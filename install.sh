@@ -248,9 +248,36 @@ with open(settings_path, 'w') as f:
 install_mcp_servers() {
     info "Installing MCP servers..."
 
+    # Collect API keys interactively (MCP env vars must be actual values, not references)
+    local GITHUB_PAT_VAL=""
+    local SUPABASE_TOKEN_VAL=""
+
+    # Check if keys already exist in settings.local.json
+    if [ -f "$SETTINGS_LOCAL" ]; then
+        GITHUB_PAT_VAL=$(python3 -c "import json; d=json.load(open('$SETTINGS_LOCAL')); print(d.get('env',{}).get('GITHUB_PAT',''))" 2>/dev/null || echo "")
+        SUPABASE_TOKEN_VAL=$(python3 -c "import json; d=json.load(open('$SETTINGS_LOCAL')); print(d.get('env',{}).get('SUPABASE_ACCESS_TOKEN',''))" 2>/dev/null || echo "")
+    fi
+
+    # Prompt for missing keys
+    if [ -z "$GITHUB_PAT_VAL" ] || echo "$GITHUB_PAT_VAL" | grep -q "your_"; then
+        echo ""
+        info "GitHub Personal Access Token needed for GitHub MCP server."
+        info "Get one at: https://github.com/settings/tokens?type=beta"
+        read -p "  Enter GitHub PAT (or press Enter to skip): " GITHUB_PAT_VAL
+    fi
+
+    if [ -z "$SUPABASE_TOKEN_VAL" ] || echo "$SUPABASE_TOKEN_VAL" | grep -q "your_"; then
+        echo ""
+        info "Supabase Access Token needed for Supabase MCP server."
+        info "Get one at: https://supabase.com/dashboard/account/tokens"
+        read -p "  Enter Supabase token (or press Enter to skip): " SUPABASE_TOKEN_VAL
+    fi
+
     export _CLAUDE_JSON="$CLAUDE_JSON"
     export _MCP_JSON="$SCRIPT_DIR/mcp/mcp-servers.json"
     export _HOME_DIR="$HOME"
+    export _GITHUB_PAT="${GITHUB_PAT_VAL:-__GITHUB_PAT__}"
+    export _SUPABASE_TOKEN="${SUPABASE_TOKEN_VAL:-__SUPABASE_ACCESS_TOKEN__}"
 
     if [ ! -f "$CLAUDE_JSON" ]; then
         # Create minimal .claude.json with MCP servers
@@ -260,12 +287,17 @@ import json, os
 mcp_path = os.environ['_MCP_JSON']
 claude_path = os.environ['_CLAUDE_JSON']
 home = os.environ['_HOME_DIR']
+github_pat = os.environ['_GITHUB_PAT']
+supabase_token = os.environ['_SUPABASE_TOKEN']
 
 with open(mcp_path) as f:
     servers = json.load(f)
 
-# Replace __HOME__ placeholder with actual home
-servers_str = json.dumps(servers).replace('__HOME__', home)
+# Replace all placeholders with actual values
+servers_str = json.dumps(servers)
+servers_str = servers_str.replace('__HOME__', home)
+servers_str = servers_str.replace('__GITHUB_PAT__', github_pat)
+servers_str = servers_str.replace('__SUPABASE_ACCESS_TOKEN__', supabase_token)
 servers = json.loads(servers_str)
 
 config = {'mcpServers': servers}
@@ -283,6 +315,8 @@ import json, os
 claude_path = os.environ['_CLAUDE_JSON']
 mcp_path = os.environ['_MCP_JSON']
 home = os.environ['_HOME_DIR']
+github_pat = os.environ['_GITHUB_PAT']
+supabase_token = os.environ['_SUPABASE_TOKEN']
 
 with open(claude_path) as f:
     config = json.load(f)
@@ -290,8 +324,11 @@ with open(claude_path) as f:
 with open(mcp_path) as f:
     new_servers = json.load(f)
 
-# Replace __HOME__ placeholder
-servers_str = json.dumps(new_servers).replace('__HOME__', home)
+# Replace all placeholders with actual values
+servers_str = json.dumps(new_servers)
+servers_str = servers_str.replace('__HOME__', home)
+servers_str = servers_str.replace('__GITHUB_PAT__', github_pat)
+servers_str = servers_str.replace('__SUPABASE_ACCESS_TOKEN__', supabase_token)
 new_servers = json.loads(servers_str)
 
 if 'mcpServers' not in config:
@@ -319,7 +356,12 @@ if skipped:
         ok "MCP servers merged into .claude.json"
     fi
 
-    unset _CLAUDE_JSON _MCP_JSON _HOME_DIR
+    unset _CLAUDE_JSON _MCP_JSON _HOME_DIR _GITHUB_PAT _SUPABASE_TOKEN
+
+    # Warn about placeholder values
+    if [ "$_GITHUB_PAT" = "__GITHUB_PAT__" ] || [ "$_SUPABASE_TOKEN" = "__SUPABASE_ACCESS_TOKEN__" ]; then
+        warn "Some MCP servers have placeholder tokens. Edit ~/.claude.json to add real values."
+    fi
 }
 
 # ============================================================================

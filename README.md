@@ -61,15 +61,18 @@ The installer will:
 4. **Install** global `CLAUDE.md` to `~/.claude/`
 5. **Merge** hooks into `~/.claude/settings.json` (preserves your existing hooks)
 6. **Merge** MCP servers into `~/.claude.json` (skips servers you already have)
-7. **Create** `~/.claude/settings.local.json` with API key placeholders (if it doesn't exist)
+7. **Prompt for API keys** — enters them directly into MCP server configs where they're needed
+8. **Create** `~/.claude/settings.local.json` with env var placeholders for Bash tools (if not exists)
 
 Safe to run multiple times — it deduplicates and never overwrites your existing configs.
 
+> **Important:** MCP servers need actual API key values directly in `~/.claude.json`. The `${VAR}` syntax does NOT work for MCP env vars — it only works for Bash tool sessions. The installer handles this for you by prompting during setup.
+
 ---
 
-## Post-Install: API Key Setup
+## API Keys: How to Get Them
 
-After installing, edit `~/.claude/settings.local.json` to add your API keys. Here's how to get each one:
+The installer will prompt you for these during setup. Here's how to get each one:
 
 ### GitHub Personal Access Token (required for GitHub MCP)
 
@@ -81,20 +84,12 @@ After installing, edit `~/.claude/settings.local.json` to add your API keys. Her
 6. Under **Permissions**, grant: `Contents` (read/write), `Pull requests` (read/write), `Issues` (read/write)
 7. Click **Generate token** and copy it
 
-```json
-"GITHUB_PAT": "github_pat_xxxxxxxxxxxx"
-```
-
 ### Supabase Access Token (required for Supabase MCP)
 
 1. Go to [supabase.com/dashboard/account/tokens](https://supabase.com/dashboard/account/tokens)
 2. Click **"Generate new token"**
 3. Give it a name like `claude-code`
 4. Copy the token (starts with `sbp_`)
-
-```json
-"SUPABASE_ACCESS_TOKEN": "sbp_xxxxxxxxxxxx"
-```
 
 ### Cloudflare API Token (optional — for cf-crawl website scraping skill)
 
@@ -104,28 +99,15 @@ After installing, edit `~/.claude/settings.local.json` to add your API keys. Her
 4. Copy the token
 5. Find your Account ID in the Cloudflare dashboard sidebar
 
-```json
-"CF_ACCOUNT_ID": "your_account_id",
-"CLOUDFLARE_API_TOKEN": "your_api_token"
-```
+### Where Keys End Up
 
-### Final settings.local.json
+| Key              | Location                                   | Used By                   |
+| ---------------- | ------------------------------------------ | ------------------------- |
+| GitHub PAT       | `~/.claude.json` > mcpServers.github.env   | GitHub MCP server         |
+| Supabase token   | `~/.claude.json` > mcpServers.supabase.env | Supabase MCP server       |
+| Cloudflare token | `~/.claude/settings.local.json` > env      | cf-crawl skill (via Bash) |
 
-Your file should look like this:
-
-```json
-{
-  "permissions": { "allow": [] },
-  "env": {
-    "GITHUB_PAT": "github_pat_xxxxxxxxxxxx",
-    "SUPABASE_ACCESS_TOKEN": "sbp_xxxxxxxxxxxx",
-    "CF_ACCOUNT_ID": "optional",
-    "CLOUDFLARE_API_TOKEN": "optional"
-  }
-}
-```
-
-This file is `chmod 600` (owner-only) and never committed to git.
+`~/.claude.json` is local-only and never committed to git. `settings.local.json` is `chmod 600` (owner-only).
 
 ### Restart Claude Code
 

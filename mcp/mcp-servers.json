@@ -14,7 +14,7 @@
     "command": "npx",
     "args": ["-y", "@modelcontextprotocol/server-github"],
     "env": {
-      "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_PAT}"
+      "GITHUB_PERSONAL_ACCESS_TOKEN": "__GITHUB_PAT__"
     }
   },
   "supabase": {
@@ -22,7 +22,7 @@
     "command": "npx",
     "args": ["-y", "@supabase/mcp-server-supabase@latest"],
     "env": {
-      "SUPABASE_ACCESS_TOKEN": "${SUPABASE_ACCESS_TOKEN}"
+      "SUPABASE_ACCESS_TOKEN": "__SUPABASE_ACCESS_TOKEN__"
     }
   },
   "qdrant-memory": {
