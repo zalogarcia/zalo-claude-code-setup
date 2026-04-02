@@ -11,7 +11,7 @@ Secrets are stored in environment variables (configured in `~/.claude/settings.l
 
 - **Bot Token:** `$TELEGRAM_BOT_TOKEN`
 - **Chat ID:** `$TELEGRAM_CHAT_ID`
-- **Bot Username:** @zalocc9191_bot
+- **Bot Username:** @YOUR_BOT_USERNAME (set this to your bot's username)
 
 ## How to Send
 

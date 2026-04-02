@@ -83,6 +83,13 @@ backup_configs() {
     [ -d "$CLAUDE_DIR/agents" ] && cp -r "$CLAUDE_DIR/agents" "$BACKUP_DIR/agents.bak" 2>/dev/null || true
     [ -d "$CLAUDE_DIR/skills" ] && cp -r "$CLAUDE_DIR/skills" "$BACKUP_DIR/skills.bak" 2>/dev/null || true
 
+    # Mark what existed before install (for clean uninstall on fresh machines)
+    touch "$BACKUP_DIR/.manifest"
+    [ -f "$CLAUDE_JSON" ] && echo "claude.json" >> "$BACKUP_DIR/.manifest"
+    [ -f "$SETTINGS_JSON" ] && echo "settings.json" >> "$BACKUP_DIR/.manifest"
+    [ -f "$SETTINGS_LOCAL" ] && echo "settings.local.json" >> "$BACKUP_DIR/.manifest"
+    [ -f "$CLAUDE_DIR/CLAUDE.md" ] && echo "CLAUDE.md" >> "$BACKUP_DIR/.manifest"
+
     ok "Backup complete"
 }
 
@@ -159,7 +166,7 @@ install_claude_md() {
 }
 
 # ============================================================================
-# Install hooks (merge into settings.json)
+# Install hooks (merge into settings.json, preserving existing hooks)
 # ============================================================================
 
 install_hooks() {
@@ -172,22 +179,50 @@ install_hooks() {
         return
     fi
 
-    # Merge hooks into existing settings.json
+    # Merge hooks into existing settings.json (preserves other hook events, deduplicates)
+    export _SETTINGS_JSON="$SETTINGS_JSON"
+    export _HOOKS_JSON="$SCRIPT_DIR/hooks/settings.json"
     python3 -c "
-import json
+import json, os
 
-with open('$SETTINGS_JSON') as f:
+settings_path = os.environ['_SETTINGS_JSON']
+hooks_path = os.environ['_HOOKS_JSON']
+
+with open(settings_path) as f:
     settings = json.load(f)
 
-with open('$SCRIPT_DIR/hooks/settings.json') as f:
-    new_hooks = json.load(f)
+with open(hooks_path) as f:
+    new_hooks_config = json.load(f)
 
-settings['hooks'] = new_hooks.get('hooks', {})
+existing_hooks = settings.get('hooks', {})
+new_hooks = new_hooks_config.get('hooks', {})
 
-with open('$SETTINGS_JSON', 'w') as f:
+# For each hook event (e.g. PostToolUse), merge arrays with deduplication
+for event, new_hook_list in new_hooks.items():
+    if event not in existing_hooks:
+        existing_hooks[event] = new_hook_list
+    else:
+        # Deduplicate by comparing the command string of each hook entry
+        existing_commands = set()
+        for entry in existing_hooks[event]:
+            for h in entry.get('hooks', []):
+                existing_commands.add(h.get('command', ''))
+        for new_entry in new_hook_list:
+            is_duplicate = False
+            for h in new_entry.get('hooks', []):
+                if h.get('command', '') in existing_commands:
+                    is_duplicate = True
+                    break
+            if not is_duplicate:
+                existing_hooks[event].append(new_entry)
+
+settings['hooks'] = existing_hooks
+
+with open(settings_path, 'w') as f:
     json.dump(settings, f, indent=2)
     f.write('\n')
 "
+    unset _SETTINGS_JSON _HOOKS_JSON
     ok "Hooks merged into settings.json"
 }
 
@@ -198,44 +233,50 @@ with open('$SETTINGS_JSON', 'w') as f:
 install_mcp_servers() {
     info "Installing MCP servers..."
 
+    export _CLAUDE_JSON="$CLAUDE_JSON"
+    export _MCP_JSON="$SCRIPT_DIR/mcp/mcp-servers.json"
+    export _HOME_DIR="$HOME"
+
     if [ ! -f "$CLAUDE_JSON" ]; then
         # Create minimal .claude.json with MCP servers
         python3 -c "
-import json
+import json, os
 
-with open('$SCRIPT_DIR/mcp/mcp-servers.json') as f:
+mcp_path = os.environ['_MCP_JSON']
+claude_path = os.environ['_CLAUDE_JSON']
+home = os.environ['_HOME_DIR']
+
+with open(mcp_path) as f:
     servers = json.load(f)
 
 # Replace __HOME__ placeholder with actual home
-home = '$HOME'
-servers_str = json.dumps(servers)
-servers_str = servers_str.replace('__HOME__', home)
+servers_str = json.dumps(servers).replace('__HOME__', home)
 servers = json.loads(servers_str)
 
 config = {'mcpServers': servers}
 
-with open('$CLAUDE_JSON', 'w') as f:
+with open(claude_path, 'w') as f:
     json.dump(config, f, indent=2)
     f.write('\n')
 "
         ok "Created .claude.json with MCP servers"
-        return
-    fi
+    else
+        # Merge MCP servers into existing .claude.json
+        python3 -c "
+import json, os
 
-    # Merge MCP servers into existing .claude.json
-    python3 -c "
-import json
+claude_path = os.environ['_CLAUDE_JSON']
+mcp_path = os.environ['_MCP_JSON']
+home = os.environ['_HOME_DIR']
 
-with open('$CLAUDE_JSON') as f:
+with open(claude_path) as f:
     config = json.load(f)
 
-with open('$SCRIPT_DIR/mcp/mcp-servers.json') as f:
+with open(mcp_path) as f:
     new_servers = json.load(f)
 
 # Replace __HOME__ placeholder
-home = '$HOME'
-servers_str = json.dumps(new_servers)
-servers_str = servers_str.replace('__HOME__', home)
+servers_str = json.dumps(new_servers).replace('__HOME__', home)
 new_servers = json.loads(servers_str)
 
 if 'mcpServers' not in config:
@@ -251,7 +292,7 @@ for name, server_config in new_servers.items():
     else:
         skipped.append(name)
 
-with open('$CLAUDE_JSON', 'w') as f:
+with open(claude_path, 'w') as f:
     json.dump(config, f, indent=2)
     f.write('\n')
 
@@ -260,7 +301,10 @@ if added:
 if skipped:
     print('Skipped (already exist): ' + ', '.join(skipped))
 "
-    ok "MCP servers merged into .claude.json"
+        ok "MCP servers merged into .claude.json"
+    fi
+
+    unset _CLAUDE_JSON _MCP_JSON _HOME_DIR
 }
 
 # ============================================================================
@@ -277,10 +321,15 @@ setup_env_vars() {
     fi
 
     # Create settings.local.json with empty env template
+    export _SETTINGS_LOCAL="$SETTINGS_LOCAL"
+    export _TEMPLATE_JSON="$SCRIPT_DIR/mcp/env-template.json"
     python3 -c "
-import json
+import json, os
 
-with open('$SCRIPT_DIR/mcp/env-template.json') as f:
+template_path = os.environ['_TEMPLATE_JSON']
+settings_path = os.environ['_SETTINGS_LOCAL']
+
+with open(template_path) as f:
     template = json.load(f)
 
 # Remove the comment key
@@ -291,10 +340,11 @@ settings = {
     'env': template
 }
 
-with open('$SETTINGS_LOCAL', 'w') as f:
+with open(settings_path, 'w') as f:
     json.dump(settings, f, indent=2)
     f.write('\n')
 "
+    unset _SETTINGS_LOCAL _TEMPLATE_JSON
     chmod 600 "$SETTINGS_LOCAL"
     ok "Created settings.local.json with env var template"
     warn "IMPORTANT: Edit $SETTINGS_LOCAL to add your actual API keys!"

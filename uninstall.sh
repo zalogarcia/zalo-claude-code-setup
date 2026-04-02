@@ -5,6 +5,7 @@ set -euo pipefail
 # Claude Code Setup Uninstaller
 # ============================================================================
 # Restores from the most recent backup created by install.sh
+# Files that didn't exist before install are removed (not left orphaned)
 # ============================================================================
 
 CLAUDE_DIR="$HOME/.claude"
@@ -47,13 +48,32 @@ if [[ ! $REPLY =~ ^[Yy]$ ]]; then
     exit 0
 fi
 
+# Helper: restore or remove a config file
+# If backup exists, restore it. If file didn't exist before install, remove it.
+restore_or_remove() {
+    local backup_name="$1"
+    local target_path="$2"
+    local manifest_key="$3"
+
+    if [ -f "$BACKUP_DIR/$backup_name" ]; then
+        cp "$BACKUP_DIR/$backup_name" "$target_path"
+        ok "Restored $target_path"
+    elif [ -f "$BACKUP_DIR/.manifest" ] && ! grep -q "^${manifest_key}$" "$BACKUP_DIR/.manifest"; then
+        # File didn't exist before install — remove the installed version
+        rm -f "$target_path"
+        ok "Removed $target_path (did not exist before install)"
+    else
+        warn "No backup for $target_path and no manifest info — leaving as-is"
+    fi
+}
+
 # Restore configs
 info "Restoring configs from backup..."
 
-[ -f "$BACKUP_DIR/claude.json.bak" ] && cp "$BACKUP_DIR/claude.json.bak" "$CLAUDE_JSON" && ok "Restored .claude.json"
-[ -f "$BACKUP_DIR/settings.json.bak" ] && cp "$BACKUP_DIR/settings.json.bak" "$SETTINGS_JSON" && ok "Restored settings.json"
-[ -f "$BACKUP_DIR/settings.local.json.bak" ] && cp "$BACKUP_DIR/settings.local.json.bak" "$SETTINGS_LOCAL" && ok "Restored settings.local.json"
-[ -f "$BACKUP_DIR/CLAUDE.md.bak" ] && cp "$BACKUP_DIR/CLAUDE.md.bak" "$CLAUDE_DIR/CLAUDE.md" && ok "Restored CLAUDE.md"
+restore_or_remove "claude.json.bak" "$CLAUDE_JSON" "claude.json"
+restore_or_remove "settings.json.bak" "$SETTINGS_JSON" "settings.json"
+restore_or_remove "settings.local.json.bak" "$SETTINGS_LOCAL" "settings.local.json"
+restore_or_remove "CLAUDE.md.bak" "$CLAUDE_DIR/CLAUDE.md" "CLAUDE.md"
 
 # Restore agents
 if [ -d "$BACKUP_DIR/agents.bak" ]; then
