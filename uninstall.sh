@@ -101,6 +101,14 @@ else
     ok "Removed installed skills"
 fi
 
+# Clean up qdrant storage if empty
+if [ -d "$HOME/.qdrant/storage" ] && [ -z "$(ls -A "$HOME/.qdrant/storage" 2>/dev/null)" ]; then
+    rm -rf "$HOME/.qdrant"
+    ok "Removed empty ~/.qdrant directory"
+elif [ -d "$HOME/.qdrant" ]; then
+    warn "~/.qdrant contains data (memory). Remove manually if desired: rm -rf ~/.qdrant"
+fi
+
 echo ""
 echo -e "${GREEN}Uninstall complete.${NC} Restart Claude Code to apply changes."
 echo ""

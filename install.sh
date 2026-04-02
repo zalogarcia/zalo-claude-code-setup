@@ -158,11 +158,26 @@ install_claude_md() {
     info "Installing global CLAUDE.md..."
 
     if [ -f "$CLAUDE_DIR/CLAUDE.md" ]; then
-        warn "Existing CLAUDE.md found. Replacing (backup saved)."
+        warn "Existing CLAUDE.md found. Merging Learned Mistakes section..."
+        # Extract existing Learned Mistakes entries (lines after the marker)
+        local LEARNED=""
+        if grep -q "## Learned Mistakes" "$CLAUDE_DIR/CLAUDE.md"; then
+            LEARNED=$(sed -n '/^## Learned Mistakes$/,$ p' "$CLAUDE_DIR/CLAUDE.md" | tail -n +2)
+        fi
+        cp "$SCRIPT_DIR/claude-md/CLAUDE.md" "$CLAUDE_DIR/CLAUDE.md"
+        # Re-append preserved Learned Mistakes entries if any existed
+        if [ -n "$LEARNED" ]; then
+            # Remove the empty placeholder from the new file and append the real entries
+            sed -i '' '/^<!-- Add entries here when corrected/d' "$CLAUDE_DIR/CLAUDE.md"
+            echo "$LEARNED" >> "$CLAUDE_DIR/CLAUDE.md"
+            ok "CLAUDE.md installed (Learned Mistakes preserved)"
+        else
+            ok "CLAUDE.md installed"
+        fi
+    else
+        cp "$SCRIPT_DIR/claude-md/CLAUDE.md" "$CLAUDE_DIR/CLAUDE.md"
+        ok "CLAUDE.md installed"
     fi
-
-    cp "$SCRIPT_DIR/claude-md/CLAUDE.md" "$CLAUDE_DIR/CLAUDE.md"
-    ok "CLAUDE.md installed"
 }
 
 # ============================================================================

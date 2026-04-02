@@ -10,21 +10,21 @@ Scrape and crawl websites using the Cloudflare Browser Rendering REST API.
 Secrets are stored in environment variables (configured in `~/.claude/settings.local.json`):
 
 - **Account ID:** `$CF_ACCOUNT_ID`
-- **API Token:** `$CLOUDFLARE_API_TOKEN` or `$CF_API_TOKEN`
+- **API Token:** `$CLOUDFLARE_API_TOKEN`
 
 ```bash
 ACCOUNT_ID="${CF_ACCOUNT_ID}"
-API_TOKEN="${CLOUDFLARE_API_TOKEN:-${CF_API_TOKEN}}"
+API_TOKEN="${CLOUDFLARE_API_TOKEN}"
 BASE="https://api.cloudflare.com/client/v4/accounts/${ACCOUNT_ID}/browser-rendering"
 ```
 
 ## Endpoint Selection
 
-| Need | Endpoint | Method |
-|------|----------|--------|
-| Single page → HTML | `/content` | Synchronous POST |
-| Single page → Markdown | `/markdown` | Synchronous POST |
-| Multi-page crawl | `/crawl` | Async POST + poll GET |
+| Need                   | Endpoint    | Method                |
+| ---------------------- | ----------- | --------------------- |
+| Single page → HTML     | `/content`  | Synchronous POST      |
+| Single page → Markdown | `/markdown` | Synchronous POST      |
+| Multi-page crawl       | `/crawl`    | Async POST + poll GET |
 
 **IMPORTANT:** For single-page scraping, prefer `/content` or `/markdown` — they are synchronous and return results immediately. Only use `/crawl` for multi-page jobs.
 
@@ -42,6 +42,7 @@ curl -s -X POST "${BASE}/markdown" \
 ```
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -87,6 +88,7 @@ curl -s -X POST "${BASE}/content" \
 ```
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -136,6 +138,7 @@ curl -s "${BASE}/crawl/${JOB_ID}" \
 Poll every 5-10 seconds until `result.status` is not `"running"`.
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -152,7 +155,11 @@ Poll every 5-10 seconds until `result.status` is not `"running"`.
         "markdown": "# Page Title\n...",
         "html": "<html>...</html>",
         "json": {},
-        "metadata": { "status": 200, "title": "Page Title", "url": "https://example.com/page" }
+        "metadata": {
+          "status": 200,
+          "title": "Page Title",
+          "url": "https://example.com/page"
+        }
       }
     ],
     "cursor": null
@@ -173,25 +180,25 @@ curl -s -X DELETE "${BASE}/crawl/${JOB_ID}" \
 
 ### Core
 
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `url` | String | **required** | Starting URL |
-| `limit` | Number | 10 | Max pages (max 100,000) |
-| `depth` | Number | 100,000 | Max link depth |
-| `source` | String | "all" | Discovery: `all`, `sitemaps`, `links` |
-| `formats` | Array | ["html"] | Output: `html`, `markdown`, `json` |
-| `render` | Boolean | true | JS rendering (false = fast static mode) |
-| `maxAge` | Number | 86400 | Cache TTL in seconds |
-| `modifiedSince` | Number | — | Unix timestamp; skip older pages |
+| Parameter       | Type    | Default      | Description                             |
+| --------------- | ------- | ------------ | --------------------------------------- |
+| `url`           | String  | **required** | Starting URL                            |
+| `limit`         | Number  | 10           | Max pages (max 100,000)                 |
+| `depth`         | Number  | 100,000      | Max link depth                          |
+| `source`        | String  | "all"        | Discovery: `all`, `sitemaps`, `links`   |
+| `formats`       | Array   | ["html"]     | Output: `html`, `markdown`, `json`      |
+| `render`        | Boolean | true         | JS rendering (false = fast static mode) |
+| `maxAge`        | Number  | 86400        | Cache TTL in seconds                    |
+| `modifiedSince` | Number  | —            | Unix timestamp; skip older pages        |
 
 ### URL Filtering (`options` object)
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
+| Parameter                      | Type    | Description                            |
+| ------------------------------ | ------- | -------------------------------------- |
 | `options.includeExternalLinks` | Boolean | Follow external links (default: false) |
-| `options.includeSubdomains` | Boolean | Follow subdomain links |
-| `options.includePatterns` | Array | Wildcard include (e.g. `"/blog/**"`) |
-| `options.excludePatterns` | Array | Wildcard exclude (higher priority) |
+| `options.includeSubdomains`    | Boolean | Follow subdomain links                 |
+| `options.includePatterns`      | Array   | Wildcard include (e.g. `"/blog/**"`)   |
+| `options.excludePatterns`      | Array   | Wildcard exclude (higher priority)     |
 
 Pattern syntax: `*` = any chars except `/`, `**` = any chars including `/`.
 
@@ -224,11 +231,11 @@ Note: Uses Workers AI — incurs additional usage costs.
 
 ### GET Query Parameters (polling)
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `cursor` | String | Pagination (when response > 10 MB) |
-| `limit` | Number | Max records per response |
-| `status` | String | Filter: `queued`, `completed`, `disallowed`, `skipped`, `errored`, `cancelled` |
+| Parameter | Type   | Description                                                                    |
+| --------- | ------ | ------------------------------------------------------------------------------ |
+| `cursor`  | String | Pagination (when response > 10 MB)                                             |
+| `limit`   | Number | Max records per response                                                       |
+| `status`  | String | Filter: `queued`, `completed`, `disallowed`, `skipped`, `errored`, `cancelled` |
 
 ---
 
@@ -236,20 +243,20 @@ Note: Uses Workers AI — incurs additional usage costs.
 
 ### Authentication & Headers
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `authenticate` | Object | `{ "username": "...", "password": "..." }` |
-| `setExtraHTTPHeaders` | Object | Custom headers |
-| `cookies` | Array | Session cookies |
+| Parameter             | Type   | Description                                |
+| --------------------- | ------ | ------------------------------------------ |
+| `authenticate`        | Object | `{ "username": "...", "password": "..." }` |
+| `setExtraHTTPHeaders` | Object | Custom headers                             |
+| `cookies`             | Array  | Session cookies                            |
 
 ### Browser Control
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `gotoOptions` | Object | `{ "waitUntil": "networkidle0", "timeout": 30000 }` |
-| `waitForSelector` | Object | `{ "selector": ".content", "timeout": 5000, "visible": true }` |
-| `rejectResourceTypes` | Array | Block: `image`, `media`, `font`, `stylesheet` |
-| `userAgent` | String | Custom UA (does NOT bypass bot detection) |
+| Parameter             | Type   | Description                                                    |
+| --------------------- | ------ | -------------------------------------------------------------- |
+| `gotoOptions`         | Object | `{ "waitUntil": "networkidle0", "timeout": 30000 }`            |
+| `waitForSelector`     | Object | `{ "selector": ".content", "timeout": 5000, "visible": true }` |
+| `rejectResourceTypes` | Array  | Block: `image`, `media`, `font`, `stylesheet`                  |
+| `userAgent`           | String | Custom UA (does NOT bypass bot detection)                      |
 
 ---
 
