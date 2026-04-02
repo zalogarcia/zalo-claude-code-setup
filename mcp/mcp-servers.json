@@ -1,0 +1,46 @@
+{
+  "context7": {
+    "type": "http",
+    "url": "https://mcp.context7.com/mcp"
+  },
+  "playwright": {
+    "type": "stdio",
+    "command": "npx",
+    "args": ["-y", "@playwright/mcp@latest"],
+    "env": {}
+  },
+  "github": {
+    "type": "stdio",
+    "command": "npx",
+    "args": ["-y", "@modelcontextprotocol/server-github"],
+    "env": {
+      "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_PAT}"
+    }
+  },
+  "supabase": {
+    "type": "stdio",
+    "command": "npx",
+    "args": ["-y", "@supabase/mcp-server-supabase@latest"],
+    "env": {
+      "SUPABASE_ACCESS_TOKEN": "${SUPABASE_ACCESS_TOKEN}"
+    }
+  },
+  "qdrant-memory": {
+    "type": "stdio",
+    "command": "uvx",
+    "args": ["mcp-server-qdrant"],
+    "env": {
+      "QDRANT_LOCAL_PATH": "__HOME__/.qdrant/storage",
+      "COLLECTION_NAME": "claude-memory",
+      "EMBEDDING_MODEL": "sentence-transformers/all-MiniLM-L6-v2"
+    }
+  },
+  "knowledge-graph": {
+    "type": "stdio",
+    "command": "npx",
+    "args": ["-y", "@modelcontextprotocol/server-memory"],
+    "env": {
+      "MEMORY_FILE_PATH": "__HOME__/.claude/memory.jsonl"
+    }
+  }
+}
