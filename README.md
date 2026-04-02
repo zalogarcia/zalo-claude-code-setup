@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/banner.png" alt="Claude Code Pro Setup" width="100%">
+</p>
+
 # Claude Code Pro Setup
 
 > One command to turn Claude Code into a production-grade AI engineering environment.
