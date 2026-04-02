@@ -86,7 +86,6 @@ else
     rm -f "$CLAUDE_DIR/agents/safe-planner.md"
     rm -f "$CLAUDE_DIR/agents/live-test.md"
     rm -f "$CLAUDE_DIR/agents/frontend-specialist.md"
-    rm -f "$CLAUDE_DIR/agents/image-craft-expert.md"
     ok "Removed installed agents"
 fi
 
@@ -98,7 +97,6 @@ if [ -d "$BACKUP_DIR/skills.bak" ]; then
 else
     rm -rf "$CLAUDE_DIR/skills/ui-ux-pro-max"
     rm -rf "$CLAUDE_DIR/skills/frontend-design"
-    rm -rf "$CLAUDE_DIR/skills/telegram"
     rm -rf "$CLAUDE_DIR/skills/cf-crawl"
     ok "Removed installed skills"
 fi

@@ -1,168 +1,287 @@
 # Claude Code Pro Setup
 
-A complete Claude Code configuration package with custom agents, skills, hooks, MCP servers, and workflow automation. One command to install a production-grade Claude Code environment.
+> One command to turn Claude Code into a production-grade AI engineering environment.
 
-## What's Included
+Custom agents, skills, MCP servers, auto-formatting hooks, and workflow automation — all preconfigured and ready to go.
 
-### Custom Agents (5)
+---
 
-| Agent                   | Purpose                                                       |
-| ----------------------- | ------------------------------------------------------------- |
-| **qa-agent**            | Audits code for real, reproducible bugs with severity ratings |
-| **safe-planner**        | Maps dependencies and risks before complex changes            |
-| **live-test**           | Visual verification in browser via Playwright                 |
-| **frontend-specialist** | Production-quality UI with a11y, responsiveness, edge states  |
-| **image-craft-expert**  | Crafts optimized text-to-image prompts                        |
+## Recommended Workflow
 
-### Skills (4)
+This is how I use Claude Code to get the best results on any task:
 
-| Skill               | Purpose                                                                                      |
-| ------------------- | -------------------------------------------------------------------------------------------- |
-| **ui-ux-pro-max**   | Design intelligence: 50 styles, 21 palettes, 50 font pairings, 20 chart types, 8 tech stacks |
-| **frontend-design** | Anti-slop frontend aesthetics with bold design direction                                     |
-| **telegram**        | Send messages/files/images via Telegram Bot API                                              |
-| **cf-crawl**        | Website crawling via Cloudflare Browser Rendering API                                        |
+```
+Plan + Research  -->  Optimize Plan  -->  Execute in Phases  -->  Verify + Test  -->  Repeat
+```
 
-### MCP Servers (6)
+1. **Plan + Research** — Before touching code, have Claude research the problem and produce a written plan (`safe-planner` agent or `/plan`). Understand the blast radius.
+2. **Optimize the plan** — Review the plan, ask questions, refine. Get alignment before execution.
+3. **Execute in phases** — Break the work into small, shippable phases. Implement one phase at a time.
+4. **Verify + test after each phase** — Run builds, tests, and visual checks (`live-test` agent) after every phase. Never stack unverified changes.
+5. **Continue implementing** — Move to the next phase only after the current one passes.
+6. **Run QA multiple times** — Use the `qa-agent` repeatedly until all bugs are fixed. Don't ship until it passes clean.
 
-| Server              | Purpose                                        |
-| ------------------- | ---------------------------------------------- |
-| **context7**        | Documentation lookup for any library/framework |
-| **playwright**      | Browser automation for testing                 |
-| **github**          | GitHub API integration                         |
-| **supabase**        | Supabase database/functions management         |
-| **qdrant-memory**   | Semantic search memory (local)                 |
-| **knowledge-graph** | Structured entity/relationship memory (local)  |
+This loop ensures nothing slips through. Plan first, execute small, verify always.
 
-### Hooks (Auto-formatting)
-
-- **Prettier** — Auto-formats `.ts`, `.tsx`, `.js`, `.jsx`, `.css`, `.json`, `.md`, `.html` on every edit
-- **Ruff** — Auto-formats and lints `.py` files on every edit
-
-### Global CLAUDE.md
-
-- Self-learning protocol (learns from corrections)
-- Project init protocol (auto-scaffolds `.claude/` config for new projects)
-- Automated frontend workflow (design -> build -> verify pipeline)
-- Verification-first workflow (always prove it works)
-- Subagent orchestration rules
-- Context survival strategies
+---
 
 ## Quick Install
 
+### Prerequisites
+
+Make sure these are installed first:
+
+| Tool              | Install Command                                          | Purpose                                           |
+| ----------------- | -------------------------------------------------------- | ------------------------------------------------- |
+| **Node.js + npm** | [nodejs.org](https://nodejs.org/) or `brew install node` | Required for MCP servers and npx                  |
+| **Python 3**      | `brew install python3`                                   | Required for UI/UX Pro Max skill search engine    |
+| **jq**            | `brew install jq`                                        | Required for hook JSON parsing                    |
+| **Prettier**      | `npm install -g prettier`                                | Auto-formats TS/JS/CSS/JSON/MD/HTML on every edit |
+| **Ruff**          | `pip install ruff`                                       | Auto-formats and lints Python on every edit       |
+| **uv**            | `pip install uv`                                         | Required for Qdrant memory MCP server             |
+| **Git**           | `brew install git`                                       | Required for cloning UI/UX Pro Max data           |
+
+### Run the Installer
+
 ```bash
-git clone https://github.com/YOUR_USERNAME/claude-install-zalo.git
-cd claude-install-zalo
+git clone https://github.com/zalogarcia/zalo-claude-code-setup.git
+cd zalo-claude-code-setup
 ./install.sh
 ```
 
-## What the Installer Does
+The installer will:
 
-1. **Backs up** all existing Claude Code configs to `~/.claude/backups/`
-2. **Copies** agents to `~/.claude/agents/`
-3. **Copies** skills to `~/.claude/skills/`
-4. **Installs** global `CLAUDE.md` to `~/.claude/`
-5. **Merges** hooks into `~/.claude/settings.json` (preserves existing settings)
-6. **Merges** MCP servers into `~/.claude.json` (skips servers that already exist)
-7. **Creates** `~/.claude/settings.local.json` with env var template (if not exists)
+1. **Back up** all your existing Claude Code configs to `~/.claude/backups/`
+2. **Copy** agents to `~/.claude/agents/`
+3. **Copy** skills to `~/.claude/skills/` (clones UI/UX Pro Max data from GitHub)
+4. **Install** global `CLAUDE.md` to `~/.claude/`
+5. **Merge** hooks into `~/.claude/settings.json` (preserves your existing hooks)
+6. **Merge** MCP servers into `~/.claude.json` (skips servers you already have)
+7. **Create** `~/.claude/settings.local.json` with API key placeholders (if it doesn't exist)
 
-## Post-Install Setup
+Safe to run multiple times — it deduplicates and never overwrites your existing configs.
 
-### 1. Add Your API Keys
+---
 
-Edit `~/.claude/settings.local.json` and replace placeholder values:
+## Post-Install: API Key Setup
+
+After installing, edit `~/.claude/settings.local.json` to add your API keys. Here's how to get each one:
+
+### GitHub Personal Access Token (required for GitHub MCP)
+
+1. Go to [github.com/settings/tokens](https://github.com/settings/tokens?type=beta)
+2. Click **"Generate new token"** (Fine-grained token recommended)
+3. Give it a name like `claude-code`
+4. Set expiration (90 days recommended)
+5. Under **Repository access**, select the repos you want Claude to access
+6. Under **Permissions**, grant: `Contents` (read/write), `Pull requests` (read/write), `Issues` (read/write)
+7. Click **Generate token** and copy it
+
+```json
+"GITHUB_PAT": "github_pat_xxxxxxxxxxxx"
+```
+
+### Supabase Access Token (required for Supabase MCP)
+
+1. Go to [supabase.com/dashboard/account/tokens](https://supabase.com/dashboard/account/tokens)
+2. Click **"Generate new token"**
+3. Give it a name like `claude-code`
+4. Copy the token (starts with `sbp_`)
+
+```json
+"SUPABASE_ACCESS_TOKEN": "sbp_xxxxxxxxxxxx"
+```
+
+### Cloudflare API Token (optional — for cf-crawl website scraping skill)
+
+1. Go to [dash.cloudflare.com/profile/api-tokens](https://dash.cloudflare.com/profile/api-tokens)
+2. Click **"Create Token"**
+3. Use the **"Edit Cloudflare Workers"** template (or create custom with Browser Rendering permissions)
+4. Copy the token
+5. Find your Account ID in the Cloudflare dashboard sidebar
+
+```json
+"CF_ACCOUNT_ID": "your_account_id",
+"CLOUDFLARE_API_TOKEN": "your_api_token"
+```
+
+### Final settings.local.json
+
+Your file should look like this:
 
 ```json
 {
+  "permissions": { "allow": [] },
   "env": {
-    "GITHUB_PAT": "your_github_personal_access_token",
-    "SUPABASE_ACCESS_TOKEN": "your_supabase_access_token",
-    "TELEGRAM_BOT_TOKEN": "your_token (optional)",
-    "TELEGRAM_CHAT_ID": "your_chat_id (optional)",
-    "CF_ACCOUNT_ID": "your_cloudflare_account_id (optional)",
-    "CLOUDFLARE_API_TOKEN": "your_cloudflare_token (optional)"
+    "GITHUB_PAT": "github_pat_xxxxxxxxxxxx",
+    "SUPABASE_ACCESS_TOKEN": "sbp_xxxxxxxxxxxx",
+    "CF_ACCOUNT_ID": "optional",
+    "CLOUDFLARE_API_TOKEN": "optional"
   }
 }
 ```
 
-### 2. Install Global Tools
+This file is `chmod 600` (owner-only) and never committed to git.
 
-```bash
-# Required for hooks
-npm install -g prettier
-pip install ruff
-
-# Required for qdrant-memory MCP
-pip install uv
-
-# Optional but recommended
-brew install jq
-```
-
-### 3. Restart Claude Code
+### Restart Claude Code
 
 Close and reopen Claude Code to pick up all changes.
 
-## Uninstall
+---
 
-Restores from the backup created during install:
+## What's Included
+
+### Custom Agents (4)
+
+| Agent                   | What It Does                                                                                                             |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| **qa-agent**            | Audits code for real, reproducible bugs. Categorizes by severity (critical/high/medium/low). Run it after every feature. |
+| **safe-planner**        | Reads all related code, maps dependencies and risks, produces a rollback-ready plan. Use before any non-trivial change.  |
+| **live-test**           | Opens the app in a real browser via Playwright. Screenshots happy path, edge cases, and 3 responsive breakpoints.        |
+| **frontend-specialist** | Builds production-quality UI — accessible, responsive, performant. Matches your existing codebase conventions.           |
+
+### Skills (3)
+
+| Skill               | What It Does                                                                                                                                |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| **ui-ux-pro-max**   | Searchable design database: 50 UI styles, 21 color palettes, 50 font pairings, 20 chart types, 8 tech stacks. Invoke with `/ui-ux-pro-max`. |
+| **frontend-design** | Anti-slop aesthetic guidelines. Bold design direction, distinctive typography, no generic AI look. Invoke with `/frontend-design`.          |
+| **cf-crawl**        | Scrape websites via Cloudflare Browser Rendering API. Single page (sync) or multi-page crawl (async). Invoke with `/cf-crawl`.              |
+
+### MCP Servers (6)
+
+| Server              | What It Does                                                                                                    |
+| ------------------- | --------------------------------------------------------------------------------------------------------------- |
+| **context7**        | Documentation lookup for any library or framework (React, Next.js, Supabase, etc.). Always up-to-date.          |
+| **playwright**      | Browser automation — navigate, click, fill forms, screenshot. Powers the `live-test` agent.                     |
+| **github**          | Full GitHub API — create PRs, manage issues, search code, push files. Requires `GITHUB_PAT`.                    |
+| **supabase**        | Manage Supabase projects — run SQL, deploy edge functions, manage migrations. Requires `SUPABASE_ACCESS_TOKEN`. |
+| **qdrant-memory**   | Local semantic search memory. Stores patterns, solutions, and decisions across conversations.                   |
+| **knowledge-graph** | Local structured memory. Stores entity relationships, configs, and facts across conversations.                  |
+
+### Auto-Formatting Hooks
+
+Every time Claude edits a file, it's automatically formatted before you see it:
+
+| File Types                                             | Formatter                    | Install                   |
+| ------------------------------------------------------ | ---------------------------- | ------------------------- |
+| `.ts` `.tsx` `.js` `.jsx` `.css` `.json` `.md` `.html` | **Prettier**                 | `npm install -g prettier` |
+| `.py`                                                  | **Ruff** (format + lint fix) | `pip install ruff`        |
+
+### Global CLAUDE.md
+
+Behavioral rules that make Claude Code significantly more effective:
+
+- **Self-learning** — When you correct Claude, it saves the lesson to prevent repeating mistakes
+- **Project init** — Auto-scaffolds `.claude/CLAUDE.md` and `.claude/rules/` for new projects
+- **Frontend auto-chain** — Building UI automatically triggers: design search -> aesthetic guidelines -> specialist agent -> visual verification
+- **Verification-first** — Claude proves changes work (build, test, screenshot) instead of saying "this should work"
+- **Context survival** — Plans are written to files so they survive compaction and session transfers
+- **Subagent orchestration** — Complex work is delegated to specialized agents, keeping the main context clean
+
+---
+
+## Automated Frontend Workflow
+
+When you ask Claude to build any UI (page, component, dashboard, landing page), it automatically chains these steps without you asking:
+
+1. **`/ui-ux-pro-max`** — Searches the design database for the right palette, fonts, and style
+2. **`/frontend-design`** — Applies anti-slop aesthetic principles (no generic Inter + purple gradient)
+3. **`frontend-specialist` agent** — Builds production-quality code (a11y, responsiveness, edge states)
+4. **`live-test` agent** — Opens a browser and screenshots the result for visual verification
+
+No manual invocation needed. Just say "build me a pricing page" and the pipeline runs.
+
+---
+
+## Default Tech Stack
+
+When you don't specify, Claude defaults to:
+
+| Layer               | Default                                       |
+| ------------------- | --------------------------------------------- |
+| **Frontend**        | React + TypeScript + Tailwind CSS             |
+| **Backend**         | Supabase (Edge Functions, Auth, RLS, Storage) |
+| **Payments**        | Stripe                                        |
+| **Deployment**      | Vercel or Supabase hosting                    |
+| **Package manager** | npm                                           |
+| **Testing**         | Vitest for unit, Playwright for e2e           |
+
+---
+
+## Dependencies Summary
+
+Everything you need to install for the full setup to work:
 
 ```bash
-./uninstall.sh
+# System tools (macOS)
+brew install node python3 jq git
+
+# Global npm packages
+npm install -g prettier
+
+# Python packages
+pip install ruff uv
 ```
+
+| Dependency    | Required By                                                 | Required?   |
+| ------------- | ----------------------------------------------------------- | ----------- |
+| Node.js + npm | MCP servers (github, supabase, playwright, knowledge-graph) | Yes         |
+| Python 3      | UI/UX Pro Max search, installer scripts                     | Yes         |
+| jq            | Hook JSON parsing                                           | Yes         |
+| Git           | Installer (clones UI/UX Pro Max data)                       | Yes         |
+| Prettier      | Auto-format hook (TS/JS/CSS/JSON/MD/HTML)                   | Recommended |
+| Ruff          | Auto-format hook (Python)                                   | Recommended |
+| uv/uvx        | Qdrant memory MCP server                                    | Recommended |
+
+If a recommended tool is missing, the relevant hook or MCP will silently skip — nothing breaks.
+
+---
 
 ## File Structure
 
 ```
 .
 ├── README.md
-├── install.sh              # One-command installer
-├── uninstall.sh            # Restore from backup
+├── install.sh                  # One-command installer (backs up first)
+├── uninstall.sh                # Restore from backup
 ├── claude-md/
-│   └── CLAUDE.md           # Global instructions
+│   └── CLAUDE.md               # Global behavioral instructions
 ├── agents/
-│   ├── qa-agent.md
-│   ├── safe-planner.md
-│   ├── live-test.md
-│   ├── frontend-specialist.md
-│   └── image-craft-expert.md
+│   ├── qa-agent.md             # Bug auditor
+│   ├── safe-planner.md         # Risk-aware planner
+│   ├── live-test.md            # Browser verification
+│   └── frontend-specialist.md  # UI builder
 ├── skills/
 │   ├── ui-ux-pro-max/
-│   │   └── SKILL.md
+│   │   └── SKILL.md            # Design database (scripts cloned at install)
 │   ├── frontend-design/
-│   │   └── SKILL.md
-│   ├── telegram/
-│   │   └── SKILL.md
+│   │   └── SKILL.md            # Anti-slop aesthetics
 │   └── cf-crawl/
-│       └── SKILL.md
+│       └── SKILL.md            # Cloudflare web scraper
 ├── hooks/
-│   └── settings.json       # Hook configurations
+│   └── settings.json           # Prettier + Ruff auto-formatting
 └── mcp/
-    ├── mcp-servers.json    # MCP server configs
-    └── env-template.json   # API key template
+    ├── mcp-servers.json        # 6 MCP server configs
+    └── env-template.json       # API key placeholders
 ```
 
-## Default Tech Stack
+---
 
-This setup defaults to:
+## Uninstall
 
-- **Frontend**: React + TypeScript + Tailwind CSS
-- **Backend**: Supabase (Edge Functions, Auth, RLS, Storage)
-- **Payments**: Stripe
-- **Deployment**: Vercel or Supabase hosting
-- **Package manager**: npm
-- **Testing**: Vitest for unit, Playwright for e2e
+Restores everything from the backup created during install:
 
-## Automated Frontend Workflow
+```bash
+./uninstall.sh
+```
 
-When you ask Claude to build any UI, it automatically chains:
+Handles both scenarios:
 
-1. `/ui-ux-pro-max` — Design intelligence (palette, fonts, style)
-2. `/frontend-design` — Anti-slop aesthetics
-3. `frontend-specialist` agent — Production implementation
-4. `live-test` agent — Visual verification in browser
+- **Had existing configs** — Restores them from backup
+- **Fresh install** — Cleanly removes everything that was added
 
-No manual invocation needed.
+---
 
 ## License
 

@@ -87,7 +87,6 @@ Subagents protect the main context window and enable parallelism. Use them delib
 | `qa-agent`            | After implementing a feature or before deployment — audit for real bugs                          |
 | `safe-planner`        | Before complex refactors, migrations, or multi-file changes — map risks first                    |
 | `frontend-specialist` | For building UI components, styling, responsive design, accessibility                            |
-| `image-craft-expert`  | For ALL image generation — produces better prompts than inline                                   |
 | `Explore`             | For broad codebase questions that need multiple searches — keeps exploration out of main context |
 
 **Rules:**
