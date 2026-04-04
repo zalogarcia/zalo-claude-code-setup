@@ -190,6 +190,31 @@ Slash commands for workflow automation. Invoke with `/<command-name>`.
 | **knowledge-graph** | Local structured memory. Stores entity relationships, configs, and facts across conversations.                  |
 | **n8n-api**         | n8n workflow automation API. Trigger workflows, manage executions. Requires `N8N_API_KEY`.                      |
 
+### Autoloop Dashboard
+
+A full monitoring UI for autonomous AI code optimization loops. Runs as a local Node.js server with a single-file web dashboard.
+
+- **Server:** Node.js HTTP server on port 7890
+- **Dashboard:** Bloomberg-terminal-style dark UI (Mission Control aesthetic)
+- **Features:** Real-time status monitoring, per-project phase tracking, agent terminal output, log viewer, start/stop/restart controls
+- **Auto-discovery:** Scans configured directories for `.autoloop/` folders
+- **API:** REST endpoints for loop status, logs, git history, agent events
+- **Start:** `~/.claude/autoloop-dashboard/start.sh`
+- **Stop:** `~/.claude/autoloop-dashboard/stop.sh`
+- **URL:** http://localhost:7890
+
+### xbar Menu Bar Plugins
+
+macOS menu bar integration via [xbar](https://xbarapp.com/):
+
+| Plugin                           | What It Does                                                                                    |
+| -------------------------------- | ----------------------------------------------------------------------------------------------- |
+| **003-autoloop.5s.sh**           | Shows autoloop status in menu bar (running count, per-project phases). Updates every 5 seconds. |
+| **001-shortcuts.1d.sh**          | Custom keyboard shortcuts menu                                                                  |
+| **002-clipboard-snippets.1d.sh** | Clipboard snippet manager                                                                       |
+
+Plus 21 helper scripts in `scripts/` for launching Claude Code sessions in various project contexts, clipboard workflows, and window layout management.
+
 ### Auto-Formatting Hooks
 
 Every time Claude edits a file, it's automatically formatted before you see it:
@@ -334,9 +359,23 @@ If a recommended tool is missing, the relevant hook or MCP will silently skip �
 │       └── SKILL.md                  # Telegram notifications
 ├── hooks/
 │   └── settings.json                 # Hooks + Vibe Island integration
-└── mcp/
-    ├── mcp-servers.json              # 7 MCP server configs
-    └── env-template.json             # API key placeholders
+├── mcp/
+│   ├── mcp-servers.json              # 7 MCP server configs
+│   └── env-template.json             # API key placeholders
+├── autoloop-dashboard/
+│   ├── server.js                     # Node.js monitoring server (port 7890)
+│   ├── dashboard.html                # Single-file web UI (Mission Control)
+│   ├── package.json                  # Dependencies (Playwright)
+│   ├── config.example.json           # Example config (edit with your paths)
+│   ├── start.sh                      # Start server
+│   ├── stop.sh                       # Stop server
+│   └── .gitignore
+└── xbar/
+    └── plugins/
+        ├── 001-shortcuts.1d.sh       # Keyboard shortcuts menu
+        ├── 002-clipboard-snippets.1d.sh  # Clipboard snippets
+        ├── 003-autoloop.5s.sh        # Autoloop menu bar monitor
+        └── scripts/                  # 21 helper scripts (launchers, clips, layout)
 ```
 
 ---

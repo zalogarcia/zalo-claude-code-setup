@@ -1,0 +1,6 @@
+node_modules/
+server.log
+server.pid
+test-results/
+.playwright-mcp/
+config.json

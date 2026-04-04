@@ -446,6 +446,80 @@ create_directories() {
 }
 
 # ============================================================================
+# Install autoloop dashboard
+# ============================================================================
+
+install_autoloop_dashboard() {
+    info "Installing autoloop dashboard..."
+    local DASH_DIR="$CLAUDE_DIR/autoloop-dashboard"
+    mkdir -p "$DASH_DIR"
+
+    for f in server.js dashboard.html package.json start.sh stop.sh .gitignore; do
+        if [ -f "$SCRIPT_DIR/autoloop-dashboard/$f" ]; then
+            cp "$SCRIPT_DIR/autoloop-dashboard/$f" "$DASH_DIR/$f"
+        fi
+    done
+
+    # Make scripts executable
+    chmod +x "$DASH_DIR/start.sh" "$DASH_DIR/stop.sh" 2>/dev/null || true
+
+    # Create config.json from example if it doesn't exist
+    if [ ! -f "$DASH_DIR/config.json" ]; then
+        sed "s|\\\$HOME|$HOME|g" "$SCRIPT_DIR/autoloop-dashboard/config.example.json" > "$DASH_DIR/config.json"
+        ok "  Created config.json (edit to add your project paths)"
+    else
+        ok "  config.json already exists (preserved)"
+    fi
+
+    # Install npm dependencies
+    if command -v npm >/dev/null 2>&1; then
+        (cd "$DASH_DIR" && npm install --silent 2>/dev/null) || warn "  npm install failed — run manually in $DASH_DIR"
+    fi
+
+    ok "Autoloop dashboard installed to $DASH_DIR"
+    info "  Start: $DASH_DIR/start.sh"
+    info "  Stop:  $DASH_DIR/stop.sh"
+    info "  URL:   http://localhost:7890"
+}
+
+# ============================================================================
+# Install xbar plugins
+# ============================================================================
+
+install_xbar_plugins() {
+    local XBAR_DIR="$HOME/Library/Application Support/xbar/plugins"
+
+    # Only install if xbar is present
+    if [ ! -d "$XBAR_DIR" ]; then
+        warn "xbar plugins directory not found. Skipping xbar installation."
+        warn "  Install xbar from https://xbarapp.com/ then re-run."
+        return
+    fi
+
+    info "Installing xbar plugins..."
+    mkdir -p "$XBAR_DIR/scripts"
+
+    for plugin in "$SCRIPT_DIR/xbar/plugins"/*.sh; do
+        [ -f "$plugin" ] || continue
+        local name=$(basename "$plugin")
+        cp "$plugin" "$XBAR_DIR/$name"
+        chmod +x "$XBAR_DIR/$name"
+        ok "  Plugin: $name"
+    done
+
+    for script in "$SCRIPT_DIR/xbar/plugins/scripts"/*; do
+        [ -f "$script" ] || continue
+        local name=$(basename "$script")
+        cp "$script" "$XBAR_DIR/scripts/$name"
+        chmod +x "$XBAR_DIR/scripts/$name"
+    done
+    ok "  Helper scripts installed ($(ls "$SCRIPT_DIR/xbar/plugins/scripts" | wc -l | tr -d ' ') files)"
+
+    ok "xbar plugins installed"
+    info "  Refresh xbar to see the autoloop status in your menu bar"
+}
+
+# ============================================================================
 # Main
 # ============================================================================
 
@@ -466,6 +540,8 @@ install_hooks
 install_mcp_servers
 setup_env_vars
 create_directories
+install_autoloop_dashboard
+install_xbar_plugins
 
 echo ""
 echo "============================================"
@@ -479,6 +555,8 @@ echo "  - 4 skills (ui-ux-pro-max, frontend-design, cf-crawl, telegram)"
 echo "  - Global CLAUDE.md with workflow automation"
 echo "  - Hooks: PostToolUse formatting (Prettier + Ruff) + Vibe Island bridge (all events)"
 echo "  - 7 MCP servers (context7, playwright, github, n8n-api, supabase, qdrant-memory, knowledge-graph)"
+echo "  - Autoloop dashboard (monitor autonomous AI loops at localhost:7890)"
+echo "  - xbar plugins (menu bar status for autoloop + quick launchers)"
 echo ""
 echo "Next steps:"
 echo "  1. Edit ~/.claude/settings.local.json to add your API keys"

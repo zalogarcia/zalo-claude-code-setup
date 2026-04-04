@@ -1,0 +1,6 @@
+{
+  "port": 7890,
+  "directories": [],
+  "scanPaths": ["$HOME/Documents", "$HOME/Projects"],
+  "dismissedDirectories": []
+}
