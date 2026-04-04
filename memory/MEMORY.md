@@ -1,0 +1,3 @@
+- [Fine-tuning response style](feedback_finetuning_style.md) -- training data needs varied SMS-like lengths, must be vertical-agnostic for any business
+- [Apple HIG Menu Bar Principles](apple_hig_menu_bar_principles.md) -- full design principles from Apple HIG for menu bars (anatomy, ordering, labeling, shortcuts, dynamic items, iPadOS/macOS differences, menu bar extras)
+- [Apple HIG Design Standards](apple_hig_design_principles.md) -- 87 standards across 26 sections with implementation specs; outcome/why/what format for frontend agent

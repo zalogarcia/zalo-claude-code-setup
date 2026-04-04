@@ -520,6 +520,27 @@ install_xbar_plugins() {
 }
 
 # ============================================================================
+# Install memory files (design principles, learned patterns)
+# ============================================================================
+
+install_memory() {
+    info "Installing memory files..."
+    local MEM_DIR="$CLAUDE_DIR/projects/-Users-$(whoami)/memory"
+    mkdir -p "$MEM_DIR"
+
+    for mem_file in "$SCRIPT_DIR/memory"/*.md; do
+        [ -f "$mem_file" ] || continue
+        local name=$(basename "$mem_file")
+        if [ ! -f "$MEM_DIR/$name" ]; then
+            cp "$mem_file" "$MEM_DIR/$name"
+            ok "  Memory: $name"
+        else
+            ok "  Memory: $name (already exists, preserved)"
+        fi
+    done
+}
+
+# ============================================================================
 # Main
 # ============================================================================
 
@@ -542,6 +563,7 @@ setup_env_vars
 create_directories
 install_autoloop_dashboard
 install_xbar_plugins
+install_memory
 
 echo ""
 echo "============================================"
