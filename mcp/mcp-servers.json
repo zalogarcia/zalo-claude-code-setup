@@ -17,6 +17,16 @@
       "GITHUB_PERSONAL_ACCESS_TOKEN": "__GITHUB_PAT__"
     }
   },
+  "n8n-api": {
+    "type": "stdio",
+    "command": "node",
+    "args": ["__HOME__/Documents/AI Projects/n8n-zk/n8n-mcp-server/index.js"],
+    "env": {
+      "N8N_HOST": "__N8N_HOST__",
+      "N8N_API_KEY": "__N8N_API_KEY__",
+      "NODE_TLS_REJECT_UNAUTHORIZED": "0"
+    }
+  },
   "supabase": {
     "type": "stdio",
     "command": "npx",

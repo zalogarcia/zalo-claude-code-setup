@@ -3,5 +3,9 @@
   "GITHUB_PAT": "your_github_personal_access_token",
   "SUPABASE_ACCESS_TOKEN": "your_supabase_access_token",
   "CF_ACCOUNT_ID": "your_cloudflare_account_id (optional - for cf-crawl skill)",
-  "CLOUDFLARE_API_TOKEN": "your_cloudflare_api_token (optional - for cf-crawl skill)"
+  "CLOUDFLARE_API_TOKEN": "your_cloudflare_api_token (optional - for cf-crawl skill)",
+  "N8N_HOST": "your_n8n_host_url (optional - for n8n-api MCP)",
+  "N8N_API_KEY": "your_n8n_api_key (optional - for n8n-api MCP)",
+  "TELEGRAM_BOT_TOKEN": "your_telegram_bot_token (optional - for telegram skill)",
+  "TELEGRAM_CHAT_ID": "your_telegram_chat_id (optional - for telegram skill)"
 }

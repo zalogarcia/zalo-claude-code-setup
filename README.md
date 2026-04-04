@@ -6,7 +6,7 @@
 
 > One command to turn Claude Code into a production-grade AI engineering environment.
 
-Custom agents, skills, MCP servers, auto-formatting hooks, and workflow automation — all preconfigured and ready to go.
+Custom agents, skills, commands, MCP servers, auto-formatting hooks, and workflow automation — all preconfigured and ready to go.
 
 ---
 
@@ -57,12 +57,13 @@ The installer will:
 
 1. **Back up** all your existing Claude Code configs to `~/.claude/backups/`
 2. **Copy** agents to `~/.claude/agents/`
-3. **Copy** skills to `~/.claude/skills/` (clones UI/UX Pro Max data from GitHub)
-4. **Install** global `CLAUDE.md` to `~/.claude/`
-5. **Merge** hooks into `~/.claude/settings.json` (preserves your existing hooks)
-6. **Merge** MCP servers into `~/.claude.json` (skips servers you already have)
-7. **Prompt for API keys** — enters them directly into MCP server configs where they're needed
-8. **Create** `~/.claude/settings.local.json` with env var placeholders for Bash tools (if not exists)
+3. **Copy** commands to `~/.claude/commands/` (20+ workflow automations)
+4. **Copy** skills to `~/.claude/skills/` (clones UI/UX Pro Max data from GitHub)
+5. **Install** global `CLAUDE.md` to `~/.claude/`
+6. **Merge** hooks into `~/.claude/settings.json` (preserves your existing hooks)
+7. **Merge** MCP servers into `~/.claude.json` (skips servers you already have)
+8. **Prompt for API keys** — enters them directly into MCP server configs where they're needed
+9. **Create** `~/.claude/settings.local.json` with env var placeholders for Bash tools (if not exists)
 
 Safe to run multiple times — it deduplicates and never overwrites your existing configs.
 
@@ -99,6 +100,19 @@ The installer will prompt you for these during setup. Here's how to get each one
 4. Copy the token
 5. Find your Account ID in the Cloudflare dashboard sidebar
 
+### Telegram Bot Token (optional — for Telegram notifications)
+
+1. Message [@BotFather](https://t.me/BotFather) on Telegram
+2. Send `/newbot` and follow the prompts
+3. Copy the bot token
+4. Send a message to your bot, then call `https://api.telegram.org/bot<TOKEN>/getUpdates` to find your Chat ID
+
+### n8n API Key (optional — for n8n workflow automation)
+
+1. Open your n8n instance settings
+2. Go to API > API Keys
+3. Generate a new key
+
 ### Where Keys End Up
 
 | Key              | Location                                   | Used By                   |
@@ -106,6 +120,8 @@ The installer will prompt you for these during setup. Here's how to get each one
 | GitHub PAT       | `~/.claude.json` > mcpServers.github.env   | GitHub MCP server         |
 | Supabase token   | `~/.claude.json` > mcpServers.supabase.env | Supabase MCP server       |
 | Cloudflare token | `~/.claude/settings.local.json` > env      | cf-crawl skill (via Bash) |
+| Telegram token   | `~/.claude/settings.local.json` > env      | Telegram skill (via Bash) |
+| n8n API key      | `~/.claude.json` > mcpServers.n8n-api.env  | n8n MCP server            |
 
 `~/.claude.json` is local-only and never committed to git. `settings.local.json` is `chmod 600` (owner-only).
 
@@ -117,24 +133,52 @@ Close and reopen Claude Code to pick up all changes.
 
 ## What's Included
 
-### Custom Agents (4)
+### Custom Agents (6)
 
 | Agent                   | What It Does                                                                                                             |
 | ----------------------- | ------------------------------------------------------------------------------------------------------------------------ |
 | **qa-agent**            | Audits code for real, reproducible bugs. Categorizes by severity (critical/high/medium/low). Run it after every feature. |
 | **safe-planner**        | Reads all related code, maps dependencies and risks, produces a rollback-ready plan. Use before any non-trivial change.  |
 | **live-test**           | Opens the app in a real browser via Playwright. Screenshots happy path, edge cases, and 3 responsive breakpoints.        |
-| **frontend-specialist** | Builds production-quality UI — accessible, responsive, performant. Matches your existing codebase conventions.           |
+| **frontend-specialist** | Builds production-quality UI with Aceternity UI and shadcn/ui MCP access. Reads Apple HIG principles before coding.      |
+| **bug-fix**             | Traces the full user flow to find root cause. Reads all related code and crafts a comprehensive fix plan before changes. |
+| **image-craft-expert**  | Crafts optimized prompts and generates images on both Gemini Pro (nano-banana) and ChatGPT (gpt-image-1.5) in parallel.  |
 
-### Skills (3)
+### Commands (20)
+
+Slash commands for workflow automation. Invoke with `/<command-name>`.
+
+| Command                | What It Does                                                                             |
+| ---------------------- | ---------------------------------------------------------------------------------------- |
+| **autoloop**           | Autonomous optimization loop (Karpathy autoresearch pattern) — iteratively improves code |
+| **autotest**           | Autonomous Playwright-based testing harness — systematically tests web apps              |
+| **bug**                | Bug-fix workflow with agent delegation and QA validation                                 |
+| **build-fix**          | Iterative build error detection and fixing                                               |
+| **e2e**                | Generate and run Playwright end-to-end tests                                             |
+| **enhance-audio**      | Audio enhancement using FFmpeg filters (noise removal, normalization)                    |
+| **ghl-upload**         | Upload media to GoHighLevel                                                              |
+| **learn**              | Extract reusable patterns and lessons from the current session into memory               |
+| **nano-banana**        | AI image generation with Gemini (multi-resolution, style transfer, green screen)         |
+| **optimize-video**     | Video optimization and upload to Supabase Storage                                        |
+| **qa-loop**            | Iterative QA loop — finds and fixes bugs until the codebase is clean                     |
+| **redesign**           | UI redesign workflow: brainstorm, mockup generation, implement, visual verification      |
+| **refactor-clean**     | Detect and safely remove dead code, unused dependencies, unnecessary complexity          |
+| **session-save**       | Save session context for continuity across sessions                                      |
+| **split-screen-video** | Create split-screen video from talking-head footage with B-roll and subtitles            |
+| **tdd**                | Strict Test-Driven Development (RED-GREEN-REFACTOR)                                      |
+| **transcribe**         | Audio/video transcription using OpenAI Whisper (99 languages)                            |
+| **view-video**         | Extract frames from video for visual analysis                                            |
+
+### Skills (4)
 
 | Skill               | What It Does                                                                                                                                |
 | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
 | **ui-ux-pro-max**   | Searchable design database: 50 UI styles, 21 color palettes, 50 font pairings, 20 chart types, 8 tech stacks. Invoke with `/ui-ux-pro-max`. |
 | **frontend-design** | Anti-slop aesthetic guidelines. Bold design direction, distinctive typography, no generic AI look. Invoke with `/frontend-design`.          |
 | **cf-crawl**        | Scrape websites via Cloudflare Browser Rendering API. Single page (sync) or multi-page crawl (async). Invoke with `/cf-crawl`.              |
+| **telegram**        | Send messages, files, and images to Telegram via Bot API. Invoke with `/telegram`.                                                          |
 
-### MCP Servers (6)
+### MCP Servers (7)
 
 | Server              | What It Does                                                                                                    |
 | ------------------- | --------------------------------------------------------------------------------------------------------------- |
@@ -144,6 +188,7 @@ Close and reopen Claude Code to pick up all changes.
 | **supabase**        | Manage Supabase projects — run SQL, deploy edge functions, manage migrations. Requires `SUPABASE_ACCESS_TOKEN`. |
 | **qdrant-memory**   | Local semantic search memory. Stores patterns, solutions, and decisions across conversations.                   |
 | **knowledge-graph** | Local structured memory. Stores entity relationships, configs, and facts across conversations.                  |
+| **n8n-api**         | n8n workflow automation API. Trigger workflows, manage executions. Requires `N8N_API_KEY`.                      |
 
 ### Auto-Formatting Hooks
 
@@ -154,16 +199,30 @@ Every time Claude edits a file, it's automatically formatted before you see it:
 | `.ts` `.tsx` `.js` `.jsx` `.css` `.json` `.md` `.html` | **Prettier**                 | `npm install -g prettier` |
 | `.py`                                                  | **Ruff** (format + lint fix) | `pip install ruff`        |
 
+### Vibe Island Integration
+
+Full lifecycle monitoring via hooks — bridges every major event to the Vibe Island notification/telemetry system:
+
+- Session start/end
+- Tool use (pre/post)
+- Permission requests
+- Subagent start/stop
+- Compaction events
+- User prompt submission
+- Stop events
+- Status line display
+
 ### Global CLAUDE.md
 
 Behavioral rules that make Claude Code significantly more effective:
 
 - **Self-learning** — When you correct Claude, it saves the lesson to prevent repeating mistakes
 - **Project init** — Auto-scaffolds `.claude/CLAUDE.md` and `.claude/rules/` for new projects
-- **Frontend auto-chain** — Building UI automatically triggers: design search -> aesthetic guidelines -> specialist agent -> visual verification
+- **Frontend auto-chain** — Building UI automatically triggers: design search -> aesthetic guidelines -> specialist agent (with Aceternity UI + shadcn/ui MCP access + Apple HIG principles) -> visual verification
 - **Verification-first** — Claude proves changes work (build, test, screenshot) instead of saying "this should work"
 - **Context survival** — Plans are written to files so they survive compaction and session transfers
 - **Subagent orchestration** — Complex work is delegated to specialized agents, keeping the main context clean
+- **Persistent memory** — Qdrant (semantic search) + Knowledge Graph (structured facts) survive across conversations
 
 ---
 
@@ -173,7 +232,7 @@ When you ask Claude to build any UI (page, component, dashboard, landing page), 
 
 1. **`/ui-ux-pro-max`** — Searches the design database for the right palette, fonts, and style
 2. **`/frontend-design`** — Applies anti-slop aesthetic principles (no generic Inter + purple gradient)
-3. **`frontend-specialist` agent** — Builds production-quality code (a11y, responsiveness, edge states)
+3. **`frontend-specialist` agent** — Builds production-quality code with Aceternity UI + shadcn/ui component libraries, reads Apple HIG design principles before writing any code
 4. **`live-test` agent** — Opens a browser and screenshots the result for visual verification
 
 No manual invocation needed. Just say "build me a pricing page" and the pipeline runs.
@@ -229,27 +288,55 @@ If a recommended tool is missing, the relevant hook or MCP will silently skip �
 ```
 .
 ├── README.md
-├── install.sh                  # One-command installer (backs up first)
-├── uninstall.sh                # Restore from backup
+├── install.sh                        # One-command installer (backs up first)
+├── uninstall.sh                      # Restore from backup
 ├── claude-md/
-│   └── CLAUDE.md               # Global behavioral instructions
+│   └── CLAUDE.md                     # Global behavioral instructions
 ├── agents/
-│   ├── qa-agent.md             # Bug auditor
-│   ├── safe-planner.md         # Risk-aware planner
-│   ├── live-test.md            # Browser verification
-│   └── frontend-specialist.md  # UI builder
+│   ├── qa-agent.md                   # Bug auditor
+│   ├── safe-planner.md               # Risk-aware planner
+│   ├── live-test.md                  # Browser verification
+│   ├── frontend-specialist.md        # UI builder (Aceternity + shadcn MCPs)
+│   ├── bug-fix.md                    # Root cause tracer
+│   └── image-craft-expert.md         # AI image generation
+├── commands/
+│   ├── autoloop.md                   # Autonomous optimization
+│   ├── autotest.md                   # Autonomous testing
+│   ├── bug.md                        # Bug-fix workflow
+│   ├── build-fix.md                  # Build error fixer
+│   ├── e2e.md                        # E2E test generator
+│   ├── enhance-audio.md              # Audio enhancement
+│   ├── ghl-upload.md                 # GHL media upload
+│   ├── learn.md                      # Pattern extraction
+│   ├── nano-banana.md                # Image generation
+│   ├── optimize-video.md             # Video optimization
+│   ├── qa-loop.md                    # QA iteration loop
+│   ├── redesign.md                   # UI redesign workflow
+│   ├── refactor-clean.md             # Dead code removal
+│   ├── session-save.md               # Session persistence
+│   ├── split-screen-video.md         # Split-screen video
+│   ├── tdd.md                        # Test-driven development
+│   ├── transcribe.md                 # Audio transcription
+│   ├── view-video.md                 # Video frame extraction
+│   ├── autoloop-harness.sh           # Autoloop shell harness
+│   └── split-screen-video-scripts/   # Video processing scripts
+│       ├── build_video.sh
+│       ├── annotate_broll.py
+│       └── generate_subtitles.py
 ├── skills/
 │   ├── ui-ux-pro-max/
-│   │   └── SKILL.md            # Design database (scripts cloned at install)
+│   │   └── SKILL.md                  # Design database
 │   ├── frontend-design/
-│   │   └── SKILL.md            # Anti-slop aesthetics
-│   └── cf-crawl/
-│       └── SKILL.md            # Cloudflare web scraper
+│   │   └── SKILL.md                  # Anti-slop aesthetics
+│   ├── cf-crawl/
+│   │   └── SKILL.md                  # Web scraper
+│   └── telegram/
+│       └── SKILL.md                  # Telegram notifications
 ├── hooks/
-│   └── settings.json           # Prettier + Ruff auto-formatting
+│   └── settings.json                 # Hooks + Vibe Island integration
 └── mcp/
-    ├── mcp-servers.json        # 6 MCP server configs
-    └── env-template.json       # API key placeholders
+    ├── mcp-servers.json              # 7 MCP server configs
+    └── env-template.json             # API key placeholders
 ```
 
 ---

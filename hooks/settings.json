@@ -1,5 +1,32 @@
 {
+  "enabledPlugins": {},
+  "env": {
+    "CLAUDE_CODE_DISABLE_TERMINAL_TITLE": "1"
+  },
   "hooks": {
+    "Notification": [
+      {
+        "hooks": [
+          {
+            "command": "/Users/zalo/.vibe-island/bin/vibe-island-bridge --source claude",
+            "type": "command"
+          }
+        ],
+        "matcher": "*"
+      }
+    ],
+    "PermissionRequest": [
+      {
+        "hooks": [
+          {
+            "command": "/Users/zalo/.vibe-island/bin/vibe-island-bridge --source claude",
+            "timeout": 86400,
+            "type": "command"
+          }
+        ],
+        "matcher": "*"
+      }
+    ],
     "PostToolUse": [
       {
         "matcher": "Edit|Write|MultiEdit",
@@ -20,7 +47,103 @@
             "timeout": 10000
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "command": "/Users/zalo/.vibe-island/bin/vibe-island-bridge --source claude",
+            "type": "command"
+          }
+        ],
+        "matcher": "*"
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "command": "/Users/zalo/.vibe-island/bin/vibe-island-bridge --source claude",
+            "type": "command"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "hooks": [
+          {
+            "command": "/Users/zalo/.vibe-island/bin/vibe-island-bridge --source claude",
+            "type": "command"
+          }
+        ],
+        "matcher": "*"
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "command": "/Users/zalo/.vibe-island/bin/vibe-island-bridge --source claude",
+            "type": "command"
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "command": "/Users/zalo/.vibe-island/bin/vibe-island-bridge --source claude",
+            "type": "command"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "command": "/Users/zalo/.vibe-island/bin/vibe-island-bridge --source claude",
+            "type": "command"
+          }
+        ]
+      }
+    ],
+    "SubagentStart": [
+      {
+        "hooks": [
+          {
+            "command": "/Users/zalo/.vibe-island/bin/vibe-island-bridge --source claude",
+            "type": "command"
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "command": "/Users/zalo/.vibe-island/bin/vibe-island-bridge --source claude",
+            "type": "command"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "command": "/Users/zalo/.vibe-island/bin/vibe-island-bridge --source claude",
+            "type": "command"
+          }
+        ]
       }
     ]
-  }
+  },
+  "skipDangerousModePermissionPrompt": true,
+  "statusLine": {
+    "command": "/Users/zalo/.vibe-island/bin/vibe-island-statusline",
+    "type": "command"
+  },
+  "voiceEnabled": true
 }

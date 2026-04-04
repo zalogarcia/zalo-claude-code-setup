@@ -72,10 +72,10 @@ When the user asks to build, design, or create any frontend UI (page, component,
 
 1. **Design** — Invoke `/ui-ux-pro-max` to get concrete palette, font pairing, and style recommendations for the context
 2. **Create** — Apply `/frontend-design` principles (bold direction, anti-slop aesthetics) while writing the code, using the design database output from step 1
-3. **Build** — Use the `frontend-specialist` agent for production-quality implementation (a11y, responsiveness, edge states)
+3. **Build** — **ALWAYS** use the `frontend-specialist` agent for implementation. It has scoped MCP servers for Aceternity UI and shadcn/ui — never build frontend inline in the main thread. The agent will pull real component docs and examples before writing code. **Before writing any code, the agent must read `~/.claude/projects/-Users-zalo/memory/apple_hig_design_principles.md`** and apply those principles throughout.
 4. **Verify** — Launch `live-test` agent to screenshot and confirm it looks right in the browser
 
-Skip steps that don't apply (e.g., skip step 4 if no dev server is running, skip step 3 for simple single-file components you can build inline).
+Skip steps that don't apply (e.g., skip step 4 if no dev server is running), but **never skip step 3** — all frontend code must go through the `frontend-specialist` agent.
 
 ## When to Use Subagents
 
@@ -87,6 +87,7 @@ Subagents protect the main context window and enable parallelism. Use them delib
 | `qa-agent`            | After implementing a feature or before deployment — audit for real bugs                          |
 | `safe-planner`        | Before complex refactors, migrations, or multi-file changes — map risks first                    |
 | `frontend-specialist` | For building UI components, styling, responsive design, accessibility                            |
+| `image-craft-expert`  | For ALL image generation — produces better prompts than inline                                   |
 | `Explore`             | For broad codebase questions that need multiple searches — keeps exploration out of main context |
 
 **Rules:**

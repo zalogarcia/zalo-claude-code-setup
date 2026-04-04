@@ -79,9 +79,10 @@ backup_configs() {
     [ -f "$SETTINGS_LOCAL" ] && cp "$SETTINGS_LOCAL" "$BACKUP_DIR/settings.local.json.bak"
     [ -f "$CLAUDE_DIR/CLAUDE.md" ] && cp "$CLAUDE_DIR/CLAUDE.md" "$BACKUP_DIR/CLAUDE.md.bak"
 
-    # Backup existing agents/skills
+    # Backup existing agents/skills/commands
     [ -d "$CLAUDE_DIR/agents" ] && cp -r "$CLAUDE_DIR/agents" "$BACKUP_DIR/agents.bak" 2>/dev/null || true
     [ -d "$CLAUDE_DIR/skills" ] && cp -r "$CLAUDE_DIR/skills" "$BACKUP_DIR/skills.bak" 2>/dev/null || true
+    [ -d "$CLAUDE_DIR/commands" ] && cp -r "$CLAUDE_DIR/commands" "$BACKUP_DIR/commands.bak" 2>/dev/null || true
 
     # Mark what existed before install (for clean uninstall on fresh machines)
     touch "$BACKUP_DIR/.manifest"
@@ -91,6 +92,29 @@ backup_configs() {
     [ -f "$CLAUDE_DIR/CLAUDE.md" ] && echo "CLAUDE.md" >> "$BACKUP_DIR/.manifest"
 
     ok "Backup complete"
+}
+
+# ============================================================================
+# Install commands (slash commands)
+# ============================================================================
+
+install_commands() {
+    info "Installing commands..."
+    mkdir -p "$CLAUDE_DIR/commands"
+
+    for cmd_file in "$SCRIPT_DIR/commands"/*.md "$SCRIPT_DIR/commands"/*.sh; do
+        [ -f "$cmd_file" ] || continue
+        local name=$(basename "$cmd_file")
+        cp "$cmd_file" "$CLAUDE_DIR/commands/$name"
+        ok "  Command: $name"
+    done
+
+    # Copy split-screen-video-scripts subdirectory
+    if [ -d "$SCRIPT_DIR/commands/split-screen-video-scripts" ]; then
+        mkdir -p "$CLAUDE_DIR/commands/split-screen-video-scripts"
+        cp -r "$SCRIPT_DIR/commands/split-screen-video-scripts"/* "$CLAUDE_DIR/commands/split-screen-video-scripts/"
+        ok "  Command scripts: split-screen-video-scripts/"
+    fi
 }
 
 # ============================================================================
@@ -298,6 +322,8 @@ servers_str = json.dumps(servers)
 servers_str = servers_str.replace('__HOME__', home)
 servers_str = servers_str.replace('__GITHUB_PAT__', github_pat)
 servers_str = servers_str.replace('__SUPABASE_ACCESS_TOKEN__', supabase_token)
+servers_str = servers_str.replace('__N8N_HOST__', '__N8N_HOST__')
+servers_str = servers_str.replace('__N8N_API_KEY__', '__N8N_API_KEY__')
 servers = json.loads(servers_str)
 
 config = {'mcpServers': servers}
@@ -329,6 +355,8 @@ servers_str = json.dumps(new_servers)
 servers_str = servers_str.replace('__HOME__', home)
 servers_str = servers_str.replace('__GITHUB_PAT__', github_pat)
 servers_str = servers_str.replace('__SUPABASE_ACCESS_TOKEN__', supabase_token)
+servers_str = servers_str.replace('__N8N_HOST__', '__N8N_HOST__')
+servers_str = servers_str.replace('__N8N_API_KEY__', '__N8N_API_KEY__')
 new_servers = json.loads(servers_str)
 
 if 'mcpServers' not in config:
@@ -430,6 +458,7 @@ echo ""
 
 check_prerequisites
 backup_configs
+install_commands
 install_agents
 install_skills
 install_claude_md
@@ -444,11 +473,12 @@ echo -e "  ${GREEN}Installation complete!${NC}"
 echo "============================================"
 echo ""
 echo "What was installed:"
-echo "  - 4 custom agents (qa-agent, safe-planner, live-test, frontend-specialist)"
-echo "  - 3 skills (ui-ux-pro-max, frontend-design, cf-crawl)"
+echo "  - 20 slash commands (autoloop, autotest, bug, build-fix, e2e, and more)"
+echo "  - 6 custom agents (qa-agent, safe-planner, live-test, frontend-specialist, bug-fix, image-craft-expert)"
+echo "  - 4 skills (ui-ux-pro-max, frontend-design, cf-crawl, telegram)"
 echo "  - Global CLAUDE.md with workflow automation"
-echo "  - PostToolUse hooks (Prettier + Ruff auto-formatting)"
-echo "  - 6 MCP servers (context7, playwright, github, supabase, qdrant-memory, knowledge-graph)"
+echo "  - Hooks: PostToolUse formatting (Prettier + Ruff) + Vibe Island bridge (all events)"
+echo "  - 7 MCP servers (context7, playwright, github, n8n-api, supabase, qdrant-memory, knowledge-graph)"
 echo ""
 echo "Next steps:"
 echo "  1. Edit ~/.claude/settings.local.json to add your API keys"
