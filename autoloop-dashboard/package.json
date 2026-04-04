@@ -1,0 +1,12 @@
+{
+  "name": "autoloop-dashboard",
+  "version": "1.0.0",
+  "description": "Menu bar + web dashboard for monitoring autoloop processes",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "playwright": "^1.59.1"
+  }
+}
