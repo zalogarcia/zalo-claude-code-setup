@@ -192,6 +192,10 @@ Slash commands for workflow automation. Invoke with `/<command-name>`.
 
 ### Autoloop Dashboard
 
+<p align="center">
+  <img src="assets/autoloop-infographic.png" alt="Autoloop — Autonomous Code Optimization Loop" width="100%">
+</p>
+
 The autoloop system lets Claude Code run autonomous optimization loops on your codebase — think [Karpathy's autoresearch](https://x.com/karpathy/status/1886192184808149383) but for any project. The `/autoloop` command starts a loop that iteratively improves code against a target metric (test scores, performance, quality) without human intervention.
 
 The **dashboard** is the monitoring and control center for these loops:
