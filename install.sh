@@ -287,14 +287,14 @@ install_mcp_servers() {
         echo ""
         info "GitHub Personal Access Token needed for GitHub MCP server."
         info "Get one at: https://github.com/settings/tokens?type=beta"
-        read -p "  Enter GitHub PAT (or press Enter to skip): " GITHUB_PAT_VAL
+        read -p "  Enter GitHub PAT (or press Enter to skip): " GITHUB_PAT_VAL || GITHUB_PAT_VAL=""
     fi
 
     if [ -z "$SUPABASE_TOKEN_VAL" ] || echo "$SUPABASE_TOKEN_VAL" | grep -q "your_"; then
         echo ""
         info "Supabase Access Token needed for Supabase MCP server."
         info "Get one at: https://supabase.com/dashboard/account/tokens"
-        read -p "  Enter Supabase token (or press Enter to skip): " SUPABASE_TOKEN_VAL
+        read -p "  Enter Supabase token (or press Enter to skip): " SUPABASE_TOKEN_VAL || SUPABASE_TOKEN_VAL=""
     fi
 
     export _CLAUDE_JSON="$CLAUDE_JSON"
@@ -384,12 +384,12 @@ if skipped:
         ok "MCP servers merged into .claude.json"
     fi
 
-    unset _CLAUDE_JSON _MCP_JSON _HOME_DIR _GITHUB_PAT _SUPABASE_TOKEN
-
-    # Warn about placeholder values
-    if [ "$_GITHUB_PAT" = "__GITHUB_PAT__" ] || [ "$_SUPABASE_TOKEN" = "__SUPABASE_ACCESS_TOKEN__" ]; then
+    # Warn about placeholder values (must check before unset due to set -u)
+    if [ "${_GITHUB_PAT:-}" = "__GITHUB_PAT__" ] || [ "${_SUPABASE_TOKEN:-}" = "__SUPABASE_ACCESS_TOKEN__" ]; then
         warn "Some MCP servers have placeholder tokens. Edit ~/.claude.json to add real values."
     fi
+
+    unset _CLAUDE_JSON _MCP_JSON _HOME_DIR _GITHUB_PAT _SUPABASE_TOKEN
 }
 
 # ============================================================================
@@ -491,7 +491,11 @@ install_graphrag() {
         ok "  .env already exists (preserved)"
     fi
 
-    # Install global git post-commit hook
+    # Install global git post-commit hook (backup existing first)
+    if [ -f "$HOME/.git-hooks/post-commit" ]; then
+        cp "$HOME/.git-hooks/post-commit" "$BACKUP_DIR/post-commit.bak"
+        warn "  Existing post-commit hook backed up to $BACKUP_DIR/post-commit.bak"
+    fi
     cp "$SCRIPT_DIR/graphrag/post-commit" "$HOME/.git-hooks/post-commit"
     chmod +x "$HOME/.git-hooks/post-commit"
     ok "  Global post-commit hook installed"
