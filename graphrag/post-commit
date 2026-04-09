@@ -27,7 +27,8 @@ if [ -n "$REPO_DIR" ] && [ -d "$GRAPHRAG_DIR" ]; then
     STORAGE_NAME="storage_$(basename "$REPO_DIR")"
     (
         cd "$GRAPHRAG_DIR"
-        uv run python cli_create.py "$REPO_DIR" "$STORAGE_NAME" >> /tmp/repo-graphrag.log 2>&1
+        # OMP_NUM_THREADS=1 prevents pthread_mutex_init crash on macOS
+        OMP_NUM_THREADS=1 uv run python cli_create.py "$REPO_DIR" "$STORAGE_NAME" >> /tmp/repo-graphrag.log 2>&1 || true
     ) &
 fi
 
