@@ -6,7 +6,7 @@
 
 > One command to turn Claude Code into a production-grade AI engineering environment.
 
-Custom agents, skills, commands, MCP servers, auto-formatting hooks, and workflow automation — all preconfigured and ready to go.
+Custom agents, skills, commands, MCP servers, auto-formatting hooks, agentic RAG, and workflow automation — all preconfigured and ready to go.
 
 ---
 
@@ -42,7 +42,7 @@ Make sure these are installed first:
 | **jq**            | `brew install jq`                                        | Required for hook JSON parsing                    |
 | **Prettier**      | `npm install -g prettier`                                | Auto-formats TS/JS/CSS/JSON/MD/HTML on every edit |
 | **Ruff**          | `pip install ruff`                                       | Auto-formats and lints Python on every edit       |
-| **uv**            | `pip install uv`                                         | Required for Qdrant memory MCP server             |
+| **uv**            | `pip install uv`                                         | Required for Qdrant memory MCP and repo-graphrag  |
 | **Git**           | `brew install git`                                       | Required for cloning UI/UX Pro Max data           |
 
 ### Run the Installer
@@ -57,13 +57,14 @@ The installer will:
 
 1. **Back up** all your existing Claude Code configs to `~/.claude/backups/`
 2. **Copy** agents to `~/.claude/agents/`
-3. **Copy** commands to `~/.claude/commands/` (20+ workflow automations)
+3. **Copy** commands to `~/.claude/commands/` (21 workflow automations)
 4. **Copy** skills to `~/.claude/skills/` (clones UI/UX Pro Max data from GitHub)
 5. **Install** global `CLAUDE.md` to `~/.claude/`
 6. **Merge** hooks into `~/.claude/settings.json` (preserves your existing hooks)
 7. **Merge** MCP servers into `~/.claude.json` (skips servers you already have)
 8. **Prompt for API keys** — enters them directly into MCP server configs where they're needed
 9. **Create** `~/.claude/settings.local.json` with env var placeholders for Bash tools (if not exists)
+10. **Install** repo-graphrag — clones, installs dependencies, configures global git hook for auto-updating code knowledge graphs
 
 Safe to run multiple times — it deduplicates and never overwrites your existing configs.
 
@@ -144,7 +145,7 @@ Close and reopen Claude Code to pick up all changes.
 | **bug-fix**             | Traces the full user flow to find root cause. Reads all related code and crafts a comprehensive fix plan before changes. |
 | **image-craft-expert**  | Crafts optimized prompts and generates images on both Gemini Pro (nano-banana) and ChatGPT (gpt-image-1.5) in parallel.  |
 
-### Commands (20)
+### Commands (21)
 
 Slash commands for workflow automation. Invoke with `/<command-name>`.
 
@@ -168,6 +169,7 @@ Slash commands for workflow automation. Invoke with `/<command-name>`.
 | **tdd**                | Strict Test-Driven Development (RED-GREEN-REFACTOR)                                      |
 | **transcribe**         | Audio/video transcription using OpenAI Whisper (99 languages)                            |
 | **view-video**         | Extract frames from video for visual analysis                                            |
+| **graph**              | Build or rebuild the repo-graphrag knowledge graph for the current project               |
 
 ### Skills (4)
 
@@ -178,7 +180,7 @@ Slash commands for workflow automation. Invoke with `/<command-name>`.
 | **cf-crawl**        | Scrape websites via Cloudflare Browser Rendering API. Single page (sync) or multi-page crawl (async). Invoke with `/cf-crawl`.              |
 | **telegram**        | Send messages, files, and images to Telegram via Bot API. Invoke with `/telegram`.                                                          |
 
-### MCP Servers (7)
+### MCP Servers (8)
 
 | Server              | What It Does                                                                                                    |
 | ------------------- | --------------------------------------------------------------------------------------------------------------- |
@@ -188,7 +190,43 @@ Slash commands for workflow automation. Invoke with `/<command-name>`.
 | **supabase**        | Manage Supabase projects — run SQL, deploy edge functions, manage migrations. Requires `SUPABASE_ACCESS_TOKEN`. |
 | **qdrant-memory**   | Local semantic search memory. Stores patterns, solutions, and decisions across conversations.                   |
 | **knowledge-graph** | Local structured memory. Stores entity relationships, configs, and facts across conversations.                  |
+| **repo-graphrag**   | Code-aware knowledge graph. Uses Tree-sitter + LightRAG for structural code understanding and planning.         |
 | **n8n-api**         | n8n workflow automation API. Trigger workflows, manage executions. Requires `N8N_API_KEY`.                      |
+
+### Agentic RAG — repo-graphrag
+
+Code-aware knowledge graph that gives Claude structural understanding of your codebase — call chains, class hierarchies, cross-file dependencies — not just text search.
+
+**How it works:**
+
+1. **Tree-sitter** parses code into structural entities (classes, functions, methods)
+2. **LightRAG** builds a knowledge graph from those entities + documentation
+3. Claude uses `graph_query` and `graph_plan` to answer architecture questions and plan implementations
+
+**Automatic updates via git hook:**
+
+A global `post-commit` hook (`~/.git-hooks/post-commit`) incrementally updates the graph after every commit. It's smart about when to run:
+
+| Repo size                   | Behavior                  |
+| --------------------------- | ------------------------- |
+| **< 30 code/doc files**     | Skipped (grep is enough)  |
+| **30+ files**               | Auto-enabled              |
+| **Has `.graphrag` file**    | Force enabled (any size)  |
+| **Has `.no-graphrag` file** | Force disabled (any size) |
+
+The hook runs in the background — commits are never blocked. Each repo gets its own storage (`storage_<repo-name>`).
+
+**Manual usage:**
+
+```bash
+# Build/rebuild graph for current project
+claude /graph
+
+# CLI (outside Claude Code)
+cd ~/repo-graphrag-mcp && uv run python cli_create.py /path/to/repo storage_my-repo
+```
+
+**Requires:** Anthropic API key in `~/repo-graphrag-mcp/.env`
 
 ### Autoloop Dashboard
 
@@ -312,7 +350,7 @@ Behavioral rules that make Claude Code significantly more effective:
 - **Verification-first** — Claude proves changes work (build, test, screenshot) instead of saying "this should work"
 - **Context survival** — Plans are written to files so they survive compaction and session transfers
 - **Subagent orchestration** — Complex work is delegated to specialized agents, keeping the main context clean
-- **Persistent memory** — Qdrant (semantic search) + Knowledge Graph (structured facts) survive across conversations
+- **Persistent memory** — Qdrant (semantic search) + Knowledge Graph (structured facts) + repo-graphrag (code structure) survive across conversations
 
 ---
 
@@ -408,6 +446,7 @@ If a recommended tool is missing, the relevant hook or MCP will silently skip �
 │   ├── tdd.md                        # Test-driven development
 │   ├── transcribe.md                 # Audio transcription
 │   ├── view-video.md                 # Video frame extraction
+│   ├── graph.md                      # Build/rebuild code knowledge graph
 │   ├── autoloop-harness.sh           # Autoloop shell harness
 │   └── split-screen-video-scripts/   # Video processing scripts
 │       ├── build_video.sh
@@ -425,8 +464,12 @@ If a recommended tool is missing, the relevant hook or MCP will silently skip �
 ├── hooks/
 │   └── settings.json                 # Hooks + Vibe Island integration
 ├── mcp/
-│   ├── mcp-servers.json              # 7 MCP server configs
+│   ├── mcp-servers.json              # 8 MCP server configs
 │   └── env-template.json             # API key placeholders
+├── graphrag/
+│   ├── cli_create.py                 # CLI wrapper for graph_create (used by git hook)
+│   ├── post-commit                   # Global git hook (auto-updates knowledge graph)
+│   └── env-template                  # Default .env config for repo-graphrag-mcp
 ├── autoloop-dashboard/
 │   ├── server.js                     # Node.js monitoring server (port 7890)
 │   ├── dashboard.html                # Single-file web UI (Mission Control)

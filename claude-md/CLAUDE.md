@@ -118,11 +118,37 @@ When compacting (`/compact`):
 
 Prefer CLI tools (gh, supabase CLI) over MCP for simple one-off operations. MCPs consume context.
 
-## Persistent Memory
+## Persistent Memory & Agentic RAG
 
-Two memory MCPs are active: **Qdrant** (semantic search for patterns, solutions, decisions) and **Knowledge Graph** (structured facts, entity relationships, configs).
+Three memory/RAG MCPs are active:
+
+- **Qdrant** — semantic vector search for patterns, solutions, decisions
+- **Knowledge Graph** — structured facts, entity relationships, configs
+- **repo-graphrag** — code-aware structural knowledge graph (Tree-sitter + LightRAG)
 
 **Goal**: Important non-obvious learnings survive across conversations. Deduplicate before storing. Skip routine edits, info already in docs, and temporary state.
+
+### repo-graphrag Setup
+
+**Graph updates are deterministic via a global git post-commit hook** (`~/.git-hooks/post-commit`).
+
+- **Auto-enabled** for repos with 30+ tracked code/doc files — small repos are skipped automatically
+- **Force enable** a small repo: `touch /path/to/repo/.graphrag`
+- **Force disable** any repo: `touch /path/to/repo/.no-graphrag`
+- **Storage naming**: each repo gets `storage_<repo-dirname>` (e.g., `storage_my-app`)
+- **Hook behavior**: runs `graph_create` incrementally in the background after every commit (non-blocking)
+- **Manual rebuild**: `cd ~/repo-graphrag-mcp && uv run python cli_create.py /path/to/repo [storage_name]`
+- **Logs**: `/tmp/repo-graphrag.log`
+
+### repo-graphrag Auto-Usage
+
+**Do NOT wait to be asked — use repo-graphrag proactively:**
+
+1. **Before implementation planning**: Always use `graph_plan` with `storage_name=storage_<repo-dirname>` to generate structurally-aware plans.
+2. **When answering code questions**: Use `graph_query` before grep/read when the question is about architecture, relationships between components, or "how does X work".
+3. **When the graph doesn't exist yet**: If `graph_query`/`graph_plan` fails because no graph exists, run `graph_create` with `storage_name=storage_<repo-dirname>`, then retry.
+4. **On project init**: If no git hook is installed for the repo, install it: `~/repo-graphrag-mcp/install-hook.sh <repo_path>`
+5. **Skip** for trivial tasks (single-file edits, typo fixes, config changes).
 
 ## Code Quality
 

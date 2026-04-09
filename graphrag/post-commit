@@ -1,0 +1,38 @@
+#!/bin/bash
+# Global post-commit hook: incrementally update repo-graphrag knowledge graph
+# Runs in background so it never blocks your workflow
+#
+# Controls:
+#   .graphrag     in repo root → force enable (even small repos)
+#   .no-graphrag  in repo root → force disable
+#   Otherwise: auto-enable when repo has 30+ tracked code/doc files
+
+GRAPHRAG_DIR="$HOME/repo-graphrag-mcp"
+REPO_DIR="$(git rev-parse --show-toplevel 2>/dev/null)"
+MIN_FILES=30
+
+if [ -n "$REPO_DIR" ] && [ -d "$GRAPHRAG_DIR" ]; then
+
+    # Force disable
+    [ -f "$REPO_DIR/.no-graphrag" ] && exit 0
+
+    # Auto-detect: skip small repos unless force-enabled
+    if [ ! -f "$REPO_DIR/.graphrag" ]; then
+        FILE_COUNT=$(git ls-files -- '*.py' '*.js' '*.ts' '*.tsx' '*.jsx' '*.go' '*.rs' '*.java' '*.rb' '*.c' '*.cpp' '*.h' '*.cs' '*.swift' '*.kt' '*.md' '*.rst' '*.txt' 2>/dev/null | wc -l | tr -d ' ')
+        if [ "$FILE_COUNT" -lt "$MIN_FILES" ]; then
+            exit 0
+        fi
+    fi
+
+    STORAGE_NAME="storage_$(basename "$REPO_DIR")"
+    (
+        cd "$GRAPHRAG_DIR"
+        uv run python cli_create.py "$REPO_DIR" "$STORAGE_NAME" >> /tmp/repo-graphrag.log 2>&1
+    ) &
+fi
+
+# Chain to repo-local post-commit hook if it exists
+LOCAL_HOOK="$(git rev-parse --git-dir 2>/dev/null)/hooks/post-commit.local"
+if [ -x "$LOCAL_HOOK" ]; then
+    exec "$LOCAL_HOOK" "$@"
+fi

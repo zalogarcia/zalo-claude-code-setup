@@ -52,5 +52,11 @@
     "env": {
       "MEMORY_FILE_PATH": "__HOME__/.claude/memory.jsonl"
     }
+  },
+  "repo-graphrag": {
+    "type": "stdio",
+    "command": "uv",
+    "args": ["--directory", "__HOME__/repo-graphrag-mcp", "run", "server.py"],
+    "env": {}
   }
 }
