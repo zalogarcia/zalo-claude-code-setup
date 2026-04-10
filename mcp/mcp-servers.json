@@ -57,6 +57,8 @@
     "type": "stdio",
     "command": "uv",
     "args": ["--directory", "__HOME__/repo-graphrag-mcp", "run", "server.py"],
-    "env": {}
+    "env": {
+      "OMP_NUM_THREADS": "1"
+    }
   }
 }

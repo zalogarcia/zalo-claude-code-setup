@@ -1,8 +1,12 @@
 #!/usr/bin/env python3
 """CLI wrapper to run graph_create outside of MCP (e.g., from git hooks)."""
+import os
+
+# Prevent OpenMP segfault on macOS during cleanup (pthread_mutex_init crash)
+os.environ.setdefault("OMP_NUM_THREADS", "1")
+
 import asyncio
 import sys
-import os
 
 # Load .env from this script's directory
 from dotenv import load_dotenv
