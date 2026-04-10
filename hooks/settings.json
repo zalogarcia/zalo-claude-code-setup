@@ -72,6 +72,16 @@
       {
         "hooks": [
           {
+            "command": "CMD=$(cat | jq -r '.tool_input.command // empty'); if echo \"$CMD\" | grep -qE '^git\\s+push'; then echo '\\n[HOOK BLOCKED] git push requires explicit user approval. Ask the user before pushing.' >&2; exit 2; fi",
+            "timeout": 5000,
+            "type": "command"
+          }
+        ],
+        "matcher": "Bash"
+      },
+      {
+        "hooks": [
+          {
             "command": "/Users/zalo/.vibe-island/bin/vibe-island-bridge --source claude",
             "type": "command"
           }

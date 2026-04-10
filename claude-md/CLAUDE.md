@@ -43,8 +43,27 @@ When starting work on a new project, or when the user asks to initialize/set up 
 - `/e2e` — Generate Playwright end-to-end tests
 - `/learn` — Extract reusable patterns from session into memory
 - `/session-save` — Save session context for cross-session continuity
+- `/ship` — Full feature delivery: plan → implement → QA loop → wait for push approval
+- `/deploy-validate` — Self-healing deployment: pre-deploy QA → deploy → smoke test → validate → wait for prod approval
 
-## Verification (IMPORTANT)
+## Git & Deployment (IMPORTANT)
+
+- **Never push to any remote branch without explicit user permission.** Commit freely, but STOP and ask before `git push`.
+- When the user says "push" — confirm the target branch before executing.
+- Default working branch is `dev` unless the user specifies otherwise.
+- Never force-push to `main` or `dev` without explicit approval.
+- If deploying edge functions or running migrations, ask the user first — these affect shared infrastructure.
+
+## Debugging Protocol
+
+When investigating bugs or errors:
+
+1. **Check live evidence FIRST** — Supabase edge function logs, browser console, server logs. Use `mcp__supabase__get_logs` or CLI before forming hypotheses.
+2. **Never conclude "no error found"** without checking actual runtime logs from the last 5 minutes.
+3. **Trace the full flow** — from user action → frontend → API/edge function → database. Don't guess which layer failed.
+4. If the user says "I just reproduced this" — the bug is real. Skip re-verification and go straight to logs.
+
+## Verification & QA (IMPORTANT)
 
 Always verify your work. This is the single highest-leverage practice:
 
@@ -54,8 +73,16 @@ Always verify your work. This is the single highest-leverage practice:
 - After API changes: curl the endpoint or run the test suite
 - If there's no automated way to verify, tell the user what to check manually
 - Never say "this should work" — prove it works
+- **Before marking any feature or fix complete**, run a full QA loop:
+  1. `npx tsc --noEmit` (typecheck)
+  2. `npm run build` (build)
+  3. Run relevant tests if they exist
+  4. Fix all findings before reporting results
+- **Kill stale background processes** before starting new dev servers or builds (`pkill -f 'next dev' || true`)
 
 ## Default Tech Stack Preferences
+
+Primary stack: **TypeScript/JavaScript (Next.js)**, **Supabase** (Edge Functions, Auth, RLS, Storage, DB), **Vercel** deployment. Always use TypeScript for new files unless explicitly told otherwise.
 
 When the user doesn't specify, default to:
 
@@ -65,6 +92,12 @@ When the user doesn't specify, default to:
 - **Deployment**: Vercel or Supabase hosting
 - **Package manager**: npm
 - **Testing**: Vitest for unit, Playwright for e2e
+
+## Design Principles
+
+- When proposing architecture or UX changes, **present the direct/simple approach first**. Avoid adding unnecessary queues, intermediary steps, or over-engineered patterns unless explicitly requested.
+- For CSS/UI fixes: **audit all style sources** (parent components, layouts, global CSS, Tailwind config) before making changes. Account for specificity, inheritance, and layout conflicts in a single pass — don't iterate blindly.
+- Prefer flat, obvious implementations over abstracted clever ones.
 
 ## Frontend Workflow (Auto-Chain)
 

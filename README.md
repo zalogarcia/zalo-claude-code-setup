@@ -145,12 +145,14 @@ Close and reopen Claude Code to pick up all changes.
 | **bug-fix**             | Traces the full user flow to find root cause. Reads all related code and crafts a comprehensive fix plan before changes. |
 | **image-craft-expert**  | Crafts optimized prompts and generates images on both Gemini Pro (nano-banana) and ChatGPT (gpt-image-1.5) in parallel.  |
 
-### Commands (21)
+### Commands (23)
 
 Slash commands for workflow automation. Invoke with `/<command-name>`.
 
 | Command                | What It Does                                                                             |
 | ---------------------- | ---------------------------------------------------------------------------------------- |
+| **ship**               | Full feature delivery: plan → implement → QA loop → wait for push approval               |
+| **deploy-validate**    | Self-healing deployment: pre-deploy QA → deploy → smoke test → validate → approval gate  |
 | **autoloop**           | Autonomous optimization loop (Karpathy autoresearch pattern) — iteratively improves code |
 | **autotest**           | Autonomous Playwright-based testing harness — systematically tests web apps              |
 | **bug**                | Bug-fix workflow with agent delegation and QA validation                                 |
