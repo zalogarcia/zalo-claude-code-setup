@@ -134,44 +134,46 @@ Close and reopen Claude Code to pick up all changes.
 
 ## What's Included
 
-### Custom Agents (6)
+### Custom Agents (7)
 
-| Agent                   | What It Does                                                                                                             |
-| ----------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| **qa-agent**            | Audits code for real, reproducible bugs. Categorizes by severity (critical/high/medium/low). Run it after every feature. |
-| **safe-planner**        | Reads all related code, maps dependencies and risks, produces a rollback-ready plan. Use before any non-trivial change.  |
-| **live-test**           | Opens the app in a real browser via Playwright. Screenshots happy path, edge cases, and 3 responsive breakpoints.        |
-| **frontend-specialist** | Builds production-quality UI with Aceternity UI and shadcn/ui MCP access. Reads Apple HIG principles before coding.      |
-| **bug-fix**             | Traces the full user flow to find root cause. Reads all related code and crafts a comprehensive fix plan before changes. |
-| **image-craft-expert**  | Crafts optimized prompts and generates images on both Gemini Pro (nano-banana) and ChatGPT (gpt-image-1.5) in parallel.  |
+| Agent                   | What It Does                                                                                                                                                                                |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **qa-agent**            | Audits code for real, reproducible bugs. Categorizes by severity (critical/high/medium/low). Run it after every feature.                                                                    |
+| **safe-planner**        | Reads all related code, maps dependencies and risks, produces a rollback-ready plan. Use before any non-trivial change.                                                                     |
+| **live-test**           | Opens the app in a real browser via Playwright. Screenshots happy path, edge cases, and 3 responsive breakpoints.                                                                           |
+| **frontend-specialist** | Builds production-quality UI with Aceternity UI and shadcn/ui MCP access. Reads Apple HIG principles before coding.                                                                         |
+| **bug-fix**             | Traces the full user flow to find root cause. Reads all related code and crafts a comprehensive fix plan before changes.                                                                    |
+| **image-craft-expert**  | Crafts optimized prompts and generates images on both Gemini Pro (nano-banana) and ChatGPT (gpt-image-1.5) in parallel.                                                                     |
+| **brainstorm**          | Deep-thinking agent that challenges assumptions, eliminates complexity, and stress-tests plans using first principles, Elon Musk's 5-step philosophy, inversion, and second-order thinking. |
 
-### Commands (23)
+### Commands (24)
 
 Slash commands for workflow automation. Invoke with `/<command-name>`.
 
-| Command                | What It Does                                                                             |
-| ---------------------- | ---------------------------------------------------------------------------------------- |
-| **ship**               | Full feature delivery: plan → implement → QA loop → wait for push approval               |
-| **deploy-validate**    | Self-healing deployment: pre-deploy QA → deploy → smoke test → validate → approval gate  |
-| **autoloop**           | Autonomous optimization loop (Karpathy autoresearch pattern) — iteratively improves code |
-| **autotest**           | Autonomous Playwright-based testing harness — systematically tests web apps              |
-| **bug**                | Bug-fix workflow with agent delegation and QA validation                                 |
-| **build-fix**          | Iterative build error detection and fixing                                               |
-| **e2e**                | Generate and run Playwright end-to-end tests                                             |
-| **enhance-audio**      | Audio enhancement using FFmpeg filters (noise removal, normalization)                    |
-| **ghl-upload**         | Upload media to GoHighLevel                                                              |
-| **learn**              | Extract reusable patterns and lessons from the current session into memory               |
-| **nano-banana**        | AI image generation with Gemini (multi-resolution, style transfer, green screen)         |
-| **optimize-video**     | Video optimization and upload to Supabase Storage                                        |
-| **qa-loop**            | Iterative QA loop — finds and fixes bugs until the codebase is clean                     |
-| **redesign**           | UI redesign workflow: brainstorm, mockup generation, implement, visual verification      |
-| **refactor-clean**     | Detect and safely remove dead code, unused dependencies, unnecessary complexity          |
-| **session-save**       | Save session context for continuity across sessions                                      |
-| **split-screen-video** | Create split-screen video from talking-head footage with B-roll and subtitles            |
-| **tdd**                | Strict Test-Driven Development (RED-GREEN-REFACTOR)                                      |
-| **transcribe**         | Audio/video transcription using OpenAI Whisper (99 languages)                            |
-| **view-video**         | Extract frames from video for visual analysis                                            |
-| **graph**              | Build or rebuild the repo-graphrag knowledge graph for the current project               |
+| Command                | What It Does                                                                                           |
+| ---------------------- | ------------------------------------------------------------------------------------------------------ |
+| **ship**               | Full feature delivery: plan → implement → QA loop → wait for push approval                             |
+| **deploy-validate**    | Self-healing deployment: pre-deploy QA → deploy → smoke test → validate → approval gate                |
+| **autoloop**           | Autonomous optimization loop (Karpathy autoresearch pattern) — iteratively improves code               |
+| **autotest**           | Autonomous Playwright-based testing harness — systematically tests web apps                            |
+| **bug**                | Bug-fix workflow with agent delegation and QA validation                                               |
+| **build-fix**          | Iterative build error detection and fixing                                                             |
+| **e2e**                | Generate and run Playwright end-to-end tests                                                           |
+| **enhance-audio**      | Audio enhancement using FFmpeg filters (noise removal, normalization)                                  |
+| **ghl-upload**         | Upload media to GoHighLevel                                                                            |
+| **learn**              | Extract reusable patterns and lessons from the current session into memory                             |
+| **nano-banana**        | AI image generation with Gemini (multi-resolution, style transfer, green screen)                       |
+| **optimize-video**     | Video optimization and upload to Supabase Storage                                                      |
+| **qa-loop**            | Iterative QA loop — finds and fixes bugs until the codebase is clean                                   |
+| **redesign**           | UI redesign workflow: brainstorm, mockup generation, implement, visual verification                    |
+| **refactor-clean**     | Detect and safely remove dead code, unused dependencies, unnecessary complexity                        |
+| **session-save**       | Save session context for continuity across sessions                                                    |
+| **split-screen-video** | Create split-screen video from talking-head footage with B-roll and subtitles                          |
+| **tdd**                | Strict Test-Driven Development (RED-GREEN-REFACTOR)                                                    |
+| **transcribe**         | Audio/video transcription using OpenAI Whisper (99 languages)                                          |
+| **view-video**         | Extract frames from video for visual analysis                                                          |
+| **brainstorm**         | Deep-analyze a problem, plan, or decision with first principles, inversion, and structured elimination |
+| **graph**              | Build or rebuild the repo-graphrag knowledge graph for the current project                             |
 
 ### Skills (4)
 
@@ -428,7 +430,8 @@ If a recommended tool is missing, the relevant hook or MCP will silently skip �
 │   ├── live-test.md                  # Browser verification
 │   ├── frontend-specialist.md        # UI builder (Aceternity + shadcn MCPs)
 │   ├── bug-fix.md                    # Root cause tracer
-│   └── image-craft-expert.md         # AI image generation
+│   ├── image-craft-expert.md         # AI image generation
+│   └── brainstorm.md                 # Deep-thinking problem analyzer
 ├── commands/
 │   ├── autoloop.md                   # Autonomous optimization
 │   ├── autotest.md                   # Autonomous testing
@@ -448,6 +451,7 @@ If a recommended tool is missing, the relevant hook or MCP will silently skip �
 │   ├── tdd.md                        # Test-driven development
 │   ├── transcribe.md                 # Audio transcription
 │   ├── view-video.md                 # Video frame extraction
+│   ├── brainstorm.md                 # Deep-analyze problems and plans
 │   ├── graph.md                      # Build/rebuild code knowledge graph
 │   ├── autoloop-harness.sh           # Autoloop shell harness
 │   └── split-screen-video-scripts/   # Video processing scripts
