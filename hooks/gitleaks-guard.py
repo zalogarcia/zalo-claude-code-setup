@@ -15,6 +15,11 @@ import subprocess
 import sys
 
 
+_GIT_VALUE_OPTS = {
+    "-C", "-c", "--git-dir", "--work-tree", "--namespace", "--super-prefix",
+}
+
+
 def parses_to_git_subcommand(cmd: str, sub: str) -> bool:
     for sep in ("&&", "||", ";", "|"):
         cmd = cmd.replace(sep, "\n")
@@ -26,16 +31,31 @@ def parses_to_git_subcommand(cmd: str, sub: str) -> bool:
             tokens = shlex.split(line, comments=False, posix=True)
         except ValueError:
             continue
-        i = 0
-        while i < len(tokens):
-            tok = tokens[i]
-            if tok == "git" or tok.endswith("/git"):
-                j = i + 1
-                while j < len(tokens) and tokens[j].startswith("-"):
-                    j += 1
-                if j < len(tokens) and tokens[j] == sub:
-                    return True
-            i += 1
+        if not tokens:
+            continue
+        # Allow a leading `eval` / `exec` wrapper; otherwise only treat token 0
+        # as the command position so pathspecs like `git log -- git commit` are
+        # not misread.
+        start = 0
+        while start < len(tokens) and tokens[start] in ("eval", "exec"):
+            start += 1
+        if start >= len(tokens):
+            continue
+        cmd_tok = tokens[start]
+        if cmd_tok != "git" and not cmd_tok.endswith("/git"):
+            continue
+        j = start + 1
+        while j < len(tokens):
+            t = tokens[j]
+            if t in _GIT_VALUE_OPTS:
+                j += 2  # skip flag and its separate value
+                continue
+            if t.startswith("-"):
+                j += 1  # flag with no separate value (or --key=value form)
+                continue
+            break
+        if j < len(tokens) and tokens[j] == sub:
+            return True
     return False
 
 
