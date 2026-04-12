@@ -472,7 +472,8 @@ If a recommended tool is missing, the relevant hook or MCP will silently skip �
 ├── hooks/
 │   ├── settings.json                 # Hooks + Vibe Island integration
 │   ├── continue-if-incomplete.py     # Stop hook: nudge Claude if it halts mid-task
-│   └── reset-stop-counter.sh         # UserPromptSubmit hook: reset nudge counter
+│   ├── reset-stop-counter.sh         # UserPromptSubmit hook: reset nudge counter
+│   └── gitleaks-guard.py             # PreToolUse hook: block git commit/push if gitleaks finds secrets
 ├── mcp/
 │   ├── mcp-servers.json              # 8 MCP server configs
 │   └── env-template.json             # API key placeholders

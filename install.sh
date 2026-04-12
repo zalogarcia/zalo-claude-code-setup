@@ -213,7 +213,7 @@ install_hooks() {
 
     # Copy hook scripts (referenced by settings.json) into ~/.claude/hooks/
     mkdir -p "$CLAUDE_DIR/hooks"
-    for script in continue-if-incomplete.py reset-stop-counter.sh; do
+    for script in continue-if-incomplete.py reset-stop-counter.sh gitleaks-guard.py; do
         if [ -f "$SCRIPT_DIR/hooks/$script" ]; then
             cp "$SCRIPT_DIR/hooks/$script" "$CLAUDE_DIR/hooks/$script"
             chmod +x "$CLAUDE_DIR/hooks/$script"

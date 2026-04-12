@@ -76,6 +76,16 @@
             "command": "/Users/zalo/.vibe-island/bin/vibe-island-bridge --source claude"
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 /Users/zalo/.claude/hooks/gitleaks-guard.py",
+            "timeout": 30
+          }
+        ],
+        "matcher": "Bash"
       }
     ],
     "SessionEnd": [
