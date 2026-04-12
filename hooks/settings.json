@@ -1,30 +1,29 @@
 {
-  "enabledPlugins": {},
   "env": {
     "CLAUDE_CODE_DISABLE_TERMINAL_TITLE": "1"
   },
   "hooks": {
     "Notification": [
       {
+        "matcher": "*",
         "hooks": [
           {
-            "command": "/Users/zalo/.vibe-island/bin/vibe-island-bridge --source claude",
-            "type": "command"
+            "type": "command",
+            "command": "/Users/zalo/.vibe-island/bin/vibe-island-bridge --source claude"
           }
-        ],
-        "matcher": "*"
+        ]
       }
     ],
     "PermissionRequest": [
       {
+        "matcher": "*",
         "hooks": [
           {
+            "type": "command",
             "command": "/Users/zalo/.vibe-island/bin/vibe-island-bridge --source claude",
-            "timeout": 86400,
-            "type": "command"
+            "timeout": 86400
           }
-        ],
-        "matcher": "*"
+        ]
       }
     ],
     "PostToolUse": [
@@ -49,42 +48,42 @@
         ]
       },
       {
+        "matcher": "*",
         "hooks": [
           {
-            "command": "/Users/zalo/.vibe-island/bin/vibe-island-bridge --source claude",
-            "type": "command"
+            "type": "command",
+            "command": "/Users/zalo/.vibe-island/bin/vibe-island-bridge --source claude"
           }
-        ],
-        "matcher": "*"
+        ]
       }
     ],
     "PreCompact": [
       {
         "hooks": [
           {
-            "command": "/Users/zalo/.vibe-island/bin/vibe-island-bridge --source claude",
-            "type": "command"
+            "type": "command",
+            "command": "/Users/zalo/.vibe-island/bin/vibe-island-bridge --source claude"
           }
         ]
       }
     ],
     "PreToolUse": [
       {
+        "matcher": "*",
         "hooks": [
           {
-            "command": "/Users/zalo/.vibe-island/bin/vibe-island-bridge --source claude",
-            "type": "command"
+            "type": "command",
+            "command": "/Users/zalo/.vibe-island/bin/vibe-island-bridge --source claude"
           }
-        ],
-        "matcher": "*"
+        ]
       }
     ],
     "SessionEnd": [
       {
         "hooks": [
           {
-            "command": "/Users/zalo/.vibe-island/bin/vibe-island-bridge --source claude",
-            "type": "command"
+            "type": "command",
+            "command": "/Users/zalo/.vibe-island/bin/vibe-island-bridge --source claude"
           }
         ]
       }
@@ -93,8 +92,8 @@
       {
         "hooks": [
           {
-            "command": "/Users/zalo/.vibe-island/bin/vibe-island-bridge --source claude",
-            "type": "command"
+            "type": "command",
+            "command": "/Users/zalo/.vibe-island/bin/vibe-island-bridge --source claude"
           }
         ]
       }
@@ -103,8 +102,13 @@
       {
         "hooks": [
           {
-            "command": "/Users/zalo/.vibe-island/bin/vibe-island-bridge --source claude",
-            "type": "command"
+            "type": "command",
+            "command": "/Users/zalo/.vibe-island/bin/vibe-island-bridge --source claude"
+          },
+          {
+            "type": "command",
+            "command": "python3 /Users/zalo/.claude/hooks/continue-if-incomplete.py",
+            "timeout": 10
           }
         ]
       }
@@ -113,8 +117,8 @@
       {
         "hooks": [
           {
-            "command": "/Users/zalo/.vibe-island/bin/vibe-island-bridge --source claude",
-            "type": "command"
+            "type": "command",
+            "command": "/Users/zalo/.vibe-island/bin/vibe-island-bridge --source claude"
           }
         ]
       }
@@ -123,8 +127,8 @@
       {
         "hooks": [
           {
-            "command": "/Users/zalo/.vibe-island/bin/vibe-island-bridge --source claude",
-            "type": "command"
+            "type": "command",
+            "command": "/Users/zalo/.vibe-island/bin/vibe-island-bridge --source claude"
           }
         ]
       }
@@ -133,17 +137,23 @@
       {
         "hooks": [
           {
-            "command": "/Users/zalo/.vibe-island/bin/vibe-island-bridge --source claude",
-            "type": "command"
+            "type": "command",
+            "command": "/Users/zalo/.vibe-island/bin/vibe-island-bridge --source claude"
+          },
+          {
+            "type": "command",
+            "command": "/Users/zalo/.claude/hooks/reset-stop-counter.sh",
+            "timeout": 5
           }
         ]
       }
     ]
   },
-  "skipDangerousModePermissionPrompt": true,
   "statusLine": {
-    "command": "/Users/zalo/.vibe-island/bin/vibe-island-statusline",
-    "type": "command"
+    "type": "command",
+    "command": "/Users/zalo/.vibe-island/bin/vibe-island-statusline"
   },
-  "voiceEnabled": true
+  "enabledPlugins": {},
+  "voiceEnabled": true,
+  "skipDangerousModePermissionPrompt": true
 }

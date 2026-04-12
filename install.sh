@@ -211,6 +211,15 @@ install_claude_md() {
 install_hooks() {
     info "Installing hooks into settings.json..."
 
+    # Copy hook scripts (referenced by settings.json) into ~/.claude/hooks/
+    mkdir -p "$CLAUDE_DIR/hooks"
+    for script in continue-if-incomplete.py reset-stop-counter.sh; do
+        if [ -f "$SCRIPT_DIR/hooks/$script" ]; then
+            cp "$SCRIPT_DIR/hooks/$script" "$CLAUDE_DIR/hooks/$script"
+            chmod +x "$CLAUDE_DIR/hooks/$script"
+        fi
+    done
+
     if [ ! -f "$SETTINGS_JSON" ]; then
         # No existing settings — just copy ours
         cp "$SCRIPT_DIR/hooks/settings.json" "$SETTINGS_JSON"

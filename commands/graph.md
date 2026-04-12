@@ -12,4 +12,4 @@ Usage: /graph [repo_path]
    - `read_dir_path`: the repo path
    - `storage_name`: the derived storage name
 3. Report the result — how many files were processed, whether it was a fresh build or incremental update
-4. If `graph_create` fails, fall back to the CLI: `cd ~/repo-graphrag-mcp && uv run python cli_create.py <repo_path> <storage_name>`
+4. If `graph_create` fails, fall back to the CLI: `cd ~/repo-graphrag-mcp && uv run cli_create.py <repo_path> <storage_name>`

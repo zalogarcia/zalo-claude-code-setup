@@ -465,10 +465,14 @@ If a recommended tool is missing, the relevant hook or MCP will silently skip �
 │   │   └── SKILL.md                  # Anti-slop aesthetics
 │   ├── cf-crawl/
 │   │   └── SKILL.md                  # Web scraper
+│   ├── multi-edit/
+│   │   └── SKILL.md                  # Heavyweight planning path for refactors/migrations
 │   └── telegram/
 │       └── SKILL.md                  # Telegram notifications
 ├── hooks/
-│   └── settings.json                 # Hooks + Vibe Island integration
+│   ├── settings.json                 # Hooks + Vibe Island integration
+│   ├── continue-if-incomplete.py     # Stop hook: nudge Claude if it halts mid-task
+│   └── reset-stop-counter.sh         # UserPromptSubmit hook: reset nudge counter
 ├── mcp/
 │   ├── mcp-servers.json              # 8 MCP server configs
 │   └── env-template.json             # API key placeholders
