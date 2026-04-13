@@ -3,3 +3,4 @@
 *.local.json
 settings.local.json
 *.jsonl
+__pycache__/

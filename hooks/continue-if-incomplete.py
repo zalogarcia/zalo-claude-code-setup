@@ -55,10 +55,16 @@ COMPLETION_LEXICAL = re.compile(
 )
 
 
-def read_last_assistant_text(transcript_path: str) -> str:
+def read_last_assistant_entry(transcript_path: str) -> tuple[str, str | None]:
+    """Return (text, trailing_block_type) from the FINAL assistant entry only.
+
+    trailing_block_type is the `type` of the last content block ("text",
+    "tool_use", etc.) or None if unavailable. This lets callers detect turns
+    that ended mid-action with a tool call and no summary text.
+    """
     if not transcript_path or not os.path.exists(transcript_path):
-        return ""
-    last_text = ""
+        return "", None
+    last_entry = None
     try:
         with open(transcript_path, "r", encoding="utf-8", errors="replace") as f:
             for line in f:
@@ -69,26 +75,33 @@ def read_last_assistant_text(transcript_path: str) -> str:
                     entry = json.loads(line)
                 except json.JSONDecodeError:
                     continue
-                if entry.get("type") != "assistant":
-                    continue
-                msg = entry.get("message")
-                if not isinstance(msg, dict):
-                    continue
-                content = msg.get("content")
-                if isinstance(content, str):
-                    last_text = content
-                elif isinstance(content, list):
-                    parts = [
-                        c.get("text", "")
-                        for c in content
-                        if isinstance(c, dict) and c.get("type") == "text"
-                    ]
-                    joined = "".join(parts).strip()
-                    if joined:
-                        last_text = joined
+                if entry.get("type") == "assistant":
+                    last_entry = entry
     except OSError:
-        return ""
-    return last_text
+        return "", None
+
+    if not last_entry:
+        return "", None
+    msg = last_entry.get("message")
+    if not isinstance(msg, dict):
+        return "", None
+    content = msg.get("content")
+    if isinstance(content, str):
+        return content, "text"
+    if not isinstance(content, list):
+        return "", None
+
+    text_parts: list[str] = []
+    trailing: str | None = None
+    for c in content:
+        if not isinstance(c, dict):
+            continue
+        t = c.get("type")
+        if t:
+            trailing = t
+        if t == "text":
+            text_parts.append(c.get("text", ""))
+    return "".join(text_parts).strip(), trailing
 
 
 def last_sentence(text: str) -> str:
@@ -103,7 +116,10 @@ def last_sentence(text: str) -> str:
     return ""
 
 
-def is_incomplete(text: str) -> tuple[bool, str]:
+def is_incomplete(text: str, trailing_block: str | None) -> tuple[bool, str]:
+    if trailing_block and trailing_block != "text":
+        return True, f"turn ended on {trailing_block} block with no follow-up text"
+
     if not text:
         return False, ""
     stripped = text.rstrip()
@@ -176,8 +192,17 @@ def main() -> int:
     if get_counter(session_id) >= MAX_NUDGES:
         return 0
 
-    text = read_last_assistant_text(transcript_path)
-    incomplete, why = is_incomplete(text)
+    text, trailing = read_last_assistant_entry(transcript_path)
+    # Transcript flush race guard: Claude Code writes each content block as its
+    # own JSONL entry, and the final text block can land up to a few hundred
+    # milliseconds after the Stop event. Retry a few times before trusting a
+    # non-text trailing block.
+    retries = 0
+    while trailing and trailing != "text" and retries < 4:
+        time.sleep(0.25)
+        text, trailing = read_last_assistant_entry(transcript_path)
+        retries += 1
+    incomplete, why = is_incomplete(text, trailing)
     if not incomplete:
         return 0
 
