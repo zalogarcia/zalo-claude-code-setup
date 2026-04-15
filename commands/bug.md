@@ -1,69 +1,78 @@
-Trace, diagnose, and fix a bug using the bug-fix agent, then validate with a QA loop.
+# /bug — Trace, Diagnose, Fix, Validate
 
-## Instructions
+Trace the full flow → identify root cause → fix narrowly → QA. Built around the `bug-fix` agent's 4-phase systematic debugging.
+
+## Authoritative Rules
+
+@~/.claude/rules/agent-contracts.md
+@~/.claude/rules/problem-solving.md
+@~/.claude/rules/gates.md
+@~/.claude/rules/verification-patterns.md
+
+## Workflow
 
 ### Step 1: Gather Context
 
-Ask the user to describe the bug:
+Ask the user:
 
-- What is the expected behavior?
-- What is the actual behavior?
-- Steps to reproduce (if known)
-- Any relevant error messages or logs
+- Expected behavior?
+- Actual behavior?
+- Steps to reproduce (if known)?
+- Relevant errors or logs?
 
-If the user already provided this information in the conversation, skip asking and proceed.
+If the user already provided this, skip and proceed.
 
-### Step 2: Launch Bug-Fix Agent
+If the user said "I just reproduced this" → the bug is real. Skip re-verification per `~/.claude/CLAUDE.md` Debugging Protocol — go straight to logs.
 
-Run a `bug-fix` subagent with a detailed prompt that includes:
+### Step 2: Dispatch `bug-fix`
+
+Pass:
 
 - The bug description and reproduction steps from Step 1
-- The working directory and any relevant file paths mentioned by the user
-- Instructions to trace the full user flow, read all related code, identify the root cause, and produce a comprehensive fix plan
+- Working directory + relevant file paths
+- Instruction to follow the 4-phase debugging in `~/.claude/agents/bug-fix.md`
+- Instruction to check live logs first if Supabase/infrastructure is involved (`mcp__supabase__get_logs`)
 
-The bug-fix agent will:
+Wait for one of:
 
-1. Read all related code and trace the flow
-2. Identify the root cause
-3. Produce a fix plan with specific file and line changes
+- `## ROOT CAUSE FOUND` — proceed to Step 3.
+- `## INVESTIGATION INCOMPLETE` — present competing hypotheses to user, ask which lead to pursue, re-dispatch with that lead.
+- `## BLOCKED` — investigate the block (missing access, can't repro, etc.) and provide the missing context.
 
-### Step 3: Review and Clarify
+### Step 3: 3+ Fixes Rule (Architecture Gate)
 
-Review the bug-fix agent's findings. If the root cause is ambiguous or the fix could go multiple ways:
+If `bug-fix` reports it has already attempted 3+ failed fixes:
 
-- Present the diagnosis to the user
-- Ask which approach they prefer before proceeding
+- **STOP fixing.**
+- Apply `~/.claude/rules/problem-solving.md` 3+ Fixes Rule: question the architecture, not the fix.
+- Dispatch `brainstorm` to challenge the assumption that the bug is where you've been looking.
 
-If the diagnosis is clear and the fix is straightforward, proceed directly.
+### Step 4: Review with User
 
-### Step 4: Apply the Fix
+If root cause is clear and fix is narrow → proceed.
+If root cause has alternatives → present diagnosis + options, wait for user choice.
 
-Implement the changes identified by the bug-fix agent:
+### Step 5: Apply the Fix
 
-- Apply minimal, targeted fixes — do not refactor surrounding code
-- Do not add unrelated improvements
-- Run the build/typecheck command after applying changes to verify they compile
+- Minimal, targeted changes only.
+- No surrounding refactor, no "while we're here" cleanup.
+- Run build/typecheck after applying — verify it compiles.
 
-### Step 5: Run QA Loop
+### Step 6: QA Loop
 
-Invoke the `/qa-loop` skill to validate the fix:
+Invoke `/qa-loop` to validate the fix and catch any regressions introduced by the fix itself.
 
-- This will audit the changed files for any regressions or new bugs introduced by the fix
-- It will iterate until the code is clean or report remaining issues
+### Step 7: Report
 
-### Step 6: Report
+- **Root cause:** what was wrong and why (file:line)
+- **Fix applied:** what changed
+- **QA result:** clean or remaining issues
+- **How to verify manually:** steps the user can take to confirm
 
-Summarize to the user:
+## Anti-Patterns (will not do)
 
-- **Root cause**: what was wrong and why
-- **Fix applied**: what changed (files and lines)
-- **QA result**: clean or any remaining issues
-- **How to verify**: manual steps the user can take to confirm the fix
-
-### Guardrails
-
-- **Never fix more than the reported bug** — stay focused on the issue
-- **Never refactor or improve surrounding code** while fixing the bug
-- **If the root cause is unclear after investigation**, stop and ask the user — don't guess
-- **Always run build/typecheck** after applying the fix, before QA
-- **If the QA loop finds regressions from the fix**, address them before reporting done
+- Patch the symptom without finding the root cause.
+- Refactor surrounding code "while in there."
+- Fix unrelated bugs found along the way (report them; don't auto-fix).
+- Continue trying fixes after the 3+ Fixes Rule fires.
+- Claim "fix verified" without running the verification command in this turn.

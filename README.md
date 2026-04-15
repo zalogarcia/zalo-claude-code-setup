@@ -184,6 +184,38 @@ Slash commands for workflow automation. Invoke with `/<command-name>`.
 | **cf-crawl**        | Scrape websites via Cloudflare Browser Rendering API. Single page (sync) or multi-page crawl (async). Invoke with `/cf-crawl`.              |
 | **telegram**        | Send messages, files, and images to Telegram via Bot API. Invoke with `/telegram`.                                                          |
 
+### Shared Rules (11)
+
+Authoritative reference docs at `~/.claude/rules/`. Commands and agents `@`-include them; the main thread reads them when the situation applies. Built from the best of `gsd-build/get-shit-done` + `obra/superpowers`.
+
+| Rule                         | What It Governs                                                                                 |
+| ---------------------------- | ----------------------------------------------------------------------------------------------- |
+| **agent-contracts.md**       | H2 completion markers + DONE / DONE_WITH_CONCERNS / NEEDS_CONTEXT / BLOCKED status protocol     |
+| **gates.md**                 | 4 workflow gate types (pre-flight / revision / escalation / abort) + 5-step Verification Gate   |
+| **checkpoints.md**           | Human-in-loop XML schema (`checkpoint:human-verify` / `:decision` / `:human-action`)            |
+| **verification-patterns.md** | "Existence ≠ Implementation" — stub-detection greps + wiring checks                             |
+| **anti-patterns.md**         | Universal failure modes (placeholders, silent partial completion, drift) + No-Placeholders list |
+| **questioning.md**           | Dream-extraction philosophy for requirements gathering                                          |
+| **context-budget.md**        | PEAK / GOOD / DEGRADING / POOR tier behaviors + degradation warning signs                       |
+| **persuasion-principles.md** | Cialdini-derived patterns for writing rules that actually get followed                          |
+| **when-to-parallelize.md**   | 4-criteria decision rule for parallel agent dispatch                                            |
+| **problem-solving.md**       | When-stuck dispatch table (inversion / simplification / meta-pattern) + 3+ Fixes Rule           |
+| **git-safety.md**            | Staging discipline, pre-op checks, destructive-op approval                                      |
+
+### Meta-Rule (Session-Start Re-injection)
+
+`~/.claude/META_RULE.md` is automatically re-injected at every `startup`, `/clear`, and `/compact` via the `session-start.sh` hook. It names the available primitives (subagents, slash commands, skills, shared rules) and the discipline for routing work — so the orchestrator never forgets the system's shape. Edit freely; the hook reads it fresh each time.
+
+### Agent Prompt Templates (3)
+
+Reusable subagent dispatch templates at `~/.claude/agents/templates/` (from `obra/superpowers` two-stage review pattern):
+
+| Template                            | Used By                                                                   |
+| ----------------------------------- | ------------------------------------------------------------------------- |
+| **implementer-prompt.md**           | Standard fresh-context implementation dispatch with H2 marker integration |
+| **spec-reviewer-prompt.md**         | Stage 1 of two-stage review — verifies spec compliance only               |
+| **code-quality-reviewer-prompt.md** | Stage 2 of two-stage review — ship-it judgment with severity buckets      |
+
 ### MCP Servers (8)
 
 | Server              | What It Does                                                                                                    |

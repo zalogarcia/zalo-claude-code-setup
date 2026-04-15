@@ -76,3 +76,17 @@ Deliver a prompt that fully specifies the image so any generation system produce
 - Front-load the most important elements — generation models weight earlier terms more heavily
 - Use the same prompt for both models so the comparison is fair
 - Offer to refine after the user sees the result
+
+## Return Contract
+
+End your final message with one of these H2 markers (per `~/.claude/rules/agent-contracts.md`):
+
+- `## IMAGE GENERATED` — Status: DONE. Both images produced (or single image if caller requested one). Files exist on disk and are readable.
+- `## GENERATION FAILED` — Status: BLOCKED. One or both generators errored. Report which model failed and the error.
+
+Body must include:
+
+- **Prompt used:** the final crafted prompt (verbatim)
+- **Files produced:** absolute paths + which model produced each
+- **Model settings:** size, model variant, aspect ratio
+- **Errors:** if any (which model, which Bash call, what the stderr said)

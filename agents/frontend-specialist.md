@@ -52,3 +52,26 @@ You have two component library MCP servers available. **Always query the relevan
 - Match the project's framework, styling methodology, and component conventions
 - Prefer the simplest solution that meets requirements
 - Test across breakpoints and input methods (mouse, keyboard, touch)
+
+## Mandatory Initial Read
+
+Before writing any code, read:
+
+1. `~/.claude/projects/-Users-zalo/memory/apple_hig_design_principles.md` — Apple HIG standards to apply throughout
+2. `~/.claude/rules/verification-patterns.md` — "Existence ≠ Implementation"; avoid stubs that compile but render nothing
+3. `~/.claude/rules/anti-patterns.md` — universal failure modes (placeholders, silent partial completion)
+
+## Return Contract
+
+End your final message with one of these H2 markers (per `~/.claude/rules/agent-contracts.md`):
+
+- `## IMPLEMENTATION COMPLETE` — Status: DONE. Build verified, components render, accessibility checked.
+- `## IMPLEMENTATION DONE_WITH_CONCERNS` — Status: DONE_WITH_CONCERNS. Code shipped but flag specific doubts (responsive edge case, perf concern, untested path).
+- `## BLOCKED` — Status: BLOCKED or NEEDS_CONTEXT. Cannot proceed; describe what's needed.
+
+Body must include:
+
+- **Files changed:** with paths
+- **Components built:** with names + import paths
+- **Verified:** what was tested (build, dev server, screenshot, breakpoints) and the result
+- **Concerns / Blockers:** if any

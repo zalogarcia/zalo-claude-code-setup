@@ -54,6 +54,24 @@ When starting work on a new project, or when the user asks to initialize/set up 
 - Never force-push to `main` or `dev` without explicit approval.
 - If deploying edge functions or running migrations, ask the user first — these affect shared infrastructure.
 
+## Shared Rules (Authoritative)
+
+The meta-rule injected at every session boundary (`~/.claude/META_RULE.md`) names the primitives in this setup. Detailed reference docs live in `~/.claude/rules/` and are `@`-included by commands and agents that depend on them. You should also read them directly when an applicable situation arises.
+
+| Rule                                       | Use When                                                                                                 |
+| ------------------------------------------ | -------------------------------------------------------------------------------------------------------- |
+| `~/.claude/rules/agent-contracts.md`       | Dispatching or interpreting subagents — H2 markers + DONE / DONE_WITH_CONCERNS / NEEDS_CONTEXT / BLOCKED |
+| `~/.claude/rules/gates.md`                 | 4 workflow gate types + the 5-step Verification Gate Function for "is it really done?"                   |
+| `~/.claude/rules/checkpoints.md`           | Inserting human-verify / decision / human-action checkpoints in a long workflow                          |
+| `~/.claude/rules/verification-patterns.md` | "Existence ≠ Implementation" — stub-detect greps + wiring checks                                         |
+| `~/.claude/rules/anti-patterns.md`         | Universal failure modes (placeholders, silent partial completion, drift)                                 |
+| `~/.claude/rules/questioning.md`           | Surfacing the real problem behind the presented one (dream extraction)                                   |
+| `~/.claude/rules/context-budget.md`        | PEAK / GOOD / DEGRADING / POOR tier behaviors + degradation warning signs                                |
+| `~/.claude/rules/persuasion-principles.md` | Authoring or revising rules in `~/.claude/rules/` or this file                                           |
+| `~/.claude/rules/when-to-parallelize.md`   | Deciding whether to dispatch agents in parallel vs. sequential                                           |
+| `~/.claude/rules/problem-solving.md`       | When stuck — symptom-to-technique dispatch table + 3+ Fixes Rule                                         |
+| `~/.claude/rules/git-safety.md`            | Any git operation — staging, pre-op checks, destructive-op approval                                      |
+
 ## Debugging Protocol
 
 When investigating bugs or errors:
@@ -62,23 +80,26 @@ When investigating bugs or errors:
 2. **Never conclude "no error found"** without checking actual runtime logs from the last 5 minutes.
 3. **Trace the full flow** — from user action → frontend → API/edge function → database. Don't guess which layer failed.
 4. If the user says "I just reproduced this" — the bug is real. Skip re-verification and go straight to logs.
+5. Apply the 4-phase systematic debugging in `~/.claude/agents/bug-fix.md` (Understand symptom → Trace backward → Identify root cause → STOP at 3 failed fixes).
+6. When stuck, consult `~/.claude/rules/problem-solving.md` — symptom-to-technique dispatch table (inversion, simplification, root-cause tracing).
 
 ## Verification & QA (IMPORTANT)
 
-Always verify your work. This is the single highest-leverage practice:
+Always verify your work. This is the single highest-leverage practice. Apply the **Verification Gate Function** in `~/.claude/rules/gates.md` Part 2 — every claim of "done" requires a fresh command, captured output, and reported evidence in the same turn.
 
 - After writing code: run the build/lint/typecheck command
 - After fixing a bug: run the relevant test or reproduce the fix
 - After frontend changes: take a screenshot or check the browser if Playwright is available
 - After API changes: curl the endpoint or run the test suite
 - If there's no automated way to verify, tell the user what to check manually
-- Never say "this should work" — prove it works
+- Never say "this should work" — prove it works (per the Iron Law in `~/.claude/rules/gates.md`)
 - **Before marking any feature or fix complete**, run a full QA loop:
   1. `npx tsc --noEmit` (typecheck)
   2. `npm run build` (build)
   3. Run relevant tests if they exist
   4. Fix all findings before reporting results
 - **Kill stale background processes** before starting new dev servers or builds (`pkill -f 'next dev' || true`)
+- For "did I really build it?" doubt, apply `~/.claude/rules/verification-patterns.md` — Existence ≠ Implementation; use the stub-detect greps.
 
 ## Default Tech Stack Preferences
 

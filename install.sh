@@ -79,10 +79,12 @@ backup_configs() {
     [ -f "$SETTINGS_LOCAL" ] && cp "$SETTINGS_LOCAL" "$BACKUP_DIR/settings.local.json.bak"
     [ -f "$CLAUDE_DIR/CLAUDE.md" ] && cp "$CLAUDE_DIR/CLAUDE.md" "$BACKUP_DIR/CLAUDE.md.bak"
 
-    # Backup existing agents/skills/commands
+    # Backup existing agents/skills/commands/rules
     [ -d "$CLAUDE_DIR/agents" ] && cp -r "$CLAUDE_DIR/agents" "$BACKUP_DIR/agents.bak" 2>/dev/null || true
     [ -d "$CLAUDE_DIR/skills" ] && cp -r "$CLAUDE_DIR/skills" "$BACKUP_DIR/skills.bak" 2>/dev/null || true
     [ -d "$CLAUDE_DIR/commands" ] && cp -r "$CLAUDE_DIR/commands" "$BACKUP_DIR/commands.bak" 2>/dev/null || true
+    [ -d "$CLAUDE_DIR/rules" ] && cp -r "$CLAUDE_DIR/rules" "$BACKUP_DIR/rules.bak" 2>/dev/null || true
+    [ -f "$CLAUDE_DIR/META_RULE.md" ] && cp "$CLAUDE_DIR/META_RULE.md" "$BACKUP_DIR/META_RULE.md.bak" 2>/dev/null || true
 
     # Mark what existed before install (for clean uninstall on fresh machines)
     touch "$BACKUP_DIR/.manifest"
@@ -131,6 +133,42 @@ install_agents() {
         cp "$agent_file" "$CLAUDE_DIR/agents/$name"
         ok "  Agent: $name"
     done
+
+    # Install subagent prompt templates (implementer / spec-reviewer / code-quality-reviewer)
+    if [ -d "$SCRIPT_DIR/agents/templates" ]; then
+        mkdir -p "$CLAUDE_DIR/agents/templates"
+        cp "$SCRIPT_DIR/agents/templates"/*.md "$CLAUDE_DIR/agents/templates/" 2>/dev/null || true
+        ok "  Agent templates: $(ls "$SCRIPT_DIR/agents/templates"/*.md 2>/dev/null | wc -l | tr -d ' ') files"
+    fi
+}
+
+# ============================================================================
+# Install rules (shared reference docs @-included by commands and agents)
+# ============================================================================
+
+install_rules() {
+    info "Installing rules..."
+    mkdir -p "$CLAUDE_DIR/rules"
+
+    for rule_file in "$SCRIPT_DIR/rules"/*.md; do
+        [ -f "$rule_file" ] || continue
+        local name=$(basename "$rule_file")
+        cp "$rule_file" "$CLAUDE_DIR/rules/$name"
+        ok "  Rule: $name"
+    done
+}
+
+# ============================================================================
+# Install META_RULE.md (re-injected by SessionStart hook)
+# ============================================================================
+
+install_meta_rule() {
+    info "Installing META_RULE.md..."
+
+    if [ -f "$SCRIPT_DIR/META_RULE.md" ]; then
+        cp "$SCRIPT_DIR/META_RULE.md" "$CLAUDE_DIR/META_RULE.md"
+        ok "META_RULE.md installed"
+    fi
 }
 
 # ============================================================================
@@ -213,7 +251,7 @@ install_hooks() {
 
     # Copy hook scripts (referenced by settings.json) into ~/.claude/hooks/
     mkdir -p "$CLAUDE_DIR/hooks"
-    for script in continue-if-incomplete.py reset-stop-counter.sh gitleaks-guard.py; do
+    for script in continue-if-incomplete.py reset-stop-counter.sh gitleaks-guard.py session-start.sh; do
         if [ -f "$SCRIPT_DIR/hooks/$script" ]; then
             cp "$SCRIPT_DIR/hooks/$script" "$CLAUDE_DIR/hooks/$script"
             chmod +x "$CLAUDE_DIR/hooks/$script"
@@ -639,6 +677,8 @@ backup_configs
 install_commands
 install_agents
 install_skills
+install_rules
+install_meta_rule
 install_claude_md
 install_hooks
 install_mcp_servers

@@ -78,14 +78,14 @@
         ]
       },
       {
+        "matcher": "Bash",
         "hooks": [
           {
             "type": "command",
             "command": "python3 /Users/zalo/.claude/hooks/gitleaks-guard.py",
             "timeout": 30
           }
-        ],
-        "matcher": "Bash"
+        ]
       }
     ],
     "SessionEnd": [
@@ -104,6 +104,11 @@
           {
             "type": "command",
             "command": "/Users/zalo/.vibe-island/bin/vibe-island-bridge --source claude"
+          },
+          {
+            "type": "command",
+            "command": "/Users/zalo/.claude/hooks/session-start.sh",
+            "timeout": 5
           }
         ]
       }
@@ -164,6 +169,7 @@
     "command": "/Users/zalo/.vibe-island/bin/vibe-island-statusline"
   },
   "enabledPlugins": {},
-  "voiceEnabled": true,
-  "skipDangerousModePermissionPrompt": true
+  "effortLevel": "high",
+  "skipDangerousModePermissionPrompt": true,
+  "voiceEnabled": true
 }

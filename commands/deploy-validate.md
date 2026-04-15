@@ -1,53 +1,100 @@
-# /deploy-validate - Self-Healing Deployment
+# /deploy-validate — Self-Healing Deployment Pipeline
 
-You are executing a deployment validation pipeline. Every check must pass before proceeding to production.
+Pre-deploy QA → deploy to staging → smoke test → log audit → human-action checkpoint for production.
 
-## Pre-Deploy Gate
+## Authoritative Rules
 
-1. **Run full QA** — typecheck, build, and test must all pass:
+@~/.claude/rules/agent-contracts.md
+@~/.claude/rules/gates.md
+@~/.claude/rules/checkpoints.md
+@~/.claude/rules/git-safety.md
+
+## Pre-Deploy Gate (Abort Gate)
+
+This is an Abort Gate per `~/.claude/rules/gates.md` Part 1. If anything below fails, **abort** — do NOT proceed to deploy.
+
+1. Run full QA — apply `~/.claude/rules/gates.md` Part 2 Verification Gate Function:
    - `npx tsc --noEmit`
    - `npm run build`
-   - Run test suite if it exists
-   - If ANY check fails: fix it, re-run, do NOT proceed until green
+   - Test suite if it exists
+2. `git status` must be clean. Commit or stash anything outstanding (per `~/.claude/rules/git-safety.md`).
 
-2. **Check for uncommitted changes** — `git status` must be clean. Commit or stash anything outstanding.
+If any check fails → fix it, re-run, do NOT proceed until green.
 
 ## Deploy to Staging
 
-3. **Deploy edge functions** to Supabase:
-   - Use `supabase functions deploy` for each changed function
-   - Check deployment output for errors
-
-4. **Smoke test each endpoint**:
-   - Curl each deployed edge function with test payloads
-   - Validate response shapes match expected TypeScript types
-   - Check HTTP status codes (expect 200/201 for success paths)
-
-5. **Check logs for errors**:
-   - Use `mcp__supabase__get_logs` or `supabase functions logs` to check the last 60 seconds
-   - Flag any errors, warnings, or unexpected patterns
-
-6. **Validate environment & config**:
-   - Confirm all required env vars are set in Supabase dashboard/config
-   - Verify JWT/auth configuration is correct
-   - Check that any new DB migrations have been applied
+3. Deploy edge functions: `supabase functions deploy <name>` for each changed function. Capture deployment output.
+4. Smoke test each endpoint:
+   - Curl with realistic test payloads
+   - Validate response shape matches expected TypeScript types
+   - Check HTTP status codes
+5. Check logs for errors:
+   - `mcp__supabase__get_logs` for the last 60 seconds
+   - Flag any errors, warnings, unexpected patterns
+6. Validate environment & config:
+   - Required env vars set
+   - JWT/auth configuration correct
+   - New DB migrations applied
 
 ## Decision Point
 
-7. **If ANY check failed**:
-   - Report the failure with root cause analysis
-   - Suggest a specific fix
+7. If ANY staging check failed:
+   - Report failure with root cause
+   - Suggest specific fix
    - Do NOT proceed to production
    - Offer to fix and re-run
 
-8. **If ALL checks passed**:
-   - Present a deployment summary: what changed, what was tested, all green results
-   - Ask user: "All checks passed. Deploy to production?"
-   - **STOP and wait for explicit approval**
+8. If ALL checks passed → proceed to Human-Action Checkpoint.
 
-## Rules
+## Production Deploy — Human-Action Checkpoint
 
-- Never deploy to production without explicit user approval
-- Retry transient failures (network timeouts, rate limits) up to 3 times before reporting failure
-- If a rollback is needed, present the rollback steps clearly before executing
-- Log everything — the user should be able to audit what was checked and what passed
+This is a `checkpoint:human-action` per `~/.claude/rules/checkpoints.md`. The deploy itself touches shared infrastructure — the human must approve and authorize.
+
+```xml
+<checkpoint type="human-action">
+  <context>
+    All pre-deploy + staging checks passed. Ready to deploy to production.
+  </context>
+  <summary>
+    [What changed, what was tested, all green results — be specific]
+  </summary>
+  <ask>
+    "All checks passed. Deploy to production? Type 'deploy' to confirm."
+  </ask>
+  <on-confirm>
+    Run production deploy commands.
+    Re-run smoke tests against production.
+    Re-check logs against production.
+  </on-confirm>
+  <on-deny>
+    Hold. Report what would have been deployed. End session.
+  </on-deny>
+</checkpoint>
+```
+
+**Never default to deploy.** If user response is ambiguous, default to Hold.
+
+## Post-Deploy Verification (Verification Gate Function)
+
+After production deploy:
+
+1. Smoke test production endpoints (same payloads as staging).
+2. Check production logs for errors in the next 2 minutes.
+3. Report: deployed functions, smoke test results, log clean/issues.
+
+## Rollback Plan
+
+If post-deploy verification shows errors:
+
+- Present rollback steps clearly **before** executing.
+- Wait for user confirmation.
+- For Supabase edge functions: redeploy the previous version (`supabase functions deploy <name> --import-map <previous>`).
+- For migrations: present manual revert SQL — do not auto-revert migrations.
+
+## Anti-Patterns (will not do)
+
+- Deploy to production without explicit user typing "deploy".
+- Auto-revert migrations (irreversible by default — needs human review).
+- Skip the staging smoke test ("the build passed").
+- Retry transient failures more than 3 times before reporting.
+- Continue to production if any staging check is yellow ("probably fine").
