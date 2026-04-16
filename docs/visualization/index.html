@@ -37,7 +37,7 @@
 -->
 
     <script type="application/json" id="graph-data">
-{"meta":{"generatedAt":"2026-04-16T22:59:57.597Z","repo":"zalo-claude-code-setup"},"nodes":[{"id":"meta.META_RULE","kind":"meta","label":"META_RULE.md","path":"META_RULE.md","summary":"Re-injected on every `startup`, `/clear`, and `/compact`. Edit this file freely — the `session-start.sh` hook reads it fresh each time."},{"id":"meta.CLAUDE","kind":"meta","label":"CLAUDE.md","path":"claude-md/CLAUDE.md","summary":"When the user corrects you, says \"no\", \"wrong\", \"don't do that\", \"stop\", or otherwise indicates you made a mistake:"},{"id":"meta.orchestrator","kind":"meta","label":"Main Thread (Orchestrator)","path":"","summary":"The main conversation thread. Routes requests, reads rules, dispatches fresh-context subagents, and owns the user relationship. Never does heavy lifting itself."},{"id":"rule.agent-contracts","kind":"rule","label":"agent-contracts","path":"rules/agent-contracts.md","summary":"Completion markers and return contract for `~/.claude/agents/`. Skills/orchestrators detect agent completion by regex-matching these H2 markers in the agent's final output."},{"id":"rule.anti-patterns","kind":"rule","label":"anti-patterns","path":"rules/anti-patterns.md","summary":"Behavioral rules that apply regardless of project. Drawn from both gsd-build/get-shit-done universal anti-patterns and obra/superpowers writing-plans \"No Placeholders\" list."},{"id":"rule.checkpoints","kind":"rule","label":"checkpoints","path":"rules/checkpoints.md","summary":"Adapted from gsd-build/get-shit-done. When an orchestrator needs human input, emit a **readable markdown checkpoint block** and **stop** — do not continue past the gate."},{"id":"rule.context-budget","kind":"rule","label":"context-budget","path":"rules/context-budget.md","summary":"Adapted from gsd-build/get-shit-done `references/context-budget.md`. Use this to self-regulate context usage and to recognize degradation before it becomes catastrophic."},{"id":"rule.gates","kind":"rule","label":"gates","path":"rules/gates.md","summary":"Two distinct kinds of gates: **workflow gates** (when to advance/loop/stop in a multi-step orchestration) and the **Verification Gate Function** (when an agent claims a task is done)."},{"id":"rule.git-safety","kind":"rule","label":"git-safety","path":"rules/git-safety.md","summary":"Combined from obra/superpowers `using-git-worktrees` and gsd-build/get-shit-done universal anti-patterns."},{"id":"rule.persuasion-principles","kind":"rule","label":"persuasion-principles","path":"rules/persuasion-principles.md","summary":"Adapted from obra/superpowers `writing-skills/persuasion-principles.md`. Reference when authoring or revising files in `~/.claude/rules/`, `~/.claude/CLAUDE.md`, agent definitions, or skill bodies."},{"id":"rule.problem-solving","kind":"rule","label":"problem-solving","path":"rules/problem-solving.md","summary":"Adapted from obra/superpowers-skills `problem-solving/when-stuck`. When you (or a subagent) feel stuck, name the symptom and pick the matching technique. Don't keep retrying the same approach."},{"id":"rule.questioning","kind":"rule","label":"questioning","path":"rules/questioning.md","summary":"Adapted from gsd-build/get-shit-done `references/questioning.md`. Use this when eliciting requirements, brainstorming, or any \"what do you actually want?\" conversation."},{"id":"rule.verification-patterns","kind":"rule","label":"verification-patterns","path":"rules/verification-patterns.md","summary":"The defining principle for `qa-agent`, `live-test`, and any \"is it actually done?\" check."},{"id":"rule.when-to-parallelize","kind":"rule","label":"when-to-parallelize","path":"rules/when-to-parallelize.md","summary":"Adapted from obra/superpowers `dispatching-parallel-agents`. Claude Code's `Agent` tool runs multiple invocations concurrently when called in a single message — use this rule to decide when that's appropriate."},{"id":"command.autoloop","kind":"command","label":"/autoloop","path":"commands/autoloop.md","summary":"Autonomous optimization loop that iteratively improves code until it meets a target metric. Based on Karpathy's autoresearch architecture: hypothesis -> modify -> test -> commit/revert.","includes":[],"dispatches":["agent.live-test","agent.qa-agent"]},{"id":"command.autoloop-harness","kind":"command","label":"/autoloop-harness","path":"commands/autoloop-harness.sh","summary":"set -euo pipefail","includes":[],"dispatches":[]},{"id":"command.autotest","kind":"command","label":"/autotest","path":"commands/autotest.md","summary":"Autonomous live testing agent that systematically tests a web application via Playwright. Reads a briefing for the test plan (URL, credentials, test cases) and executes each test, recording pass/fail results. Reusable across any web app.","includes":[],"dispatches":[]},{"id":"command.brainstorm","kind":"command","label":"/brainstorm","path":"commands/brainstorm.md","summary":"Dispatch the `brainstorm` agent to apply first principles, inversion, and second-order thinking. Surfaces the real problem, not just the presented one.","includes":["rule.agent-contracts","rule.questioning","rule.problem-solving"],"dispatches":["agent.brainstorm"]},{"id":"command.bug","kind":"command","label":"/bug","path":"commands/bug.md","summary":"Trace the full flow → identify root cause → fix narrowly → QA. Built around the `bug-fix` agent's 4-phase systematic debugging.","includes":["rule.agent-contracts","rule.problem-solving","rule.gates","rule.verification-patterns"],"dispatches":["agent.bug-fix","agent.brainstorm"]},{"id":"command.build-fix","kind":"command","label":"/build-fix","path":"commands/build-fix.md","summary":"Detect and fix build errors iteratively with guardrails.","includes":[],"dispatches":[]},{"id":"command.deploy-validate","kind":"command","label":"/deploy-validate","path":"commands/deploy-validate.md","summary":"Pre-deploy QA → deploy to staging → smoke test → log audit → human-action checkpoint for production.","includes":["rule.agent-contracts","rule.gates","rule.checkpoints","rule.git-safety"],"dispatches":[]},{"id":"command.e2e","kind":"command","label":"/e2e","path":"commands/e2e.md","summary":"Generate and run end-to-end tests using Playwright.","includes":[],"dispatches":[]},{"id":"command.enhance-audio","kind":"command","label":"/enhance-audio","path":"commands/enhance-audio.md","summary":"Enhance and clean up audio in video/audio files using FFmpeg filters. Removes noise, normalizes volume, and improves speech clarity.","includes":[],"dispatches":[]},{"id":"command.ghl-upload","kind":"command","label":"/ghl-upload","path":"commands/ghl-upload.md","summary":"Upload files to GoHighLevel's media library via API.","includes":[],"dispatches":[]},{"id":"command.graph","kind":"command","label":"/graph","path":"commands/graph.md","summary":"Build or rebuild the repo-graphrag knowledge graph for the current project.","includes":[],"dispatches":[]},{"id":"command.learn","kind":"command","label":"/learn","path":"commands/learn.md","summary":"Extract reusable patterns and lessons from the current session and save them to memory.","includes":[],"dispatches":[]},{"id":"command.nano-banana","kind":"command","label":"/nano-banana","path":"commands/nano-banana.md","summary":"Generates AI images using the nano-banana CLI (Gemini 3.1 Flash default, Pro available). Handles multi-resolution (512-4K), aspect ratios, reference images for style transfer, green screen workflow for transparent assets, cost tracking, and exact dimension control. Use when asked to \"generate an image\", \"create a sprite\", \"make an asset\", \"generate artwork\", or any image generation task for UI mockups, game assets, videos, or marketing materials.","includes":[],"dispatches":[]},{"id":"command.optimize-video","kind":"command","label":"/optimize-video","path":"commands/optimize-video.md","summary":"Process and upload optimized videos to Supabase Storage with faststart + compression.","includes":[],"dispatches":[]},{"id":"command.qa-loop","kind":"command","label":"/qa-loop","path":"commands/qa-loop.md","summary":"Revision Gate that converges on a clean state. Iterates `qa-agent` audits + minimal fixes until no real bugs remain.","includes":["rule.agent-contracts","rule.gates","rule.verification-patterns","rule.anti-patterns"],"dispatches":["agent.qa-agent"]},{"id":"command.redesign","kind":"command","label":"/redesign","path":"commands/redesign.md","summary":"Redesign an existing UI through collaborative brainstorming, mockup generation, implementation, and visual verification.","includes":[],"dispatches":["agent.brainstorm","agent.live-test","agent.frontend-specialist","agent.image-craft-expert"]},{"id":"command.refactor-clean","kind":"command","label":"/refactor-clean","path":"commands/refactor-clean.md","summary":"Detect and safely remove dead code, unused dependencies, and unnecessary complexity.","includes":[],"dispatches":[]},{"id":"command.session-save","kind":"command","label":"/session-save","path":"commands/session-save.md","summary":"Save the current session context to a file for continuity across sessions.","includes":[],"dispatches":[]},{"id":"command.ship","kind":"command","label":"/ship","path":"commands/ship.md","summary":"Plan → implement → QA → wait for explicit push approval. The orchestrator owns sequencing; subagents do the work.","includes":["rule.agent-contracts","rule.gates","rule.anti-patterns","rule.checkpoints"],"dispatches":["agent.safe-planner","agent.frontend-specialist","agent.live-test","agent.qa-agent"]},{"id":"command.split-screen-video","kind":"command","label":"/split-screen-video","path":"commands/split-screen-video.md","summary":"Create a polished split-screen video from raw talking-head footage. Top half = B-roll images with annotations, bottom half = zoomed presenter. Includes yellow subtitle bars, enhanced audio, and 1.2x speed.","includes":[],"dispatches":[]},{"id":"command.tdd","kind":"command","label":"/tdd","path":"commands/tdd.md","summary":"Strict RED → GREEN → REFACTOR. Adapted from obra/superpowers `test-driven-development`.","includes":["rule.gates","rule.anti-patterns","rule.verification-patterns"],"dispatches":[]},{"id":"command.transcribe","kind":"command","label":"/transcribe","path":"commands/transcribe.md","summary":"Transcribe audio/video files using OpenAI Whisper. Supports 99 languages with automatic detection.","includes":[],"dispatches":[]},{"id":"command.view-video","kind":"command","label":"/view-video","path":"commands/view-video.md","summary":"Extract frames from a video using ffmpeg so Claude can visually analyze the content.","includes":[],"dispatches":[]},{"id":"agent.brainstorm","kind":"agent","label":"brainstorm","path":"agents/brainstorm.md","summary":"Deep-thinking agent that prevents expensive mistakes by challenging assumptions, eliminating complexity, and stress-testing ideas before committing. Applies first principles, Elon Musk's 5-step philosophy, inversion, and second-order thinking. Use for any problem, plan, architecture decision, or strategy that deserves rigorous thought before action. <example>user: 'I need to figure out the best architecture for our real-time notification system' assistant: 'I'll use the brainstorm agent to break this down from first principles and challenge our assumptions.'</example>","markers":["## EXPLORATION COMPLETE"],"includes":[]},{"id":"agent.bug-fix","kind":"agent","label":"bug-fix","path":"agents/bug-fix.md","summary":"Trace the full user flow to find the root cause of a bug. Reads all related code and crafts a comprehensive fix plan before making changes. Use when something is broken and you need a thorough diagnosis. <example>user: 'Users are getting logged out randomly after checkout' assistant: 'I'll use the bug-fix agent to trace the full flow and find the root cause.'</example>","markers":["## ROOT CAUSE FOUND","## INVESTIGATION INCOMPLETE","## BLOCKED"],"includes":[]},{"id":"agent.frontend-specialist","kind":"agent","label":"frontend-specialist","path":"agents/frontend-specialist.md","summary":"Builds and optimizes frontend UI — components, styling, responsiveness, accessibility, and performance. Use for any client-side development task. <example>user: 'I need to build a mobile-friendly navigation bar that collapses on smaller screens' assistant: 'I'll use the frontend-specialist agent to create a responsive navigation component.'</example>","markers":["## IMPLEMENTATION COMPLETE","## IMPLEMENTATION DONE_WITH_CONCERNS","## BLOCKED"],"includes":[]},{"id":"agent.image-craft-expert","kind":"agent","label":"image-craft-expert","path":"agents/image-craft-expert.md","summary":"Crafts optimized text-to-image prompts and generates images using Gemini (nano-banana) and/or ChatGPT (gpt-image-1.5). Use for any image generation task. <example>user: 'Create an image of a fantasy castle at sunset' assistant: 'I'll use the image-craft-expert to craft a detailed generation prompt.'</example>","markers":["## IMAGE GENERATED","## GENERATION FAILED"],"includes":[]},{"id":"agent.live-test","kind":"agent","label":"live-test","path":"agents/live-test.md","summary":"Visually verifies code changes work in the browser using Playwright. Use after implementing features, fixing bugs, or making UI changes to confirm they work as intended before shipping. <example>user: 'I just added the new pricing page, can you verify it looks right?' assistant: 'I'll use the live-test agent to open the app in the browser and verify the pricing page.'</example>","markers":["## UI VERIFIED","## UI ISSUES FOUND","## BLOCKED"],"includes":[]},{"id":"agent.qa-agent","kind":"agent","label":"qa-agent","path":"agents/qa-agent.md","summary":"Audits recent code changes for real, reproducible bugs. Use after implementing features, before deployments, or when asked to stress test, verify, or audit code. <example>user: 'I just finished the checkout flow, can you stress test it?' assistant: 'I'll use the qa-agent to find any real bugs in the checkout implementation.'</example>","markers":["## VERIFICATION PASSED","## ISSUES FOUND","## BLOCKED"],"includes":[]},{"id":"agent.safe-planner","kind":"agent","label":"safe-planner","path":"agents/safe-planner.md","summary":"Plans implementation changes safely by reading all related code, mapping dependencies, identifying risks, and producing a rollback-ready plan for approval. Use before features, refactors, migrations, or any non-trivial changes. <example>user: 'I need to add Stripe webhooks to our checkout flow' assistant: 'I'll use the safe-planner agent to map dependencies and create a safe implementation plan before we touch anything.'</example>","markers":["## PLAN READY","## NEEDS DECISION","## BLOCKED"],"includes":[]},{"id":"agent-template.code-quality-reviewer-prompt","kind":"agent-template","label":"code-quality-reviewer-prompt","path":"agents/templates/code-quality-reviewer-prompt.md","summary":"Source: obra/superpowers `subagent-driven-development/code-quality-reviewer-prompt.md`. Use this template for **stage 2** of two-stage review, after spec-compliance has passed. This is the \"would I approve this PR?\" pass.","includes":[]},{"id":"agent-template.implementer-prompt","kind":"agent-template","label":"implementer-prompt","path":"agents/templates/implementer-prompt.md","summary":"Source: obra/superpowers `subagent-driven-development/implementer-prompt.md`. Use this template when dispatching a subagent to implement a discrete task. Fill in `[bracketed]` slots with concrete content — never paste this template verbatim with placeholders intact.","includes":[]},{"id":"agent-template.spec-reviewer-prompt","kind":"agent-template","label":"spec-reviewer-prompt","path":"agents/templates/spec-reviewer-prompt.md","summary":"Source: obra/superpowers `subagent-driven-development/spec-reviewer-prompt.md`. Use this template when dispatching the **first stage** of two-stage review (spec compliance, before code quality). Pair with `code-quality-reviewer-prompt.md`.","includes":[]},{"id":"skill.cf-crawl","kind":"skill","label":"cf-crawl","path":"skills/cf-crawl","summary":"Crawl websites using Cloudflare Browser Rendering API. Use when the user wants to scrape, crawl, or extract content from a website (single page or multi-page). Returns HTML, Markdown, or structured JSON."},{"id":"skill.frontend-design","kind":"skill","label":"frontend-design","path":"skills/frontend-design","summary":"Create distinctive, production-grade frontend interfaces with high design quality. Use this skill when the user asks to build web components, pages, or applications. Generates creative, polished code that avoids generic AI aesthetics."},{"id":"skill.multi-edit","kind":"skill","label":"multi-edit","path":"skills/multi-edit","summary":"Heavyweight planning path for refactors, renames, migrations, and cross-module changes that are hard to roll back. Runs safe-planner, optionally brainstorm, then blocks on human approval before any edit. Triggers on \"refactor\", \"rename across\", \"migrate\", \"restructure\", \"move X out of\", \"extract into shared\", or any change that crosses module boundaries. Not for new features (use /ship) or single-file fixes."},{"id":"skill.telegram","kind":"skill","label":"telegram","path":"skills/telegram","summary":"Send messages, files, images, or documents to the user via their Telegram bot. Use when the user asks to send something to Telegram, notify them, or share content via Telegram."},{"id":"skill.ui-ux-pro-max","kind":"skill","label":"ui-ux-pro-max","path":"skills/ui-ux-pro-max","summary":"UI/UX design intelligence. 50 styles, 21 palettes, 50 font pairings, 20 charts, 8 stacks (React, Next.js, Vue, Svelte, SwiftUI, React Native, Flutter, Tailwind). Actions: plan, build, create, design, implement, review, fix, improve, optimize, enhance, refactor, check UI/UX code. Projects: website, landing page, dashboard, admin panel, e-commerce, SaaS, portfolio, blog, mobile app, .html, .tsx, .vue, .svelte. Elements: button, modal, navbar, sidebar, card, table, form, chart. Styles: glassmorphism, claymorphism, minimalism, brutalism, neumorphism, bento grid, dark mode, responsive, skeuomorphism, flat design. Topics: color palette, accessibility, animation, layout, typography, font pairing, spacing, hover, shadow, gradient."},{"id":"mcp.context7","kind":"mcp","label":"context7","path":"mcp/mcp-servers.json","summary":"HTTP endpoint: https://mcp.context7.com/mcp","transport":"http"},{"id":"mcp.playwright","kind":"mcp","label":"playwright","path":"mcp/mcp-servers.json","summary":"stdio: npx -y @playwright/mcp@latest","transport":"stdio"},{"id":"mcp.github","kind":"mcp","label":"github","path":"mcp/mcp-servers.json","summary":"stdio: npx -y @modelcontextprotocol/server-github","transport":"stdio"},{"id":"mcp.n8n-api","kind":"mcp","label":"n8n-api","path":"mcp/mcp-servers.json","summary":"stdio: node __HOME__/Documents/AI Projects/n8n-zk/n8n-mcp-server/index.js","transport":"stdio"},{"id":"mcp.supabase","kind":"mcp","label":"supabase","path":"mcp/mcp-servers.json","summary":"stdio: npx -y @supabase/mcp-server-supabase@latest","transport":"stdio"},{"id":"mcp.qdrant-memory","kind":"mcp","label":"qdrant-memory","path":"mcp/mcp-servers.json","summary":"stdio: uvx mcp-server-qdrant","transport":"stdio"},{"id":"mcp.knowledge-graph","kind":"mcp","label":"knowledge-graph","path":"mcp/mcp-servers.json","summary":"stdio: npx -y @modelcontextprotocol/server-memory","transport":"stdio"},{"id":"mcp.repo-graphrag","kind":"mcp","label":"repo-graphrag","path":"mcp/mcp-servers.json","summary":"stdio: uv --directory __HOME__/repo-graphrag-mcp run server.py","transport":"stdio"},{"id":"hook.Notification.0","kind":"hook","label":"Notification","event":"Notification","matcher":"*","path":"hooks/settings.json","summary":"/Users/zalo/.vibe-island/bin/vibe-island-bridge --source claude"},{"id":"hook.PermissionRequest.0","kind":"hook","label":"PermissionRequest","event":"PermissionRequest","matcher":"*","path":"hooks/settings.json","summary":"/Users/zalo/.vibe-island/bin/vibe-island-bridge --source claude"},{"id":"hook.PostToolUse.0","kind":"hook","label":"PostToolUse [Edit|Write|MultiEdit]","event":"PostToolUse","matcher":"Edit|Write|MultiEdit","path":"hooks/settings.json","summary":"FILE=$(cat | jq -r '.tool_input.file_path // empty'); if [ -n \"$FILE\" ] && echo \"$FILE\" | grep -qE '\\.(ts|tsx|js|jsx|css|json|md|html)$'; then prettier --write \"$FILE\" 2>/dev/null; fi"},{"id":"hook.PostToolUse.1","kind":"hook","label":"PostToolUse [Edit|Write|MultiEdit]","event":"PostToolUse","matcher":"Edit|Write|MultiEdit","path":"hooks/settings.json","summary":"FILE=$(cat | jq -r '.tool_input.file_path // empty'); if [ -n \"$FILE\" ] && echo \"$FILE\" | grep -qE '\\.py$'; then which ruff >/dev/null 2>&1 && ruff format \"$FILE\" 2>/dev/null && ruff check --fix \"$FILE\" 2>/dev/null; fi"},{"id":"hook.PostToolUse.2","kind":"hook","label":"PostToolUse","event":"PostToolUse","matcher":"*","path":"hooks/settings.json","summary":"/Users/zalo/.vibe-island/bin/vibe-island-bridge --source claude"},{"id":"hook.PreCompact.0","kind":"hook","label":"PreCompact","event":"PreCompact","matcher":"*","path":"hooks/settings.json","summary":"/Users/zalo/.vibe-island/bin/vibe-island-bridge --source claude"},{"id":"hook.PreToolUse.0","kind":"hook","label":"PreToolUse","event":"PreToolUse","matcher":"*","path":"hooks/settings.json","summary":"/Users/zalo/.vibe-island/bin/vibe-island-bridge --source claude"},{"id":"hook.PreToolUse.1","kind":"hook","label":"PreToolUse [Bash]","event":"PreToolUse","matcher":"Bash","path":"hooks/settings.json","summary":"python3 /Users/zalo/.claude/hooks/gitleaks-guard.py"},{"id":"hook.SessionEnd.0","kind":"hook","label":"SessionEnd","event":"SessionEnd","matcher":"*","path":"hooks/settings.json","summary":"/Users/zalo/.vibe-island/bin/vibe-island-bridge --source claude"},{"id":"hook.SessionStart.0","kind":"hook","label":"SessionStart","event":"SessionStart","matcher":"*","path":"hooks/settings.json","summary":"/Users/zalo/.vibe-island/bin/vibe-island-bridge --source claude"},{"id":"hook.Stop.0","kind":"hook","label":"Stop","event":"Stop","matcher":"*","path":"hooks/settings.json","summary":"/Users/zalo/.vibe-island/bin/vibe-island-bridge --source claude"},{"id":"hook.SubagentStart.0","kind":"hook","label":"SubagentStart","event":"SubagentStart","matcher":"*","path":"hooks/settings.json","summary":"/Users/zalo/.vibe-island/bin/vibe-island-bridge --source claude"},{"id":"hook.SubagentStop.0","kind":"hook","label":"SubagentStop","event":"SubagentStop","matcher":"*","path":"hooks/settings.json","summary":"/Users/zalo/.vibe-island/bin/vibe-island-bridge --source claude"},{"id":"hook.UserPromptSubmit.0","kind":"hook","label":"UserPromptSubmit","event":"UserPromptSubmit","matcher":"*","path":"hooks/settings.json","summary":"/Users/zalo/.vibe-island/bin/vibe-island-bridge --source claude"}],"edges":[{"source":"meta.orchestrator","target":"meta.CLAUDE","type":"include"},{"source":"meta.orchestrator","target":"meta.META_RULE","type":"include"},{"source":"hook.SessionStart.0","target":"meta.META_RULE","type":"trigger"},{"source":"command.autoloop","target":"agent.live-test","type":"dispatch"},{"source":"command.autoloop","target":"agent.qa-agent","type":"dispatch"},{"source":"meta.orchestrator","target":"command.autoloop","type":"routes"},{"source":"meta.orchestrator","target":"command.autoloop-harness","type":"routes"},{"source":"meta.orchestrator","target":"command.autotest","type":"routes"},{"source":"command.brainstorm","target":"rule.agent-contracts","type":"include"},{"source":"command.brainstorm","target":"rule.questioning","type":"include"},{"source":"command.brainstorm","target":"rule.problem-solving","type":"include"},{"source":"command.brainstorm","target":"agent.brainstorm","type":"dispatch"},{"source":"meta.orchestrator","target":"command.brainstorm","type":"routes"},{"source":"command.bug","target":"rule.agent-contracts","type":"include"},{"source":"command.bug","target":"rule.problem-solving","type":"include"},{"source":"command.bug","target":"rule.gates","type":"include"},{"source":"command.bug","target":"rule.verification-patterns","type":"include"},{"source":"command.bug","target":"agent.bug-fix","type":"dispatch"},{"source":"command.bug","target":"agent.brainstorm","type":"dispatch"},{"source":"meta.orchestrator","target":"command.bug","type":"routes"},{"source":"meta.orchestrator","target":"command.build-fix","type":"routes"},{"source":"command.deploy-validate","target":"rule.agent-contracts","type":"include"},{"source":"command.deploy-validate","target":"rule.gates","type":"include"},{"source":"command.deploy-validate","target":"rule.checkpoints","type":"include"},{"source":"command.deploy-validate","target":"rule.git-safety","type":"include"},{"source":"meta.orchestrator","target":"command.deploy-validate","type":"routes"},{"source":"meta.orchestrator","target":"command.e2e","type":"routes"},{"source":"meta.orchestrator","target":"command.enhance-audio","type":"routes"},{"source":"meta.orchestrator","target":"command.ghl-upload","type":"routes"},{"source":"meta.orchestrator","target":"command.graph","type":"routes"},{"source":"meta.orchestrator","target":"command.learn","type":"routes"},{"source":"meta.orchestrator","target":"command.nano-banana","type":"routes"},{"source":"meta.orchestrator","target":"command.optimize-video","type":"routes"},{"source":"command.qa-loop","target":"rule.agent-contracts","type":"include"},{"source":"command.qa-loop","target":"rule.gates","type":"include"},{"source":"command.qa-loop","target":"rule.verification-patterns","type":"include"},{"source":"command.qa-loop","target":"rule.anti-patterns","type":"include"},{"source":"command.qa-loop","target":"agent.qa-agent","type":"dispatch"},{"source":"meta.orchestrator","target":"command.qa-loop","type":"routes"},{"source":"command.redesign","target":"agent.brainstorm","type":"dispatch"},{"source":"command.redesign","target":"agent.live-test","type":"dispatch"},{"source":"command.redesign","target":"agent.frontend-specialist","type":"dispatch"},{"source":"command.redesign","target":"agent.image-craft-expert","type":"dispatch"},{"source":"meta.orchestrator","target":"command.redesign","type":"routes"},{"source":"meta.orchestrator","target":"command.refactor-clean","type":"routes"},{"source":"meta.orchestrator","target":"command.session-save","type":"routes"},{"source":"command.ship","target":"rule.agent-contracts","type":"include"},{"source":"command.ship","target":"rule.gates","type":"include"},{"source":"command.ship","target":"rule.anti-patterns","type":"include"},{"source":"command.ship","target":"rule.checkpoints","type":"include"},{"source":"command.ship","target":"agent.safe-planner","type":"dispatch"},{"source":"command.ship","target":"agent.frontend-specialist","type":"dispatch"},{"source":"command.ship","target":"agent.live-test","type":"dispatch"},{"source":"command.ship","target":"agent.qa-agent","type":"dispatch"},{"source":"meta.orchestrator","target":"command.ship","type":"routes"},{"source":"meta.orchestrator","target":"command.split-screen-video","type":"routes"},{"source":"command.tdd","target":"rule.gates","type":"include"},{"source":"command.tdd","target":"rule.anti-patterns","type":"include"},{"source":"command.tdd","target":"rule.verification-patterns","type":"include"},{"source":"meta.orchestrator","target":"command.tdd","type":"routes"},{"source":"meta.orchestrator","target":"command.transcribe","type":"routes"},{"source":"meta.orchestrator","target":"command.view-video","type":"routes"},{"source":"meta.orchestrator","target":"agent.brainstorm","type":"routes"},{"source":"meta.orchestrator","target":"agent.bug-fix","type":"routes"},{"source":"meta.orchestrator","target":"agent.frontend-specialist","type":"routes"},{"source":"meta.orchestrator","target":"agent.image-craft-expert","type":"routes"},{"source":"meta.orchestrator","target":"agent.live-test","type":"routes"},{"source":"meta.orchestrator","target":"agent.qa-agent","type":"routes"},{"source":"meta.orchestrator","target":"agent.safe-planner","type":"routes"}]}
+{"meta":{"generatedAt":"2026-04-16T23:24:20.690Z","repo":"zalo-claude-code-setup"},"nodes":[{"id":"meta.META_RULE","kind":"meta","label":"META_RULE.md","path":"META_RULE.md","summary":"Re-injected on every `startup`, `/clear`, and `/compact`. Edit this file freely — the `session-start.sh` hook reads it fresh each time."},{"id":"meta.CLAUDE","kind":"meta","label":"CLAUDE.md","path":"claude-md/CLAUDE.md","summary":"When the user corrects you, says \"no\", \"wrong\", \"don't do that\", \"stop\", or otherwise indicates you made a mistake:"},{"id":"meta.orchestrator","kind":"meta","label":"Main Thread (Orchestrator)","path":"","summary":"The main conversation thread. Routes requests, reads rules, dispatches fresh-context subagents, and owns the user relationship. Never does heavy lifting itself."},{"id":"rule.agent-contracts","kind":"rule","label":"agent-contracts","path":"rules/agent-contracts.md","summary":"Completion markers and return contract for `~/.claude/agents/`. Skills/orchestrators detect agent completion by regex-matching these H2 markers in the agent's final output."},{"id":"rule.anti-patterns","kind":"rule","label":"anti-patterns","path":"rules/anti-patterns.md","summary":"Behavioral rules that apply regardless of project. Drawn from both gsd-build/get-shit-done universal anti-patterns and obra/superpowers writing-plans \"No Placeholders\" list."},{"id":"rule.checkpoints","kind":"rule","label":"checkpoints","path":"rules/checkpoints.md","summary":"Adapted from gsd-build/get-shit-done. When an orchestrator needs human input, emit a **readable markdown checkpoint block** and **stop** — do not continue past the gate."},{"id":"rule.context-budget","kind":"rule","label":"context-budget","path":"rules/context-budget.md","summary":"Adapted from gsd-build/get-shit-done `references/context-budget.md`. Use this to self-regulate context usage and to recognize degradation before it becomes catastrophic."},{"id":"rule.gates","kind":"rule","label":"gates","path":"rules/gates.md","summary":"Two distinct kinds of gates: **workflow gates** (when to advance/loop/stop in a multi-step orchestration) and the **Verification Gate Function** (when an agent claims a task is done)."},{"id":"rule.git-safety","kind":"rule","label":"git-safety","path":"rules/git-safety.md","summary":"Combined from obra/superpowers `using-git-worktrees` and gsd-build/get-shit-done universal anti-patterns."},{"id":"rule.persuasion-principles","kind":"rule","label":"persuasion-principles","path":"rules/persuasion-principles.md","summary":"Adapted from obra/superpowers `writing-skills/persuasion-principles.md`. Reference when authoring or revising files in `~/.claude/rules/`, `~/.claude/CLAUDE.md`, agent definitions, or skill bodies."},{"id":"rule.problem-solving","kind":"rule","label":"problem-solving","path":"rules/problem-solving.md","summary":"Adapted from obra/superpowers-skills `problem-solving/when-stuck`. When you (or a subagent) feel stuck, name the symptom and pick the matching technique. Don't keep retrying the same approach."},{"id":"rule.questioning","kind":"rule","label":"questioning","path":"rules/questioning.md","summary":"Adapted from gsd-build/get-shit-done `references/questioning.md`. Use this when eliciting requirements, brainstorming, or any \"what do you actually want?\" conversation."},{"id":"rule.verification-patterns","kind":"rule","label":"verification-patterns","path":"rules/verification-patterns.md","summary":"The defining principle for `qa-agent`, `live-test`, and any \"is it actually done?\" check."},{"id":"rule.when-to-parallelize","kind":"rule","label":"when-to-parallelize","path":"rules/when-to-parallelize.md","summary":"Adapted from obra/superpowers `dispatching-parallel-agents`. Claude Code's `Agent` tool runs multiple invocations concurrently when called in a single message — use this rule to decide when that's appropriate."},{"id":"command.autoloop","kind":"command","label":"/autoloop","path":"commands/autoloop.md","summary":"Autonomous optimization loop that iteratively improves code until it meets a target metric. Based on Karpathy's autoresearch architecture: hypothesis -> modify -> test -> commit/revert.","includes":[],"dispatches":["agent.live-test","agent.qa-agent"]},{"id":"command.autoloop-harness","kind":"command","label":"/autoloop-harness","path":"commands/autoloop-harness.sh","summary":"set -euo pipefail","includes":[],"dispatches":[]},{"id":"command.autotest","kind":"command","label":"/autotest","path":"commands/autotest.md","summary":"Autonomous live testing agent that systematically tests a web application via Playwright. Reads a briefing for the test plan (URL, credentials, test cases) and executes each test, recording pass/fail results. Reusable across any web app.","includes":[],"dispatches":[]},{"id":"command.brainstorm","kind":"command","label":"/brainstorm","path":"commands/brainstorm.md","summary":"Dispatch the `brainstorm` agent to apply first principles, inversion, and second-order thinking. Surfaces the real problem, not just the presented one.","includes":["rule.agent-contracts","rule.questioning","rule.problem-solving"],"dispatches":["agent.brainstorm"]},{"id":"command.bug","kind":"command","label":"/bug","path":"commands/bug.md","summary":"Trace the full flow → identify root cause → fix narrowly → QA. Built around the `bug-fix` agent's 4-phase systematic debugging.","includes":["rule.agent-contracts","rule.problem-solving","rule.gates","rule.verification-patterns"],"dispatches":["agent.bug-fix","agent.brainstorm"]},{"id":"command.build-fix","kind":"command","label":"/build-fix","path":"commands/build-fix.md","summary":"Detect and fix build errors iteratively with guardrails.","includes":[],"dispatches":[]},{"id":"command.deploy-validate","kind":"command","label":"/deploy-validate","path":"commands/deploy-validate.md","summary":"Pre-deploy QA → deploy to staging → smoke test → log audit → human-action checkpoint for production.","includes":["rule.agent-contracts","rule.gates","rule.checkpoints","rule.git-safety"],"dispatches":[]},{"id":"command.e2e","kind":"command","label":"/e2e","path":"commands/e2e.md","summary":"Generate and run end-to-end tests using Playwright.","includes":[],"dispatches":[]},{"id":"command.enhance-audio","kind":"command","label":"/enhance-audio","path":"commands/enhance-audio.md","summary":"Enhance and clean up audio in video/audio files using FFmpeg filters. Removes noise, normalizes volume, and improves speech clarity.","includes":[],"dispatches":[]},{"id":"command.ghl-upload","kind":"command","label":"/ghl-upload","path":"commands/ghl-upload.md","summary":"Upload files to GoHighLevel's media library via API.","includes":[],"dispatches":[]},{"id":"command.graph","kind":"command","label":"/graph","path":"commands/graph.md","summary":"Build or rebuild the repo-graphrag knowledge graph for the current project.","includes":[],"dispatches":[]},{"id":"command.learn","kind":"command","label":"/learn","path":"commands/learn.md","summary":"Extract reusable patterns and lessons from the current session and save them to memory.","includes":[],"dispatches":[]},{"id":"command.nano-banana","kind":"command","label":"/nano-banana","path":"commands/nano-banana.md","summary":"Generates AI images using the nano-banana CLI (Gemini 3.1 Flash default, Pro available). Handles multi-resolution (512-4K), aspect ratios, reference images for style transfer, green screen workflow for transparent assets, cost tracking, and exact dimension control. Use when asked to \"generate an image\", \"create a sprite\", \"make an asset\", \"generate artwork\", or any image generation task for UI mockups, game assets, videos, or marketing materials.","includes":[],"dispatches":[]},{"id":"command.optimize-video","kind":"command","label":"/optimize-video","path":"commands/optimize-video.md","summary":"Process and upload optimized videos to Supabase Storage with faststart + compression.","includes":[],"dispatches":[]},{"id":"command.qa-loop","kind":"command","label":"/qa-loop","path":"commands/qa-loop.md","summary":"Revision Gate that converges on a clean state. Iterates `qa-agent` audits + minimal fixes until no real bugs remain.","includes":["rule.agent-contracts","rule.gates","rule.verification-patterns","rule.anti-patterns"],"dispatches":["agent.qa-agent"]},{"id":"command.redesign","kind":"command","label":"/redesign","path":"commands/redesign.md","summary":"Redesign an existing UI through collaborative brainstorming, mockup generation, implementation, and visual verification.","includes":[],"dispatches":["agent.brainstorm","agent.live-test","agent.frontend-specialist","agent.image-craft-expert"]},{"id":"command.refactor-clean","kind":"command","label":"/refactor-clean","path":"commands/refactor-clean.md","summary":"Detect and safely remove dead code, unused dependencies, and unnecessary complexity.","includes":[],"dispatches":[]},{"id":"command.session-save","kind":"command","label":"/session-save","path":"commands/session-save.md","summary":"Save the current session context to a file for continuity across sessions.","includes":[],"dispatches":[]},{"id":"command.ship","kind":"command","label":"/ship","path":"commands/ship.md","summary":"Plan → implement → QA → wait for explicit push approval. The orchestrator owns sequencing; subagents do the work.","includes":["rule.agent-contracts","rule.gates","rule.anti-patterns","rule.checkpoints"],"dispatches":["agent.safe-planner","agent.frontend-specialist","agent.live-test","agent.qa-agent"]},{"id":"command.split-screen-video","kind":"command","label":"/split-screen-video","path":"commands/split-screen-video.md","summary":"Create a polished split-screen video from raw talking-head footage. Top half = B-roll images with annotations, bottom half = zoomed presenter. Includes yellow subtitle bars, enhanced audio, and 1.2x speed.","includes":[],"dispatches":[]},{"id":"command.tdd","kind":"command","label":"/tdd","path":"commands/tdd.md","summary":"Strict RED → GREEN → REFACTOR. Adapted from obra/superpowers `test-driven-development`.","includes":["rule.gates","rule.anti-patterns","rule.verification-patterns"],"dispatches":[]},{"id":"command.transcribe","kind":"command","label":"/transcribe","path":"commands/transcribe.md","summary":"Transcribe audio/video files using OpenAI Whisper. Supports 99 languages with automatic detection.","includes":[],"dispatches":[]},{"id":"command.view-video","kind":"command","label":"/view-video","path":"commands/view-video.md","summary":"Extract frames from a video using ffmpeg so Claude can visually analyze the content.","includes":[],"dispatches":[]},{"id":"agent.brainstorm","kind":"agent","label":"brainstorm","path":"agents/brainstorm.md","summary":"Deep-thinking agent that prevents expensive mistakes by challenging assumptions, eliminating complexity, and stress-testing ideas before committing. Applies first principles, Elon Musk's 5-step philosophy, inversion, and second-order thinking. Use for any problem, plan, architecture decision, or strategy that deserves rigorous thought before action. <example>user: 'I need to figure out the best architecture for our real-time notification system' assistant: 'I'll use the brainstorm agent to break this down from first principles and challenge our assumptions.'</example>","markers":["## EXPLORATION COMPLETE"],"includes":[]},{"id":"agent.bug-fix","kind":"agent","label":"bug-fix","path":"agents/bug-fix.md","summary":"Trace the full user flow to find the root cause of a bug. Reads all related code and crafts a comprehensive fix plan before making changes. Use when something is broken and you need a thorough diagnosis. <example>user: 'Users are getting logged out randomly after checkout' assistant: 'I'll use the bug-fix agent to trace the full flow and find the root cause.'</example>","markers":["## ROOT CAUSE FOUND","## INVESTIGATION INCOMPLETE","## BLOCKED"],"includes":[]},{"id":"agent.frontend-specialist","kind":"agent","label":"frontend-specialist","path":"agents/frontend-specialist.md","summary":"Builds and optimizes frontend UI — components, styling, responsiveness, accessibility, and performance. Use for any client-side development task. <example>user: 'I need to build a mobile-friendly navigation bar that collapses on smaller screens' assistant: 'I'll use the frontend-specialist agent to create a responsive navigation component.'</example>","markers":["## IMPLEMENTATION COMPLETE","## IMPLEMENTATION DONE_WITH_CONCERNS","## BLOCKED"],"includes":[]},{"id":"agent.image-craft-expert","kind":"agent","label":"image-craft-expert","path":"agents/image-craft-expert.md","summary":"Crafts optimized text-to-image prompts and generates images using Gemini (nano-banana) and/or ChatGPT (gpt-image-1.5). Use for any image generation task. <example>user: 'Create an image of a fantasy castle at sunset' assistant: 'I'll use the image-craft-expert to craft a detailed generation prompt.'</example>","markers":["## IMAGE GENERATED","## GENERATION FAILED"],"includes":[]},{"id":"agent.live-test","kind":"agent","label":"live-test","path":"agents/live-test.md","summary":"Visually verifies code changes work in the browser using Playwright. Use after implementing features, fixing bugs, or making UI changes to confirm they work as intended before shipping. <example>user: 'I just added the new pricing page, can you verify it looks right?' assistant: 'I'll use the live-test agent to open the app in the browser and verify the pricing page.'</example>","markers":["## UI VERIFIED","## UI ISSUES FOUND","## BLOCKED"],"includes":[]},{"id":"agent.qa-agent","kind":"agent","label":"qa-agent","path":"agents/qa-agent.md","summary":"Audits recent code changes for real, reproducible bugs. Use after implementing features, before deployments, or when asked to stress test, verify, or audit code. <example>user: 'I just finished the checkout flow, can you stress test it?' assistant: 'I'll use the qa-agent to find any real bugs in the checkout implementation.'</example>","markers":["## VERIFICATION PASSED","## ISSUES FOUND","## BLOCKED"],"includes":[]},{"id":"agent.safe-planner","kind":"agent","label":"safe-planner","path":"agents/safe-planner.md","summary":"Plans implementation changes safely by reading all related code, mapping dependencies, identifying risks, and producing a rollback-ready plan for approval. Use before features, refactors, migrations, or any non-trivial changes. <example>user: 'I need to add Stripe webhooks to our checkout flow' assistant: 'I'll use the safe-planner agent to map dependencies and create a safe implementation plan before we touch anything.'</example>","markers":["## PLAN READY","## NEEDS DECISION","## BLOCKED"],"includes":[]},{"id":"agent-template.code-quality-reviewer-prompt","kind":"agent-template","label":"code-quality-reviewer-prompt","path":"agents/templates/code-quality-reviewer-prompt.md","summary":"Source: obra/superpowers `subagent-driven-development/code-quality-reviewer-prompt.md`. Use this template for **stage 2** of two-stage review, after spec-compliance has passed. This is the \"would I approve this PR?\" pass.","includes":[]},{"id":"agent-template.implementer-prompt","kind":"agent-template","label":"implementer-prompt","path":"agents/templates/implementer-prompt.md","summary":"Source: obra/superpowers `subagent-driven-development/implementer-prompt.md`. Use this template when dispatching a subagent to implement a discrete task. Fill in `[bracketed]` slots with concrete content — never paste this template verbatim with placeholders intact.","includes":[]},{"id":"agent-template.spec-reviewer-prompt","kind":"agent-template","label":"spec-reviewer-prompt","path":"agents/templates/spec-reviewer-prompt.md","summary":"Source: obra/superpowers `subagent-driven-development/spec-reviewer-prompt.md`. Use this template when dispatching the **first stage** of two-stage review (spec compliance, before code quality). Pair with `code-quality-reviewer-prompt.md`.","includes":[]},{"id":"skill.cf-crawl","kind":"skill","label":"cf-crawl","path":"skills/cf-crawl","summary":"Crawl websites using Cloudflare Browser Rendering API. Use when the user wants to scrape, crawl, or extract content from a website (single page or multi-page). Returns HTML, Markdown, or structured JSON."},{"id":"skill.frontend-design","kind":"skill","label":"frontend-design","path":"skills/frontend-design","summary":"Create distinctive, production-grade frontend interfaces with high design quality. Use this skill when the user asks to build web components, pages, or applications. Generates creative, polished code that avoids generic AI aesthetics."},{"id":"skill.multi-edit","kind":"skill","label":"multi-edit","path":"skills/multi-edit","summary":"Heavyweight planning path for refactors, renames, migrations, and cross-module changes that are hard to roll back. Runs safe-planner, optionally brainstorm, then blocks on human approval before any edit. Triggers on \"refactor\", \"rename across\", \"migrate\", \"restructure\", \"move X out of\", \"extract into shared\", or any change that crosses module boundaries. Not for new features (use /ship) or single-file fixes."},{"id":"skill.telegram","kind":"skill","label":"telegram","path":"skills/telegram","summary":"Send messages, files, images, or documents to the user via their Telegram bot. Use when the user asks to send something to Telegram, notify them, or share content via Telegram."},{"id":"skill.ui-ux-pro-max","kind":"skill","label":"ui-ux-pro-max","path":"skills/ui-ux-pro-max","summary":"UI/UX design intelligence. 50 styles, 21 palettes, 50 font pairings, 20 charts, 8 stacks (React, Next.js, Vue, Svelte, SwiftUI, React Native, Flutter, Tailwind). Actions: plan, build, create, design, implement, review, fix, improve, optimize, enhance, refactor, check UI/UX code. Projects: website, landing page, dashboard, admin panel, e-commerce, SaaS, portfolio, blog, mobile app, .html, .tsx, .vue, .svelte. Elements: button, modal, navbar, sidebar, card, table, form, chart. Styles: glassmorphism, claymorphism, minimalism, brutalism, neumorphism, bento grid, dark mode, responsive, skeuomorphism, flat design. Topics: color palette, accessibility, animation, layout, typography, font pairing, spacing, hover, shadow, gradient."},{"id":"mcp.context7","kind":"mcp","label":"context7","path":"mcp/mcp-servers.json","summary":"HTTP endpoint: https://mcp.context7.com/mcp","transport":"http"},{"id":"mcp.playwright","kind":"mcp","label":"playwright","path":"mcp/mcp-servers.json","summary":"stdio: npx -y @playwright/mcp@latest","transport":"stdio"},{"id":"mcp.github","kind":"mcp","label":"github","path":"mcp/mcp-servers.json","summary":"stdio: npx -y @modelcontextprotocol/server-github","transport":"stdio"},{"id":"mcp.n8n-api","kind":"mcp","label":"n8n-api","path":"mcp/mcp-servers.json","summary":"stdio: node __HOME__/Documents/AI Projects/n8n-zk/n8n-mcp-server/index.js","transport":"stdio"},{"id":"mcp.supabase","kind":"mcp","label":"supabase","path":"mcp/mcp-servers.json","summary":"stdio: npx -y @supabase/mcp-server-supabase@latest","transport":"stdio"},{"id":"mcp.qdrant-memory","kind":"mcp","label":"qdrant-memory","path":"mcp/mcp-servers.json","summary":"stdio: uvx mcp-server-qdrant","transport":"stdio"},{"id":"mcp.knowledge-graph","kind":"mcp","label":"knowledge-graph","path":"mcp/mcp-servers.json","summary":"stdio: npx -y @modelcontextprotocol/server-memory","transport":"stdio"},{"id":"mcp.repo-graphrag","kind":"mcp","label":"repo-graphrag","path":"mcp/mcp-servers.json","summary":"stdio: uv --directory __HOME__/repo-graphrag-mcp run server.py","transport":"stdio"},{"id":"hook.Notification.0","kind":"hook","label":"Notification","event":"Notification","matcher":"*","path":"hooks/settings.json","summary":"/Users/zalo/.vibe-island/bin/vibe-island-bridge --source claude"},{"id":"hook.PermissionRequest.0","kind":"hook","label":"PermissionRequest","event":"PermissionRequest","matcher":"*","path":"hooks/settings.json","summary":"/Users/zalo/.vibe-island/bin/vibe-island-bridge --source claude"},{"id":"hook.PostToolUse.0","kind":"hook","label":"PostToolUse [Edit|Write|MultiEdit]","event":"PostToolUse","matcher":"Edit|Write|MultiEdit","path":"hooks/settings.json","summary":"FILE=$(cat | jq -r '.tool_input.file_path // empty'); if [ -n \"$FILE\" ] && echo \"$FILE\" | grep -qE '\\.(ts|tsx|js|jsx|css|json|md|html)$'; then prettier --write \"$FILE\" 2>/dev/null; fi"},{"id":"hook.PostToolUse.1","kind":"hook","label":"PostToolUse [Edit|Write|MultiEdit]","event":"PostToolUse","matcher":"Edit|Write|MultiEdit","path":"hooks/settings.json","summary":"FILE=$(cat | jq -r '.tool_input.file_path // empty'); if [ -n \"$FILE\" ] && echo \"$FILE\" | grep -qE '\\.py$'; then which ruff >/dev/null 2>&1 && ruff format \"$FILE\" 2>/dev/null && ruff check --fix \"$FILE\" 2>/dev/null; fi"},{"id":"hook.PostToolUse.2","kind":"hook","label":"PostToolUse","event":"PostToolUse","matcher":"*","path":"hooks/settings.json","summary":"/Users/zalo/.vibe-island/bin/vibe-island-bridge --source claude"},{"id":"hook.PreCompact.0","kind":"hook","label":"PreCompact","event":"PreCompact","matcher":"*","path":"hooks/settings.json","summary":"/Users/zalo/.vibe-island/bin/vibe-island-bridge --source claude"},{"id":"hook.PreToolUse.0","kind":"hook","label":"PreToolUse","event":"PreToolUse","matcher":"*","path":"hooks/settings.json","summary":"/Users/zalo/.vibe-island/bin/vibe-island-bridge --source claude"},{"id":"hook.PreToolUse.1","kind":"hook","label":"PreToolUse [Bash]","event":"PreToolUse","matcher":"Bash","path":"hooks/settings.json","summary":"python3 /Users/zalo/.claude/hooks/gitleaks-guard.py"},{"id":"hook.SessionEnd.0","kind":"hook","label":"SessionEnd","event":"SessionEnd","matcher":"*","path":"hooks/settings.json","summary":"/Users/zalo/.vibe-island/bin/vibe-island-bridge --source claude"},{"id":"hook.SessionStart.0","kind":"hook","label":"SessionStart","event":"SessionStart","matcher":"*","path":"hooks/settings.json","summary":"/Users/zalo/.vibe-island/bin/vibe-island-bridge --source claude"},{"id":"hook.Stop.0","kind":"hook","label":"Stop","event":"Stop","matcher":"*","path":"hooks/settings.json","summary":"/Users/zalo/.vibe-island/bin/vibe-island-bridge --source claude"},{"id":"hook.SubagentStart.0","kind":"hook","label":"SubagentStart","event":"SubagentStart","matcher":"*","path":"hooks/settings.json","summary":"/Users/zalo/.vibe-island/bin/vibe-island-bridge --source claude"},{"id":"hook.SubagentStop.0","kind":"hook","label":"SubagentStop","event":"SubagentStop","matcher":"*","path":"hooks/settings.json","summary":"/Users/zalo/.vibe-island/bin/vibe-island-bridge --source claude"},{"id":"hook.UserPromptSubmit.0","kind":"hook","label":"UserPromptSubmit","event":"UserPromptSubmit","matcher":"*","path":"hooks/settings.json","summary":"/Users/zalo/.vibe-island/bin/vibe-island-bridge --source claude"}],"edges":[{"source":"meta.orchestrator","target":"meta.CLAUDE","type":"include"},{"source":"meta.orchestrator","target":"meta.META_RULE","type":"include"},{"source":"hook.SessionStart.0","target":"meta.META_RULE","type":"trigger"},{"source":"command.autoloop","target":"agent.live-test","type":"dispatch"},{"source":"command.autoloop","target":"agent.qa-agent","type":"dispatch"},{"source":"meta.orchestrator","target":"command.autoloop","type":"routes"},{"source":"meta.orchestrator","target":"command.autoloop-harness","type":"routes"},{"source":"meta.orchestrator","target":"command.autotest","type":"routes"},{"source":"command.brainstorm","target":"rule.agent-contracts","type":"include"},{"source":"command.brainstorm","target":"rule.questioning","type":"include"},{"source":"command.brainstorm","target":"rule.problem-solving","type":"include"},{"source":"command.brainstorm","target":"agent.brainstorm","type":"dispatch"},{"source":"meta.orchestrator","target":"command.brainstorm","type":"routes"},{"source":"command.bug","target":"rule.agent-contracts","type":"include"},{"source":"command.bug","target":"rule.problem-solving","type":"include"},{"source":"command.bug","target":"rule.gates","type":"include"},{"source":"command.bug","target":"rule.verification-patterns","type":"include"},{"source":"command.bug","target":"agent.bug-fix","type":"dispatch"},{"source":"command.bug","target":"agent.brainstorm","type":"dispatch"},{"source":"meta.orchestrator","target":"command.bug","type":"routes"},{"source":"meta.orchestrator","target":"command.build-fix","type":"routes"},{"source":"command.deploy-validate","target":"rule.agent-contracts","type":"include"},{"source":"command.deploy-validate","target":"rule.gates","type":"include"},{"source":"command.deploy-validate","target":"rule.checkpoints","type":"include"},{"source":"command.deploy-validate","target":"rule.git-safety","type":"include"},{"source":"meta.orchestrator","target":"command.deploy-validate","type":"routes"},{"source":"meta.orchestrator","target":"command.e2e","type":"routes"},{"source":"meta.orchestrator","target":"command.enhance-audio","type":"routes"},{"source":"meta.orchestrator","target":"command.ghl-upload","type":"routes"},{"source":"meta.orchestrator","target":"command.graph","type":"routes"},{"source":"meta.orchestrator","target":"command.learn","type":"routes"},{"source":"meta.orchestrator","target":"command.nano-banana","type":"routes"},{"source":"meta.orchestrator","target":"command.optimize-video","type":"routes"},{"source":"command.qa-loop","target":"rule.agent-contracts","type":"include"},{"source":"command.qa-loop","target":"rule.gates","type":"include"},{"source":"command.qa-loop","target":"rule.verification-patterns","type":"include"},{"source":"command.qa-loop","target":"rule.anti-patterns","type":"include"},{"source":"command.qa-loop","target":"agent.qa-agent","type":"dispatch"},{"source":"meta.orchestrator","target":"command.qa-loop","type":"routes"},{"source":"command.redesign","target":"agent.brainstorm","type":"dispatch"},{"source":"command.redesign","target":"agent.live-test","type":"dispatch"},{"source":"command.redesign","target":"agent.frontend-specialist","type":"dispatch"},{"source":"command.redesign","target":"agent.image-craft-expert","type":"dispatch"},{"source":"meta.orchestrator","target":"command.redesign","type":"routes"},{"source":"meta.orchestrator","target":"command.refactor-clean","type":"routes"},{"source":"meta.orchestrator","target":"command.session-save","type":"routes"},{"source":"command.ship","target":"rule.agent-contracts","type":"include"},{"source":"command.ship","target":"rule.gates","type":"include"},{"source":"command.ship","target":"rule.anti-patterns","type":"include"},{"source":"command.ship","target":"rule.checkpoints","type":"include"},{"source":"command.ship","target":"agent.safe-planner","type":"dispatch"},{"source":"command.ship","target":"agent.frontend-specialist","type":"dispatch"},{"source":"command.ship","target":"agent.live-test","type":"dispatch"},{"source":"command.ship","target":"agent.qa-agent","type":"dispatch"},{"source":"meta.orchestrator","target":"command.ship","type":"routes"},{"source":"meta.orchestrator","target":"command.split-screen-video","type":"routes"},{"source":"command.tdd","target":"rule.gates","type":"include"},{"source":"command.tdd","target":"rule.anti-patterns","type":"include"},{"source":"command.tdd","target":"rule.verification-patterns","type":"include"},{"source":"meta.orchestrator","target":"command.tdd","type":"routes"},{"source":"meta.orchestrator","target":"command.transcribe","type":"routes"},{"source":"meta.orchestrator","target":"command.view-video","type":"routes"},{"source":"meta.orchestrator","target":"agent.brainstorm","type":"routes"},{"source":"meta.orchestrator","target":"agent.bug-fix","type":"routes"},{"source":"meta.orchestrator","target":"agent.frontend-specialist","type":"routes"},{"source":"meta.orchestrator","target":"agent.image-craft-expert","type":"routes"},{"source":"meta.orchestrator","target":"agent.live-test","type":"routes"},{"source":"meta.orchestrator","target":"agent.qa-agent","type":"routes"},{"source":"meta.orchestrator","target":"agent.safe-planner","type":"routes"}]}
 </script>
     <script type="application/json" id="flow-data">
 {"command.ship":{"label":"/ship — Full Feature Delivery","description":"Plan → Implement → Verify → Audit → Human push-gate","steps":[{"node":"command.ship","caption":"User invokes /ship with a feature description"},{"node":"rule.questioning","caption":"Orchestrator consults questioning.md to sharpen scope","via":"include"},{"node":"agent.safe-planner","caption":"Dispatch safe-planner for a rollback-ready plan","via":"dispatch","marker":"## PLAN READY"},{"node":"agent.frontend-specialist","caption":"Dispatch frontend-specialist to implement","via":"dispatch","marker":"## IMPLEMENTATION COMPLETE"},{"node":"agent.live-test","caption":"live-test verifies UI in browser","via":"dispatch","marker":"## UI VERIFIED"},{"node":"agent.qa-agent","caption":"qa-agent audits for real bugs","via":"dispatch","marker":"## VERIFICATION PASSED"},{"node":"rule.checkpoints","caption":"Emit human push-gate checkpoint — nothing ships until approval","via":"include"}],"canonical":true},"command.tdd":{"label":"/tdd — Test-Driven Development","description":"Red → Green → Refactor, with the Iron Law of \"test first\"","steps":[{"node":"command.tdd","caption":"User invokes /tdd for a new behavior"},{"node":"rule.gates","caption":"@-includes gates.md (Iron Law: no code before a failing test)","via":"include"},{"node":"agent.safe-planner","caption":"Plan the test surface and rollback","via":"dispatch","marker":"## PLAN READY"},{"node":"agent.frontend-specialist","caption":"Write failing test → minimal impl → refactor","via":"dispatch","marker":"## IMPLEMENTATION COMPLETE"},{"node":"agent.qa-agent","caption":"qa-agent confirms coverage and no regressions","via":"dispatch","marker":"## VERIFICATION PASSED"}],"canonical":true},"command.bug":{"label":"/bug — Trace, Diagnose, Fix, Validate","description":"4-phase systematic debugging, stops at 3+ failed fixes","steps":[{"node":"command.bug","caption":"User reports symptom"},{"node":"rule.problem-solving","caption":"@-includes problem-solving.md (symptom→technique dispatch)","via":"include"},{"node":"agent.bug-fix","caption":"Dispatch bug-fix: trace flow → identify root cause","via":"dispatch","marker":"## ROOT CAUSE FOUND"},{"node":"agent.frontend-specialist","caption":"Apply narrow fix at root cause","via":"dispatch","marker":"## IMPLEMENTATION COMPLETE"},{"node":"agent.qa-agent","caption":"qa-agent confirms symptom gone, no regressions","via":"dispatch","marker":"## VERIFICATION PASSED"}],"canonical":true},"command.qa-loop":{"label":"/qa-loop — Iterative Audit-and-Fix","description":"Revision gate: audit → fix → re-audit until clean (max 3 iterations)","steps":[{"node":"command.qa-loop","caption":"User triggers /qa-loop on recent changes"},{"node":"agent.qa-agent","caption":"qa-agent finds bugs","via":"dispatch","marker":"## ISSUES FOUND"},{"node":"agent.frontend-specialist","caption":"Fix CRITICAL/HIGH findings","via":"dispatch","marker":"## IMPLEMENTATION COMPLETE"},{"node":"agent.qa-agent","caption":"Re-audit until PASSED or max-iterations","via":"dispatch","marker":"## VERIFICATION PASSED"},{"node":"rule.gates","caption":"Revision gate: loop or escalate per gates.md","via":"include"}],"canonical":true},"command.deploy-validate":{"label":"/deploy-validate — Self-Healing Deployment","description":"Pre-deploy QA → deploy → smoke test → human prod approval","steps":[{"node":"command.deploy-validate","caption":"User runs /deploy-validate"},{"node":"agent.qa-agent","caption":"Pre-deploy audit","via":"dispatch","marker":"## VERIFICATION PASSED"},{"node":"rule.checkpoints","caption":"checkpoint:human-action for the live deploy","via":"include"},{"node":"agent.live-test","caption":"Post-deploy smoke test on prod URL","via":"dispatch","marker":"## UI VERIFIED"},{"node":"rule.checkpoints","caption":"Final human approval before marking success","via":"include"}],"canonical":true},"command.redesign":{"label":"/redesign — Collaborative UI Redesign","description":"Capture → brainstorm → generate mockups → implement → verify","steps":[{"node":"command.redesign","caption":"User requests a UI redesign"},{"node":"agent.live-test","caption":"Capture current state screenshots","via":"dispatch","marker":"## UI VERIFIED"},{"node":"agent.brainstorm","caption":"2+ loops: challenge assumptions, propose directions","via":"dispatch","marker":"## EXPLORATION COMPLETE"},{"node":"agent.image-craft-expert","caption":"3 options × 2 generators = 6 mockups in parallel","via":"dispatch","marker":"## IMAGE GENERATED"},{"node":"agent.frontend-specialist","caption":"Implement chosen direction","via":"dispatch","marker":"## IMPLEMENTATION COMPLETE"},{"node":"agent.live-test","caption":"Verify against mockup","via":"dispatch","marker":"## UI VERIFIED"}],"canonical":true},"command.autoloop":{"label":"/autoloop — Autonomous optimization loop that iteratively improves code until it meets a tar","description":"Autonomous optimization loop that iteratively improves code until it meets a target metric. Based on Karpathy's autoresearch architecture: hypothesis -> modify -> test -> commit/revert.","steps":[{"node":"command.autoloop","caption":"User invokes /autoloop"},{"node":"agent.live-test","via":"dispatch","caption":"Dispatch live-test","marker":"## UI VERIFIED"},{"node":"agent.qa-agent","via":"dispatch","caption":"Dispatch qa-agent","marker":"## VERIFICATION PASSED"}],"canonical":false},"command.autoloop-harness":{"label":"/autoloop-harness — set -euo pipefail","description":"set -euo pipefail","steps":[{"node":"command.autoloop-harness","caption":"User invokes /autoloop-harness"},{"node":"command.autoloop-harness","caption":"Standalone skill/utility — no subagent dispatch in the core path"}],"canonical":false},"command.autotest":{"label":"/autotest — Autonomous live testing agent that systematically tests a web application via Pl","description":"Autonomous live testing agent that systematically tests a web application via Playwright. Reads a briefing for the test plan (URL, credentials, test cases) and executes each test, recording pass/fail results. Reusable across any web app.","steps":[{"node":"command.autotest","caption":"User invokes /autotest"},{"node":"command.autotest","caption":"Standalone skill/utility — no subagent dispatch in the core path"}],"canonical":false},"command.brainstorm":{"label":"/brainstorm — Dispatch the `brainstorm` agent to apply first principles, inversion, and second","description":"Dispatch the `brainstorm` agent to apply first principles, inversion, and second-order thinking. Surfaces the real problem, not just the presented one.","steps":[{"node":"command.brainstorm","caption":"User invokes /brainstorm"},{"node":"agent.brainstorm","via":"dispatch","caption":"Dispatch brainstorm","marker":"## EXPLORATION COMPLETE"},{"node":"rule.agent-contracts","via":"include","caption":"@-includes agent-contracts"},{"node":"rule.questioning","via":"include","caption":"@-includes questioning"},{"node":"rule.problem-solving","via":"include","caption":"@-includes problem-solving"}],"canonical":false},"command.build-fix":{"label":"/build-fix — Detect and fix build errors iteratively with guardrails.","description":"Detect and fix build errors iteratively with guardrails.","steps":[{"node":"command.build-fix","caption":"User invokes /build-fix"},{"node":"command.build-fix","caption":"Standalone skill/utility — no subagent dispatch in the core path"}],"canonical":false},"command.e2e":{"label":"/e2e — Generate and run end-to-end tests using Playwright.","description":"Generate and run end-to-end tests using Playwright.","steps":[{"node":"command.e2e","caption":"User invokes /e2e"},{"node":"command.e2e","caption":"Standalone skill/utility — no subagent dispatch in the core path"}],"canonical":false},"command.enhance-audio":{"label":"/enhance-audio — Enhance and clean up audio in video/audio files using FFmpeg filters. Removes no","description":"Enhance and clean up audio in video/audio files using FFmpeg filters. Removes noise, normalizes volume, and improves speech clarity.","steps":[{"node":"command.enhance-audio","caption":"User invokes /enhance-audio"},{"node":"command.enhance-audio","caption":"Standalone skill/utility — no subagent dispatch in the core path"}],"canonical":false},"command.ghl-upload":{"label":"/ghl-upload — Upload files to GoHighLevel's media library via API.","description":"Upload files to GoHighLevel's media library via API.","steps":[{"node":"command.ghl-upload","caption":"User invokes /ghl-upload"},{"node":"command.ghl-upload","caption":"Standalone skill/utility — no subagent dispatch in the core path"}],"canonical":false},"command.graph":{"label":"/graph — Build or rebuild the repo-graphrag knowledge graph for the current project.","description":"Build or rebuild the repo-graphrag knowledge graph for the current project.","steps":[{"node":"command.graph","caption":"User invokes /graph"},{"node":"command.graph","caption":"Standalone skill/utility — no subagent dispatch in the core path"}],"canonical":false},"command.learn":{"label":"/learn — Extract reusable patterns and lessons from the current session and save them to ","description":"Extract reusable patterns and lessons from the current session and save them to memory.","steps":[{"node":"command.learn","caption":"User invokes /learn"},{"node":"command.learn","caption":"Standalone skill/utility — no subagent dispatch in the core path"}],"canonical":false},"command.nano-banana":{"label":"/nano-banana — Generates AI images using the nano-banana CLI (Gemini 3.1 Flash default, Pro ava","description":"Generates AI images using the nano-banana CLI (Gemini 3.1 Flash default, Pro available). Handles multi-resolution (512-4K), aspect ratios, reference images for style transfer, green screen workflow for transparent assets, cost tracking, and exact dimension control. Use when asked to \"generate an image\", \"create a sprite\", \"make an asset\", \"generate artwork\", or any image generation task for UI mockups, game assets, videos, or marketing materials.","steps":[{"node":"command.nano-banana","caption":"User invokes /nano-banana"},{"node":"command.nano-banana","caption":"Standalone skill/utility — no subagent dispatch in the core path"}],"canonical":false},"command.optimize-video":{"label":"/optimize-video — Process and upload optimized videos to Supabase Storage with faststart + compres","description":"Process and upload optimized videos to Supabase Storage with faststart + compression.","steps":[{"node":"command.optimize-video","caption":"User invokes /optimize-video"},{"node":"command.optimize-video","caption":"Standalone skill/utility — no subagent dispatch in the core path"}],"canonical":false},"command.refactor-clean":{"label":"/refactor-clean — Detect and safely remove dead code, unused dependencies, and unnecessary complex","description":"Detect and safely remove dead code, unused dependencies, and unnecessary complexity.","steps":[{"node":"command.refactor-clean","caption":"User invokes /refactor-clean"},{"node":"command.refactor-clean","caption":"Standalone skill/utility — no subagent dispatch in the core path"}],"canonical":false},"command.session-save":{"label":"/session-save — Save the current session context to a file for continuity across sessions.","description":"Save the current session context to a file for continuity across sessions.","steps":[{"node":"command.session-save","caption":"User invokes /session-save"},{"node":"command.session-save","caption":"Standalone skill/utility — no subagent dispatch in the core path"}],"canonical":false},"command.split-screen-video":{"label":"/split-screen-video — Create a polished split-screen video from raw talking-head footage. Top half = B","description":"Create a polished split-screen video from raw talking-head footage. Top half = B-roll images with annotations, bottom half = zoomed presenter. Includes yellow subtitle bars, enhanced audio, and 1.2x speed.","steps":[{"node":"command.split-screen-video","caption":"User invokes /split-screen-video"},{"node":"command.split-screen-video","caption":"Standalone skill/utility — no subagent dispatch in the core path"}],"canonical":false},"command.transcribe":{"label":"/transcribe — Transcribe audio/video files using OpenAI Whisper. Supports 99 languages with au","description":"Transcribe audio/video files using OpenAI Whisper. Supports 99 languages with automatic detection.","steps":[{"node":"command.transcribe","caption":"User invokes /transcribe"},{"node":"command.transcribe","caption":"Standalone skill/utility — no subagent dispatch in the core path"}],"canonical":false},"command.view-video":{"label":"/view-video — Extract frames from a video using ffmpeg so Claude can visually analyze the cont","description":"Extract frames from a video using ffmpeg so Claude can visually analyze the content.","steps":[{"node":"command.view-video","caption":"User invokes /view-video"},{"node":"command.view-video","caption":"Standalone skill/utility — no subagent dispatch in the core path"}],"canonical":false}}
@@ -1387,6 +1387,393 @@
           grid-template-columns: 1fr 1fr 1fr;
         }
       }
+
+      /* =============================================================
+         View toggle (Map / List) — segmented control in header
+         ============================================================= */
+      .view-toggle {
+        display: inline-flex;
+        align-items: center;
+        padding: 3px;
+        gap: 2px;
+        background: var(--bg-elev-2);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+      }
+      .view-toggle__tab {
+        appearance: none;
+        -webkit-appearance: none;
+        border: 0;
+        background: transparent;
+        color: var(--text-secondary);
+        font-family: var(--font-ui);
+        font-size: 12px;
+        font-weight: 600;
+        letter-spacing: 0.01em;
+        padding: 0 12px;
+        height: 28px;
+        min-width: 52px;
+        border-radius: 6px;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        transition:
+          color var(--transition-fast),
+          background var(--transition-fast);
+      }
+      .view-toggle__tab:hover {
+        color: var(--text-primary);
+      }
+      .view-toggle__tab[aria-selected="true"] {
+        background: var(--bg-elev-1);
+        color: var(--text-primary);
+        box-shadow:
+          0 1px 0 rgba(255, 255, 255, 0.04) inset,
+          0 1px 2px rgba(0, 0, 0, 0.25);
+      }
+      [data-theme="light"] .view-toggle__tab[aria-selected="true"] {
+        background: #ffffff;
+        box-shadow: 0 1px 2px rgba(20, 20, 30, 0.08);
+      }
+      .view-toggle__tab:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+      }
+      .view-toggle__tab svg {
+        width: 13px;
+        height: 13px;
+      }
+
+      /* View swap container: the <main> and <section class="list-view">
+         cross-fade when switching. We drive the fade off body[data-view]. */
+      .list-view {
+        max-width: 960px;
+        margin: 0 auto;
+        padding: 0 20px 64px;
+        display: none;
+        opacity: 0;
+        transition: opacity var(--transition-med);
+      }
+      body[data-view="list"] .list-view {
+        display: block;
+        opacity: 1;
+      }
+      body[data-view="list"] .graph-wrap {
+        display: none;
+      }
+      /* During a theme/view transition with reduced motion, disable the fade. */
+      @media (prefers-reduced-motion: reduce) {
+        .list-view {
+          transition: none;
+        }
+      }
+
+      /* List TOC — sticky chip nav ------------------------------------ */
+      .list-toc {
+        position: sticky;
+        top: 62px; /* sit just under the translucent header */
+        z-index: 20;
+        margin: 0 -20px 20px;
+        padding: 10px 20px;
+        background: color-mix(in srgb, var(--bg) 80%, transparent);
+        backdrop-filter: saturate(160%) blur(12px);
+        -webkit-backdrop-filter: saturate(160%) blur(12px);
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+      }
+      .list-toc__chip {
+        appearance: none;
+        -webkit-appearance: none;
+        background: var(--bg-elev-1);
+        color: var(--text-secondary);
+        border: 1px solid var(--border);
+        font-family: var(--font-ui);
+        font-size: 12px;
+        font-weight: 500;
+        padding: 6px 12px;
+        border-radius: 999px;
+        cursor: pointer;
+        white-space: nowrap;
+        transition:
+          color var(--transition-fast),
+          background var(--transition-fast),
+          border-color var(--transition-fast);
+      }
+      .list-toc__chip:hover {
+        color: var(--text-primary);
+        border-color: var(--border-strong);
+      }
+      .list-toc__chip[data-active="true"] {
+        color: var(--text-primary);
+        background: var(--bg-elev-3);
+        border-color: var(--border-strong);
+      }
+      .list-toc__chip:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+      }
+      .list-toc__count {
+        font-family: var(--font-mono);
+        font-size: 10px;
+        color: var(--text-muted);
+        margin-left: 6px;
+      }
+
+      /* List sections -------------------------------------------------- */
+      .list-section {
+        margin: 28px 0 0;
+        scroll-margin-top: 130px; /* offset for header + toc */
+      }
+      .list-section__head {
+        display: flex;
+        align-items: baseline;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin: 0 0 4px;
+      }
+      .list-section__title {
+        font-size: 18px;
+        font-weight: 700;
+        letter-spacing: -0.015em;
+        color: var(--text-primary);
+        margin: 0;
+      }
+      .list-section__kind-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-family: var(--font-mono);
+        font-size: 10px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        padding: 3px 8px;
+        border-radius: 999px;
+        background: var(--bg-elev-2);
+        border: 1px solid var(--border);
+        color: var(--text-secondary);
+      }
+      .list-section__kind-pill::before {
+        content: "";
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--_dot, var(--accent));
+      }
+      .list-section__count {
+        font-family: var(--font-mono);
+        font-size: 12px;
+        color: var(--text-muted);
+      }
+      .list-section__role {
+        font-size: 14px;
+        line-height: 1.55;
+        color: var(--text-secondary);
+        margin: 6px 0 16px;
+        max-width: 680px;
+      }
+      .list-section__role code {
+        font-family: var(--font-mono);
+        font-size: 0.88em;
+        background: var(--bg-elev-2);
+        border: 1px solid var(--border);
+        padding: 1px 5px;
+        border-radius: 3px;
+        color: var(--text-primary);
+      }
+
+      /* Card grid ------------------------------------------------------ */
+      .list-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 14px;
+      }
+      .list-card {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        padding: 14px 14px 12px;
+        background: var(--bg-elev-1);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        color: var(--text-primary);
+        text-align: left;
+        cursor: pointer;
+        overflow: hidden;
+        transition:
+          background var(--transition-fast),
+          border-color var(--transition-fast),
+          transform var(--transition-fast);
+      }
+      .list-card:hover,
+      .list-card:focus-visible {
+        background: var(--bg-elev-2);
+        border-color: var(--border-strong);
+        outline: none;
+      }
+      .list-card:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+      }
+      @media (prefers-reduced-motion: no-preference) {
+        .list-card:hover {
+          transform: translateY(-1px);
+        }
+      }
+      .list-card__kind {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-family: var(--font-mono);
+        font-size: 10px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        padding: 2px 8px;
+        border-radius: 999px;
+        background: var(--bg-elev-2);
+        border: 1px solid var(--border);
+        color: var(--text-secondary);
+        align-self: flex-start;
+      }
+      [data-theme="light"] .list-card__kind {
+        background: var(--bg-elev-3);
+      }
+      .list-card__kind::before {
+        content: "";
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: var(--_dot, var(--accent));
+      }
+      .list-card__label {
+        font-size: 15px;
+        font-weight: 700;
+        letter-spacing: -0.01em;
+        color: var(--text-primary);
+        margin: 0;
+        word-break: break-word;
+      }
+      .list-card__summary {
+        font-size: 13px;
+        line-height: 1.5;
+        color: var(--text-secondary);
+        margin: 0;
+        display: -webkit-box;
+        -webkit-line-clamp: 3;
+        line-clamp: 3;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        word-break: break-word;
+      }
+      .list-card__summary code {
+        font-family: var(--font-mono);
+        font-size: 0.88em;
+        background: var(--bg-elev-2);
+        border: 1px solid var(--border);
+        padding: 0 4px;
+        border-radius: 3px;
+        color: var(--text-primary);
+      }
+      .list-card__footer {
+        margin-top: auto;
+        padding-top: 4px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        align-items: center;
+      }
+      /* Agent marker badge */
+      .list-card__marker {
+        font-family: var(--font-mono);
+        font-size: 10.5px;
+        font-weight: 600;
+        padding: 3px 8px;
+        border-radius: 4px;
+        background: var(--bg-elev-2);
+        border: 1px solid var(--border);
+        color: var(--_mc, var(--text-secondary));
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 100%;
+      }
+      .list-card__marker--success {
+        --_mc: var(--success);
+        border-color: color-mix(in srgb, var(--success) 40%, var(--border));
+        background: color-mix(in srgb, var(--success) 8%, var(--bg-elev-2));
+      }
+      .list-card__marker--warning {
+        --_mc: var(--warning);
+        border-color: color-mix(in srgb, var(--warning) 40%, var(--border));
+        background: color-mix(in srgb, var(--warning) 8%, var(--bg-elev-2));
+      }
+      .list-card__marker--danger {
+        --_mc: var(--danger);
+        border-color: color-mix(in srgb, var(--danger) 40%, var(--border));
+        background: color-mix(in srgb, var(--danger) 8%, var(--bg-elev-2));
+      }
+      /* Command count chips */
+      .list-card__count {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        font-family: var(--font-mono);
+        font-size: 10.5px;
+        padding: 2px 7px;
+        border-radius: 4px;
+        background: var(--bg-elev-2);
+        border: 1px solid var(--border);
+        color: var(--text-muted);
+      }
+      .list-card__count strong {
+        color: var(--text-secondary);
+        font-weight: 700;
+      }
+      /* Hook / MCP mono line */
+      .list-card__mono {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        color: var(--text-muted);
+        word-break: break-all;
+      }
+      .list-card__mono strong {
+        color: var(--text-secondary);
+        font-weight: 600;
+      }
+
+      /* Mobile list tweaks */
+      @media (max-width: 640px) {
+        .list-view {
+          padding: 0 14px 48px;
+        }
+        .list-toc {
+          top: 54px;
+          margin: 0 -14px 16px;
+          padding: 8px 14px;
+          flex-wrap: nowrap;
+          overflow-x: auto;
+          scrollbar-width: none;
+        }
+        .list-toc::-webkit-scrollbar {
+          display: none;
+        }
+        .list-grid {
+          grid-template-columns: 1fr;
+          gap: 12px;
+        }
+        .list-section__title {
+          font-size: 16px;
+        }
+        .list-section__role {
+          font-size: 13px;
+        }
+      }
     </style>
   </head>
   <body>
@@ -1440,6 +1827,56 @@
         </div>
 
         <div class="header__actions">
+          <div
+            class="view-toggle"
+            id="view-toggle"
+            role="tablist"
+            aria-label="View mode"
+          >
+            <button
+              class="view-toggle__tab"
+              id="view-tab-map"
+              role="tab"
+              aria-selected="true"
+              aria-controls="view-map"
+              data-view="map"
+              tabindex="0"
+              title="Map view (V to toggle)"
+            >
+              <svg
+                viewBox="0 0 16 16"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+                aria-hidden="true"
+              >
+                <circle cx="8" cy="8" r="2" />
+                <circle cx="8" cy="8" r="5.5" />
+              </svg>
+              Map
+            </button>
+            <button
+              class="view-toggle__tab"
+              id="view-tab-list"
+              role="tab"
+              aria-selected="false"
+              aria-controls="view-list"
+              data-view="list"
+              tabindex="-1"
+              title="List view (V to toggle)"
+            >
+              <svg
+                viewBox="0 0 16 16"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+                aria-hidden="true"
+              >
+                <path d="M3 4h10M3 8h10M3 12h10" />
+              </svg>
+              List
+            </button>
+          </div>
           <button
             class="icon-btn"
             id="theme-toggle"
@@ -1712,6 +2149,22 @@
         </div>
       </div>
     </main>
+
+    <!-- LIST VIEW (linear scroll) ========================================= -->
+    <section
+      class="list-view"
+      id="view-list"
+      role="region"
+      aria-label="Linear list of all 74 pieces, grouped by kind"
+      aria-hidden="true"
+    >
+      <nav
+        class="list-toc"
+        id="list-toc"
+        aria-label="List section navigation"
+      ></nav>
+      <div id="list-sections"></div>
+    </section>
 
     <!-- INSPECTOR (desktop slide-in) ======================================== -->
     <aside
@@ -3669,6 +4122,11 @@
           if (!STATE.data) return;
           const frame = document.getElementById("graph-frame");
           const rect = frame.getBoundingClientRect();
+          // When the map view is hidden (list view active), the frame has a
+          // 0×0 rect. Any layout pass would produce NaN positions and spam d3
+          // with errors, so skip — setView("map") triggers a fresh pass once
+          // the frame becomes measurable again.
+          if (rect.width === 0 || rect.height === 0) return;
           if (
             rect.width === STATE.currentWidth &&
             rect.height === STATE.currentHeight
@@ -3678,6 +4136,432 @@
           assignInitialPositions(rect.width, rect.height);
           renderGraph();
           runForceLayout();
+        }
+
+        // -----------------------------------------------------------
+        // List view --------------------------------------------------
+        // -----------------------------------------------------------
+        // Ordered section definitions. Kinds match values in data.nodes[*].kind.
+        // For "Orchestrator & Meta-Rules" and "Agents" we merge kinds and give
+        // dedicated copy per the narrative progression.
+        const LIST_SECTIONS = [
+          {
+            id: "meta",
+            title: "Orchestrator & Meta-Rules",
+            kinds: ["meta"],
+            dot: "var(--meta)",
+            pillKind: "Meta",
+            role: "The main thread is a router, not a worker. These three anchors set the discipline.",
+          },
+          {
+            id: "rule",
+            title: "Shared Rules",
+            kinds: ["rule"],
+            dot: "var(--warning)",
+            pillKind: "Rule",
+            role: "Authoritative reference docs that commands and agents `@`-include. Single source of truth, no drift.",
+          },
+          {
+            id: "command",
+            title: "Commands",
+            kinds: ["command"],
+            dot: "var(--accent)",
+            pillKind: "Command",
+            role: "Thin orchestrators the user invokes. Each `@`-includes the rules it needs and dispatches the agents that do the work.",
+          },
+          {
+            id: "agent",
+            title: "Agents",
+            kinds: ["agent"],
+            dot: "var(--agent)",
+            pillKind: "Agent",
+            role: "Fresh-context delegates. Each returns with an H2 completion marker the orchestrator regex-detects.",
+          },
+          {
+            id: "agent-template",
+            title: "Agent Templates",
+            kinds: ["agent-template"],
+            dot: "var(--agent)",
+            pillKind: "Template",
+            role: "Reusable subagent prompt templates for the two-stage review pattern.",
+          },
+          {
+            id: "skill",
+            title: "Skills",
+            kinds: ["skill"],
+            dot: "var(--skill)",
+            pillKind: "Skill",
+            role: "Compound tools invoked via `/skill-name`.",
+          },
+          {
+            id: "mcp",
+            title: "MCP Servers",
+            kinds: ["mcp"],
+            dot: "var(--mcp)",
+            pillKind: "MCP",
+            role: "Model Context Protocol integrations — external tool surfaces.",
+          },
+          {
+            id: "hook",
+            title: "Hooks",
+            kinds: ["hook"],
+            dot: "var(--hook)",
+            pillKind: "Hook",
+            role: "Settings-level event handlers the harness runs; enforce discipline the model won't do itself.",
+          },
+        ];
+
+        // Reuse markerClass() from the inspector module (defined above).
+        // Split summary on single backticks, preserving <code> segments.
+        function renderSummaryInto(target, raw) {
+          if (!raw) return;
+          const cleaned = raw
+            .replace(/<example>[\s\S]*?<\/example>/g, "")
+            .trim();
+          const parts = cleaned.split("`");
+          parts.forEach((part, i) => {
+            if (i % 2 === 1) {
+              const c = document.createElement("code");
+              c.textContent = part;
+              target.appendChild(c);
+            } else {
+              target.appendChild(document.createTextNode(part));
+            }
+          });
+        }
+
+        function buildListCard(node) {
+          const meta = KIND_META[node.kind] || {
+            label: node.kind,
+            color: "var(--accent)",
+          };
+          const card = document.createElement("button");
+          card.type = "button";
+          card.className = "list-card";
+          card.setAttribute("data-node-id", node.id);
+          card.setAttribute("aria-label", `${meta.label}: ${node.label}`);
+
+          // Kind pill
+          const kindPill = document.createElement("span");
+          kindPill.className = "list-card__kind";
+          kindPill.style.setProperty("--_dot", meta.color);
+          kindPill.textContent = meta.label;
+          card.appendChild(kindPill);
+
+          // Label
+          const h = document.createElement("h3");
+          h.className = "list-card__label";
+          h.textContent = node.label;
+          card.appendChild(h);
+
+          // Summary
+          if (node.summary) {
+            const p = document.createElement("p");
+            p.className = "list-card__summary";
+            renderSummaryInto(p, node.summary);
+            card.appendChild(p);
+          }
+
+          // Footer (role-specific)
+          const footer = document.createElement("div");
+          footer.className = "list-card__footer";
+          let footerHasContent = false;
+
+          if (
+            node.kind === "agent" &&
+            Array.isArray(node.markers) &&
+            node.markers.length
+          ) {
+            const badge = document.createElement("span");
+            badge.className = `list-card__marker ${markerClass(node.markers[0])}`;
+            badge.textContent = node.markers[0];
+            footer.appendChild(badge);
+            footerHasContent = true;
+          } else if (node.kind === "command") {
+            const incCount = Array.isArray(node.includes)
+              ? node.includes.length
+              : 0;
+            const disCount = Array.isArray(node.dispatches)
+              ? node.dispatches.length
+              : 0;
+            if (incCount > 0) {
+              const inc = document.createElement("span");
+              inc.className = "list-card__count";
+              inc.innerHTML = `<strong>${incCount}</strong> ${incCount === 1 ? "include" : "includes"}`;
+              footer.appendChild(inc);
+              footerHasContent = true;
+            }
+            if (disCount > 0) {
+              const dis = document.createElement("span");
+              dis.className = "list-card__count";
+              dis.innerHTML = `<strong>${disCount}</strong> ${disCount === 1 ? "dispatch" : "dispatches"}`;
+              footer.appendChild(dis);
+              footerHasContent = true;
+            }
+          } else if (node.kind === "hook") {
+            const mono = document.createElement("span");
+            mono.className = "list-card__mono";
+            const ev = node.event || "";
+            const match = node.matcher || "";
+            mono.innerHTML = `<strong>${ev}</strong>${match ? " · " + match : ""}`;
+            footer.appendChild(mono);
+            footerHasContent = true;
+          } else if (node.kind === "mcp" && node.transport) {
+            const mono = document.createElement("span");
+            mono.className = "list-card__mono";
+            mono.innerHTML = `transport: <strong>${node.transport}</strong>`;
+            footer.appendChild(mono);
+            footerHasContent = true;
+          }
+
+          if (footerHasContent) card.appendChild(footer);
+
+          // Wire: click or Enter/Space opens the shared inspector.
+          const open = (e) => {
+            e.preventDefault();
+            // On mobile, pinInspector routes to the bottom sheet automatically.
+            pinInspector(node);
+          };
+          card.addEventListener("click", open);
+          card.addEventListener("keydown", (e) => {
+            if (e.key === "Enter" || e.key === " ") open(e);
+          });
+
+          return card;
+        }
+
+        function buildListView() {
+          const sectionsEl = document.getElementById("list-sections");
+          const tocEl = document.getElementById("list-toc");
+          if (!sectionsEl || !tocEl) return;
+
+          // Clear (in case of re-init)
+          sectionsEl.innerHTML = "";
+          tocEl.innerHTML = "";
+
+          // Bucket nodes by kind once.
+          const byKind = new Map();
+          for (const n of STATE.data.nodes) {
+            if (!byKind.has(n.kind)) byKind.set(n.kind, []);
+            byKind.get(n.kind).push(n);
+          }
+          // Stable alpha by label within each section.
+          for (const arr of byKind.values()) {
+            arr.sort((a, b) =>
+              (a.label || "").localeCompare(b.label || "", undefined, {
+                sensitivity: "base",
+              }),
+            );
+          }
+
+          for (const def of LIST_SECTIONS) {
+            const items = def.kinds.flatMap((k) => byKind.get(k) || []);
+            if (!items.length) continue;
+
+            // TOC chip
+            const chip = document.createElement("button");
+            chip.type = "button";
+            chip.className = "list-toc__chip";
+            chip.setAttribute("data-section", def.id);
+            chip.setAttribute("data-active", "false");
+            chip.innerHTML = `${def.title}<span class="list-toc__count">${items.length}</span>`;
+            chip.addEventListener("click", () => {
+              const target = document.getElementById(`list-sec-${def.id}`);
+              if (target)
+                target.scrollIntoView({ behavior: "smooth", block: "start" });
+            });
+            tocEl.appendChild(chip);
+
+            // Section
+            const sec = document.createElement("section");
+            sec.className = "list-section";
+            sec.id = `list-sec-${def.id}`;
+            sec.setAttribute("data-section", def.id);
+
+            const head = document.createElement("div");
+            head.className = "list-section__head";
+            const pill = document.createElement("span");
+            pill.className = "list-section__kind-pill";
+            pill.style.setProperty("--_dot", def.dot);
+            pill.textContent = def.pillKind;
+            head.appendChild(pill);
+            const title = document.createElement("h2");
+            title.className = "list-section__title";
+            title.textContent = def.title;
+            head.appendChild(title);
+            const count = document.createElement("span");
+            count.className = "list-section__count";
+            count.textContent = `${items.length} ${items.length === 1 ? "item" : "items"}`;
+            head.appendChild(count);
+            sec.appendChild(head);
+
+            const role = document.createElement("p");
+            role.className = "list-section__role";
+            renderSummaryInto(role, def.role);
+            sec.appendChild(role);
+
+            const grid = document.createElement("div");
+            grid.className = "list-grid";
+            for (const node of items) grid.appendChild(buildListCard(node));
+            sec.appendChild(grid);
+
+            sectionsEl.appendChild(sec);
+          }
+
+          // Scroll-spy: highlight current TOC chip.
+          const chips = Array.from(tocEl.querySelectorAll(".list-toc__chip"));
+          const chipBySection = new Map(
+            chips.map((c) => [c.getAttribute("data-section"), c]),
+          );
+          const setActiveChip = (id) => {
+            for (const c of chips)
+              c.setAttribute(
+                "data-active",
+                c.getAttribute("data-section") === id ? "true" : "false",
+              );
+          };
+          // Initial
+          if (chips.length)
+            setActiveChip(chips[0].getAttribute("data-section"));
+
+          if (!("IntersectionObserver" in window)) return;
+          const io = new IntersectionObserver(
+            (entries) => {
+              // Pick the entry closest to the top that's intersecting.
+              let best = null;
+              for (const en of entries) {
+                if (!en.isIntersecting) continue;
+                if (
+                  !best ||
+                  en.boundingClientRect.top < best.boundingClientRect.top
+                )
+                  best = en;
+              }
+              if (best) {
+                const id = best.target.getAttribute("data-section");
+                if (id) setActiveChip(id);
+              }
+            },
+            {
+              // Fire when a section enters the top third of the viewport.
+              rootMargin: "-140px 0px -60% 0px",
+              threshold: 0,
+            },
+          );
+          for (const sec of sectionsEl.querySelectorAll(".list-section")) {
+            io.observe(sec);
+          }
+        }
+
+        // -----------------------------------------------------------
+        // View toggle (Map / List) -----------------------------------
+        // -----------------------------------------------------------
+        const VIEW_STORAGE_KEY = "viz-view";
+
+        function setView(view, opts = {}) {
+          const next = view === "list" ? "list" : "map";
+          document.body.setAttribute("data-view", next);
+
+          const mapTab = document.getElementById("view-tab-map");
+          const listTab = document.getElementById("view-tab-list");
+          const listRegion = document.getElementById("view-list");
+          const mapRegion = document.querySelector("main.graph-wrap");
+
+          if (mapTab && listTab) {
+            const isList = next === "list";
+            mapTab.setAttribute("aria-selected", String(!isList));
+            listTab.setAttribute("aria-selected", String(isList));
+            mapTab.setAttribute("tabindex", isList ? "-1" : "0");
+            listTab.setAttribute("tabindex", isList ? "0" : "-1");
+          }
+          if (listRegion)
+            listRegion.setAttribute(
+              "aria-hidden",
+              next === "list" ? "false" : "true",
+            );
+          if (mapRegion)
+            mapRegion.setAttribute(
+              "aria-hidden",
+              next === "map" ? "false" : "true",
+            );
+
+          // Persist unless we're merely restoring on boot.
+          if (!opts.silent) {
+            try {
+              localStorage.setItem(VIEW_STORAGE_KEY, next);
+            } catch (_) {
+              /* quota / privacy mode — ignore */
+            }
+          }
+
+          // Switching away from the graph: close any open flow overlay-free
+          // behavior is preserved (map stays interactive on return).
+          // When we return to map, the radial layout is already in place; no
+          // re-render is required. If the window was resized while hidden,
+          // onResize will still pick up the new rect next time it fires.
+          if (next === "map") {
+            // Nudge layout in case the frame was 0-sized while hidden.
+            requestAnimationFrame(() => {
+              try {
+                onResize();
+              } catch (_) {}
+            });
+          }
+        }
+
+        function initViewToggle() {
+          const mapTab = document.getElementById("view-tab-map");
+          const listTab = document.getElementById("view-tab-list");
+          if (!mapTab || !listTab) return;
+
+          // Build the list content once on init.
+          buildListView();
+
+          mapTab.addEventListener("click", () => setView("map"));
+          listTab.addEventListener("click", () => setView("list"));
+
+          // Arrow key navigation inside the tablist (ARIA pattern).
+          const tabs = [mapTab, listTab];
+          for (const t of tabs) {
+            t.addEventListener("keydown", (e) => {
+              if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+              e.preventDefault();
+              const idx = tabs.indexOf(e.currentTarget);
+              const nextIdx =
+                e.key === "ArrowRight"
+                  ? (idx + 1) % tabs.length
+                  : (idx - 1 + tabs.length) % tabs.length;
+              tabs[nextIdx].focus();
+              setView(tabs[nextIdx].getAttribute("data-view"));
+            });
+          }
+
+          // Global `V` hotkey — ignore when user is typing in an input.
+          document.addEventListener("keydown", (e) => {
+            if (e.key !== "v" && e.key !== "V") return;
+            if (e.metaKey || e.ctrlKey || e.altKey) return;
+            const ae = document.activeElement;
+            const tag = ae && ae.tagName ? ae.tagName.toLowerCase() : "";
+            if (
+              tag === "input" ||
+              tag === "textarea" ||
+              tag === "select" ||
+              (ae && ae.isContentEditable)
+            )
+              return;
+            e.preventDefault();
+            const cur = document.body.getAttribute("data-view") || "map";
+            setView(cur === "list" ? "map" : "list");
+          });
+
+          // Restore persisted view.
+          let saved = "map";
+          try {
+            saved = localStorage.getItem(VIEW_STORAGE_KEY) || "map";
+          } catch (_) {
+            /* ignore */
+          }
+          setView(saved === "list" ? "list" : "map", { silent: true });
         }
 
         // -----------------------------------------------------------
@@ -3720,6 +4604,7 @@
           initFlowControls();
           initStoryboardClose();
           initBottomSheetDrag();
+          initViewToggle();
 
           window.addEventListener("resize", debounce(onResize, 200));
         }
