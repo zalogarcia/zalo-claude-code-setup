@@ -1,0 +1,1045 @@
+{
+  "meta": {
+    "generatedAt": "2026-04-16T22:59:57.597Z",
+    "repo": "zalo-claude-code-setup"
+  },
+  "nodes": [
+    {
+      "id": "meta.META_RULE",
+      "kind": "meta",
+      "label": "META_RULE.md",
+      "path": "META_RULE.md",
+      "summary": "Re-injected on every `startup`, `/clear`, and `/compact`. Edit this file freely — the `session-start.sh` hook reads it fresh each time."
+    },
+    {
+      "id": "meta.CLAUDE",
+      "kind": "meta",
+      "label": "CLAUDE.md",
+      "path": "claude-md/CLAUDE.md",
+      "summary": "When the user corrects you, says \"no\", \"wrong\", \"don't do that\", \"stop\", or otherwise indicates you made a mistake:"
+    },
+    {
+      "id": "meta.orchestrator",
+      "kind": "meta",
+      "label": "Main Thread (Orchestrator)",
+      "path": "",
+      "summary": "The main conversation thread. Routes requests, reads rules, dispatches fresh-context subagents, and owns the user relationship. Never does heavy lifting itself."
+    },
+    {
+      "id": "rule.agent-contracts",
+      "kind": "rule",
+      "label": "agent-contracts",
+      "path": "rules/agent-contracts.md",
+      "summary": "Completion markers and return contract for `~/.claude/agents/`. Skills/orchestrators detect agent completion by regex-matching these H2 markers in the agent's final output."
+    },
+    {
+      "id": "rule.anti-patterns",
+      "kind": "rule",
+      "label": "anti-patterns",
+      "path": "rules/anti-patterns.md",
+      "summary": "Behavioral rules that apply regardless of project. Drawn from both gsd-build/get-shit-done universal anti-patterns and obra/superpowers writing-plans \"No Placeholders\" list."
+    },
+    {
+      "id": "rule.checkpoints",
+      "kind": "rule",
+      "label": "checkpoints",
+      "path": "rules/checkpoints.md",
+      "summary": "Adapted from gsd-build/get-shit-done. When an orchestrator needs human input, emit a **readable markdown checkpoint block** and **stop** — do not continue past the gate."
+    },
+    {
+      "id": "rule.context-budget",
+      "kind": "rule",
+      "label": "context-budget",
+      "path": "rules/context-budget.md",
+      "summary": "Adapted from gsd-build/get-shit-done `references/context-budget.md`. Use this to self-regulate context usage and to recognize degradation before it becomes catastrophic."
+    },
+    {
+      "id": "rule.gates",
+      "kind": "rule",
+      "label": "gates",
+      "path": "rules/gates.md",
+      "summary": "Two distinct kinds of gates: **workflow gates** (when to advance/loop/stop in a multi-step orchestration) and the **Verification Gate Function** (when an agent claims a task is done)."
+    },
+    {
+      "id": "rule.git-safety",
+      "kind": "rule",
+      "label": "git-safety",
+      "path": "rules/git-safety.md",
+      "summary": "Combined from obra/superpowers `using-git-worktrees` and gsd-build/get-shit-done universal anti-patterns."
+    },
+    {
+      "id": "rule.persuasion-principles",
+      "kind": "rule",
+      "label": "persuasion-principles",
+      "path": "rules/persuasion-principles.md",
+      "summary": "Adapted from obra/superpowers `writing-skills/persuasion-principles.md`. Reference when authoring or revising files in `~/.claude/rules/`, `~/.claude/CLAUDE.md`, agent definitions, or skill bodies."
+    },
+    {
+      "id": "rule.problem-solving",
+      "kind": "rule",
+      "label": "problem-solving",
+      "path": "rules/problem-solving.md",
+      "summary": "Adapted from obra/superpowers-skills `problem-solving/when-stuck`. When you (or a subagent) feel stuck, name the symptom and pick the matching technique. Don't keep retrying the same approach."
+    },
+    {
+      "id": "rule.questioning",
+      "kind": "rule",
+      "label": "questioning",
+      "path": "rules/questioning.md",
+      "summary": "Adapted from gsd-build/get-shit-done `references/questioning.md`. Use this when eliciting requirements, brainstorming, or any \"what do you actually want?\" conversation."
+    },
+    {
+      "id": "rule.verification-patterns",
+      "kind": "rule",
+      "label": "verification-patterns",
+      "path": "rules/verification-patterns.md",
+      "summary": "The defining principle for `qa-agent`, `live-test`, and any \"is it actually done?\" check."
+    },
+    {
+      "id": "rule.when-to-parallelize",
+      "kind": "rule",
+      "label": "when-to-parallelize",
+      "path": "rules/when-to-parallelize.md",
+      "summary": "Adapted from obra/superpowers `dispatching-parallel-agents`. Claude Code's `Agent` tool runs multiple invocations concurrently when called in a single message — use this rule to decide when that's appropriate."
+    },
+    {
+      "id": "command.autoloop",
+      "kind": "command",
+      "label": "/autoloop",
+      "path": "commands/autoloop.md",
+      "summary": "Autonomous optimization loop that iteratively improves code until it meets a target metric. Based on Karpathy's autoresearch architecture: hypothesis -> modify -> test -> commit/revert.",
+      "includes": [],
+      "dispatches": [
+        "agent.live-test",
+        "agent.qa-agent"
+      ]
+    },
+    {
+      "id": "command.autoloop-harness",
+      "kind": "command",
+      "label": "/autoloop-harness",
+      "path": "commands/autoloop-harness.sh",
+      "summary": "set -euo pipefail",
+      "includes": [],
+      "dispatches": []
+    },
+    {
+      "id": "command.autotest",
+      "kind": "command",
+      "label": "/autotest",
+      "path": "commands/autotest.md",
+      "summary": "Autonomous live testing agent that systematically tests a web application via Playwright. Reads a briefing for the test plan (URL, credentials, test cases) and executes each test, recording pass/fail results. Reusable across any web app.",
+      "includes": [],
+      "dispatches": []
+    },
+    {
+      "id": "command.brainstorm",
+      "kind": "command",
+      "label": "/brainstorm",
+      "path": "commands/brainstorm.md",
+      "summary": "Dispatch the `brainstorm` agent to apply first principles, inversion, and second-order thinking. Surfaces the real problem, not just the presented one.",
+      "includes": [
+        "rule.agent-contracts",
+        "rule.questioning",
+        "rule.problem-solving"
+      ],
+      "dispatches": [
+        "agent.brainstorm"
+      ]
+    },
+    {
+      "id": "command.bug",
+      "kind": "command",
+      "label": "/bug",
+      "path": "commands/bug.md",
+      "summary": "Trace the full flow → identify root cause → fix narrowly → QA. Built around the `bug-fix` agent's 4-phase systematic debugging.",
+      "includes": [
+        "rule.agent-contracts",
+        "rule.problem-solving",
+        "rule.gates",
+        "rule.verification-patterns"
+      ],
+      "dispatches": [
+        "agent.bug-fix",
+        "agent.brainstorm"
+      ]
+    },
+    {
+      "id": "command.build-fix",
+      "kind": "command",
+      "label": "/build-fix",
+      "path": "commands/build-fix.md",
+      "summary": "Detect and fix build errors iteratively with guardrails.",
+      "includes": [],
+      "dispatches": []
+    },
+    {
+      "id": "command.deploy-validate",
+      "kind": "command",
+      "label": "/deploy-validate",
+      "path": "commands/deploy-validate.md",
+      "summary": "Pre-deploy QA → deploy to staging → smoke test → log audit → human-action checkpoint for production.",
+      "includes": [
+        "rule.agent-contracts",
+        "rule.gates",
+        "rule.checkpoints",
+        "rule.git-safety"
+      ],
+      "dispatches": []
+    },
+    {
+      "id": "command.e2e",
+      "kind": "command",
+      "label": "/e2e",
+      "path": "commands/e2e.md",
+      "summary": "Generate and run end-to-end tests using Playwright.",
+      "includes": [],
+      "dispatches": []
+    },
+    {
+      "id": "command.enhance-audio",
+      "kind": "command",
+      "label": "/enhance-audio",
+      "path": "commands/enhance-audio.md",
+      "summary": "Enhance and clean up audio in video/audio files using FFmpeg filters. Removes noise, normalizes volume, and improves speech clarity.",
+      "includes": [],
+      "dispatches": []
+    },
+    {
+      "id": "command.ghl-upload",
+      "kind": "command",
+      "label": "/ghl-upload",
+      "path": "commands/ghl-upload.md",
+      "summary": "Upload files to GoHighLevel's media library via API.",
+      "includes": [],
+      "dispatches": []
+    },
+    {
+      "id": "command.graph",
+      "kind": "command",
+      "label": "/graph",
+      "path": "commands/graph.md",
+      "summary": "Build or rebuild the repo-graphrag knowledge graph for the current project.",
+      "includes": [],
+      "dispatches": []
+    },
+    {
+      "id": "command.learn",
+      "kind": "command",
+      "label": "/learn",
+      "path": "commands/learn.md",
+      "summary": "Extract reusable patterns and lessons from the current session and save them to memory.",
+      "includes": [],
+      "dispatches": []
+    },
+    {
+      "id": "command.nano-banana",
+      "kind": "command",
+      "label": "/nano-banana",
+      "path": "commands/nano-banana.md",
+      "summary": "Generates AI images using the nano-banana CLI (Gemini 3.1 Flash default, Pro available). Handles multi-resolution (512-4K), aspect ratios, reference images for style transfer, green screen workflow for transparent assets, cost tracking, and exact dimension control. Use when asked to \"generate an image\", \"create a sprite\", \"make an asset\", \"generate artwork\", or any image generation task for UI mockups, game assets, videos, or marketing materials.",
+      "includes": [],
+      "dispatches": []
+    },
+    {
+      "id": "command.optimize-video",
+      "kind": "command",
+      "label": "/optimize-video",
+      "path": "commands/optimize-video.md",
+      "summary": "Process and upload optimized videos to Supabase Storage with faststart + compression.",
+      "includes": [],
+      "dispatches": []
+    },
+    {
+      "id": "command.qa-loop",
+      "kind": "command",
+      "label": "/qa-loop",
+      "path": "commands/qa-loop.md",
+      "summary": "Revision Gate that converges on a clean state. Iterates `qa-agent` audits + minimal fixes until no real bugs remain.",
+      "includes": [
+        "rule.agent-contracts",
+        "rule.gates",
+        "rule.verification-patterns",
+        "rule.anti-patterns"
+      ],
+      "dispatches": [
+        "agent.qa-agent"
+      ]
+    },
+    {
+      "id": "command.redesign",
+      "kind": "command",
+      "label": "/redesign",
+      "path": "commands/redesign.md",
+      "summary": "Redesign an existing UI through collaborative brainstorming, mockup generation, implementation, and visual verification.",
+      "includes": [],
+      "dispatches": [
+        "agent.brainstorm",
+        "agent.live-test",
+        "agent.frontend-specialist",
+        "agent.image-craft-expert"
+      ]
+    },
+    {
+      "id": "command.refactor-clean",
+      "kind": "command",
+      "label": "/refactor-clean",
+      "path": "commands/refactor-clean.md",
+      "summary": "Detect and safely remove dead code, unused dependencies, and unnecessary complexity.",
+      "includes": [],
+      "dispatches": []
+    },
+    {
+      "id": "command.session-save",
+      "kind": "command",
+      "label": "/session-save",
+      "path": "commands/session-save.md",
+      "summary": "Save the current session context to a file for continuity across sessions.",
+      "includes": [],
+      "dispatches": []
+    },
+    {
+      "id": "command.ship",
+      "kind": "command",
+      "label": "/ship",
+      "path": "commands/ship.md",
+      "summary": "Plan → implement → QA → wait for explicit push approval. The orchestrator owns sequencing; subagents do the work.",
+      "includes": [
+        "rule.agent-contracts",
+        "rule.gates",
+        "rule.anti-patterns",
+        "rule.checkpoints"
+      ],
+      "dispatches": [
+        "agent.safe-planner",
+        "agent.frontend-specialist",
+        "agent.live-test",
+        "agent.qa-agent"
+      ]
+    },
+    {
+      "id": "command.split-screen-video",
+      "kind": "command",
+      "label": "/split-screen-video",
+      "path": "commands/split-screen-video.md",
+      "summary": "Create a polished split-screen video from raw talking-head footage. Top half = B-roll images with annotations, bottom half = zoomed presenter. Includes yellow subtitle bars, enhanced audio, and 1.2x speed.",
+      "includes": [],
+      "dispatches": []
+    },
+    {
+      "id": "command.tdd",
+      "kind": "command",
+      "label": "/tdd",
+      "path": "commands/tdd.md",
+      "summary": "Strict RED → GREEN → REFACTOR. Adapted from obra/superpowers `test-driven-development`.",
+      "includes": [
+        "rule.gates",
+        "rule.anti-patterns",
+        "rule.verification-patterns"
+      ],
+      "dispatches": []
+    },
+    {
+      "id": "command.transcribe",
+      "kind": "command",
+      "label": "/transcribe",
+      "path": "commands/transcribe.md",
+      "summary": "Transcribe audio/video files using OpenAI Whisper. Supports 99 languages with automatic detection.",
+      "includes": [],
+      "dispatches": []
+    },
+    {
+      "id": "command.view-video",
+      "kind": "command",
+      "label": "/view-video",
+      "path": "commands/view-video.md",
+      "summary": "Extract frames from a video using ffmpeg so Claude can visually analyze the content.",
+      "includes": [],
+      "dispatches": []
+    },
+    {
+      "id": "agent.brainstorm",
+      "kind": "agent",
+      "label": "brainstorm",
+      "path": "agents/brainstorm.md",
+      "summary": "Deep-thinking agent that prevents expensive mistakes by challenging assumptions, eliminating complexity, and stress-testing ideas before committing. Applies first principles, Elon Musk's 5-step philosophy, inversion, and second-order thinking. Use for any problem, plan, architecture decision, or strategy that deserves rigorous thought before action. <example>user: 'I need to figure out the best architecture for our real-time notification system' assistant: 'I'll use the brainstorm agent to break this down from first principles and challenge our assumptions.'</example>",
+      "markers": [
+        "## EXPLORATION COMPLETE"
+      ],
+      "includes": []
+    },
+    {
+      "id": "agent.bug-fix",
+      "kind": "agent",
+      "label": "bug-fix",
+      "path": "agents/bug-fix.md",
+      "summary": "Trace the full user flow to find the root cause of a bug. Reads all related code and crafts a comprehensive fix plan before making changes. Use when something is broken and you need a thorough diagnosis. <example>user: 'Users are getting logged out randomly after checkout' assistant: 'I'll use the bug-fix agent to trace the full flow and find the root cause.'</example>",
+      "markers": [
+        "## ROOT CAUSE FOUND",
+        "## INVESTIGATION INCOMPLETE",
+        "## BLOCKED"
+      ],
+      "includes": []
+    },
+    {
+      "id": "agent.frontend-specialist",
+      "kind": "agent",
+      "label": "frontend-specialist",
+      "path": "agents/frontend-specialist.md",
+      "summary": "Builds and optimizes frontend UI — components, styling, responsiveness, accessibility, and performance. Use for any client-side development task. <example>user: 'I need to build a mobile-friendly navigation bar that collapses on smaller screens' assistant: 'I'll use the frontend-specialist agent to create a responsive navigation component.'</example>",
+      "markers": [
+        "## IMPLEMENTATION COMPLETE",
+        "## IMPLEMENTATION DONE_WITH_CONCERNS",
+        "## BLOCKED"
+      ],
+      "includes": []
+    },
+    {
+      "id": "agent.image-craft-expert",
+      "kind": "agent",
+      "label": "image-craft-expert",
+      "path": "agents/image-craft-expert.md",
+      "summary": "Crafts optimized text-to-image prompts and generates images using Gemini (nano-banana) and/or ChatGPT (gpt-image-1.5). Use for any image generation task. <example>user: 'Create an image of a fantasy castle at sunset' assistant: 'I'll use the image-craft-expert to craft a detailed generation prompt.'</example>",
+      "markers": [
+        "## IMAGE GENERATED",
+        "## GENERATION FAILED"
+      ],
+      "includes": []
+    },
+    {
+      "id": "agent.live-test",
+      "kind": "agent",
+      "label": "live-test",
+      "path": "agents/live-test.md",
+      "summary": "Visually verifies code changes work in the browser using Playwright. Use after implementing features, fixing bugs, or making UI changes to confirm they work as intended before shipping. <example>user: 'I just added the new pricing page, can you verify it looks right?' assistant: 'I'll use the live-test agent to open the app in the browser and verify the pricing page.'</example>",
+      "markers": [
+        "## UI VERIFIED",
+        "## UI ISSUES FOUND",
+        "## BLOCKED"
+      ],
+      "includes": []
+    },
+    {
+      "id": "agent.qa-agent",
+      "kind": "agent",
+      "label": "qa-agent",
+      "path": "agents/qa-agent.md",
+      "summary": "Audits recent code changes for real, reproducible bugs. Use after implementing features, before deployments, or when asked to stress test, verify, or audit code. <example>user: 'I just finished the checkout flow, can you stress test it?' assistant: 'I'll use the qa-agent to find any real bugs in the checkout implementation.'</example>",
+      "markers": [
+        "## VERIFICATION PASSED",
+        "## ISSUES FOUND",
+        "## BLOCKED"
+      ],
+      "includes": []
+    },
+    {
+      "id": "agent.safe-planner",
+      "kind": "agent",
+      "label": "safe-planner",
+      "path": "agents/safe-planner.md",
+      "summary": "Plans implementation changes safely by reading all related code, mapping dependencies, identifying risks, and producing a rollback-ready plan for approval. Use before features, refactors, migrations, or any non-trivial changes. <example>user: 'I need to add Stripe webhooks to our checkout flow' assistant: 'I'll use the safe-planner agent to map dependencies and create a safe implementation plan before we touch anything.'</example>",
+      "markers": [
+        "## PLAN READY",
+        "## NEEDS DECISION",
+        "## BLOCKED"
+      ],
+      "includes": []
+    },
+    {
+      "id": "agent-template.code-quality-reviewer-prompt",
+      "kind": "agent-template",
+      "label": "code-quality-reviewer-prompt",
+      "path": "agents/templates/code-quality-reviewer-prompt.md",
+      "summary": "Source: obra/superpowers `subagent-driven-development/code-quality-reviewer-prompt.md`. Use this template for **stage 2** of two-stage review, after spec-compliance has passed. This is the \"would I approve this PR?\" pass.",
+      "includes": []
+    },
+    {
+      "id": "agent-template.implementer-prompt",
+      "kind": "agent-template",
+      "label": "implementer-prompt",
+      "path": "agents/templates/implementer-prompt.md",
+      "summary": "Source: obra/superpowers `subagent-driven-development/implementer-prompt.md`. Use this template when dispatching a subagent to implement a discrete task. Fill in `[bracketed]` slots with concrete content — never paste this template verbatim with placeholders intact.",
+      "includes": []
+    },
+    {
+      "id": "agent-template.spec-reviewer-prompt",
+      "kind": "agent-template",
+      "label": "spec-reviewer-prompt",
+      "path": "agents/templates/spec-reviewer-prompt.md",
+      "summary": "Source: obra/superpowers `subagent-driven-development/spec-reviewer-prompt.md`. Use this template when dispatching the **first stage** of two-stage review (spec compliance, before code quality). Pair with `code-quality-reviewer-prompt.md`.",
+      "includes": []
+    },
+    {
+      "id": "skill.cf-crawl",
+      "kind": "skill",
+      "label": "cf-crawl",
+      "path": "skills/cf-crawl",
+      "summary": "Crawl websites using Cloudflare Browser Rendering API. Use when the user wants to scrape, crawl, or extract content from a website (single page or multi-page). Returns HTML, Markdown, or structured JSON."
+    },
+    {
+      "id": "skill.frontend-design",
+      "kind": "skill",
+      "label": "frontend-design",
+      "path": "skills/frontend-design",
+      "summary": "Create distinctive, production-grade frontend interfaces with high design quality. Use this skill when the user asks to build web components, pages, or applications. Generates creative, polished code that avoids generic AI aesthetics."
+    },
+    {
+      "id": "skill.multi-edit",
+      "kind": "skill",
+      "label": "multi-edit",
+      "path": "skills/multi-edit",
+      "summary": "Heavyweight planning path for refactors, renames, migrations, and cross-module changes that are hard to roll back. Runs safe-planner, optionally brainstorm, then blocks on human approval before any edit. Triggers on \"refactor\", \"rename across\", \"migrate\", \"restructure\", \"move X out of\", \"extract into shared\", or any change that crosses module boundaries. Not for new features (use /ship) or single-file fixes."
+    },
+    {
+      "id": "skill.telegram",
+      "kind": "skill",
+      "label": "telegram",
+      "path": "skills/telegram",
+      "summary": "Send messages, files, images, or documents to the user via their Telegram bot. Use when the user asks to send something to Telegram, notify them, or share content via Telegram."
+    },
+    {
+      "id": "skill.ui-ux-pro-max",
+      "kind": "skill",
+      "label": "ui-ux-pro-max",
+      "path": "skills/ui-ux-pro-max",
+      "summary": "UI/UX design intelligence. 50 styles, 21 palettes, 50 font pairings, 20 charts, 8 stacks (React, Next.js, Vue, Svelte, SwiftUI, React Native, Flutter, Tailwind). Actions: plan, build, create, design, implement, review, fix, improve, optimize, enhance, refactor, check UI/UX code. Projects: website, landing page, dashboard, admin panel, e-commerce, SaaS, portfolio, blog, mobile app, .html, .tsx, .vue, .svelte. Elements: button, modal, navbar, sidebar, card, table, form, chart. Styles: glassmorphism, claymorphism, minimalism, brutalism, neumorphism, bento grid, dark mode, responsive, skeuomorphism, flat design. Topics: color palette, accessibility, animation, layout, typography, font pairing, spacing, hover, shadow, gradient."
+    },
+    {
+      "id": "mcp.context7",
+      "kind": "mcp",
+      "label": "context7",
+      "path": "mcp/mcp-servers.json",
+      "summary": "HTTP endpoint: https://mcp.context7.com/mcp",
+      "transport": "http"
+    },
+    {
+      "id": "mcp.playwright",
+      "kind": "mcp",
+      "label": "playwright",
+      "path": "mcp/mcp-servers.json",
+      "summary": "stdio: npx -y @playwright/mcp@latest",
+      "transport": "stdio"
+    },
+    {
+      "id": "mcp.github",
+      "kind": "mcp",
+      "label": "github",
+      "path": "mcp/mcp-servers.json",
+      "summary": "stdio: npx -y @modelcontextprotocol/server-github",
+      "transport": "stdio"
+    },
+    {
+      "id": "mcp.n8n-api",
+      "kind": "mcp",
+      "label": "n8n-api",
+      "path": "mcp/mcp-servers.json",
+      "summary": "stdio: node __HOME__/Documents/AI Projects/n8n-zk/n8n-mcp-server/index.js",
+      "transport": "stdio"
+    },
+    {
+      "id": "mcp.supabase",
+      "kind": "mcp",
+      "label": "supabase",
+      "path": "mcp/mcp-servers.json",
+      "summary": "stdio: npx -y @supabase/mcp-server-supabase@latest",
+      "transport": "stdio"
+    },
+    {
+      "id": "mcp.qdrant-memory",
+      "kind": "mcp",
+      "label": "qdrant-memory",
+      "path": "mcp/mcp-servers.json",
+      "summary": "stdio: uvx mcp-server-qdrant",
+      "transport": "stdio"
+    },
+    {
+      "id": "mcp.knowledge-graph",
+      "kind": "mcp",
+      "label": "knowledge-graph",
+      "path": "mcp/mcp-servers.json",
+      "summary": "stdio: npx -y @modelcontextprotocol/server-memory",
+      "transport": "stdio"
+    },
+    {
+      "id": "mcp.repo-graphrag",
+      "kind": "mcp",
+      "label": "repo-graphrag",
+      "path": "mcp/mcp-servers.json",
+      "summary": "stdio: uv --directory __HOME__/repo-graphrag-mcp run server.py",
+      "transport": "stdio"
+    },
+    {
+      "id": "hook.Notification.0",
+      "kind": "hook",
+      "label": "Notification",
+      "event": "Notification",
+      "matcher": "*",
+      "path": "hooks/settings.json",
+      "summary": "/Users/zalo/.vibe-island/bin/vibe-island-bridge --source claude"
+    },
+    {
+      "id": "hook.PermissionRequest.0",
+      "kind": "hook",
+      "label": "PermissionRequest",
+      "event": "PermissionRequest",
+      "matcher": "*",
+      "path": "hooks/settings.json",
+      "summary": "/Users/zalo/.vibe-island/bin/vibe-island-bridge --source claude"
+    },
+    {
+      "id": "hook.PostToolUse.0",
+      "kind": "hook",
+      "label": "PostToolUse [Edit|Write|MultiEdit]",
+      "event": "PostToolUse",
+      "matcher": "Edit|Write|MultiEdit",
+      "path": "hooks/settings.json",
+      "summary": "FILE=$(cat | jq -r '.tool_input.file_path // empty'); if [ -n \"$FILE\" ] && echo \"$FILE\" | grep -qE '\\.(ts|tsx|js|jsx|css|json|md|html)$'; then prettier --write \"$FILE\" 2>/dev/null; fi"
+    },
+    {
+      "id": "hook.PostToolUse.1",
+      "kind": "hook",
+      "label": "PostToolUse [Edit|Write|MultiEdit]",
+      "event": "PostToolUse",
+      "matcher": "Edit|Write|MultiEdit",
+      "path": "hooks/settings.json",
+      "summary": "FILE=$(cat | jq -r '.tool_input.file_path // empty'); if [ -n \"$FILE\" ] && echo \"$FILE\" | grep -qE '\\.py$'; then which ruff >/dev/null 2>&1 && ruff format \"$FILE\" 2>/dev/null && ruff check --fix \"$FILE\" 2>/dev/null; fi"
+    },
+    {
+      "id": "hook.PostToolUse.2",
+      "kind": "hook",
+      "label": "PostToolUse",
+      "event": "PostToolUse",
+      "matcher": "*",
+      "path": "hooks/settings.json",
+      "summary": "/Users/zalo/.vibe-island/bin/vibe-island-bridge --source claude"
+    },
+    {
+      "id": "hook.PreCompact.0",
+      "kind": "hook",
+      "label": "PreCompact",
+      "event": "PreCompact",
+      "matcher": "*",
+      "path": "hooks/settings.json",
+      "summary": "/Users/zalo/.vibe-island/bin/vibe-island-bridge --source claude"
+    },
+    {
+      "id": "hook.PreToolUse.0",
+      "kind": "hook",
+      "label": "PreToolUse",
+      "event": "PreToolUse",
+      "matcher": "*",
+      "path": "hooks/settings.json",
+      "summary": "/Users/zalo/.vibe-island/bin/vibe-island-bridge --source claude"
+    },
+    {
+      "id": "hook.PreToolUse.1",
+      "kind": "hook",
+      "label": "PreToolUse [Bash]",
+      "event": "PreToolUse",
+      "matcher": "Bash",
+      "path": "hooks/settings.json",
+      "summary": "python3 /Users/zalo/.claude/hooks/gitleaks-guard.py"
+    },
+    {
+      "id": "hook.SessionEnd.0",
+      "kind": "hook",
+      "label": "SessionEnd",
+      "event": "SessionEnd",
+      "matcher": "*",
+      "path": "hooks/settings.json",
+      "summary": "/Users/zalo/.vibe-island/bin/vibe-island-bridge --source claude"
+    },
+    {
+      "id": "hook.SessionStart.0",
+      "kind": "hook",
+      "label": "SessionStart",
+      "event": "SessionStart",
+      "matcher": "*",
+      "path": "hooks/settings.json",
+      "summary": "/Users/zalo/.vibe-island/bin/vibe-island-bridge --source claude"
+    },
+    {
+      "id": "hook.Stop.0",
+      "kind": "hook",
+      "label": "Stop",
+      "event": "Stop",
+      "matcher": "*",
+      "path": "hooks/settings.json",
+      "summary": "/Users/zalo/.vibe-island/bin/vibe-island-bridge --source claude"
+    },
+    {
+      "id": "hook.SubagentStart.0",
+      "kind": "hook",
+      "label": "SubagentStart",
+      "event": "SubagentStart",
+      "matcher": "*",
+      "path": "hooks/settings.json",
+      "summary": "/Users/zalo/.vibe-island/bin/vibe-island-bridge --source claude"
+    },
+    {
+      "id": "hook.SubagentStop.0",
+      "kind": "hook",
+      "label": "SubagentStop",
+      "event": "SubagentStop",
+      "matcher": "*",
+      "path": "hooks/settings.json",
+      "summary": "/Users/zalo/.vibe-island/bin/vibe-island-bridge --source claude"
+    },
+    {
+      "id": "hook.UserPromptSubmit.0",
+      "kind": "hook",
+      "label": "UserPromptSubmit",
+      "event": "UserPromptSubmit",
+      "matcher": "*",
+      "path": "hooks/settings.json",
+      "summary": "/Users/zalo/.vibe-island/bin/vibe-island-bridge --source claude"
+    }
+  ],
+  "edges": [
+    {
+      "source": "meta.orchestrator",
+      "target": "meta.CLAUDE",
+      "type": "include"
+    },
+    {
+      "source": "meta.orchestrator",
+      "target": "meta.META_RULE",
+      "type": "include"
+    },
+    {
+      "source": "hook.SessionStart.0",
+      "target": "meta.META_RULE",
+      "type": "trigger"
+    },
+    {
+      "source": "command.autoloop",
+      "target": "agent.live-test",
+      "type": "dispatch"
+    },
+    {
+      "source": "command.autoloop",
+      "target": "agent.qa-agent",
+      "type": "dispatch"
+    },
+    {
+      "source": "meta.orchestrator",
+      "target": "command.autoloop",
+      "type": "routes"
+    },
+    {
+      "source": "meta.orchestrator",
+      "target": "command.autoloop-harness",
+      "type": "routes"
+    },
+    {
+      "source": "meta.orchestrator",
+      "target": "command.autotest",
+      "type": "routes"
+    },
+    {
+      "source": "command.brainstorm",
+      "target": "rule.agent-contracts",
+      "type": "include"
+    },
+    {
+      "source": "command.brainstorm",
+      "target": "rule.questioning",
+      "type": "include"
+    },
+    {
+      "source": "command.brainstorm",
+      "target": "rule.problem-solving",
+      "type": "include"
+    },
+    {
+      "source": "command.brainstorm",
+      "target": "agent.brainstorm",
+      "type": "dispatch"
+    },
+    {
+      "source": "meta.orchestrator",
+      "target": "command.brainstorm",
+      "type": "routes"
+    },
+    {
+      "source": "command.bug",
+      "target": "rule.agent-contracts",
+      "type": "include"
+    },
+    {
+      "source": "command.bug",
+      "target": "rule.problem-solving",
+      "type": "include"
+    },
+    {
+      "source": "command.bug",
+      "target": "rule.gates",
+      "type": "include"
+    },
+    {
+      "source": "command.bug",
+      "target": "rule.verification-patterns",
+      "type": "include"
+    },
+    {
+      "source": "command.bug",
+      "target": "agent.bug-fix",
+      "type": "dispatch"
+    },
+    {
+      "source": "command.bug",
+      "target": "agent.brainstorm",
+      "type": "dispatch"
+    },
+    {
+      "source": "meta.orchestrator",
+      "target": "command.bug",
+      "type": "routes"
+    },
+    {
+      "source": "meta.orchestrator",
+      "target": "command.build-fix",
+      "type": "routes"
+    },
+    {
+      "source": "command.deploy-validate",
+      "target": "rule.agent-contracts",
+      "type": "include"
+    },
+    {
+      "source": "command.deploy-validate",
+      "target": "rule.gates",
+      "type": "include"
+    },
+    {
+      "source": "command.deploy-validate",
+      "target": "rule.checkpoints",
+      "type": "include"
+    },
+    {
+      "source": "command.deploy-validate",
+      "target": "rule.git-safety",
+      "type": "include"
+    },
+    {
+      "source": "meta.orchestrator",
+      "target": "command.deploy-validate",
+      "type": "routes"
+    },
+    {
+      "source": "meta.orchestrator",
+      "target": "command.e2e",
+      "type": "routes"
+    },
+    {
+      "source": "meta.orchestrator",
+      "target": "command.enhance-audio",
+      "type": "routes"
+    },
+    {
+      "source": "meta.orchestrator",
+      "target": "command.ghl-upload",
+      "type": "routes"
+    },
+    {
+      "source": "meta.orchestrator",
+      "target": "command.graph",
+      "type": "routes"
+    },
+    {
+      "source": "meta.orchestrator",
+      "target": "command.learn",
+      "type": "routes"
+    },
+    {
+      "source": "meta.orchestrator",
+      "target": "command.nano-banana",
+      "type": "routes"
+    },
+    {
+      "source": "meta.orchestrator",
+      "target": "command.optimize-video",
+      "type": "routes"
+    },
+    {
+      "source": "command.qa-loop",
+      "target": "rule.agent-contracts",
+      "type": "include"
+    },
+    {
+      "source": "command.qa-loop",
+      "target": "rule.gates",
+      "type": "include"
+    },
+    {
+      "source": "command.qa-loop",
+      "target": "rule.verification-patterns",
+      "type": "include"
+    },
+    {
+      "source": "command.qa-loop",
+      "target": "rule.anti-patterns",
+      "type": "include"
+    },
+    {
+      "source": "command.qa-loop",
+      "target": "agent.qa-agent",
+      "type": "dispatch"
+    },
+    {
+      "source": "meta.orchestrator",
+      "target": "command.qa-loop",
+      "type": "routes"
+    },
+    {
+      "source": "command.redesign",
+      "target": "agent.brainstorm",
+      "type": "dispatch"
+    },
+    {
+      "source": "command.redesign",
+      "target": "agent.live-test",
+      "type": "dispatch"
+    },
+    {
+      "source": "command.redesign",
+      "target": "agent.frontend-specialist",
+      "type": "dispatch"
+    },
+    {
+      "source": "command.redesign",
+      "target": "agent.image-craft-expert",
+      "type": "dispatch"
+    },
+    {
+      "source": "meta.orchestrator",
+      "target": "command.redesign",
+      "type": "routes"
+    },
+    {
+      "source": "meta.orchestrator",
+      "target": "command.refactor-clean",
+      "type": "routes"
+    },
+    {
+      "source": "meta.orchestrator",
+      "target": "command.session-save",
+      "type": "routes"
+    },
+    {
+      "source": "command.ship",
+      "target": "rule.agent-contracts",
+      "type": "include"
+    },
+    {
+      "source": "command.ship",
+      "target": "rule.gates",
+      "type": "include"
+    },
+    {
+      "source": "command.ship",
+      "target": "rule.anti-patterns",
+      "type": "include"
+    },
+    {
+      "source": "command.ship",
+      "target": "rule.checkpoints",
+      "type": "include"
+    },
+    {
+      "source": "command.ship",
+      "target": "agent.safe-planner",
+      "type": "dispatch"
+    },
+    {
+      "source": "command.ship",
+      "target": "agent.frontend-specialist",
+      "type": "dispatch"
+    },
+    {
+      "source": "command.ship",
+      "target": "agent.live-test",
+      "type": "dispatch"
+    },
+    {
+      "source": "command.ship",
+      "target": "agent.qa-agent",
+      "type": "dispatch"
+    },
+    {
+      "source": "meta.orchestrator",
+      "target": "command.ship",
+      "type": "routes"
+    },
+    {
+      "source": "meta.orchestrator",
+      "target": "command.split-screen-video",
+      "type": "routes"
+    },
+    {
+      "source": "command.tdd",
+      "target": "rule.gates",
+      "type": "include"
+    },
+    {
+      "source": "command.tdd",
+      "target": "rule.anti-patterns",
+      "type": "include"
+    },
+    {
+      "source": "command.tdd",
+      "target": "rule.verification-patterns",
+      "type": "include"
+    },
+    {
+      "source": "meta.orchestrator",
+      "target": "command.tdd",
+      "type": "routes"
+    },
+    {
+      "source": "meta.orchestrator",
+      "target": "command.transcribe",
+      "type": "routes"
+    },
+    {
+      "source": "meta.orchestrator",
+      "target": "command.view-video",
+      "type": "routes"
+    },
+    {
+      "source": "meta.orchestrator",
+      "target": "agent.brainstorm",
+      "type": "routes"
+    },
+    {
+      "source": "meta.orchestrator",
+      "target": "agent.bug-fix",
+      "type": "routes"
+    },
+    {
+      "source": "meta.orchestrator",
+      "target": "agent.frontend-specialist",
+      "type": "routes"
+    },
+    {
+      "source": "meta.orchestrator",
+      "target": "agent.image-craft-expert",
+      "type": "routes"
+    },
+    {
+      "source": "meta.orchestrator",
+      "target": "agent.live-test",
+      "type": "routes"
+    },
+    {
+      "source": "meta.orchestrator",
+      "target": "agent.qa-agent",
+      "type": "routes"
+    },
+    {
+      "source": "meta.orchestrator",
+      "target": "agent.safe-planner",
+      "type": "routes"
+    }
+  ]
+}

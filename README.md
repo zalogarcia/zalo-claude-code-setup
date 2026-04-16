@@ -10,6 +10,22 @@ Custom agents, skills, commands, MCP servers, auto-formatting hooks, agentic RAG
 
 ---
 
+## Interactive Architecture
+
+See how the pieces fit together: orchestrator, 7 agents, 11 shared rules, 23 commands, hooks, MCP servers — plus animated request flows (`/ship`, `/tdd`, `/bug`, `/qa-loop`, `/deploy-validate`, `/redesign` and more).
+
+**→ [Open the interactive visualization](https://zalogarcia.github.io/zalo-claude-code-setup/visualization/)**
+
+<p align="center">
+  <a href="https://zalogarcia.github.io/zalo-claude-code-setup/visualization/">
+    <img src="docs/visualization/preview/dark.png" alt="Claude Code Pro Setup — interactive architecture diagram" width="100%">
+  </a>
+</p>
+
+Click any node to inspect its contract (completion markers, `@`-includes, dispatches). Pick a flow from the dropdown to watch a request travel through the system. Works on mobile with a vertical storyboard mode.
+
+---
+
 ## Recommended Workflow
 
 This is how I use Claude Code to get the best results on any task:

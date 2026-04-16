@@ -1,0 +1,3760 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width,initial-scale=1,viewport-fit=cover"
+    />
+    <meta name="color-scheme" content="dark light" />
+    <title>
+      Claude Code Pro Setup — An Orchestrator, Seven Agents, Eleven Rules
+    </title>
+    <meta
+      name="description"
+      content="Interactive visualization of a coordinated Claude Code setup. Orchestrator-centered radial graph with flow traces over real edges."
+    />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <!--
+  Dev flow:
+    Step 9 will inline data.json + flows.json into the #graph-data / #flow-data
+    <script type="application/json"> sentinels. Until then, the page falls back
+    to fetch() from the same directory.
+
+    Opening via file:// will usually block fetch() on Chromium-family browsers
+    due to CORS. Two options to develop locally:
+      (a) Safari opens file:// fetches by default.
+      (b) Run `python3 -m http.server 8000` from this directory and visit
+          http://localhost:8000/index.html.
+    Production (Step 9 pre-inlined) works from file:// with no server.
+-->
+
+    <script type="application/json" id="graph-data">
+{"meta":{"generatedAt":"2026-04-16T22:59:57.597Z","repo":"zalo-claude-code-setup"},"nodes":[{"id":"meta.META_RULE","kind":"meta","label":"META_RULE.md","path":"META_RULE.md","summary":"Re-injected on every `startup`, `/clear`, and `/compact`. Edit this file freely — the `session-start.sh` hook reads it fresh each time."},{"id":"meta.CLAUDE","kind":"meta","label":"CLAUDE.md","path":"claude-md/CLAUDE.md","summary":"When the user corrects you, says \"no\", \"wrong\", \"don't do that\", \"stop\", or otherwise indicates you made a mistake:"},{"id":"meta.orchestrator","kind":"meta","label":"Main Thread (Orchestrator)","path":"","summary":"The main conversation thread. Routes requests, reads rules, dispatches fresh-context subagents, and owns the user relationship. Never does heavy lifting itself."},{"id":"rule.agent-contracts","kind":"rule","label":"agent-contracts","path":"rules/agent-contracts.md","summary":"Completion markers and return contract for `~/.claude/agents/`. Skills/orchestrators detect agent completion by regex-matching these H2 markers in the agent's final output."},{"id":"rule.anti-patterns","kind":"rule","label":"anti-patterns","path":"rules/anti-patterns.md","summary":"Behavioral rules that apply regardless of project. Drawn from both gsd-build/get-shit-done universal anti-patterns and obra/superpowers writing-plans \"No Placeholders\" list."},{"id":"rule.checkpoints","kind":"rule","label":"checkpoints","path":"rules/checkpoints.md","summary":"Adapted from gsd-build/get-shit-done. When an orchestrator needs human input, emit a **readable markdown checkpoint block** and **stop** — do not continue past the gate."},{"id":"rule.context-budget","kind":"rule","label":"context-budget","path":"rules/context-budget.md","summary":"Adapted from gsd-build/get-shit-done `references/context-budget.md`. Use this to self-regulate context usage and to recognize degradation before it becomes catastrophic."},{"id":"rule.gates","kind":"rule","label":"gates","path":"rules/gates.md","summary":"Two distinct kinds of gates: **workflow gates** (when to advance/loop/stop in a multi-step orchestration) and the **Verification Gate Function** (when an agent claims a task is done)."},{"id":"rule.git-safety","kind":"rule","label":"git-safety","path":"rules/git-safety.md","summary":"Combined from obra/superpowers `using-git-worktrees` and gsd-build/get-shit-done universal anti-patterns."},{"id":"rule.persuasion-principles","kind":"rule","label":"persuasion-principles","path":"rules/persuasion-principles.md","summary":"Adapted from obra/superpowers `writing-skills/persuasion-principles.md`. Reference when authoring or revising files in `~/.claude/rules/`, `~/.claude/CLAUDE.md`, agent definitions, or skill bodies."},{"id":"rule.problem-solving","kind":"rule","label":"problem-solving","path":"rules/problem-solving.md","summary":"Adapted from obra/superpowers-skills `problem-solving/when-stuck`. When you (or a subagent) feel stuck, name the symptom and pick the matching technique. Don't keep retrying the same approach."},{"id":"rule.questioning","kind":"rule","label":"questioning","path":"rules/questioning.md","summary":"Adapted from gsd-build/get-shit-done `references/questioning.md`. Use this when eliciting requirements, brainstorming, or any \"what do you actually want?\" conversation."},{"id":"rule.verification-patterns","kind":"rule","label":"verification-patterns","path":"rules/verification-patterns.md","summary":"The defining principle for `qa-agent`, `live-test`, and any \"is it actually done?\" check."},{"id":"rule.when-to-parallelize","kind":"rule","label":"when-to-parallelize","path":"rules/when-to-parallelize.md","summary":"Adapted from obra/superpowers `dispatching-parallel-agents`. Claude Code's `Agent` tool runs multiple invocations concurrently when called in a single message — use this rule to decide when that's appropriate."},{"id":"command.autoloop","kind":"command","label":"/autoloop","path":"commands/autoloop.md","summary":"Autonomous optimization loop that iteratively improves code until it meets a target metric. Based on Karpathy's autoresearch architecture: hypothesis -> modify -> test -> commit/revert.","includes":[],"dispatches":["agent.live-test","agent.qa-agent"]},{"id":"command.autoloop-harness","kind":"command","label":"/autoloop-harness","path":"commands/autoloop-harness.sh","summary":"set -euo pipefail","includes":[],"dispatches":[]},{"id":"command.autotest","kind":"command","label":"/autotest","path":"commands/autotest.md","summary":"Autonomous live testing agent that systematically tests a web application via Playwright. Reads a briefing for the test plan (URL, credentials, test cases) and executes each test, recording pass/fail results. Reusable across any web app.","includes":[],"dispatches":[]},{"id":"command.brainstorm","kind":"command","label":"/brainstorm","path":"commands/brainstorm.md","summary":"Dispatch the `brainstorm` agent to apply first principles, inversion, and second-order thinking. Surfaces the real problem, not just the presented one.","includes":["rule.agent-contracts","rule.questioning","rule.problem-solving"],"dispatches":["agent.brainstorm"]},{"id":"command.bug","kind":"command","label":"/bug","path":"commands/bug.md","summary":"Trace the full flow → identify root cause → fix narrowly → QA. Built around the `bug-fix` agent's 4-phase systematic debugging.","includes":["rule.agent-contracts","rule.problem-solving","rule.gates","rule.verification-patterns"],"dispatches":["agent.bug-fix","agent.brainstorm"]},{"id":"command.build-fix","kind":"command","label":"/build-fix","path":"commands/build-fix.md","summary":"Detect and fix build errors iteratively with guardrails.","includes":[],"dispatches":[]},{"id":"command.deploy-validate","kind":"command","label":"/deploy-validate","path":"commands/deploy-validate.md","summary":"Pre-deploy QA → deploy to staging → smoke test → log audit → human-action checkpoint for production.","includes":["rule.agent-contracts","rule.gates","rule.checkpoints","rule.git-safety"],"dispatches":[]},{"id":"command.e2e","kind":"command","label":"/e2e","path":"commands/e2e.md","summary":"Generate and run end-to-end tests using Playwright.","includes":[],"dispatches":[]},{"id":"command.enhance-audio","kind":"command","label":"/enhance-audio","path":"commands/enhance-audio.md","summary":"Enhance and clean up audio in video/audio files using FFmpeg filters. Removes noise, normalizes volume, and improves speech clarity.","includes":[],"dispatches":[]},{"id":"command.ghl-upload","kind":"command","label":"/ghl-upload","path":"commands/ghl-upload.md","summary":"Upload files to GoHighLevel's media library via API.","includes":[],"dispatches":[]},{"id":"command.graph","kind":"command","label":"/graph","path":"commands/graph.md","summary":"Build or rebuild the repo-graphrag knowledge graph for the current project.","includes":[],"dispatches":[]},{"id":"command.learn","kind":"command","label":"/learn","path":"commands/learn.md","summary":"Extract reusable patterns and lessons from the current session and save them to memory.","includes":[],"dispatches":[]},{"id":"command.nano-banana","kind":"command","label":"/nano-banana","path":"commands/nano-banana.md","summary":"Generates AI images using the nano-banana CLI (Gemini 3.1 Flash default, Pro available). Handles multi-resolution (512-4K), aspect ratios, reference images for style transfer, green screen workflow for transparent assets, cost tracking, and exact dimension control. Use when asked to \"generate an image\", \"create a sprite\", \"make an asset\", \"generate artwork\", or any image generation task for UI mockups, game assets, videos, or marketing materials.","includes":[],"dispatches":[]},{"id":"command.optimize-video","kind":"command","label":"/optimize-video","path":"commands/optimize-video.md","summary":"Process and upload optimized videos to Supabase Storage with faststart + compression.","includes":[],"dispatches":[]},{"id":"command.qa-loop","kind":"command","label":"/qa-loop","path":"commands/qa-loop.md","summary":"Revision Gate that converges on a clean state. Iterates `qa-agent` audits + minimal fixes until no real bugs remain.","includes":["rule.agent-contracts","rule.gates","rule.verification-patterns","rule.anti-patterns"],"dispatches":["agent.qa-agent"]},{"id":"command.redesign","kind":"command","label":"/redesign","path":"commands/redesign.md","summary":"Redesign an existing UI through collaborative brainstorming, mockup generation, implementation, and visual verification.","includes":[],"dispatches":["agent.brainstorm","agent.live-test","agent.frontend-specialist","agent.image-craft-expert"]},{"id":"command.refactor-clean","kind":"command","label":"/refactor-clean","path":"commands/refactor-clean.md","summary":"Detect and safely remove dead code, unused dependencies, and unnecessary complexity.","includes":[],"dispatches":[]},{"id":"command.session-save","kind":"command","label":"/session-save","path":"commands/session-save.md","summary":"Save the current session context to a file for continuity across sessions.","includes":[],"dispatches":[]},{"id":"command.ship","kind":"command","label":"/ship","path":"commands/ship.md","summary":"Plan → implement → QA → wait for explicit push approval. The orchestrator owns sequencing; subagents do the work.","includes":["rule.agent-contracts","rule.gates","rule.anti-patterns","rule.checkpoints"],"dispatches":["agent.safe-planner","agent.frontend-specialist","agent.live-test","agent.qa-agent"]},{"id":"command.split-screen-video","kind":"command","label":"/split-screen-video","path":"commands/split-screen-video.md","summary":"Create a polished split-screen video from raw talking-head footage. Top half = B-roll images with annotations, bottom half = zoomed presenter. Includes yellow subtitle bars, enhanced audio, and 1.2x speed.","includes":[],"dispatches":[]},{"id":"command.tdd","kind":"command","label":"/tdd","path":"commands/tdd.md","summary":"Strict RED → GREEN → REFACTOR. Adapted from obra/superpowers `test-driven-development`.","includes":["rule.gates","rule.anti-patterns","rule.verification-patterns"],"dispatches":[]},{"id":"command.transcribe","kind":"command","label":"/transcribe","path":"commands/transcribe.md","summary":"Transcribe audio/video files using OpenAI Whisper. Supports 99 languages with automatic detection.","includes":[],"dispatches":[]},{"id":"command.view-video","kind":"command","label":"/view-video","path":"commands/view-video.md","summary":"Extract frames from a video using ffmpeg so Claude can visually analyze the content.","includes":[],"dispatches":[]},{"id":"agent.brainstorm","kind":"agent","label":"brainstorm","path":"agents/brainstorm.md","summary":"Deep-thinking agent that prevents expensive mistakes by challenging assumptions, eliminating complexity, and stress-testing ideas before committing. Applies first principles, Elon Musk's 5-step philosophy, inversion, and second-order thinking. Use for any problem, plan, architecture decision, or strategy that deserves rigorous thought before action. <example>user: 'I need to figure out the best architecture for our real-time notification system' assistant: 'I'll use the brainstorm agent to break this down from first principles and challenge our assumptions.'</example>","markers":["## EXPLORATION COMPLETE"],"includes":[]},{"id":"agent.bug-fix","kind":"agent","label":"bug-fix","path":"agents/bug-fix.md","summary":"Trace the full user flow to find the root cause of a bug. Reads all related code and crafts a comprehensive fix plan before making changes. Use when something is broken and you need a thorough diagnosis. <example>user: 'Users are getting logged out randomly after checkout' assistant: 'I'll use the bug-fix agent to trace the full flow and find the root cause.'</example>","markers":["## ROOT CAUSE FOUND","## INVESTIGATION INCOMPLETE","## BLOCKED"],"includes":[]},{"id":"agent.frontend-specialist","kind":"agent","label":"frontend-specialist","path":"agents/frontend-specialist.md","summary":"Builds and optimizes frontend UI — components, styling, responsiveness, accessibility, and performance. Use for any client-side development task. <example>user: 'I need to build a mobile-friendly navigation bar that collapses on smaller screens' assistant: 'I'll use the frontend-specialist agent to create a responsive navigation component.'</example>","markers":["## IMPLEMENTATION COMPLETE","## IMPLEMENTATION DONE_WITH_CONCERNS","## BLOCKED"],"includes":[]},{"id":"agent.image-craft-expert","kind":"agent","label":"image-craft-expert","path":"agents/image-craft-expert.md","summary":"Crafts optimized text-to-image prompts and generates images using Gemini (nano-banana) and/or ChatGPT (gpt-image-1.5). Use for any image generation task. <example>user: 'Create an image of a fantasy castle at sunset' assistant: 'I'll use the image-craft-expert to craft a detailed generation prompt.'</example>","markers":["## IMAGE GENERATED","## GENERATION FAILED"],"includes":[]},{"id":"agent.live-test","kind":"agent","label":"live-test","path":"agents/live-test.md","summary":"Visually verifies code changes work in the browser using Playwright. Use after implementing features, fixing bugs, or making UI changes to confirm they work as intended before shipping. <example>user: 'I just added the new pricing page, can you verify it looks right?' assistant: 'I'll use the live-test agent to open the app in the browser and verify the pricing page.'</example>","markers":["## UI VERIFIED","## UI ISSUES FOUND","## BLOCKED"],"includes":[]},{"id":"agent.qa-agent","kind":"agent","label":"qa-agent","path":"agents/qa-agent.md","summary":"Audits recent code changes for real, reproducible bugs. Use after implementing features, before deployments, or when asked to stress test, verify, or audit code. <example>user: 'I just finished the checkout flow, can you stress test it?' assistant: 'I'll use the qa-agent to find any real bugs in the checkout implementation.'</example>","markers":["## VERIFICATION PASSED","## ISSUES FOUND","## BLOCKED"],"includes":[]},{"id":"agent.safe-planner","kind":"agent","label":"safe-planner","path":"agents/safe-planner.md","summary":"Plans implementation changes safely by reading all related code, mapping dependencies, identifying risks, and producing a rollback-ready plan for approval. Use before features, refactors, migrations, or any non-trivial changes. <example>user: 'I need to add Stripe webhooks to our checkout flow' assistant: 'I'll use the safe-planner agent to map dependencies and create a safe implementation plan before we touch anything.'</example>","markers":["## PLAN READY","## NEEDS DECISION","## BLOCKED"],"includes":[]},{"id":"agent-template.code-quality-reviewer-prompt","kind":"agent-template","label":"code-quality-reviewer-prompt","path":"agents/templates/code-quality-reviewer-prompt.md","summary":"Source: obra/superpowers `subagent-driven-development/code-quality-reviewer-prompt.md`. Use this template for **stage 2** of two-stage review, after spec-compliance has passed. This is the \"would I approve this PR?\" pass.","includes":[]},{"id":"agent-template.implementer-prompt","kind":"agent-template","label":"implementer-prompt","path":"agents/templates/implementer-prompt.md","summary":"Source: obra/superpowers `subagent-driven-development/implementer-prompt.md`. Use this template when dispatching a subagent to implement a discrete task. Fill in `[bracketed]` slots with concrete content — never paste this template verbatim with placeholders intact.","includes":[]},{"id":"agent-template.spec-reviewer-prompt","kind":"agent-template","label":"spec-reviewer-prompt","path":"agents/templates/spec-reviewer-prompt.md","summary":"Source: obra/superpowers `subagent-driven-development/spec-reviewer-prompt.md`. Use this template when dispatching the **first stage** of two-stage review (spec compliance, before code quality). Pair with `code-quality-reviewer-prompt.md`.","includes":[]},{"id":"skill.cf-crawl","kind":"skill","label":"cf-crawl","path":"skills/cf-crawl","summary":"Crawl websites using Cloudflare Browser Rendering API. Use when the user wants to scrape, crawl, or extract content from a website (single page or multi-page). Returns HTML, Markdown, or structured JSON."},{"id":"skill.frontend-design","kind":"skill","label":"frontend-design","path":"skills/frontend-design","summary":"Create distinctive, production-grade frontend interfaces with high design quality. Use this skill when the user asks to build web components, pages, or applications. Generates creative, polished code that avoids generic AI aesthetics."},{"id":"skill.multi-edit","kind":"skill","label":"multi-edit","path":"skills/multi-edit","summary":"Heavyweight planning path for refactors, renames, migrations, and cross-module changes that are hard to roll back. Runs safe-planner, optionally brainstorm, then blocks on human approval before any edit. Triggers on \"refactor\", \"rename across\", \"migrate\", \"restructure\", \"move X out of\", \"extract into shared\", or any change that crosses module boundaries. Not for new features (use /ship) or single-file fixes."},{"id":"skill.telegram","kind":"skill","label":"telegram","path":"skills/telegram","summary":"Send messages, files, images, or documents to the user via their Telegram bot. Use when the user asks to send something to Telegram, notify them, or share content via Telegram."},{"id":"skill.ui-ux-pro-max","kind":"skill","label":"ui-ux-pro-max","path":"skills/ui-ux-pro-max","summary":"UI/UX design intelligence. 50 styles, 21 palettes, 50 font pairings, 20 charts, 8 stacks (React, Next.js, Vue, Svelte, SwiftUI, React Native, Flutter, Tailwind). Actions: plan, build, create, design, implement, review, fix, improve, optimize, enhance, refactor, check UI/UX code. Projects: website, landing page, dashboard, admin panel, e-commerce, SaaS, portfolio, blog, mobile app, .html, .tsx, .vue, .svelte. Elements: button, modal, navbar, sidebar, card, table, form, chart. Styles: glassmorphism, claymorphism, minimalism, brutalism, neumorphism, bento grid, dark mode, responsive, skeuomorphism, flat design. Topics: color palette, accessibility, animation, layout, typography, font pairing, spacing, hover, shadow, gradient."},{"id":"mcp.context7","kind":"mcp","label":"context7","path":"mcp/mcp-servers.json","summary":"HTTP endpoint: https://mcp.context7.com/mcp","transport":"http"},{"id":"mcp.playwright","kind":"mcp","label":"playwright","path":"mcp/mcp-servers.json","summary":"stdio: npx -y @playwright/mcp@latest","transport":"stdio"},{"id":"mcp.github","kind":"mcp","label":"github","path":"mcp/mcp-servers.json","summary":"stdio: npx -y @modelcontextprotocol/server-github","transport":"stdio"},{"id":"mcp.n8n-api","kind":"mcp","label":"n8n-api","path":"mcp/mcp-servers.json","summary":"stdio: node __HOME__/Documents/AI Projects/n8n-zk/n8n-mcp-server/index.js","transport":"stdio"},{"id":"mcp.supabase","kind":"mcp","label":"supabase","path":"mcp/mcp-servers.json","summary":"stdio: npx -y @supabase/mcp-server-supabase@latest","transport":"stdio"},{"id":"mcp.qdrant-memory","kind":"mcp","label":"qdrant-memory","path":"mcp/mcp-servers.json","summary":"stdio: uvx mcp-server-qdrant","transport":"stdio"},{"id":"mcp.knowledge-graph","kind":"mcp","label":"knowledge-graph","path":"mcp/mcp-servers.json","summary":"stdio: npx -y @modelcontextprotocol/server-memory","transport":"stdio"},{"id":"mcp.repo-graphrag","kind":"mcp","label":"repo-graphrag","path":"mcp/mcp-servers.json","summary":"stdio: uv --directory __HOME__/repo-graphrag-mcp run server.py","transport":"stdio"},{"id":"hook.Notification.0","kind":"hook","label":"Notification","event":"Notification","matcher":"*","path":"hooks/settings.json","summary":"/Users/zalo/.vibe-island/bin/vibe-island-bridge --source claude"},{"id":"hook.PermissionRequest.0","kind":"hook","label":"PermissionRequest","event":"PermissionRequest","matcher":"*","path":"hooks/settings.json","summary":"/Users/zalo/.vibe-island/bin/vibe-island-bridge --source claude"},{"id":"hook.PostToolUse.0","kind":"hook","label":"PostToolUse [Edit|Write|MultiEdit]","event":"PostToolUse","matcher":"Edit|Write|MultiEdit","path":"hooks/settings.json","summary":"FILE=$(cat | jq -r '.tool_input.file_path // empty'); if [ -n \"$FILE\" ] && echo \"$FILE\" | grep -qE '\\.(ts|tsx|js|jsx|css|json|md|html)$'; then prettier --write \"$FILE\" 2>/dev/null; fi"},{"id":"hook.PostToolUse.1","kind":"hook","label":"PostToolUse [Edit|Write|MultiEdit]","event":"PostToolUse","matcher":"Edit|Write|MultiEdit","path":"hooks/settings.json","summary":"FILE=$(cat | jq -r '.tool_input.file_path // empty'); if [ -n \"$FILE\" ] && echo \"$FILE\" | grep -qE '\\.py$'; then which ruff >/dev/null 2>&1 && ruff format \"$FILE\" 2>/dev/null && ruff check --fix \"$FILE\" 2>/dev/null; fi"},{"id":"hook.PostToolUse.2","kind":"hook","label":"PostToolUse","event":"PostToolUse","matcher":"*","path":"hooks/settings.json","summary":"/Users/zalo/.vibe-island/bin/vibe-island-bridge --source claude"},{"id":"hook.PreCompact.0","kind":"hook","label":"PreCompact","event":"PreCompact","matcher":"*","path":"hooks/settings.json","summary":"/Users/zalo/.vibe-island/bin/vibe-island-bridge --source claude"},{"id":"hook.PreToolUse.0","kind":"hook","label":"PreToolUse","event":"PreToolUse","matcher":"*","path":"hooks/settings.json","summary":"/Users/zalo/.vibe-island/bin/vibe-island-bridge --source claude"},{"id":"hook.PreToolUse.1","kind":"hook","label":"PreToolUse [Bash]","event":"PreToolUse","matcher":"Bash","path":"hooks/settings.json","summary":"python3 /Users/zalo/.claude/hooks/gitleaks-guard.py"},{"id":"hook.SessionEnd.0","kind":"hook","label":"SessionEnd","event":"SessionEnd","matcher":"*","path":"hooks/settings.json","summary":"/Users/zalo/.vibe-island/bin/vibe-island-bridge --source claude"},{"id":"hook.SessionStart.0","kind":"hook","label":"SessionStart","event":"SessionStart","matcher":"*","path":"hooks/settings.json","summary":"/Users/zalo/.vibe-island/bin/vibe-island-bridge --source claude"},{"id":"hook.Stop.0","kind":"hook","label":"Stop","event":"Stop","matcher":"*","path":"hooks/settings.json","summary":"/Users/zalo/.vibe-island/bin/vibe-island-bridge --source claude"},{"id":"hook.SubagentStart.0","kind":"hook","label":"SubagentStart","event":"SubagentStart","matcher":"*","path":"hooks/settings.json","summary":"/Users/zalo/.vibe-island/bin/vibe-island-bridge --source claude"},{"id":"hook.SubagentStop.0","kind":"hook","label":"SubagentStop","event":"SubagentStop","matcher":"*","path":"hooks/settings.json","summary":"/Users/zalo/.vibe-island/bin/vibe-island-bridge --source claude"},{"id":"hook.UserPromptSubmit.0","kind":"hook","label":"UserPromptSubmit","event":"UserPromptSubmit","matcher":"*","path":"hooks/settings.json","summary":"/Users/zalo/.vibe-island/bin/vibe-island-bridge --source claude"}],"edges":[{"source":"meta.orchestrator","target":"meta.CLAUDE","type":"include"},{"source":"meta.orchestrator","target":"meta.META_RULE","type":"include"},{"source":"hook.SessionStart.0","target":"meta.META_RULE","type":"trigger"},{"source":"command.autoloop","target":"agent.live-test","type":"dispatch"},{"source":"command.autoloop","target":"agent.qa-agent","type":"dispatch"},{"source":"meta.orchestrator","target":"command.autoloop","type":"routes"},{"source":"meta.orchestrator","target":"command.autoloop-harness","type":"routes"},{"source":"meta.orchestrator","target":"command.autotest","type":"routes"},{"source":"command.brainstorm","target":"rule.agent-contracts","type":"include"},{"source":"command.brainstorm","target":"rule.questioning","type":"include"},{"source":"command.brainstorm","target":"rule.problem-solving","type":"include"},{"source":"command.brainstorm","target":"agent.brainstorm","type":"dispatch"},{"source":"meta.orchestrator","target":"command.brainstorm","type":"routes"},{"source":"command.bug","target":"rule.agent-contracts","type":"include"},{"source":"command.bug","target":"rule.problem-solving","type":"include"},{"source":"command.bug","target":"rule.gates","type":"include"},{"source":"command.bug","target":"rule.verification-patterns","type":"include"},{"source":"command.bug","target":"agent.bug-fix","type":"dispatch"},{"source":"command.bug","target":"agent.brainstorm","type":"dispatch"},{"source":"meta.orchestrator","target":"command.bug","type":"routes"},{"source":"meta.orchestrator","target":"command.build-fix","type":"routes"},{"source":"command.deploy-validate","target":"rule.agent-contracts","type":"include"},{"source":"command.deploy-validate","target":"rule.gates","type":"include"},{"source":"command.deploy-validate","target":"rule.checkpoints","type":"include"},{"source":"command.deploy-validate","target":"rule.git-safety","type":"include"},{"source":"meta.orchestrator","target":"command.deploy-validate","type":"routes"},{"source":"meta.orchestrator","target":"command.e2e","type":"routes"},{"source":"meta.orchestrator","target":"command.enhance-audio","type":"routes"},{"source":"meta.orchestrator","target":"command.ghl-upload","type":"routes"},{"source":"meta.orchestrator","target":"command.graph","type":"routes"},{"source":"meta.orchestrator","target":"command.learn","type":"routes"},{"source":"meta.orchestrator","target":"command.nano-banana","type":"routes"},{"source":"meta.orchestrator","target":"command.optimize-video","type":"routes"},{"source":"command.qa-loop","target":"rule.agent-contracts","type":"include"},{"source":"command.qa-loop","target":"rule.gates","type":"include"},{"source":"command.qa-loop","target":"rule.verification-patterns","type":"include"},{"source":"command.qa-loop","target":"rule.anti-patterns","type":"include"},{"source":"command.qa-loop","target":"agent.qa-agent","type":"dispatch"},{"source":"meta.orchestrator","target":"command.qa-loop","type":"routes"},{"source":"command.redesign","target":"agent.brainstorm","type":"dispatch"},{"source":"command.redesign","target":"agent.live-test","type":"dispatch"},{"source":"command.redesign","target":"agent.frontend-specialist","type":"dispatch"},{"source":"command.redesign","target":"agent.image-craft-expert","type":"dispatch"},{"source":"meta.orchestrator","target":"command.redesign","type":"routes"},{"source":"meta.orchestrator","target":"command.refactor-clean","type":"routes"},{"source":"meta.orchestrator","target":"command.session-save","type":"routes"},{"source":"command.ship","target":"rule.agent-contracts","type":"include"},{"source":"command.ship","target":"rule.gates","type":"include"},{"source":"command.ship","target":"rule.anti-patterns","type":"include"},{"source":"command.ship","target":"rule.checkpoints","type":"include"},{"source":"command.ship","target":"agent.safe-planner","type":"dispatch"},{"source":"command.ship","target":"agent.frontend-specialist","type":"dispatch"},{"source":"command.ship","target":"agent.live-test","type":"dispatch"},{"source":"command.ship","target":"agent.qa-agent","type":"dispatch"},{"source":"meta.orchestrator","target":"command.ship","type":"routes"},{"source":"meta.orchestrator","target":"command.split-screen-video","type":"routes"},{"source":"command.tdd","target":"rule.gates","type":"include"},{"source":"command.tdd","target":"rule.anti-patterns","type":"include"},{"source":"command.tdd","target":"rule.verification-patterns","type":"include"},{"source":"meta.orchestrator","target":"command.tdd","type":"routes"},{"source":"meta.orchestrator","target":"command.transcribe","type":"routes"},{"source":"meta.orchestrator","target":"command.view-video","type":"routes"},{"source":"meta.orchestrator","target":"agent.brainstorm","type":"routes"},{"source":"meta.orchestrator","target":"agent.bug-fix","type":"routes"},{"source":"meta.orchestrator","target":"agent.frontend-specialist","type":"routes"},{"source":"meta.orchestrator","target":"agent.image-craft-expert","type":"routes"},{"source":"meta.orchestrator","target":"agent.live-test","type":"routes"},{"source":"meta.orchestrator","target":"agent.qa-agent","type":"routes"},{"source":"meta.orchestrator","target":"agent.safe-planner","type":"routes"}]}
+</script>
+    <script type="application/json" id="flow-data">
+{"command.ship":{"label":"/ship — Full Feature Delivery","description":"Plan → Implement → Verify → Audit → Human push-gate","steps":[{"node":"command.ship","caption":"User invokes /ship with a feature description"},{"node":"rule.questioning","caption":"Orchestrator consults questioning.md to sharpen scope","via":"include"},{"node":"agent.safe-planner","caption":"Dispatch safe-planner for a rollback-ready plan","via":"dispatch","marker":"## PLAN READY"},{"node":"agent.frontend-specialist","caption":"Dispatch frontend-specialist to implement","via":"dispatch","marker":"## IMPLEMENTATION COMPLETE"},{"node":"agent.live-test","caption":"live-test verifies UI in browser","via":"dispatch","marker":"## UI VERIFIED"},{"node":"agent.qa-agent","caption":"qa-agent audits for real bugs","via":"dispatch","marker":"## VERIFICATION PASSED"},{"node":"rule.checkpoints","caption":"Emit human push-gate checkpoint — nothing ships until approval","via":"include"}],"canonical":true},"command.tdd":{"label":"/tdd — Test-Driven Development","description":"Red → Green → Refactor, with the Iron Law of \"test first\"","steps":[{"node":"command.tdd","caption":"User invokes /tdd for a new behavior"},{"node":"rule.gates","caption":"@-includes gates.md (Iron Law: no code before a failing test)","via":"include"},{"node":"agent.safe-planner","caption":"Plan the test surface and rollback","via":"dispatch","marker":"## PLAN READY"},{"node":"agent.frontend-specialist","caption":"Write failing test → minimal impl → refactor","via":"dispatch","marker":"## IMPLEMENTATION COMPLETE"},{"node":"agent.qa-agent","caption":"qa-agent confirms coverage and no regressions","via":"dispatch","marker":"## VERIFICATION PASSED"}],"canonical":true},"command.bug":{"label":"/bug — Trace, Diagnose, Fix, Validate","description":"4-phase systematic debugging, stops at 3+ failed fixes","steps":[{"node":"command.bug","caption":"User reports symptom"},{"node":"rule.problem-solving","caption":"@-includes problem-solving.md (symptom→technique dispatch)","via":"include"},{"node":"agent.bug-fix","caption":"Dispatch bug-fix: trace flow → identify root cause","via":"dispatch","marker":"## ROOT CAUSE FOUND"},{"node":"agent.frontend-specialist","caption":"Apply narrow fix at root cause","via":"dispatch","marker":"## IMPLEMENTATION COMPLETE"},{"node":"agent.qa-agent","caption":"qa-agent confirms symptom gone, no regressions","via":"dispatch","marker":"## VERIFICATION PASSED"}],"canonical":true},"command.qa-loop":{"label":"/qa-loop — Iterative Audit-and-Fix","description":"Revision gate: audit → fix → re-audit until clean (max 3 iterations)","steps":[{"node":"command.qa-loop","caption":"User triggers /qa-loop on recent changes"},{"node":"agent.qa-agent","caption":"qa-agent finds bugs","via":"dispatch","marker":"## ISSUES FOUND"},{"node":"agent.frontend-specialist","caption":"Fix CRITICAL/HIGH findings","via":"dispatch","marker":"## IMPLEMENTATION COMPLETE"},{"node":"agent.qa-agent","caption":"Re-audit until PASSED or max-iterations","via":"dispatch","marker":"## VERIFICATION PASSED"},{"node":"rule.gates","caption":"Revision gate: loop or escalate per gates.md","via":"include"}],"canonical":true},"command.deploy-validate":{"label":"/deploy-validate — Self-Healing Deployment","description":"Pre-deploy QA → deploy → smoke test → human prod approval","steps":[{"node":"command.deploy-validate","caption":"User runs /deploy-validate"},{"node":"agent.qa-agent","caption":"Pre-deploy audit","via":"dispatch","marker":"## VERIFICATION PASSED"},{"node":"rule.checkpoints","caption":"checkpoint:human-action for the live deploy","via":"include"},{"node":"agent.live-test","caption":"Post-deploy smoke test on prod URL","via":"dispatch","marker":"## UI VERIFIED"},{"node":"rule.checkpoints","caption":"Final human approval before marking success","via":"include"}],"canonical":true},"command.redesign":{"label":"/redesign — Collaborative UI Redesign","description":"Capture → brainstorm → generate mockups → implement → verify","steps":[{"node":"command.redesign","caption":"User requests a UI redesign"},{"node":"agent.live-test","caption":"Capture current state screenshots","via":"dispatch","marker":"## UI VERIFIED"},{"node":"agent.brainstorm","caption":"2+ loops: challenge assumptions, propose directions","via":"dispatch","marker":"## EXPLORATION COMPLETE"},{"node":"agent.image-craft-expert","caption":"3 options × 2 generators = 6 mockups in parallel","via":"dispatch","marker":"## IMAGE GENERATED"},{"node":"agent.frontend-specialist","caption":"Implement chosen direction","via":"dispatch","marker":"## IMPLEMENTATION COMPLETE"},{"node":"agent.live-test","caption":"Verify against mockup","via":"dispatch","marker":"## UI VERIFIED"}],"canonical":true},"command.autoloop":{"label":"/autoloop — Autonomous optimization loop that iteratively improves code until it meets a tar","description":"Autonomous optimization loop that iteratively improves code until it meets a target metric. Based on Karpathy's autoresearch architecture: hypothesis -> modify -> test -> commit/revert.","steps":[{"node":"command.autoloop","caption":"User invokes /autoloop"},{"node":"agent.live-test","via":"dispatch","caption":"Dispatch live-test","marker":"## UI VERIFIED"},{"node":"agent.qa-agent","via":"dispatch","caption":"Dispatch qa-agent","marker":"## VERIFICATION PASSED"}],"canonical":false},"command.autoloop-harness":{"label":"/autoloop-harness — set -euo pipefail","description":"set -euo pipefail","steps":[{"node":"command.autoloop-harness","caption":"User invokes /autoloop-harness"},{"node":"command.autoloop-harness","caption":"Standalone skill/utility — no subagent dispatch in the core path"}],"canonical":false},"command.autotest":{"label":"/autotest — Autonomous live testing agent that systematically tests a web application via Pl","description":"Autonomous live testing agent that systematically tests a web application via Playwright. Reads a briefing for the test plan (URL, credentials, test cases) and executes each test, recording pass/fail results. Reusable across any web app.","steps":[{"node":"command.autotest","caption":"User invokes /autotest"},{"node":"command.autotest","caption":"Standalone skill/utility — no subagent dispatch in the core path"}],"canonical":false},"command.brainstorm":{"label":"/brainstorm — Dispatch the `brainstorm` agent to apply first principles, inversion, and second","description":"Dispatch the `brainstorm` agent to apply first principles, inversion, and second-order thinking. Surfaces the real problem, not just the presented one.","steps":[{"node":"command.brainstorm","caption":"User invokes /brainstorm"},{"node":"agent.brainstorm","via":"dispatch","caption":"Dispatch brainstorm","marker":"## EXPLORATION COMPLETE"},{"node":"rule.agent-contracts","via":"include","caption":"@-includes agent-contracts"},{"node":"rule.questioning","via":"include","caption":"@-includes questioning"},{"node":"rule.problem-solving","via":"include","caption":"@-includes problem-solving"}],"canonical":false},"command.build-fix":{"label":"/build-fix — Detect and fix build errors iteratively with guardrails.","description":"Detect and fix build errors iteratively with guardrails.","steps":[{"node":"command.build-fix","caption":"User invokes /build-fix"},{"node":"command.build-fix","caption":"Standalone skill/utility — no subagent dispatch in the core path"}],"canonical":false},"command.e2e":{"label":"/e2e — Generate and run end-to-end tests using Playwright.","description":"Generate and run end-to-end tests using Playwright.","steps":[{"node":"command.e2e","caption":"User invokes /e2e"},{"node":"command.e2e","caption":"Standalone skill/utility — no subagent dispatch in the core path"}],"canonical":false},"command.enhance-audio":{"label":"/enhance-audio — Enhance and clean up audio in video/audio files using FFmpeg filters. Removes no","description":"Enhance and clean up audio in video/audio files using FFmpeg filters. Removes noise, normalizes volume, and improves speech clarity.","steps":[{"node":"command.enhance-audio","caption":"User invokes /enhance-audio"},{"node":"command.enhance-audio","caption":"Standalone skill/utility — no subagent dispatch in the core path"}],"canonical":false},"command.ghl-upload":{"label":"/ghl-upload — Upload files to GoHighLevel's media library via API.","description":"Upload files to GoHighLevel's media library via API.","steps":[{"node":"command.ghl-upload","caption":"User invokes /ghl-upload"},{"node":"command.ghl-upload","caption":"Standalone skill/utility — no subagent dispatch in the core path"}],"canonical":false},"command.graph":{"label":"/graph — Build or rebuild the repo-graphrag knowledge graph for the current project.","description":"Build or rebuild the repo-graphrag knowledge graph for the current project.","steps":[{"node":"command.graph","caption":"User invokes /graph"},{"node":"command.graph","caption":"Standalone skill/utility — no subagent dispatch in the core path"}],"canonical":false},"command.learn":{"label":"/learn — Extract reusable patterns and lessons from the current session and save them to ","description":"Extract reusable patterns and lessons from the current session and save them to memory.","steps":[{"node":"command.learn","caption":"User invokes /learn"},{"node":"command.learn","caption":"Standalone skill/utility — no subagent dispatch in the core path"}],"canonical":false},"command.nano-banana":{"label":"/nano-banana — Generates AI images using the nano-banana CLI (Gemini 3.1 Flash default, Pro ava","description":"Generates AI images using the nano-banana CLI (Gemini 3.1 Flash default, Pro available). Handles multi-resolution (512-4K), aspect ratios, reference images for style transfer, green screen workflow for transparent assets, cost tracking, and exact dimension control. Use when asked to \"generate an image\", \"create a sprite\", \"make an asset\", \"generate artwork\", or any image generation task for UI mockups, game assets, videos, or marketing materials.","steps":[{"node":"command.nano-banana","caption":"User invokes /nano-banana"},{"node":"command.nano-banana","caption":"Standalone skill/utility — no subagent dispatch in the core path"}],"canonical":false},"command.optimize-video":{"label":"/optimize-video — Process and upload optimized videos to Supabase Storage with faststart + compres","description":"Process and upload optimized videos to Supabase Storage with faststart + compression.","steps":[{"node":"command.optimize-video","caption":"User invokes /optimize-video"},{"node":"command.optimize-video","caption":"Standalone skill/utility — no subagent dispatch in the core path"}],"canonical":false},"command.refactor-clean":{"label":"/refactor-clean — Detect and safely remove dead code, unused dependencies, and unnecessary complex","description":"Detect and safely remove dead code, unused dependencies, and unnecessary complexity.","steps":[{"node":"command.refactor-clean","caption":"User invokes /refactor-clean"},{"node":"command.refactor-clean","caption":"Standalone skill/utility — no subagent dispatch in the core path"}],"canonical":false},"command.session-save":{"label":"/session-save — Save the current session context to a file for continuity across sessions.","description":"Save the current session context to a file for continuity across sessions.","steps":[{"node":"command.session-save","caption":"User invokes /session-save"},{"node":"command.session-save","caption":"Standalone skill/utility — no subagent dispatch in the core path"}],"canonical":false},"command.split-screen-video":{"label":"/split-screen-video — Create a polished split-screen video from raw talking-head footage. Top half = B","description":"Create a polished split-screen video from raw talking-head footage. Top half = B-roll images with annotations, bottom half = zoomed presenter. Includes yellow subtitle bars, enhanced audio, and 1.2x speed.","steps":[{"node":"command.split-screen-video","caption":"User invokes /split-screen-video"},{"node":"command.split-screen-video","caption":"Standalone skill/utility — no subagent dispatch in the core path"}],"canonical":false},"command.transcribe":{"label":"/transcribe — Transcribe audio/video files using OpenAI Whisper. Supports 99 languages with au","description":"Transcribe audio/video files using OpenAI Whisper. Supports 99 languages with automatic detection.","steps":[{"node":"command.transcribe","caption":"User invokes /transcribe"},{"node":"command.transcribe","caption":"Standalone skill/utility — no subagent dispatch in the core path"}],"canonical":false},"command.view-video":{"label":"/view-video — Extract frames from a video using ffmpeg so Claude can visually analyze the cont","description":"Extract frames from a video using ffmpeg so Claude can visually analyze the content.","steps":[{"node":"command.view-video","caption":"User invokes /view-video"},{"node":"command.view-video","caption":"Standalone skill/utility — no subagent dispatch in the core path"}],"canonical":false}}
+</script>
+
+    <style>
+      /* ============================================================
+     Design tokens — dark primary, light via prefers-color-scheme
+     ============================================================ */
+      :root {
+        --bg: #0a0a0c;
+        --bg-elev-1: #0e0e10;
+        --bg-elev-2: #141418;
+        --bg-elev-3: #1c1c22;
+        --border: #1f1f26;
+        --border-strong: #2a2a32;
+
+        --text-primary: #ebebef;
+        --text-secondary: #9a9aa6;
+        --text-muted: #616170;
+
+        --accent: #3b82f6; /* dispatch / primary */
+        --accent-soft: #60a5fa;
+        --agent: #a855f7; /* agents */
+        --success: #34d399; /* markers / passed */
+        --warning: #f59e0b; /* rules / caution */
+        --danger: #ef4444; /* blocked */
+        --hook: #64748b; /* hooks */
+        --skill: #22d3ee; /* skills */
+        --mcp: #ec4899; /* mcp servers */
+        --meta: #fbbf24; /* orchestrator/meta nucleus */
+
+        --edge-routes: rgba(155, 155, 175, 0.22);
+        --edge-include: rgba(245, 158, 11, 0.55);
+        --edge-dispatch: rgba(59, 130, 246, 0.75);
+        --edge-trigger: rgba(100, 116, 139, 0.55);
+
+        --radius-sm: 4px;
+        --radius-md: 8px;
+        --radius-lg: 14px;
+
+        --shadow-1:
+          0 1px 0 rgba(255, 255, 255, 0.04) inset,
+          0 6px 24px rgba(0, 0, 0, 0.28);
+        --shadow-glow:
+          0 0 0 1px rgba(59, 130, 246, 0.4), 0 0 32px rgba(59, 130, 246, 0.25);
+
+        --font-ui:
+          "Inter", system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+        --font-mono:
+          "JetBrains Mono", ui-monospace, SF Mono, Menlo, Consolas, monospace;
+
+        --transition-fast: 120ms ease;
+        --transition-med: 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+      }
+
+      [data-theme="light"] {
+        --bg: #f7f7f8;
+        --bg-elev-1: #ffffff;
+        --bg-elev-2: #f1f1f4;
+        --bg-elev-3: #e7e7ec;
+        --border: #e2e2e8;
+        --border-strong: #c8c8d0;
+
+        --text-primary: #17171c;
+        --text-secondary: #4a4a55;
+        --text-muted: #76768a;
+
+        --accent: #2563eb;
+        --accent-soft: #3b82f6;
+        --agent: #9333ea;
+        --success: #10b981;
+        --warning: #d97706;
+        --danger: #dc2626;
+        --hook: #64748b;
+        --skill: #0891b2;
+        --mcp: #db2777;
+        --meta: #d97706;
+
+        --edge-routes: rgba(80, 80, 100, 0.28);
+        --edge-include: rgba(217, 119, 6, 0.7);
+        --edge-dispatch: rgba(37, 99, 235, 0.75);
+        --edge-trigger: rgba(100, 116, 139, 0.6);
+
+        --shadow-1:
+          0 1px 0 rgba(0, 0, 0, 0.02) inset, 0 6px 24px rgba(20, 20, 30, 0.08);
+      }
+
+      /* Reset ------------------------------------------------------ */
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        font-family: var(--font-ui);
+        font-size: 15px;
+        line-height: 1.55;
+        color: var(--text-primary);
+        background: var(--bg);
+        background-image:
+          radial-gradient(
+            1200px 600px at 50% -10%,
+            rgba(59, 130, 246, 0.1),
+            transparent 60%
+          ),
+          radial-gradient(
+            800px 400px at 80% 110%,
+            rgba(168, 85, 247, 0.08),
+            transparent 60%
+          );
+        min-height: 100vh;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        overflow-x: hidden;
+      }
+      [data-theme="light"] body {
+        background-image:
+          radial-gradient(
+            1200px 600px at 50% -10%,
+            rgba(59, 130, 246, 0.14),
+            transparent 60%
+          ),
+          radial-gradient(
+            800px 400px at 80% 110%,
+            rgba(168, 85, 247, 0.1),
+            transparent 60%
+          );
+      }
+
+      ::selection {
+        background: rgba(59, 130, 246, 0.35);
+        color: var(--text-primary);
+      }
+      ::-webkit-scrollbar {
+        width: 10px;
+        height: 10px;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: var(--border-strong);
+        border-radius: 5px;
+        border: 2px solid var(--bg);
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: var(--text-muted);
+      }
+
+      a {
+        color: var(--accent-soft);
+        text-decoration: none;
+      }
+      a:hover {
+        text-decoration: underline;
+      }
+      button {
+        font-family: inherit;
+      }
+
+      .visually-hidden {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+      }
+
+      /* Header ------------------------------------------------------ */
+      .header {
+        position: sticky;
+        top: 0;
+        z-index: 40;
+        backdrop-filter: saturate(160%) blur(14px);
+        -webkit-backdrop-filter: saturate(160%) blur(14px);
+        background: color-mix(in srgb, var(--bg) 78%, transparent);
+        border-bottom: 1px solid var(--border);
+      }
+      .header__inner {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 12px 20px;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+      }
+      .header__brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-family: var(--font-mono);
+        font-weight: 700;
+        font-size: 13px;
+        color: var(--text-primary);
+        letter-spacing: -0.01em;
+        white-space: nowrap;
+      }
+      .header__brand-mark {
+        width: 22px;
+        height: 22px;
+        background: conic-gradient(
+          from 90deg at 50% 50%,
+          var(--accent) 0 25%,
+          var(--agent) 25% 50%,
+          var(--success) 50% 75%,
+          var(--warning) 75% 100%
+        );
+        border-radius: 50%;
+        box-shadow:
+          0 0 0 2px var(--bg-elev-1),
+          0 0 24px rgba(59, 130, 246, 0.45);
+      }
+      .header__search {
+        flex: 1;
+        max-width: 440px;
+        position: relative;
+      }
+      .header__search input {
+        width: 100%;
+        height: 36px;
+        padding: 0 40px 0 36px;
+        background: var(--bg-elev-2);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        color: var(--text-primary);
+        font-size: 13px;
+        font-family: var(--font-ui);
+        outline: none;
+        transition:
+          border-color var(--transition-fast),
+          background var(--transition-fast);
+      }
+      .header__search input::placeholder {
+        color: var(--text-muted);
+      }
+      .header__search input:focus {
+        border-color: var(--accent);
+        background: var(--bg-elev-1);
+      }
+      .header__search-icon {
+        position: absolute;
+        left: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--text-muted);
+        pointer-events: none;
+      }
+      .header__search-kbd {
+        position: absolute;
+        right: 8px;
+        top: 50%;
+        transform: translateY(-50%);
+        font-family: var(--font-mono);
+        font-size: 10px;
+        padding: 2px 6px;
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        color: var(--text-muted);
+        background: var(--bg-elev-1);
+      }
+      .header__search-results {
+        position: absolute;
+        top: calc(100% + 6px);
+        left: 0;
+        right: 0;
+        background: var(--bg-elev-1);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        max-height: 320px;
+        overflow-y: auto;
+        box-shadow: var(--shadow-1);
+        z-index: 5;
+        display: none;
+      }
+      .header__search-results[data-open="true"] {
+        display: block;
+      }
+      .header__search-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 12px;
+        font-size: 13px;
+        color: var(--text-secondary);
+        cursor: pointer;
+        border-bottom: 1px solid var(--border);
+      }
+      .header__search-item:last-child {
+        border-bottom: none;
+      }
+      .header__search-item[data-active="true"],
+      .header__search-item:hover {
+        background: var(--bg-elev-2);
+        color: var(--text-primary);
+      }
+      .header__search-item-kind {
+        font-family: var(--font-mono);
+        font-size: 10px;
+        padding: 2px 6px;
+        border-radius: 3px;
+        background: var(--bg-elev-3);
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+
+      .header__flow {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .header__flow label {
+        font-size: 12px;
+        color: var(--text-muted);
+        font-family: var(--font-mono);
+        white-space: nowrap;
+      }
+      .header__flow select {
+        height: 36px;
+        padding: 0 28px 0 10px;
+        background: var(--bg-elev-2)
+          url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path d='M1 1l4 4 4-4' stroke='%239a9aa6' stroke-width='1.5' fill='none'/></svg>")
+          no-repeat right 10px center;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        color: var(--text-primary);
+        font-size: 13px;
+        font-family: var(--font-ui);
+        appearance: none;
+        -webkit-appearance: none;
+        cursor: pointer;
+        max-width: 280px;
+      }
+      .header__flow select:focus {
+        border-color: var(--accent);
+        outline: none;
+      }
+
+      .header__actions {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .icon-btn {
+        width: 36px;
+        height: 36px;
+        border-radius: var(--radius-md);
+        border: 1px solid var(--border);
+        background: var(--bg-elev-2);
+        color: var(--text-secondary);
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        transition:
+          color var(--transition-fast),
+          background var(--transition-fast),
+          border-color var(--transition-fast);
+      }
+      .icon-btn:hover {
+        color: var(--text-primary);
+        border-color: var(--border-strong);
+      }
+      .icon-btn:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+      }
+      .icon-btn svg {
+        width: 16px;
+        height: 16px;
+      }
+
+      /* Hero -------------------------------------------------------- */
+      .hero {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 40px 20px 24px;
+      }
+      .hero__title {
+        font-size: clamp(30px, 4.4vw, 52px);
+        font-weight: 800;
+        letter-spacing: -0.025em;
+        line-height: 1.06;
+        margin: 0 0 14px;
+        background: linear-gradient(
+          180deg,
+          var(--text-primary) 0%,
+          color-mix(in srgb, var(--text-primary) 70%, transparent) 100%
+        );
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+      .hero__tagline {
+        font-size: clamp(15px, 1.6vw, 19px);
+        line-height: 1.55;
+        color: var(--text-secondary);
+        max-width: 780px;
+        margin: 0 0 28px;
+      }
+      .hero__tagline code {
+        font-family: var(--font-mono);
+        font-size: 0.9em;
+        background: var(--bg-elev-2);
+        border: 1px solid var(--border);
+        padding: 1px 6px;
+        border-radius: 4px;
+        color: var(--text-primary);
+      }
+      .hero__stats {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 16px;
+        max-width: 720px;
+      }
+      .stat-card {
+        padding: 18px 20px;
+        background: linear-gradient(
+          180deg,
+          var(--bg-elev-1) 0%,
+          var(--bg-elev-2) 100%
+        );
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-1);
+        position: relative;
+        overflow: hidden;
+      }
+      .stat-card::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(
+          120px 60px at 20% 0%,
+          var(--_accent, rgba(59, 130, 246, 0.18)),
+          transparent 70%
+        );
+        pointer-events: none;
+      }
+      .stat-card--agents {
+        --_accent: rgba(168, 85, 247, 0.18);
+      }
+      .stat-card--rules {
+        --_accent: rgba(245, 158, 11, 0.18);
+      }
+      .stat-card--cmds {
+        --_accent: rgba(59, 130, 246, 0.18);
+      }
+      .stat-card__value {
+        font-family: var(--font-mono);
+        font-size: 34px;
+        font-weight: 700;
+        line-height: 1;
+        letter-spacing: -0.02em;
+        color: var(--text-primary);
+        font-variant-numeric: tabular-nums;
+        margin: 0 0 6px;
+      }
+      .stat-card__label {
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        color: var(--text-muted);
+        margin: 0;
+      }
+
+      /* Graph ------------------------------------------------------- */
+      .graph-wrap {
+        position: relative;
+        max-width: 1400px;
+        margin: 8px auto 0;
+        padding: 0 20px 24px;
+      }
+      .graph-frame {
+        position: relative;
+        width: 100%;
+        aspect-ratio: 4 / 3;
+        min-height: 600px;
+        max-height: 90vh;
+        background:
+          radial-gradient(
+            closest-side at 50% 50%,
+            color-mix(in srgb, var(--bg-elev-2) 85%, transparent),
+            transparent 90%
+          ),
+          linear-gradient(180deg, var(--bg-elev-1) 0%, var(--bg) 100%);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        overflow: hidden;
+        touch-action: none;
+      }
+      #graph-svg {
+        width: 100%;
+        height: 100%;
+        display: block;
+        cursor: grab;
+      }
+      #graph-svg:active {
+        cursor: grabbing;
+      }
+      #graph-svg text {
+        user-select: none;
+      }
+
+      .graph-status {
+        position: absolute;
+        top: 14px;
+        left: 16px;
+        font-family: var(--font-mono);
+        font-size: 11px;
+        color: var(--text-muted);
+        pointer-events: none;
+      }
+      .graph-status[data-state="active"] {
+        color: var(--accent);
+      }
+
+      /* Filter chips ------------------------------------------------ */
+      .filter-bar {
+        position: absolute;
+        top: 14px;
+        right: 16px;
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+        max-width: calc(100% - 32px);
+        justify-content: flex-end;
+      }
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        height: 28px;
+        padding: 0 10px;
+        border-radius: 999px;
+        border: 1px solid var(--border);
+        background: color-mix(in srgb, var(--bg-elev-1) 92%, transparent);
+        color: var(--text-secondary);
+        font-size: 11px;
+        font-weight: 500;
+        font-family: var(--font-mono);
+        cursor: pointer;
+        transition:
+          color var(--transition-fast),
+          border-color var(--transition-fast),
+          background var(--transition-fast);
+      }
+      .chip:hover {
+        color: var(--text-primary);
+        border-color: var(--border-strong);
+      }
+      .chip[data-active="true"] {
+        color: var(--text-primary);
+        border-color: var(--border-strong);
+        background: var(--bg-elev-2);
+      }
+      .chip[data-active="false"] {
+        opacity: 0.45;
+        text-decoration: line-through;
+      }
+      .chip__swatch {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--_swatch, var(--text-muted));
+        box-shadow: 0 0 6px var(--_swatch, var(--text-muted));
+      }
+
+      /* Legend ------------------------------------------------------ */
+      .legend {
+        position: absolute;
+        left: 16px;
+        bottom: 16px;
+        font-family: var(--font-mono);
+        font-size: 11px;
+        background: color-mix(in srgb, var(--bg-elev-1) 92%, transparent);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        backdrop-filter: blur(8px);
+        max-width: 280px;
+        overflow: hidden;
+      }
+      .legend__toggle {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 8px 12px;
+        background: transparent;
+        border: none;
+        color: var(--text-secondary);
+        font-family: var(--font-mono);
+        font-size: 11px;
+        font-weight: 600;
+        cursor: pointer;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+      .legend__toggle:hover {
+        color: var(--text-primary);
+      }
+      .legend__body {
+        padding: 4px 12px 12px;
+        display: none;
+      }
+      .legend[data-open="true"] .legend__body {
+        display: block;
+      }
+      .legend[data-open="true"] .legend__chevron {
+        transform: rotate(180deg);
+      }
+      .legend__chevron {
+        transition: transform var(--transition-fast);
+      }
+      .legend__section-title {
+        font-size: 10px;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        margin: 8px 0 4px;
+      }
+      .legend__row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 3px 0;
+        color: var(--text-secondary);
+        font-size: 11px;
+      }
+      .legend__swatch {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        flex-shrink: 0;
+      }
+      .legend__line {
+        width: 28px;
+        height: 2px;
+        flex-shrink: 0;
+        border-radius: 1px;
+      }
+
+      /* Inspector --------------------------------------------------- */
+      .inspector {
+        position: fixed;
+        top: 72px;
+        right: 16px;
+        bottom: 16px;
+        width: 380px;
+        max-width: calc(100vw - 32px);
+        background: linear-gradient(
+          180deg,
+          var(--bg-elev-1) 0%,
+          var(--bg-elev-2) 100%
+        );
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
+        display: flex;
+        flex-direction: column;
+        transform: translateX(calc(100% + 32px));
+        transition: transform var(--transition-med);
+        z-index: 30;
+      }
+      .inspector[data-open="true"] {
+        transform: translateX(0);
+      }
+
+      .inspector__header {
+        padding: 16px 16px 12px;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+      }
+      .inspector__icon {
+        width: 36px;
+        height: 36px;
+        flex-shrink: 0;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: var(--font-mono);
+        font-weight: 700;
+        font-size: 14px;
+        color: #fff;
+        background: var(--_color, var(--accent));
+        box-shadow: 0 0 20px
+          color-mix(in srgb, var(--_color, var(--accent)) 40%, transparent);
+      }
+      .inspector__title {
+        flex: 1;
+        min-width: 0;
+      }
+      .inspector__label {
+        font-size: 16px;
+        font-weight: 700;
+        color: var(--text-primary);
+        word-break: break-word;
+        margin: 0 0 4px;
+        letter-spacing: -0.01em;
+      }
+      .inspector__kind {
+        display: inline-block;
+        font-family: var(--font-mono);
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        padding: 2px 8px;
+        border-radius: 999px;
+        background: var(--bg-elev-3);
+        color: var(--text-secondary);
+        border: 1px solid var(--border);
+      }
+      .inspector__close {
+        width: 32px;
+        height: 32px;
+        flex-shrink: 0;
+        border-radius: var(--radius-md);
+        border: 1px solid var(--border);
+        background: transparent;
+        color: var(--text-secondary);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .inspector__close:hover {
+        color: var(--text-primary);
+        border-color: var(--border-strong);
+      }
+      .inspector__close:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+      }
+
+      .inspector__body {
+        flex: 1;
+        overflow-y: auto;
+        padding: 14px 16px 20px;
+      }
+      .inspector__section {
+        margin-bottom: 20px;
+      }
+      .inspector__section-title {
+        font-size: 10px;
+        font-weight: 600;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        margin: 0 0 8px;
+      }
+      .inspector__path {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-family: var(--font-mono);
+        font-size: 12px;
+        color: var(--text-secondary);
+        padding: 8px 10px;
+        background: var(--bg-elev-2);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        word-break: break-all;
+      }
+      .inspector__path a {
+        margin-left: auto;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        color: var(--accent-soft);
+        font-family: var(--font-ui);
+        font-size: 11px;
+        flex-shrink: 0;
+        white-space: nowrap;
+      }
+      .inspector__summary {
+        font-size: 13.5px;
+        line-height: 1.6;
+        color: var(--text-secondary);
+      }
+      .inspector__summary code {
+        font-family: var(--font-mono);
+        font-size: 0.9em;
+        background: var(--bg-elev-3);
+        padding: 1px 5px;
+        border-radius: 3px;
+        color: var(--text-primary);
+      }
+      .inspector__chip-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+      .inspector__chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-family: var(--font-mono);
+        font-size: 11.5px;
+        padding: 4px 10px;
+        border-radius: 999px;
+        background: var(--bg-elev-2);
+        border: 1px solid var(--border);
+        color: var(--text-secondary);
+        cursor: pointer;
+        transition:
+          color var(--transition-fast),
+          background var(--transition-fast),
+          border-color var(--transition-fast);
+      }
+      .inspector__chip:hover {
+        color: var(--text-primary);
+        border-color: var(--border-strong);
+        background: var(--bg-elev-3);
+      }
+      .inspector__chip:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+      }
+      .inspector__chip-dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: var(--_color, var(--text-muted));
+      }
+      .inspector__markers {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .inspector__marker {
+        font-family: var(--font-mono);
+        font-size: 11.5px;
+        padding: 6px 10px;
+        border-radius: var(--radius-sm);
+        border: 1px solid var(--border);
+        background: var(--bg-elev-2);
+        color: var(--_mc, var(--text-secondary));
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .inspector__marker--success {
+        --_mc: var(--success);
+        border-color: color-mix(in srgb, var(--success) 35%, var(--border));
+      }
+      .inspector__marker--warning {
+        --_mc: var(--warning);
+        border-color: color-mix(in srgb, var(--warning) 35%, var(--border));
+      }
+      .inspector__marker--danger {
+        --_mc: var(--danger);
+        border-color: color-mix(in srgb, var(--danger) 35%, var(--border));
+      }
+      .inspector__kv {
+        display: grid;
+        grid-template-columns: 92px 1fr;
+        gap: 6px 10px;
+        font-size: 12px;
+      }
+      .inspector__kv dt {
+        color: var(--text-muted);
+        font-family: var(--font-mono);
+      }
+      .inspector__kv dd {
+        margin: 0;
+        color: var(--text-secondary);
+        font-family: var(--font-mono);
+        word-break: break-word;
+      }
+      .inspector__cmd {
+        font-family: var(--font-mono);
+        font-size: 11.5px;
+        padding: 8px 10px;
+        background: var(--bg-elev-2);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        color: var(--text-secondary);
+        line-height: 1.5;
+        max-height: 140px;
+        overflow: auto;
+        word-break: break-all;
+      }
+
+      /* Flow overlay ------------------------------------------------ */
+      .flow-controls {
+        position: absolute;
+        left: 50%;
+        transform: translateX(-50%);
+        bottom: 16px;
+        display: none;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 10px;
+        background: color-mix(in srgb, var(--bg-elev-1) 92%, transparent);
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        backdrop-filter: blur(8px);
+        box-shadow: var(--shadow-1);
+        z-index: 4;
+      }
+      .flow-controls[data-open="true"] {
+        display: inline-flex;
+      }
+      .flow-controls__btn {
+        width: 32px;
+        height: 32px;
+        border-radius: 999px;
+        border: 1px solid var(--border);
+        background: var(--bg-elev-2);
+        color: var(--text-secondary);
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        transition:
+          color var(--transition-fast),
+          background var(--transition-fast);
+      }
+      .flow-controls__btn:hover {
+        color: var(--text-primary);
+        background: var(--bg-elev-3);
+      }
+      .flow-controls__btn[data-primary="true"] {
+        background: var(--accent);
+        color: #fff;
+        border-color: var(--accent);
+      }
+      .flow-controls__btn[data-primary="true"]:hover {
+        background: var(--accent-soft);
+        border-color: var(--accent-soft);
+      }
+      .flow-controls__label {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        color: var(--text-secondary);
+        padding: 0 8px;
+        white-space: nowrap;
+        max-width: 240px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .flow-controls__speed {
+        font-family: var(--font-mono);
+        font-size: 10px;
+        height: 28px;
+        padding: 0 8px;
+        border-radius: 999px;
+        border: 1px solid var(--border);
+        background: var(--bg-elev-2);
+        color: var(--text-secondary);
+        cursor: pointer;
+      }
+
+      .flow-callout {
+        position: absolute;
+        max-width: 280px;
+        padding: 10px 12px;
+        background: var(--bg-elev-1);
+        border: 1px solid var(--border-strong);
+        border-radius: var(--radius-md);
+        box-shadow: var(--shadow-1);
+        font-size: 12.5px;
+        line-height: 1.5;
+        color: var(--text-primary);
+        pointer-events: none;
+        z-index: 3;
+        transform: translate(-50%, calc(-100% - 16px));
+        animation: callout-in 200ms var(--transition-med);
+      }
+      @keyframes callout-in {
+        from {
+          opacity: 0;
+          transform: translate(-50%, calc(-100% - 4px));
+        }
+        to {
+          opacity: 1;
+          transform: translate(-50%, calc(-100% - 16px));
+        }
+      }
+      .flow-callout__marker {
+        display: inline-block;
+        font-family: var(--font-mono);
+        font-size: 11px;
+        margin-top: 6px;
+        padding: 2px 8px;
+        border-radius: 999px;
+        background: color-mix(
+          in srgb,
+          var(--_mc, var(--accent)) 18%,
+          transparent
+        );
+        color: var(--_mc, var(--accent));
+        border: 1px solid
+          color-mix(in srgb, var(--_mc, var(--accent)) 35%, transparent);
+      }
+      .flow-callout__step {
+        display: block;
+        font-family: var(--font-mono);
+        font-size: 10px;
+        color: var(--text-muted);
+        margin-bottom: 4px;
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+      }
+
+      /* Mobile bottom sheet ----------------------------------------- */
+      .bottom-sheet {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 50;
+        background: linear-gradient(
+          180deg,
+          var(--bg-elev-1) 0%,
+          var(--bg-elev-2) 100%
+        );
+        border-top: 1px solid var(--border);
+        border-radius: 18px 18px 0 0;
+        max-height: 85vh;
+        transform: translateY(100%);
+        transition: transform var(--transition-med);
+        display: flex;
+        flex-direction: column;
+        touch-action: none;
+        box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.4);
+      }
+      .bottom-sheet[data-open="true"] {
+        transform: translateY(0);
+      }
+      .bottom-sheet[data-expanded="true"] {
+        transform: translateY(0);
+        max-height: 92vh;
+      }
+      .bottom-sheet__grabber {
+        padding: 10px 0 6px;
+        display: flex;
+        justify-content: center;
+        cursor: grab;
+      }
+      .bottom-sheet__grabber::before {
+        content: "";
+        width: 36px;
+        height: 4px;
+        border-radius: 999px;
+        background: var(--border-strong);
+      }
+
+      /* Flow storyboard (mobile) ------------------------------------ */
+      .story-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 60;
+        background: var(--bg);
+        background-image:
+          radial-gradient(
+            600px 300px at 50% -10%,
+            rgba(59, 130, 246, 0.12),
+            transparent 60%
+          ),
+          radial-gradient(
+            400px 200px at 80% 110%,
+            rgba(168, 85, 247, 0.1),
+            transparent 60%
+          );
+        overflow-y: scroll;
+        scroll-snap-type: y mandatory;
+        display: none;
+        -webkit-overflow-scrolling: touch;
+      }
+      body.story-lock {
+        overflow: hidden;
+      }
+      .story-overlay[data-open="true"] {
+        display: block;
+      }
+      .story-step {
+        scroll-snap-align: start;
+        min-height: 100vh;
+        min-height: 100svh;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        position: relative;
+      }
+      .story-step__header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-family: var(--font-mono);
+        font-size: 11px;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+      }
+      .story-step__node {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 14px;
+        padding: 24px 0;
+      }
+      .story-step__avatar {
+        width: 88px;
+        height: 88px;
+        border-radius: 22px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: var(--font-mono);
+        font-weight: 700;
+        font-size: 30px;
+        color: #fff;
+        background: var(--_color, var(--accent));
+        box-shadow:
+          0 0 0 2px var(--bg-elev-1),
+          0 0 48px
+            color-mix(in srgb, var(--_color, var(--accent)) 50%, transparent);
+      }
+      .story-step__label {
+        font-size: 24px;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        text-align: center;
+        margin: 0;
+      }
+      .story-step__kind {
+        font-family: var(--font-mono);
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.14em;
+        color: var(--text-muted);
+      }
+      .story-step__arrow {
+        position: absolute;
+        left: 50%;
+        top: 8px;
+        transform: translateX(-50%);
+        font-family: var(--font-mono);
+        font-size: 20px;
+        color: var(--_color, var(--text-muted));
+        animation: story-arrow 1.6s ease-in-out infinite;
+      }
+      @keyframes story-arrow {
+        0%,
+        100% {
+          transform: translate(-50%, 0);
+          opacity: 0.6;
+        }
+        50% {
+          transform: translate(-50%, 6px);
+          opacity: 1;
+        }
+      }
+      .story-step__caption {
+        font-size: 15px;
+        line-height: 1.55;
+        color: var(--text-primary);
+        text-align: center;
+        max-width: 32ch;
+        margin: 0 auto;
+      }
+      .story-step__marker {
+        align-self: center;
+        display: inline-block;
+        font-family: var(--font-mono);
+        font-size: 12px;
+        padding: 4px 10px;
+        border-radius: 999px;
+        background: color-mix(
+          in srgb,
+          var(--_mc, var(--accent)) 18%,
+          transparent
+        );
+        color: var(--_mc, var(--accent));
+        border: 1px solid
+          color-mix(in srgb, var(--_mc, var(--accent)) 40%, transparent);
+      }
+      .story-overlay__close {
+        position: fixed;
+        top: 12px;
+        right: 12px;
+        width: 40px;
+        height: 40px;
+        border-radius: 999px;
+        background: var(--bg-elev-1);
+        border: 1px solid var(--border);
+        color: var(--text-primary);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        z-index: 2;
+      }
+      .story-overlay__progress {
+        position: fixed;
+        left: 16px;
+        top: 16px;
+        font-family: var(--font-mono);
+        font-size: 11px;
+        color: var(--text-muted);
+        z-index: 2;
+        display: none; /* Step header shows its own progress */
+      }
+
+      /* Intro stagger: ring animations ------------------------------ */
+      @media (prefers-reduced-motion: no-preference) {
+        .node-group,
+        .edge-group {
+          opacity: 0;
+          animation: node-in 420ms cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+        }
+        .edge-group {
+          animation-duration: 520ms;
+        }
+      }
+      @keyframes node-in {
+        to {
+          opacity: 1;
+        }
+      }
+
+      /* Dim classes override animation-fill-mode forwards winning over inline styles. */
+      .node-group.is-dim,
+      .edge-group.is-dim {
+        opacity: 0.15 !important;
+      }
+      .edge-group.is-dim-strong {
+        opacity: 0.08 !important;
+      }
+      .node-group.is-flow-dim,
+      .edge-group.is-flow-dim {
+        opacity: 0.12 !important;
+      }
+      .edge-group.is-flow-dim-strong {
+        opacity: 0.05 !important;
+      }
+      .node-group.is-flow-active {
+        opacity: 1 !important;
+      }
+      .node-group.is-flow-prev {
+        opacity: 0.7 !important;
+      }
+      .node-group.is-hover-neighbor {
+        opacity: 0.85 !important;
+      }
+      .node-group.is-hover-target,
+      .edge-group.is-hover-incident {
+        opacity: 1 !important;
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          animation-duration: 0.001ms !important;
+          transition-duration: 0.001ms !important;
+          animation-iteration-count: 1 !important;
+        }
+        .node-group,
+        .edge-group {
+          opacity: 1 !important;
+        }
+      }
+
+      /* Responsive -------------------------------------------------- */
+      @media (max-width: 860px) {
+        .header__inner {
+          flex-wrap: wrap;
+          gap: 8px;
+          padding: 10px 14px;
+        }
+        .header__search {
+          order: 3;
+          flex: 1 1 100%;
+          max-width: none;
+        }
+        .header__flow {
+          order: 4;
+          flex: 1 1 100%;
+        }
+        .header__flow select {
+          width: 100%;
+          max-width: none;
+        }
+        .hero {
+          padding: 24px 16px 12px;
+        }
+        .hero__stats {
+          grid-template-columns: repeat(3, 1fr);
+          gap: 10px;
+        }
+        .stat-card {
+          padding: 12px 12px;
+          border-radius: 10px;
+        }
+        .stat-card__value {
+          font-size: 22px;
+        }
+        .graph-wrap {
+          padding: 0 12px 16px;
+        }
+        .graph-frame {
+          aspect-ratio: 1 / 1;
+          min-height: 360px;
+        }
+        .filter-bar {
+          top: 10px;
+          right: 10px;
+          max-width: calc(100% - 20px);
+        }
+        .legend {
+          left: 10px;
+          bottom: 10px;
+          font-size: 10px;
+        }
+      }
+      @media (max-width: 640px) {
+        .inspector {
+          display: none;
+        }
+        .flow-controls {
+          max-width: calc(100% - 24px);
+        }
+        .flow-controls__label {
+          max-width: 120px;
+        }
+        .hero__title {
+          font-size: 30px;
+        }
+        .hero__stats {
+          grid-template-columns: 1fr 1fr 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- HEADER ============================================================= -->
+    <header class="header" role="banner">
+      <div class="header__inner">
+        <a
+          class="header__brand"
+          href="#top"
+          aria-label="Claude Code Pro Setup — home"
+        >
+          <span class="header__brand-mark" aria-hidden="true"></span>
+          <span>claude-code-pro-setup</span>
+        </a>
+
+        <div class="header__search" role="search">
+          <label for="node-search" class="visually-hidden">Search nodes</label>
+          <svg
+            class="header__search-icon"
+            viewBox="0 0 16 16"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.5"
+            aria-hidden="true"
+            width="14"
+            height="14"
+          >
+            <circle cx="7" cy="7" r="5" />
+            <path d="M11 11l3 3" />
+          </svg>
+          <input
+            id="node-search"
+            type="search"
+            placeholder="Search agents, rules, commands…"
+            autocomplete="off"
+          />
+          <kbd class="header__search-kbd">/</kbd>
+          <div
+            class="header__search-results"
+            id="search-results"
+            role="listbox"
+            data-open="false"
+          ></div>
+        </div>
+
+        <div class="header__flow">
+          <label for="flow-select">Flow</label>
+          <select id="flow-select" aria-label="Show a request flow">
+            <option value="">Show a request flow…</option>
+          </select>
+        </div>
+
+        <div class="header__actions">
+          <button
+            class="icon-btn"
+            id="theme-toggle"
+            aria-label="Toggle light/dark theme"
+            title="Toggle theme"
+          >
+            <svg
+              viewBox="0 0 16 16"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.5"
+              aria-hidden="true"
+            >
+              <path
+                d="M10 2a6 6 0 104 10 5 5 0 01-4-10z"
+                fill="currentColor"
+                stroke="none"
+              />
+            </svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- HERO =============================================================== -->
+    <section class="hero" id="top">
+      <h1 class="hero__title">Claude Code Pro Setup</h1>
+      <p class="hero__tagline">
+        An orchestrator, seven agents, eleven rules — wired by
+        <code>@</code>-includes and H2 contracts. Click any node to inspect.
+        Pick a flow to watch a real request thread through the graph.
+      </p>
+      <div class="hero__stats" role="list">
+        <div class="stat-card stat-card--agents" role="listitem">
+          <p class="stat-card__value" id="stat-agents">—</p>
+          <p class="stat-card__label">Agents</p>
+        </div>
+        <div class="stat-card stat-card--rules" role="listitem">
+          <p class="stat-card__value" id="stat-rules">—</p>
+          <p class="stat-card__label">Rules</p>
+        </div>
+        <div class="stat-card stat-card--cmds" role="listitem">
+          <p class="stat-card__value" id="stat-commands">—</p>
+          <p class="stat-card__label">Commands</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- GRAPH ============================================================== -->
+    <main class="graph-wrap" role="main">
+      <div class="graph-frame" id="graph-frame">
+        <div class="graph-status" id="graph-status">Loading graph…</div>
+
+        <!-- Filter chips -->
+        <div
+          class="filter-bar"
+          id="filter-bar"
+          role="toolbar"
+          aria-label="Node kind filters"
+        ></div>
+
+        <svg
+          id="graph-svg"
+          role="img"
+          aria-label="Radial graph of the Claude Code setup. Orchestrator at center, rules, commands, agents, skills, MCP servers and hooks in concentric rings."
+        ></svg>
+
+        <!-- Flow callout (positioned in JS) -->
+        <div class="flow-callout" id="flow-callout" hidden></div>
+
+        <!-- Flow controls -->
+        <div
+          class="flow-controls"
+          id="flow-controls"
+          role="toolbar"
+          aria-label="Flow playback controls"
+          data-open="false"
+        >
+          <button
+            class="flow-controls__btn"
+            id="flow-prev"
+            aria-label="Previous step"
+            title="Previous step"
+          >
+            <svg
+              viewBox="0 0 16 16"
+              width="14"
+              height="14"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.5"
+            >
+              <path d="M10 3L5 8l5 5" />
+            </svg>
+          </button>
+          <button
+            class="flow-controls__btn"
+            id="flow-play"
+            data-primary="true"
+            aria-label="Play flow"
+            title="Play"
+          >
+            <svg
+              viewBox="0 0 16 16"
+              width="14"
+              height="14"
+              fill="currentColor"
+              id="flow-play-icon"
+            >
+              <path d="M4 3l9 5-9 5z" />
+            </svg>
+          </button>
+          <button
+            class="flow-controls__btn"
+            id="flow-next"
+            aria-label="Next step"
+            title="Next step"
+          >
+            <svg
+              viewBox="0 0 16 16"
+              width="14"
+              height="14"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.5"
+            >
+              <path d="M6 3l5 5-5 5" />
+            </svg>
+          </button>
+          <span class="flow-controls__label" id="flow-label">—</span>
+          <button
+            class="flow-controls__speed"
+            id="flow-speed"
+            aria-label="Playback speed"
+            title="Speed"
+          >
+            1x
+          </button>
+          <button
+            class="flow-controls__btn"
+            id="flow-close"
+            aria-label="Close flow"
+            title="Close flow"
+          >
+            <svg
+              viewBox="0 0 16 16"
+              width="14"
+              height="14"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.5"
+            >
+              <path d="M4 4l8 8M12 4l-8 8" />
+            </svg>
+          </button>
+        </div>
+
+        <!-- Legend -->
+        <div class="legend" id="legend" data-open="false">
+          <button
+            class="legend__toggle"
+            id="legend-toggle"
+            aria-expanded="false"
+          >
+            <span>Legend</span>
+            <svg
+              class="legend__chevron"
+              viewBox="0 0 10 6"
+              width="10"
+              height="6"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.5"
+              aria-hidden="true"
+            >
+              <path d="M1 1l4 4 4-4" />
+            </svg>
+          </button>
+          <div class="legend__body">
+            <p class="legend__section-title">Nodes</p>
+            <div class="legend__row">
+              <span
+                class="legend__swatch"
+                style="background: var(--meta)"
+              ></span
+              >Meta / orchestrator
+            </div>
+            <div class="legend__row">
+              <span
+                class="legend__swatch"
+                style="background: var(--warning)"
+              ></span
+              >Rule
+            </div>
+            <div class="legend__row">
+              <span
+                class="legend__swatch"
+                style="background: var(--accent)"
+              ></span
+              >Command
+            </div>
+            <div class="legend__row">
+              <span
+                class="legend__swatch"
+                style="background: var(--agent)"
+              ></span
+              >Agent / template
+            </div>
+            <div class="legend__row">
+              <span
+                class="legend__swatch"
+                style="background: var(--skill)"
+              ></span
+              >Skill
+            </div>
+            <div class="legend__row">
+              <span class="legend__swatch" style="background: var(--mcp)"></span
+              >MCP server
+            </div>
+            <div class="legend__row">
+              <span
+                class="legend__swatch"
+                style="background: var(--hook)"
+              ></span
+              >Hook
+            </div>
+
+            <p class="legend__section-title">Edges</p>
+            <div class="legend__row">
+              <span
+                class="legend__line"
+                style="background: var(--edge-routes)"
+              ></span
+              >routes
+            </div>
+            <div class="legend__row">
+              <span
+                class="legend__line"
+                style="
+                  background: repeating-linear-gradient(
+                    90deg,
+                    var(--edge-include) 0 6px,
+                    transparent 6px 10px
+                  );
+                "
+              ></span
+              >@-include
+            </div>
+            <div class="legend__row">
+              <span
+                class="legend__line"
+                style="background: var(--edge-dispatch); height: 3px"
+              ></span
+              >dispatch
+            </div>
+            <div class="legend__row">
+              <span
+                class="legend__line"
+                style="
+                  background: repeating-linear-gradient(
+                    90deg,
+                    var(--edge-trigger) 0 2px,
+                    transparent 2px 5px
+                  );
+                "
+              ></span
+              >trigger
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- INSPECTOR (desktop slide-in) ======================================== -->
+    <aside
+      class="inspector"
+      id="inspector"
+      role="complementary"
+      aria-label="Node details"
+      data-open="false"
+      aria-hidden="true"
+    >
+      <!-- contents injected by JS -->
+    </aside>
+
+    <!-- BOTTOM SHEET (mobile) =============================================== -->
+    <section
+      class="bottom-sheet"
+      id="bottom-sheet"
+      role="complementary"
+      aria-label="Node details (mobile)"
+      data-open="false"
+      aria-hidden="true"
+    >
+      <div
+        class="bottom-sheet__grabber"
+        id="sheet-grabber"
+        aria-label="Drag to expand or collapse"
+      ></div>
+      <div id="sheet-body"></div>
+    </section>
+
+    <!-- MOBILE FLOW STORYBOARD ============================================= -->
+    <div
+      class="story-overlay"
+      id="story-overlay"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Flow storyboard"
+      data-open="false"
+    >
+      <div
+        class="story-overlay__progress"
+        id="story-progress"
+        aria-live="polite"
+        aria-atomic="true"
+      ></div>
+      <button
+        class="story-overlay__close"
+        id="story-close"
+        aria-label="Close storyboard"
+      >
+        <svg
+          viewBox="0 0 16 16"
+          width="16"
+          height="16"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+        >
+          <path d="M4 4l8 8M12 4l-8 8" />
+        </svg>
+      </button>
+      <div id="story-steps"></div>
+    </div>
+
+    <!-- D3 -->
+    <script
+      src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"
+      defer
+    ></script>
+
+    <!-- Main script -->
+    <script>
+      (() => {
+        "use strict";
+
+        // -----------------------------------------------------------
+        // Data loading
+        //   1. Prefer inlined <script id="graph-data"> content (Step 9).
+        //   2. Fall back to fetch('data.json') for dev.
+        // -----------------------------------------------------------
+        async function loadJSON(sentinelId, file) {
+          const el = document.getElementById(sentinelId);
+          if (el && el.textContent && el.textContent.trim().length > 2) {
+            try {
+              return JSON.parse(el.textContent);
+            } catch (e) {
+              /* fall through */
+            }
+          }
+          const resp = await fetch(file, { cache: "no-cache" });
+          if (!resp.ok)
+            throw new Error(`Failed to load ${file}: HTTP ${resp.status}`);
+          return resp.json();
+        }
+
+        // -----------------------------------------------------------
+        // Kind metadata
+        // -----------------------------------------------------------
+        const KIND_META = {
+          meta: {
+            color: "var(--meta)",
+            ringIndex: 0,
+            label: "Meta",
+            glyph: "M",
+          },
+          rule: {
+            color: "var(--warning)",
+            ringIndex: 2,
+            label: "Rule",
+            glyph: "R",
+          },
+          command: {
+            color: "var(--accent)",
+            ringIndex: 3,
+            label: "Command",
+            glyph: "C",
+          },
+          agent: {
+            color: "var(--agent)",
+            ringIndex: 4,
+            label: "Agent",
+            glyph: "A",
+          },
+          "agent-template": {
+            color: "var(--agent)",
+            ringIndex: 4,
+            label: "Template",
+            glyph: "T",
+          },
+          skill: {
+            color: "var(--skill)",
+            ringIndex: 5,
+            label: "Skill",
+            glyph: "S",
+          },
+          mcp: { color: "var(--mcp)", ringIndex: 5, label: "MCP", glyph: "P" },
+          hook: {
+            color: "var(--hook)",
+            ringIndex: 5,
+            label: "Hook",
+            glyph: "H",
+          },
+        };
+
+        // Which kinds are currently visible (mutable at runtime).
+        const kindVisibility = new Map(
+          Object.keys(KIND_META).map((k) => [k, true]),
+        );
+
+        // -----------------------------------------------------------
+        // Global runtime state
+        // -----------------------------------------------------------
+        const STATE = {
+          data: null,
+          flows: null,
+          nodesById: new Map(),
+          edgesList: [],
+          sim: null,
+          svg: null,
+          gRoot: null,
+          gEdges: null,
+          gNodes: null,
+          zoom: null,
+          currentWidth: 0,
+          currentHeight: 0,
+          pinnedNode: null,
+          currentFlow: null,
+          flowIndex: 0,
+          flowPlaying: false,
+          flowSpeed: 1,
+          flowTimer: null,
+          particleTimer: null,
+        };
+
+        // -----------------------------------------------------------
+        // Responsive helpers
+        // -----------------------------------------------------------
+        const mqMobile = window.matchMedia("(max-width: 640px)");
+        const mqReduced = window.matchMedia("(prefers-reduced-motion: reduce)");
+
+        function isMobile() {
+          return mqMobile.matches;
+        }
+
+        // -----------------------------------------------------------
+        // Theme toggle
+        // -----------------------------------------------------------
+        function initTheme() {
+          const saved = (() => {
+            try {
+              return localStorage.getItem("cc-setup-theme");
+            } catch (_) {
+              return null;
+            }
+          })();
+          if (saved) document.documentElement.setAttribute("data-theme", saved);
+          const btn = document.getElementById("theme-toggle");
+          btn.addEventListener("click", () => {
+            const cur = document.documentElement.getAttribute("data-theme");
+            const next = cur === "light" ? "" : "light";
+            if (next) document.documentElement.setAttribute("data-theme", next);
+            else document.documentElement.removeAttribute("data-theme");
+            try {
+              localStorage.setItem("cc-setup-theme", next);
+            } catch (_) {}
+          });
+        }
+
+        // -----------------------------------------------------------
+        // Stat cards
+        // -----------------------------------------------------------
+        function populateStats(data) {
+          const counts = { agent: 0, rule: 0, command: 0 };
+          for (const n of data.nodes) {
+            if (n.kind === "agent") counts.agent++;
+            else if (n.kind === "rule") counts.rule++;
+            else if (n.kind === "command") counts.command++;
+          }
+          document.getElementById("stat-agents").textContent = counts.agent;
+          document.getElementById("stat-rules").textContent = counts.rule;
+          document.getElementById("stat-commands").textContent = counts.command;
+        }
+
+        // -----------------------------------------------------------
+        // Radial layout
+        //   Ring 0 = orchestrator (center)
+        //   Ring 1 = META_RULE + CLAUDE (inner ring)
+        //   Ring 2 = rules
+        //   Ring 3 = commands
+        //   Ring 4 = agents + agent-templates
+        //   Ring 5 = skills + mcp + hooks (outer)
+        // -----------------------------------------------------------
+        function computeRings() {
+          return {
+            0: { r: 0.0, nodes: [] },
+            1: { r: 0.14, nodes: [] },
+            2: { r: 0.28, nodes: [] },
+            3: { r: 0.5, nodes: [] },
+            4: { r: 0.72, nodes: [] },
+            5: { r: 0.88, nodes: [] },
+          };
+        }
+
+        function assignRings(data) {
+          const rings = computeRings();
+          for (const n of data.nodes) {
+            if (n.id === "meta.orchestrator") rings[0].nodes.push(n);
+            else if (n.kind === "meta") rings[1].nodes.push(n);
+            else if (n.kind === "rule") rings[2].nodes.push(n);
+            else if (n.kind === "command") rings[3].nodes.push(n);
+            else if (n.kind === "agent" || n.kind === "agent-template")
+              rings[4].nodes.push(n);
+            else rings[5].nodes.push(n); // skill, mcp, hook
+          }
+          // Sort each ring for stable placement (alphabetical by label within).
+          for (const k of Object.keys(rings)) {
+            rings[k].nodes.sort((a, b) => a.label.localeCompare(b.label));
+          }
+          return rings;
+        }
+
+        function assignInitialPositions(width, height) {
+          const cx = width / 2,
+            cy = height / 2;
+          // Elliptical radius: use more horizontal space when the frame is wide.
+          // xR / yR scale with the larger / smaller dimension, preserving radial
+          // ordering while reducing wasted left/right whitespace.
+          const yR = height * 0.46;
+          const xR = Math.min(width * 0.46, yR * 1.35);
+          const maxR = yR; // used for node-radius math below
+          const rings = assignRings(STATE.data);
+          // Ring 5: split into 3 phase sectors (skills, mcp, hooks) to reduce clutter.
+          const ring5 = rings[5].nodes;
+          const grouped = { skill: [], mcp: [], hook: [] };
+          for (const n of ring5) grouped[n.kind].push(n);
+          rings[5].nodes = [...grouped.skill, ...grouped.mcp, ...grouped.hook];
+
+          for (const k of Object.keys(rings)) {
+            const ring = rings[k];
+            const r = ring.r * maxR;
+            const n = ring.nodes.length;
+            if (n === 0) continue;
+            if (ring.r === 0) {
+              ring.nodes[0].x = cx;
+              ring.nodes[0].y = cy;
+              ring.nodes[0]._r = 0;
+              continue;
+            }
+            // Rotate starting angle per ring for aesthetics.
+            // Ring 1 (inner meta) gets a custom angle to keep its two labels
+            // out of the crowded top/bottom of the commands ring.
+            let offset;
+            if (parseInt(k, 10) === 1)
+              offset = -Math.PI / 4; // NW/SE diagonal
+            else offset = parseInt(k, 10) * 0.31 - Math.PI / 2;
+            // Stagger alternate items onto an inner/outer sub-ring so labels
+            // don't stack. Only applied to ring 3 (commands); ring 5 already
+            // has enough circumference and staggering outward would clip.
+            const stagger = parseInt(k, 10) === 3 && n >= 14 ? 0.08 * maxR : 0;
+            for (let i = 0; i < n; i++) {
+              const angle = offset + (i / n) * Math.PI * 2;
+              const subR =
+                stagger > 0 ? r + (i % 2 === 0 ? -stagger : +stagger) : r;
+              const ringFraction = subR / maxR; // preserves ring ratios
+              const node = ring.nodes[i];
+              node.x = cx + Math.cos(angle) * (xR * ringFraction);
+              node.y = cy + Math.sin(angle) * (yR * ringFraction);
+              node._r = subR;
+              node._ringAngle = angle;
+            }
+          }
+          // Stash on STATE for later re-layout.
+          STATE.ringLayout = { rings, cx, cy, maxR };
+        }
+
+        // -----------------------------------------------------------
+        // Node size by kind
+        // -----------------------------------------------------------
+        function nodeRadius(n) {
+          if (n.id === "meta.orchestrator") return 26;
+          if (n.kind === "meta") return 14;
+          if (n.kind === "rule") return 8.5;
+          if (n.kind === "command") return 8;
+          if (n.kind === "agent") return 11;
+          if (n.kind === "agent-template") return 8;
+          return 6; // skill/mcp/hook
+        }
+
+        function nodeColor(n) {
+          if (n.id === "meta.orchestrator") return "var(--meta)";
+          return KIND_META[n.kind].color;
+        }
+
+        // Shorten labels that would otherwise visually collide.
+        // Hooks get a trailing index when duplicates exist so the user can
+        // still tell them apart; matcher details live in the inspector.
+        function shortLabel(n) {
+          if (n.id === "meta.orchestrator") return ""; // label drawn separately inside nucleus
+          if (n.kind === "hook") {
+            // Strip matcher brackets from label (keep event name only)
+            const ev = (n.event || n.label).split(" ")[0];
+            // Add an index suffix if multiple hooks share the same event.
+            const count = (STATE.data?.nodes || []).filter(
+              (x) =>
+                x.kind === "hook" && (x.event || x.label).split(" ")[0] === ev,
+            ).length;
+            if (count > 1) {
+              const idxMatch = (n.id || "").match(/\.(\d+)$/);
+              const idx = idxMatch ? Number(idxMatch[1]) + 1 : "";
+              return idx ? `${ev} · ${idx}` : ev;
+            }
+            return ev;
+          }
+          return n.label;
+        }
+
+        // -----------------------------------------------------------
+        // Render: SVG graph
+        // -----------------------------------------------------------
+        function renderGraph() {
+          const svg = d3.select("#graph-svg");
+          STATE.svg = svg;
+
+          const frame = document.getElementById("graph-frame");
+          const rect = frame.getBoundingClientRect();
+          STATE.currentWidth = rect.width;
+          STATE.currentHeight = rect.height;
+
+          svg.attr("viewBox", `0 0 ${rect.width} ${rect.height}`);
+          svg.selectAll("*").remove();
+
+          // <defs> -----------------------------------------------------
+          const defs = svg.append("defs");
+
+          // Radial gradient for orchestrator glow
+          const coreGrad = defs
+            .append("radialGradient")
+            .attr("id", "grad-core")
+            .attr("cx", "50%")
+            .attr("cy", "50%")
+            .attr("r", "50%");
+          coreGrad
+            .append("stop")
+            .attr("offset", "0%")
+            .attr("stop-color", "var(--meta)")
+            .attr("stop-opacity", 0.6);
+          coreGrad
+            .append("stop")
+            .attr("offset", "60%")
+            .attr("stop-color", "var(--meta)")
+            .attr("stop-opacity", 0.06);
+          coreGrad
+            .append("stop")
+            .attr("offset", "100%")
+            .attr("stop-color", "var(--meta)")
+            .attr("stop-opacity", 0);
+
+          // Glow filter for particle
+          const glowFilter = defs
+            .append("filter")
+            .attr("id", "glow-filter")
+            .attr("x", "-50%")
+            .attr("y", "-50%")
+            .attr("width", "200%")
+            .attr("height", "200%");
+          glowFilter
+            .append("feGaussianBlur")
+            .attr("stdDeviation", "3")
+            .attr("result", "blur");
+          const merge = glowFilter.append("feMerge");
+          merge.append("feMergeNode").attr("in", "blur");
+          merge.append("feMergeNode").attr("in", "SourceGraphic");
+
+          // Arrow markers per edge type
+          ["routes", "include", "dispatch", "trigger"].forEach((type) => {
+            const colorMap = {
+              routes: "var(--edge-routes)",
+              include: "var(--edge-include)",
+              dispatch: "var(--edge-dispatch)",
+              trigger: "var(--edge-trigger)",
+            };
+            defs
+              .append("marker")
+              .attr("id", `arrow-${type}`)
+              .attr("viewBox", "0 0 8 8")
+              .attr("refX", 8)
+              .attr("refY", 4)
+              .attr("markerWidth", 5)
+              .attr("markerHeight", 5)
+              .attr("orient", "auto-start-reverse")
+              .append("path")
+              .attr("d", "M0,0 L8,4 L0,8 Z")
+              .attr("fill", colorMap[type]);
+          });
+
+          // Root group (zoom target) ----------------------------------
+          const gRoot = svg.append("g").attr("class", "zoom-root");
+          STATE.gRoot = gRoot;
+
+          // Ambient ring guides + core glow
+          const { cx, cy, maxR } = STATE.ringLayout;
+          const gAmbient = gRoot.append("g").attr("class", "ambient");
+          // Core glow
+          gAmbient
+            .append("circle")
+            .attr("cx", cx)
+            .attr("cy", cy)
+            .attr("r", maxR * 0.35)
+            .attr("fill", "url(#grad-core)")
+            .attr("pointer-events", "none");
+          // Ring guide circles
+          [0.26, 0.44, 0.63, 0.84].forEach((rr) => {
+            gAmbient
+              .append("circle")
+              .attr("cx", cx)
+              .attr("cy", cy)
+              .attr("r", rr * maxR)
+              .attr("fill", "none")
+              .attr("stroke", "var(--border)")
+              .attr("stroke-width", 1)
+              .attr("stroke-opacity", 0.5)
+              .attr("pointer-events", "none");
+          });
+
+          // Edges -----------------------------------------------------
+          const gEdges = gRoot.append("g").attr("class", "edges");
+          STATE.gEdges = gEdges;
+
+          // Map node objects for links
+          const nodeLookup = new Map();
+          for (const n of STATE.data.nodes) nodeLookup.set(n.id, n);
+
+          STATE.edgesList = STATE.data.edges
+            .filter((e) => nodeLookup.has(e.source) && nodeLookup.has(e.target))
+            .map((e, i) => ({
+              id: `edge-${i}`,
+              type: e.type,
+              source: nodeLookup.get(e.source),
+              target: nodeLookup.get(e.target),
+              _sid: e.source,
+              _tid: e.target,
+            }));
+
+          const edgeSel = gEdges
+            .selectAll(".edge")
+            .data(STATE.edgesList, (d) => d.id)
+            .enter()
+            .append("g")
+            .attr("class", "edge-group")
+            .attr("data-edge-id", (d) => d.id)
+            .attr("data-source", (d) => d._sid)
+            .attr("data-target", (d) => d._tid)
+            .attr("data-type", (d) => d.type)
+            .style(
+              "animation-delay",
+              (d) =>
+                `${480 + (KIND_META[d.source.kind]?.ringIndex ?? 0) * 120}ms`,
+            );
+
+          edgeSel
+            .append("line")
+            .attr("class", "edge-line")
+            .attr("stroke-linecap", "round")
+            .attr("fill", "none")
+            .each(function (d) {
+              const sel = d3.select(this);
+              if (d.type === "dispatch") {
+                sel
+                  .attr("stroke", "var(--edge-dispatch)")
+                  .attr("stroke-width", 1.8);
+              } else if (d.type === "include") {
+                sel
+                  .attr("stroke", "var(--edge-include)")
+                  .attr("stroke-width", 1.3)
+                  .attr("stroke-dasharray", "6,4");
+              } else if (d.type === "trigger") {
+                sel
+                  .attr("stroke", "var(--edge-trigger)")
+                  .attr("stroke-width", 1.2)
+                  .attr("stroke-dasharray", "2,3");
+              } else {
+                sel
+                  .attr("stroke", "var(--edge-routes)")
+                  .attr("stroke-width", 0.9);
+              }
+            });
+
+          // Nodes -----------------------------------------------------
+          const gNodes = gRoot.append("g").attr("class", "nodes");
+          STATE.gNodes = gNodes;
+
+          const nodeSel = gNodes
+            .selectAll(".node-group")
+            .data(STATE.data.nodes, (d) => d.id)
+            .enter()
+            .append("g")
+            .attr("class", "node-group")
+            .attr("data-node-id", (d) => d.id)
+            .attr("data-kind", (d) => d.kind)
+            .attr("tabindex", 0)
+            .attr("role", "button")
+            .attr("aria-label", (d) => `${KIND_META[d.kind].label}: ${d.label}`)
+            .style("cursor", "pointer")
+            .style("animation-delay", (d) => {
+              const ring = KIND_META[d.kind]?.ringIndex ?? 0;
+              return `${ring * 160}ms`;
+            });
+
+          // Halo (hover-only, hidden initially for non-focus)
+          nodeSel
+            .append("circle")
+            .attr("class", "node-halo")
+            .attr("r", (d) => nodeRadius(d) + 6)
+            .attr("fill", "none")
+            .attr("stroke", (d) => nodeColor(d))
+            .attr("stroke-width", 1.2)
+            .attr("stroke-opacity", 0);
+
+          // Main dot
+          nodeSel
+            .append("circle")
+            .attr("class", "node-dot")
+            .attr("r", (d) => nodeRadius(d))
+            .attr("fill", (d) => nodeColor(d))
+            .attr("stroke", "var(--bg-elev-1)")
+            .attr("stroke-width", (d) =>
+              d.id === "meta.orchestrator" ? 3 : 1.6,
+            )
+            .attr("filter", (d) =>
+              d.id === "meta.orchestrator" ? "url(#glow-filter)" : null,
+            );
+
+          // Orchestrator gets an inner ring insignia + inside-label.
+          const orchSel = nodeSel.filter((d) => d.id === "meta.orchestrator");
+          orchSel
+            .append("circle")
+            .attr("r", 14)
+            .attr("fill", "none")
+            .attr("stroke", "var(--bg)")
+            .attr("stroke-width", 1.5)
+            .attr("stroke-opacity", 0.6);
+          orchSel
+            .append("text")
+            .attr("class", "node-inner-label")
+            .attr("text-anchor", "middle")
+            .attr("dy", "0.35em")
+            .attr("font-family", "var(--font-mono)")
+            .attr("font-size", 8)
+            .attr("font-weight", 700)
+            .attr("letter-spacing", "0.14em")
+            .attr("fill", "var(--bg)")
+            .attr("pointer-events", "none")
+            .text("MAIN");
+
+          // Label
+          nodeSel
+            .append("text")
+            .attr("class", "node-label")
+            .attr("font-family", "var(--font-mono)")
+            .attr("font-size", (d) => {
+              if (d.id === "meta.orchestrator") return 11;
+              if (d.kind === "agent") return 10.5;
+              if (d.kind === "rule" || d.kind === "meta") return 10;
+              if (d.kind === "command") return 9;
+              return 8.5; // skill, mcp, hook, agent-template
+            })
+            .attr("font-weight", (d) =>
+              d.id === "meta.orchestrator" ? 700 : 500,
+            )
+            .attr("fill", (d) =>
+              d.id === "meta.orchestrator"
+                ? "var(--text-primary)"
+                : "var(--text-secondary)",
+            )
+            .attr("pointer-events", "none")
+            .each(function (d) {
+              positionLabel(d, d3.select(this));
+            })
+            .text((d) => shortLabel(d));
+
+          // Interactions ----------------------------------------------
+          nodeSel
+            .on("mouseenter", (event, d) => highlightNode(d))
+            .on("mouseleave", () => {
+              if (!STATE.pinnedNode && !STATE.currentFlow) clearHighlight();
+            })
+            .on("click", (event, d) => {
+              event.stopPropagation();
+              pinInspector(d);
+            })
+            .on("keydown", (event, d) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                pinInspector(d);
+              }
+            });
+
+          // Update edge positions once (deterministic layout)
+          updateEdgePositions();
+
+          // Zoom / pan
+          STATE.zoom = d3
+            .zoom()
+            .scaleExtent([0.5, 3])
+            .on("zoom", (ev) => {
+              gRoot.attr("transform", ev.transform);
+            });
+          svg.call(STATE.zoom);
+
+          // Click empty area: close inspector
+          svg.on("click", () => {
+            pinInspector(null);
+          });
+
+          // Hide status
+          document.getElementById("graph-status").style.display = "none";
+        }
+
+        // Position text label tangent-like to reduce collision with the dot/ring.
+        function positionLabel(d, sel) {
+          if (d.id === "meta.orchestrator") {
+            // Centered UNDER the nucleus, with extra gap so it clears ring-1.
+            sel
+              .attr("text-anchor", "middle")
+              .attr("dy", "0.35em")
+              .attr("x", d.x)
+              .attr("y", d.y + nodeRadius(d) + 20);
+            return;
+          }
+          if (d.kind === "meta") {
+            // Inner meta ring (CLAUDE.md / META_RULE.md) — push label OUTWARD
+            // along their own radial vector so they don't land on the nucleus.
+            const { cx, cy } = STATE.ringLayout;
+            const dx = d.x - cx,
+              dy = d.y - cy;
+            const len = Math.sqrt(dx * dx + dy * dy) || 1;
+            const ux = dx / len,
+              uy = dy / len;
+            const offset = nodeRadius(d) + 10;
+            sel
+              .attr("text-anchor", "middle")
+              .attr("dy", "0.35em")
+              .attr("x", d.x + ux * offset)
+              .attr("y", d.y + uy * offset);
+            return;
+          }
+          // All non-meta labels push outward from the center.
+          const { cx, cy } = STATE.ringLayout;
+          const dx = d.x - cx,
+            dy = d.y - cy;
+          const len = Math.sqrt(dx * dx + dy * dy) || 1;
+          const ux = dx / len,
+            uy = dy / len;
+          const offset = nodeRadius(d) + 8;
+          const lx = d.x + ux * offset;
+          const ly = d.y + uy * offset;
+          const anchor = ux > 0.2 ? "start" : ux < -0.2 ? "end" : "middle";
+          sel
+            .attr("text-anchor", anchor)
+            .attr("dy", "0.35em")
+            .attr("x", lx)
+            .attr("y", ly);
+        }
+
+        function updateEdgePositions() {
+          if (!STATE.gEdges) return;
+          STATE.gEdges
+            .selectAll(".edge-group line")
+            .attr("x1", (d) => d.source.x)
+            .attr("y1", (d) => d.source.y)
+            .attr("x2", (d) => d.target.x)
+            .attr("y2", (d) => d.target.y);
+          STATE.gNodes
+            .selectAll(".node-group")
+            .attr("transform", (d) => `translate(${d.x},${d.y})`);
+          // But the label + halo live in the group — reposition text via each node's datum.
+          STATE.gNodes.selectAll(".node-group").each(function (d) {
+            const g = d3.select(this);
+            g.select(".node-label").each(function () {
+              const sel = d3.select(this);
+              // Reset x/y relative to group (group is translated), so undo group translate:
+              if (d.id === "meta.orchestrator") {
+                sel
+                  .attr("x", 0)
+                  .attr("y", nodeRadius(d) + 20)
+                  .attr("text-anchor", "middle");
+              } else if (d.kind === "meta") {
+                const { cx, cy } = STATE.ringLayout;
+                const dx = d.x - cx,
+                  dy = d.y - cy;
+                const len = Math.sqrt(dx * dx + dy * dy) || 1;
+                const ux = dx / len,
+                  uy = dy / len;
+                const offset = nodeRadius(d) + 10;
+                sel
+                  .attr("x", ux * offset)
+                  .attr("y", uy * offset)
+                  .attr("text-anchor", "middle");
+              } else {
+                const { cx, cy } = STATE.ringLayout;
+                const dx = d.x - cx,
+                  dy = d.y - cy;
+                const len = Math.sqrt(dx * dx + dy * dy) || 1;
+                const ux = dx / len,
+                  uy = dy / len;
+                const offset = nodeRadius(d) + 8;
+                const anchor =
+                  ux > 0.2 ? "start" : ux < -0.2 ? "end" : "middle";
+                sel
+                  .attr("x", ux * offset)
+                  .attr("y", uy * offset)
+                  .attr("text-anchor", anchor);
+              }
+            });
+          });
+        }
+
+        // -----------------------------------------------------------
+        // D3 force (gentle) — keeps ring seed, relaxes label collisions.
+        // -----------------------------------------------------------
+        function runForceLayout() {
+          if (mqReduced.matches) return; // keep deterministic layout for reduced-motion users
+
+          // Save the seeded polar radius per node; constrain via custom radial force.
+          STATE.data.nodes.forEach((n) => {
+            n.fx = null;
+            n.fy = null; // unfixed but anchored via force
+            n._seedR = Math.hypot(
+              n.x - STATE.ringLayout.cx,
+              n.y - STATE.ringLayout.cy,
+            );
+          });
+
+          const sim = d3
+            .forceSimulation(STATE.data.nodes)
+            .force(
+              "radial",
+              d3
+                .forceRadial(
+                  (d) => d._seedR,
+                  STATE.ringLayout.cx,
+                  STATE.ringLayout.cy,
+                )
+                .strength(0.85),
+            )
+            .force(
+              "collide",
+              d3.forceCollide((d) => nodeRadius(d) + 2).strength(0.8),
+            )
+            .force("charge", d3.forceManyBody().strength(-18))
+            .alpha(0.5)
+            .alphaDecay(0.06)
+            .on("tick", () => {
+              updateEdgePositions();
+            })
+            .on("end", () => {
+              /* settled */
+            });
+
+          // Fix the orchestrator in place.
+          const orch = STATE.data.nodes.find(
+            (n) => n.id === "meta.orchestrator",
+          );
+          if (orch) {
+            orch.fx = orch.x;
+            orch.fy = orch.y;
+          }
+
+          STATE.sim = sim;
+          // Stop forcibly after 2s to guarantee stability.
+          setTimeout(() => {
+            sim.stop();
+            updateEdgePositions();
+          }, 2000);
+        }
+
+        // -----------------------------------------------------------
+        // Highlight / dim ------------------------------------------------
+        // -----------------------------------------------------------
+        function setDimmedAll(dimmed) {
+          // Use class toggle because @keyframes node-in (animation-fill-mode:
+          // forwards) overrides inline opacity once the intro finishes.
+          STATE.gNodes.selectAll(".node-group").classed("is-dim", dimmed);
+          STATE.gEdges.selectAll(".edge-group").classed("is-dim", dimmed);
+        }
+
+        function highlightNode(node, lock = false) {
+          // Dim everything via class (animation-fill-mode: forwards on
+          // @keyframes node-in overrides inline opacity post-animation, so we
+          // use !important CSS classes instead).
+          STATE.gNodes
+            .selectAll(".node-group")
+            .classed("is-dim", true)
+            .classed("is-hover-target", false)
+            .classed("is-hover-neighbor", false);
+          STATE.gEdges
+            .selectAll(".edge-group")
+            .classed("is-dim", false)
+            .classed("is-dim-strong", true)
+            .classed("is-hover-incident", false);
+
+          // Emphasize target
+          const tEl = STATE.gNodes.select(
+            `.node-group[data-node-id="${CSS.escape(node.id)}"]`,
+          );
+          tEl.classed("is-dim", false).classed("is-hover-target", true);
+          tEl.select(".node-halo").attr("stroke-opacity", 0.6);
+
+          // Emphasize incident edges + their other endpoints
+          const neighbors = new Set();
+          STATE.gEdges
+            .selectAll(".edge-group")
+            .filter(function () {
+              const sId = this.getAttribute("data-source");
+              const tId = this.getAttribute("data-target");
+              if (sId === node.id || tId === node.id) {
+                neighbors.add(sId);
+                neighbors.add(tId);
+                return true;
+              }
+              return false;
+            })
+            .classed("is-dim-strong", false)
+            .classed("is-hover-incident", true);
+
+          for (const nId of neighbors) {
+            if (nId === node.id) continue;
+            STATE.gNodes
+              .select(`.node-group[data-node-id="${CSS.escape(nId)}"]`)
+              .classed("is-dim", false)
+              .classed("is-hover-neighbor", true);
+          }
+        }
+
+        function clearHighlight() {
+          STATE.gNodes
+            .selectAll(".node-group")
+            .classed("is-dim", false)
+            .classed("is-hover-target", false)
+            .classed("is-hover-neighbor", false)
+            .classed("is-flow-dim", false)
+            .classed("is-flow-active", false)
+            .classed("is-flow-prev", false);
+          STATE.gEdges
+            .selectAll(".edge-group")
+            .classed("is-dim", false)
+            .classed("is-dim-strong", false)
+            .classed("is-hover-incident", false)
+            .classed("is-flow-dim", false)
+            .classed("is-flow-dim-strong", false);
+          STATE.gNodes.selectAll(".node-halo").attr("stroke-opacity", 0);
+        }
+
+        // -----------------------------------------------------------
+        // Inspector -----------------------------------------------------
+        // -----------------------------------------------------------
+        const GITHUB_BASE =
+          "https://github.com/zalogarcia/zalo-claude-code-setup/blob/main/";
+
+        function markerClass(marker) {
+          const m = marker.toUpperCase();
+          if (
+            m.includes("BLOCKED") ||
+            m.includes("FAILED") ||
+            m.includes("INCOMPLETE")
+          )
+            return "inspector__marker--danger";
+          if (
+            m.includes("CONCERN") ||
+            m.includes("ISSUES") ||
+            m.includes("NEEDS")
+          )
+            return "inspector__marker--warning";
+          return "inspector__marker--success";
+        }
+
+        function buildInspectorContent(node) {
+          const meta = KIND_META[node.kind] || { label: node.kind, glyph: "?" };
+          const hasPath = node.path && node.path.length > 0;
+          const ghHref = hasPath ? GITHUB_BASE + node.path : null;
+
+          const root = document.createElement("div");
+          root.style.display = "contents";
+
+          // Header ---------------------------------------------------
+          const header = document.createElement("header");
+          header.className = "inspector__header";
+
+          const iconEl = document.createElement("div");
+          iconEl.className = "inspector__icon";
+          iconEl.style.setProperty(
+            "--_color",
+            KIND_META[node.kind]?.color || "var(--accent)",
+          );
+          iconEl.textContent = meta.glyph;
+          header.appendChild(iconEl);
+
+          const titleEl = document.createElement("div");
+          titleEl.className = "inspector__title";
+          const h = document.createElement("h3");
+          h.className = "inspector__label";
+          h.textContent = node.label;
+          const kindEl = document.createElement("span");
+          kindEl.className = "inspector__kind";
+          kindEl.textContent = meta.label;
+          titleEl.appendChild(h);
+          titleEl.appendChild(kindEl);
+          header.appendChild(titleEl);
+
+          const closeBtn = document.createElement("button");
+          closeBtn.className = "inspector__close";
+          closeBtn.setAttribute("aria-label", "Close inspector");
+          closeBtn.innerHTML =
+            '<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 4l8 8M12 4l-8 8"/></svg>';
+          closeBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            pinInspector(null);
+          });
+          header.appendChild(closeBtn);
+
+          root.appendChild(header);
+
+          // Body -----------------------------------------------------
+          const body = document.createElement("div");
+          body.className = "inspector__body";
+
+          // Path + GitHub
+          if (hasPath) {
+            const sec = document.createElement("section");
+            sec.className = "inspector__section";
+            const title = document.createElement("p");
+            title.className = "inspector__section-title";
+            title.textContent = "Source";
+            sec.appendChild(title);
+            const row = document.createElement("div");
+            row.className = "inspector__path";
+            const code = document.createElement("span");
+            code.textContent = node.path;
+            row.appendChild(code);
+            const link = document.createElement("a");
+            link.href = ghHref;
+            link.target = "_blank";
+            link.rel = "noopener noreferrer";
+            link.innerHTML =
+              'View on GitHub<svg viewBox="0 0 12 12" width="10" height="10" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-left:4px"><path d="M4 2H2v8h8V8M8 2h2v2M6 6l4-4"/></svg>';
+            row.appendChild(link);
+            sec.appendChild(row);
+            body.appendChild(sec);
+          }
+
+          // Summary
+          if (node.summary) {
+            const sec = document.createElement("section");
+            sec.className = "inspector__section";
+            const title = document.createElement("p");
+            title.className = "inspector__section-title";
+            title.textContent = "Summary";
+            sec.appendChild(title);
+            const p = document.createElement("p");
+            p.className = "inspector__summary";
+            // Render very simple `code` fences: split on backticks and toggle.
+            // Also strip <example>…</example> prose tags from agent descriptions
+            // since they are narrative markup, not content.
+            const cleaned = node.summary
+              .replace(/<example>[\s\S]*?<\/example>/g, "")
+              .trim();
+            const parts = cleaned.split("`");
+            parts.forEach((part, i) => {
+              if (i % 2 === 1) {
+                const c = document.createElement("code");
+                c.textContent = part;
+                p.appendChild(c);
+              } else {
+                p.appendChild(document.createTextNode(part));
+              }
+            });
+            sec.appendChild(p);
+            body.appendChild(sec);
+          }
+
+          // Agent markers
+          if (
+            node.kind === "agent" &&
+            Array.isArray(node.markers) &&
+            node.markers.length
+          ) {
+            const sec = document.createElement("section");
+            sec.className = "inspector__section";
+            const title = document.createElement("p");
+            title.className = "inspector__section-title";
+            title.textContent = "H2 completion markers";
+            sec.appendChild(title);
+            const list = document.createElement("div");
+            list.className = "inspector__markers";
+            for (const m of node.markers) {
+              const row = document.createElement("div");
+              row.className = `inspector__marker ${markerClass(m)}`;
+              row.textContent = m;
+              list.appendChild(row);
+            }
+            sec.appendChild(list);
+            body.appendChild(sec);
+          }
+
+          // Command: includes + dispatches
+          if (node.kind === "command") {
+            const mk = (title, ids, colorByKind) => {
+              if (!ids || !ids.length) return null;
+              const sec = document.createElement("section");
+              sec.className = "inspector__section";
+              const h = document.createElement("p");
+              h.className = "inspector__section-title";
+              h.textContent = title;
+              sec.appendChild(h);
+              const chipList = document.createElement("div");
+              chipList.className = "inspector__chip-list";
+              for (const id of ids) {
+                const target = STATE.nodesById.get(id);
+                if (!target) continue;
+                const chip = document.createElement("button");
+                chip.className = "inspector__chip";
+                const dot = document.createElement("span");
+                dot.className = "inspector__chip-dot";
+                dot.style.setProperty(
+                  "--_color",
+                  KIND_META[target.kind]?.color || "var(--accent)",
+                );
+                chip.appendChild(dot);
+                chip.appendChild(document.createTextNode(target.label));
+                chip.addEventListener("click", (e) => {
+                  e.stopPropagation();
+                  pinInspector(target);
+                  centerOn(target);
+                });
+                chipList.appendChild(chip);
+              }
+              sec.appendChild(chipList);
+              return sec;
+            };
+            const s1 = mk("@-Includes (rules)", node.includes);
+            const s2 = mk("Dispatches (agents)", node.dispatches);
+            if (s1) body.appendChild(s1);
+            if (s2) body.appendChild(s2);
+          }
+
+          // Hook: kv + command
+          if (node.kind === "hook") {
+            const kvSec = document.createElement("section");
+            kvSec.className = "inspector__section";
+            const h = document.createElement("p");
+            h.className = "inspector__section-title";
+            h.textContent = "Hook";
+            kvSec.appendChild(h);
+            const kv = document.createElement("dl");
+            kv.className = "inspector__kv";
+            const addKv = (k, v) => {
+              if (!v) return;
+              const dt = document.createElement("dt");
+              dt.textContent = k;
+              const dd = document.createElement("dd");
+              dd.textContent = v;
+              kv.appendChild(dt);
+              kv.appendChild(dd);
+            };
+            addKv("event", node.event);
+            addKv("matcher", node.matcher);
+            kvSec.appendChild(kv);
+            body.appendChild(kvSec);
+            if (node.summary) {
+              // Also show the command truncated in its own mono block
+              const cmdSec = document.createElement("section");
+              cmdSec.className = "inspector__section";
+              const ch = document.createElement("p");
+              ch.className = "inspector__section-title";
+              ch.textContent = "Command";
+              cmdSec.appendChild(ch);
+              const pre = document.createElement("div");
+              pre.className = "inspector__cmd";
+              const txt =
+                node.summary.length > 400
+                  ? node.summary.slice(0, 400) + "…"
+                  : node.summary;
+              pre.textContent = txt;
+              cmdSec.appendChild(pre);
+              body.appendChild(cmdSec);
+            }
+          }
+
+          // MCP: transport info
+          if (node.kind === "mcp" && node.transport) {
+            const sec = document.createElement("section");
+            sec.className = "inspector__section";
+            const h = document.createElement("p");
+            h.className = "inspector__section-title";
+            h.textContent = "Transport";
+            sec.appendChild(h);
+            const kv = document.createElement("dl");
+            kv.className = "inspector__kv";
+            const dt = document.createElement("dt");
+            dt.textContent = "transport";
+            const dd = document.createElement("dd");
+            dd.textContent = node.transport;
+            kv.appendChild(dt);
+            kv.appendChild(dd);
+            sec.appendChild(kv);
+            body.appendChild(sec);
+          }
+
+          root.appendChild(body);
+          return root;
+        }
+
+        function pinInspector(node) {
+          STATE.pinnedNode = node;
+          const desktopEl = document.getElementById("inspector");
+          const mobileEl = document.getElementById("bottom-sheet");
+          const mobileBody = document.getElementById("sheet-body");
+
+          if (!node) {
+            desktopEl.setAttribute("data-open", "false");
+            desktopEl.setAttribute("aria-hidden", "true");
+            mobileEl.setAttribute("data-open", "false");
+            mobileEl.setAttribute("aria-hidden", "true");
+            mobileBody.innerHTML = "";
+            if (!STATE.currentFlow) clearHighlight();
+            return;
+          }
+
+          // Build new content
+          if (isMobile()) {
+            mobileBody.innerHTML = "";
+            mobileBody.appendChild(buildInspectorContent(node));
+            mobileEl.setAttribute("data-open", "true");
+            mobileEl.setAttribute("aria-hidden", "false");
+          } else {
+            desktopEl.innerHTML = "";
+            desktopEl.appendChild(buildInspectorContent(node));
+            desktopEl.setAttribute("data-open", "true");
+            desktopEl.setAttribute("aria-hidden", "false");
+          }
+          highlightNode(node, true);
+        }
+
+        function centerOn(node) {
+          // Smoothly recenter the current zoom/pan so `node` is near center.
+          if (!STATE.zoom || !STATE.svg) return;
+          const w = STATE.currentWidth,
+            h = STATE.currentHeight;
+          const t = d3.zoomIdentity
+            .translate(w / 2 - node.x, h / 2 - node.y)
+            .scale(1);
+          STATE.svg.transition().duration(500).call(STATE.zoom.transform, t);
+        }
+
+        // -----------------------------------------------------------
+        // Filter chips -------------------------------------------------
+        // -----------------------------------------------------------
+        function initFilterChips() {
+          const container = document.getElementById("filter-bar");
+          const order = [
+            ["agent", "Agents"],
+            ["rule", "Rules"],
+            ["command", "Commands"],
+            ["hook", "Hooks"],
+            ["skill", "Skills"],
+            ["mcp", "MCP"],
+            ["meta", "Meta"],
+          ];
+          for (const [kind, label] of order) {
+            const chip = document.createElement("button");
+            chip.className = "chip";
+            chip.setAttribute("data-kind", kind);
+            chip.setAttribute("data-active", "true");
+            chip.setAttribute("aria-pressed", "true");
+            const swatch = document.createElement("span");
+            swatch.className = "chip__swatch";
+            swatch.style.setProperty("--_swatch", KIND_META[kind].color);
+            chip.appendChild(swatch);
+            chip.appendChild(document.createTextNode(label));
+            chip.addEventListener("click", () => toggleKind(kind, chip));
+            container.appendChild(chip);
+          }
+        }
+
+        function toggleKind(kind, chipEl) {
+          const cur = kindVisibility.get(kind);
+          const next = !cur;
+          kindVisibility.set(kind, next);
+          chipEl.setAttribute("data-active", String(next));
+          chipEl.setAttribute("aria-pressed", String(next));
+
+          // Update nodes of this kind (and agent-template under agent toggle)
+          const kindMatches = (nKind) => {
+            if (kind === "agent")
+              return nKind === "agent" || nKind === "agent-template";
+            return nKind === kind;
+          };
+
+          STATE.gNodes
+            .selectAll(".node-group")
+            .filter((d) => kindMatches(d.kind))
+            .transition()
+            .duration(220)
+            .style("opacity", next ? 1 : 0.05);
+          STATE.gEdges
+            .selectAll(".edge-group")
+            .filter(
+              (d) => kindMatches(d.source.kind) || kindMatches(d.target.kind),
+            )
+            .transition()
+            .duration(220)
+            .style("opacity", next ? 1 : 0.05);
+        }
+
+        // -----------------------------------------------------------
+        // Search -------------------------------------------------------
+        // -----------------------------------------------------------
+        function initSearch() {
+          const input = document.getElementById("node-search");
+          const results = document.getElementById("search-results");
+          let activeIdx = -1;
+          let items = [];
+
+          const renderResults = (q) => {
+            results.innerHTML = "";
+            activeIdx = -1;
+            if (!q) {
+              results.setAttribute("data-open", "false");
+              items = [];
+              return;
+            }
+            const query = q.toLowerCase();
+            items = STATE.data.nodes
+              .filter(
+                (n) =>
+                  n.label.toLowerCase().includes(query) ||
+                  (n.id || "").toLowerCase().includes(query),
+              )
+              .slice(0, 20);
+            if (!items.length) {
+              results.setAttribute("data-open", "false");
+              return;
+            }
+            for (let i = 0; i < items.length; i++) {
+              const n = items[i];
+              const row = document.createElement("div");
+              row.className = "header__search-item";
+              row.setAttribute("role", "option");
+              row.setAttribute("data-idx", String(i));
+              const kind = document.createElement("span");
+              kind.className = "header__search-item-kind";
+              kind.textContent = KIND_META[n.kind]?.label || n.kind;
+              const labelEl = document.createElement("span");
+              labelEl.textContent = n.label;
+              row.appendChild(kind);
+              row.appendChild(labelEl);
+              row.addEventListener("click", () => {
+                pinInspector(n);
+                centerOn(n);
+                input.value = "";
+                results.setAttribute("data-open", "false");
+              });
+              results.appendChild(row);
+            }
+            results.setAttribute("data-open", "true");
+          };
+
+          input.addEventListener("input", (e) =>
+            renderResults(e.target.value.trim()),
+          );
+          input.addEventListener("keydown", (e) => {
+            if (e.key === "ArrowDown") {
+              e.preventDefault();
+              activeIdx = Math.min(items.length - 1, activeIdx + 1);
+              updateActive();
+            } else if (e.key === "ArrowUp") {
+              e.preventDefault();
+              activeIdx = Math.max(0, activeIdx - 1);
+              updateActive();
+            } else if (e.key === "Enter") {
+              e.preventDefault();
+              const pick = items[activeIdx >= 0 ? activeIdx : 0];
+              if (pick) {
+                pinInspector(pick);
+                centerOn(pick);
+                input.value = "";
+                results.setAttribute("data-open", "false");
+              }
+            } else if (e.key === "Escape") {
+              input.value = "";
+              results.setAttribute("data-open", "false");
+              input.blur();
+            }
+          });
+          const updateActive = () => {
+            results
+              .querySelectorAll(".header__search-item")
+              .forEach((el, i) => {
+                el.setAttribute("data-active", String(i === activeIdx));
+              });
+          };
+
+          // Global `/` shortcut
+          document.addEventListener("keydown", (e) => {
+            if (
+              e.key === "/" &&
+              document.activeElement !== input &&
+              !e.metaKey &&
+              !e.ctrlKey
+            ) {
+              e.preventDefault();
+              input.focus();
+            }
+            if (e.key === "Escape") pinInspector(null);
+          });
+        }
+
+        // -----------------------------------------------------------
+        // Legend toggle ------------------------------------------------
+        // -----------------------------------------------------------
+        function initLegend() {
+          const legend = document.getElementById("legend");
+          const toggle = document.getElementById("legend-toggle");
+          toggle.addEventListener("click", () => {
+            const open = legend.getAttribute("data-open") === "true";
+            legend.setAttribute("data-open", String(!open));
+            toggle.setAttribute("aria-expanded", String(!open));
+          });
+        }
+
+        // -----------------------------------------------------------
+        // Flow overlay ------------------------------------------------
+        // -----------------------------------------------------------
+        function initFlowSelect() {
+          const sel = document.getElementById("flow-select");
+          // Canonical first, then auto.
+          const entries = Object.entries(STATE.flows);
+          const canonical = entries.filter(([, v]) => v.canonical);
+          const auto = entries.filter(([, v]) => !v.canonical);
+
+          const addOption = (id, flow, isCanon) => {
+            const opt = document.createElement("option");
+            opt.value = id;
+            const star = isCanon ? " ★" : "";
+            opt.textContent = `${flow.label}${star}`;
+            sel.appendChild(opt);
+          };
+
+          if (canonical.length) {
+            const g = document.createElement("optgroup");
+            g.label = "Canonical orchestrator flows";
+            sel.appendChild(g);
+            canonical.forEach(([id, f]) => {
+              const opt = document.createElement("option");
+              opt.value = id;
+              opt.textContent = f.label;
+              g.appendChild(opt);
+            });
+          }
+          if (auto.length) {
+            const g = document.createElement("optgroup");
+            g.label = "Auto-traced flows";
+            sel.appendChild(g);
+            auto.forEach(([id, f]) => {
+              const opt = document.createElement("option");
+              opt.value = id;
+              opt.textContent = f.label;
+              g.appendChild(opt);
+            });
+          }
+
+          sel.addEventListener("change", (e) => {
+            const id = e.target.value;
+            if (!id) {
+              closeFlow();
+              return;
+            }
+            openFlow(id);
+          });
+        }
+
+        function openFlow(flowId) {
+          const flow = STATE.flows[flowId];
+          if (!flow) return;
+          STATE.currentFlow = { id: flowId, flow, startedAt: Date.now() };
+          STATE.flowIndex = 0;
+          STATE.flowPlaying = true;
+
+          // Mobile => storyboard, desktop => in-graph particle.
+          if (isMobile()) {
+            openStoryboard(flow);
+            return;
+          }
+
+          // Desktop: dim everything, show controls.
+          document
+            .getElementById("flow-controls")
+            .setAttribute("data-open", "true");
+          document.getElementById("flow-label").textContent = flow.label;
+          // Ensure inspector is hidden (doesn't compete)
+          pinInspector(null);
+
+          setDimmedAll(true);
+          playFlowStep(0);
+        }
+
+        function closeFlow() {
+          STATE.currentFlow = null;
+          STATE.flowPlaying = false;
+          clearInterval(STATE.flowTimer);
+          STATE.flowTimer = null;
+          if (STATE.particleTimer) {
+            cancelAnimationFrame(STATE.particleTimer);
+            STATE.particleTimer = null;
+          }
+
+          document
+            .getElementById("flow-controls")
+            .setAttribute("data-open", "false");
+          document.getElementById("flow-callout").hidden = true;
+
+          // Reset select
+          document.getElementById("flow-select").value = "";
+
+          // Remove particle and overlay edges
+          if (STATE.gRoot) {
+            STATE.gRoot.selectAll(".flow-particle").remove();
+            STATE.gRoot.selectAll(".flow-bridge").remove();
+            STATE.gRoot.selectAll(".flow-emphasis").remove();
+          }
+          clearHighlight();
+
+          // Close storyboard if open
+          const story = document.getElementById("story-overlay");
+          story.setAttribute("data-open", "false");
+          document.body.classList.remove("story-lock");
+          document.getElementById("story-steps").innerHTML = "";
+        }
+
+        function findEdgeEl(sourceId, targetId) {
+          if (!STATE.gEdges) return null;
+          return STATE.gEdges.selectAll(".edge-group").filter(function () {
+            const s = this.getAttribute("data-source");
+            const t = this.getAttribute("data-target");
+            return s === sourceId && t === targetId;
+          });
+        }
+
+        function playFlowStep(index) {
+          if (!STATE.currentFlow) return;
+          const { flow } = STATE.currentFlow;
+          if (index < 0) index = 0;
+          if (index >= flow.steps.length) {
+            // End of flow — keep last state pinned.
+            STATE.flowPlaying = false;
+            updatePlayIcon(false);
+            clearInterval(STATE.flowTimer);
+            STATE.flowTimer = null;
+            return;
+          }
+          STATE.flowIndex = index;
+
+          const step = flow.steps[index];
+          const node = STATE.nodesById.get(step.node);
+          if (!node) {
+            console.warn("Flow step refers to missing node:", step.node);
+            return;
+          }
+
+          // Highlight the current node. Use class toggles because
+          // @keyframes node-in forwards-fill defeats inline opacity styles.
+          STATE.gNodes
+            .selectAll(".node-group")
+            .classed("is-dim", false)
+            .classed("is-flow-dim", true)
+            .classed("is-flow-active", false)
+            .classed("is-flow-prev", false);
+          STATE.gEdges
+            .selectAll(".edge-group")
+            .classed("is-dim", false)
+            .classed("is-flow-dim", false)
+            .classed("is-flow-dim-strong", true)
+            .classed("is-hover-incident", false);
+
+          const nodeEl = STATE.gNodes.select(
+            `.node-group[data-node-id="${CSS.escape(node.id)}"]`,
+          );
+          nodeEl.classed("is-flow-dim", false).classed("is-flow-active", true);
+          nodeEl.select(".node-halo").attr("stroke-opacity", 0.8);
+
+          // Draw particle along the edge from prev step -> this step.
+          if (index > 0) {
+            const prevNode = STATE.nodesById.get(flow.steps[index - 1].node);
+            if (prevNode && prevNode.id !== node.id) {
+              traceParticle(prevNode, node, step.via);
+            }
+          }
+
+          // Show callout near this node.
+          showCallout(node, step, index);
+
+          // Also emphasize prev node's position (to show the thread).
+          if (index > 0) {
+            const prev = STATE.nodesById.get(flow.steps[index - 1].node);
+            if (prev) {
+              const prevEl = STATE.gNodes.select(
+                `.node-group[data-node-id="${CSS.escape(prev.id)}"]`,
+              );
+              prevEl
+                .classed("is-flow-dim", false)
+                .classed("is-flow-active", false)
+                .classed("is-flow-prev", true);
+            }
+          }
+        }
+
+        function updatePlayIcon(playing) {
+          const iconWrap = document.getElementById("flow-play-icon");
+          if (!iconWrap) return;
+          iconWrap.innerHTML = playing
+            ? '<path d="M3 3h3v10H3zM10 3h3v10h-3z"/>'
+            : '<path d="M4 3l9 5-9 5z"/>';
+        }
+
+        function traceParticle(prev, next, via) {
+          if (!STATE.gRoot) return;
+          // Find the actual edge (prev -> next) or reverse; else draw a bridge line.
+          const fwd = findEdgeEl(prev.id, next.id);
+          const rev = findEdgeEl(next.id, prev.id);
+          let edgeEl = null,
+            reverse = false;
+          if (fwd && !fwd.empty()) edgeEl = fwd;
+          else if (rev && !rev.empty()) {
+            edgeEl = rev;
+            reverse = true;
+          }
+
+          // Emphasize edge line if present
+          if (edgeEl) {
+            edgeEl
+              .classed("is-flow-dim-strong", false)
+              .classed("is-flow-dim", false)
+              .classed("is-hover-incident", true);
+            edgeEl
+              .select("line")
+              .attr("stroke-opacity", 1)
+              .attr("filter", "url(#glow-filter)");
+          } else {
+            // No materialized edge (e.g., include not in data). Draw a temp bridge.
+            STATE.gRoot.select(".flow-bridge").remove();
+            STATE.gRoot
+              .append("line")
+              .attr("class", "flow-bridge")
+              .attr("x1", prev.x)
+              .attr("y1", prev.y)
+              .attr("x2", next.x)
+              .attr("y2", next.y)
+              .attr(
+                "stroke",
+                via === "include"
+                  ? "var(--edge-include)"
+                  : "var(--accent-soft)",
+              )
+              .attr("stroke-width", 1.4)
+              .attr("stroke-dasharray", "4,4")
+              .attr("stroke-linecap", "round")
+              .attr("opacity", 0)
+              .transition()
+              .duration(300)
+              .attr("opacity", 0.8);
+          }
+
+          // Create particle
+          STATE.gRoot.selectAll(".flow-particle").remove();
+          const particle = STATE.gRoot
+            .append("circle")
+            .attr("class", "flow-particle")
+            .attr("r", 5)
+            .attr("fill", "var(--accent-soft)")
+            .attr("filter", "url(#glow-filter)")
+            .attr("opacity", 0.95);
+
+          const startX = prev.x,
+            startY = prev.y;
+          const endX = next.x,
+            endY = next.y;
+          const duration = 700 / STATE.flowSpeed;
+          const startedAt = performance.now();
+
+          if (STATE.particleTimer) cancelAnimationFrame(STATE.particleTimer);
+
+          function tick(now) {
+            if (!STATE.currentFlow) {
+              particle.remove();
+              return;
+            }
+            const t = Math.min(1, (now - startedAt) / duration);
+            // Slight curve: add a perpendicular bump for visual interest.
+            const midx = (startX + endX) / 2;
+            const midy = (startY + endY) / 2;
+            // Bezier-ish interpolation
+            const e = t * (2 - t); // ease-out quad
+            const x = startX + (endX - startX) * e;
+            const y = startY + (endY - startY) * e;
+            particle.attr("cx", x).attr("cy", y);
+            if (t < 1) STATE.particleTimer = requestAnimationFrame(tick);
+            else {
+              particle.transition().duration(250).attr("opacity", 0).remove();
+            }
+          }
+          STATE.particleTimer = requestAnimationFrame(tick);
+        }
+
+        function showCallout(node, step, index) {
+          const callout = document.getElementById("flow-callout");
+          callout.hidden = false;
+          callout.innerHTML = "";
+
+          const stepLabel = document.createElement("span");
+          stepLabel.className = "flow-callout__step";
+          stepLabel.textContent = `Step ${index + 1} of ${STATE.currentFlow.flow.steps.length}`;
+          callout.appendChild(stepLabel);
+
+          const cap = document.createElement("div");
+          cap.textContent = step.caption || node.label;
+          callout.appendChild(cap);
+
+          if (step.marker) {
+            const m = document.createElement("span");
+            m.className = "flow-callout__marker";
+            const mc = markerClass(step.marker);
+            m.style.setProperty(
+              "--_mc",
+              mc.includes("danger")
+                ? "var(--danger)"
+                : mc.includes("warning")
+                  ? "var(--warning)"
+                  : "var(--success)",
+            );
+            m.textContent = step.marker;
+            callout.appendChild(m);
+          }
+
+          // Position relative to graph-frame in viewport, converting node coords via zoom transform.
+          const svg = document.getElementById("graph-svg");
+          const ctm = svg.getScreenCTM();
+          const root = STATE.gRoot.node();
+          const rootCTM = root.getCTM();
+          const frameRect = document
+            .getElementById("graph-frame")
+            .getBoundingClientRect();
+          if (!ctm || !rootCTM) return;
+          // Map (node.x, node.y) through rootCTM
+          const pt = svg.createSVGPoint();
+          pt.x = node.x;
+          pt.y = node.y;
+          const screenPt = pt.matrixTransform(rootCTM);
+          // screenPt is in SVG user space post-transform; map through SVG -> screen
+          const svgBox = svg.getBoundingClientRect();
+          const viewportX =
+            svgBox.left +
+            (screenPt.x / svg.viewBox.baseVal.width) * svgBox.width;
+          const viewportY =
+            svgBox.top +
+            (screenPt.y / svg.viewBox.baseVal.height) * svgBox.height;
+
+          // Position inside graph-frame (callout is absolute within frame).
+          const left = viewportX - frameRect.left;
+          const top = viewportY - frameRect.top;
+
+          // Clamp inside frame
+          const maxLeft = frameRect.width - 24;
+          const clampedLeft = Math.min(maxLeft, Math.max(24, left));
+          callout.style.left = `${clampedLeft}px`;
+          callout.style.top = `${Math.max(80, top)}px`;
+        }
+
+        function initFlowControls() {
+          document
+            .getElementById("flow-prev")
+            .addEventListener("click", (e) => {
+              e.stopPropagation();
+              if (!STATE.currentFlow) return;
+              playFlowStep(STATE.flowIndex - 1);
+            });
+          document
+            .getElementById("flow-next")
+            .addEventListener("click", (e) => {
+              e.stopPropagation();
+              if (!STATE.currentFlow) return;
+              playFlowStep(STATE.flowIndex + 1);
+            });
+          document
+            .getElementById("flow-play")
+            .addEventListener("click", (e) => {
+              e.stopPropagation();
+              if (!STATE.currentFlow) return;
+              STATE.flowPlaying = !STATE.flowPlaying;
+              updatePlayIcon(STATE.flowPlaying);
+              if (STATE.flowPlaying) {
+                scheduleAutoAdvance();
+              } else {
+                clearInterval(STATE.flowTimer);
+                STATE.flowTimer = null;
+              }
+            });
+          document
+            .getElementById("flow-speed")
+            .addEventListener("click", (e) => {
+              e.stopPropagation();
+              const cycle = [1, 2, 0.5];
+              const idx = cycle.indexOf(STATE.flowSpeed);
+              STATE.flowSpeed = cycle[(idx + 1) % cycle.length];
+              e.target.textContent = `${STATE.flowSpeed}x`;
+              if (STATE.flowPlaying) scheduleAutoAdvance();
+            });
+          document
+            .getElementById("flow-close")
+            .addEventListener("click", (e) => {
+              e.stopPropagation();
+              closeFlow();
+            });
+        }
+
+        function scheduleAutoAdvance() {
+          clearInterval(STATE.flowTimer);
+          const intervalMs = 1600 / STATE.flowSpeed;
+          STATE.flowTimer = setInterval(() => {
+            if (!STATE.currentFlow || !STATE.flowPlaying) {
+              clearInterval(STATE.flowTimer);
+              STATE.flowTimer = null;
+              return;
+            }
+            const nextIdx = STATE.flowIndex + 1;
+            if (nextIdx >= STATE.currentFlow.flow.steps.length) {
+              STATE.flowPlaying = false;
+              updatePlayIcon(false);
+              clearInterval(STATE.flowTimer);
+              STATE.flowTimer = null;
+              return;
+            }
+            playFlowStep(nextIdx);
+          }, intervalMs);
+        }
+
+        // After a step renders, kick off auto-advance if playing.
+        const origPlayFlowStep = playFlowStep;
+        // eslint-disable-next-line no-func-assign
+        playFlowStep = function (i) {
+          origPlayFlowStep(i);
+          if (STATE.flowPlaying) scheduleAutoAdvance();
+        };
+
+        // -----------------------------------------------------------
+        // Mobile storyboard ------------------------------------------
+        // -----------------------------------------------------------
+        function openStoryboard(flow) {
+          const overlay = document.getElementById("story-overlay");
+          const steps = document.getElementById("story-steps");
+          const progress = document.getElementById("story-progress");
+          steps.innerHTML = "";
+
+          flow.steps.forEach((step, idx) => {
+            const node = STATE.nodesById.get(step.node);
+            if (!node) return;
+            const meta = KIND_META[node.kind] || {
+              label: node.kind,
+              glyph: "?",
+              color: "var(--accent)",
+            };
+            const sec = document.createElement("section");
+            sec.className = "story-step";
+            sec.setAttribute("data-idx", String(idx));
+            sec.style.setProperty("--_color", meta.color);
+
+            const header = document.createElement("div");
+            header.className = "story-step__header";
+            const left = document.createElement("span");
+            left.textContent = `Step ${idx + 1} / ${flow.steps.length}`;
+            const right = document.createElement("span");
+            right.textContent = flow.label;
+            right.style.maxWidth = "60%";
+            right.style.overflow = "hidden";
+            right.style.textOverflow = "ellipsis";
+            right.style.whiteSpace = "nowrap";
+            header.appendChild(left);
+            header.appendChild(right);
+            sec.appendChild(header);
+
+            if (idx > 0) {
+              const arrow = document.createElement("div");
+              arrow.className = "story-step__arrow";
+              arrow.textContent = "↑";
+              sec.appendChild(arrow);
+            }
+
+            const nodeBlock = document.createElement("div");
+            nodeBlock.className = "story-step__node";
+            const avatar = document.createElement("div");
+            avatar.className = "story-step__avatar";
+            avatar.textContent = meta.glyph;
+            nodeBlock.appendChild(avatar);
+            const label = document.createElement("h3");
+            label.className = "story-step__label";
+            label.textContent = node.label;
+            nodeBlock.appendChild(label);
+            const kind = document.createElement("span");
+            kind.className = "story-step__kind";
+            kind.textContent = meta.label;
+            nodeBlock.appendChild(kind);
+            sec.appendChild(nodeBlock);
+
+            const cap = document.createElement("p");
+            cap.className = "story-step__caption";
+            cap.textContent = step.caption || node.label;
+            sec.appendChild(cap);
+
+            if (step.marker) {
+              const m = document.createElement("span");
+              m.className = "story-step__marker";
+              const mc = markerClass(step.marker);
+              m.style.setProperty(
+                "--_mc",
+                mc.includes("danger")
+                  ? "var(--danger)"
+                  : mc.includes("warning")
+                    ? "var(--warning)"
+                    : "var(--success)",
+              );
+              m.textContent = step.marker;
+              sec.appendChild(m);
+            }
+
+            steps.appendChild(sec);
+          });
+
+          overlay.setAttribute("data-open", "true");
+          document.body.classList.add("story-lock");
+          overlay.scrollTop = 0;
+          progress.textContent = `1 / ${flow.steps.length}`;
+
+          // Track scroll to update progress.
+          overlay.onscroll = () => {
+            const secs = steps.querySelectorAll(".story-step");
+            let activeIdx = 0;
+            const cy = overlay.clientHeight / 2;
+            for (let i = 0; i < secs.length; i++) {
+              const rect = secs[i].getBoundingClientRect();
+              if (rect.top <= cy && rect.bottom >= cy) {
+                activeIdx = i;
+                break;
+              }
+            }
+            progress.textContent = `${activeIdx + 1} / ${flow.steps.length}`;
+          };
+        }
+
+        function initStoryboardClose() {
+          document
+            .getElementById("story-close")
+            .addEventListener("click", () => {
+              closeFlow();
+            });
+        }
+
+        // -----------------------------------------------------------
+        // Bottom sheet drag ------------------------------------------
+        // -----------------------------------------------------------
+        function initBottomSheetDrag() {
+          const sheet = document.getElementById("bottom-sheet");
+          const grabber = document.getElementById("sheet-grabber");
+          let startY = 0,
+            startExpanded = false,
+            dragging = false;
+
+          const onDown = (e) => {
+            dragging = true;
+            startY = e.touches ? e.touches[0].clientY : e.clientY;
+            startExpanded = sheet.getAttribute("data-expanded") === "true";
+          };
+          const onMove = (e) => {
+            if (!dragging) return;
+            const y = e.touches ? e.touches[0].clientY : e.clientY;
+            const dy = y - startY;
+            if (dy < -40) {
+              sheet.setAttribute("data-expanded", "true");
+              dragging = false;
+            } else if (dy > 60) {
+              if (startExpanded) sheet.setAttribute("data-expanded", "false");
+              else {
+                sheet.setAttribute("data-open", "false");
+                sheet.setAttribute("aria-hidden", "true");
+                STATE.pinnedNode = null;
+                clearHighlight();
+              }
+              dragging = false;
+            }
+          };
+          const onUp = () => {
+            dragging = false;
+          };
+
+          grabber.addEventListener("touchstart", onDown, { passive: true });
+          grabber.addEventListener("touchmove", onMove, { passive: true });
+          grabber.addEventListener("touchend", onUp);
+          grabber.addEventListener("mousedown", onDown);
+          window.addEventListener("mousemove", onMove);
+          window.addEventListener("mouseup", onUp);
+        }
+
+        // -----------------------------------------------------------
+        // Resize handler --------------------------------------------
+        // -----------------------------------------------------------
+        function onResize() {
+          if (!STATE.data) return;
+          const frame = document.getElementById("graph-frame");
+          const rect = frame.getBoundingClientRect();
+          if (
+            rect.width === STATE.currentWidth &&
+            rect.height === STATE.currentHeight
+          )
+            return;
+          // Re-layout rings to new dimensions.
+          assignInitialPositions(rect.width, rect.height);
+          renderGraph();
+          runForceLayout();
+        }
+
+        // -----------------------------------------------------------
+        // Boot --------------------------------------------------------
+        // -----------------------------------------------------------
+        async function boot() {
+          initTheme();
+
+          const [data, flows] = await Promise.all([
+            loadJSON("graph-data", "data.json"),
+            loadJSON("flow-data", "flows.json"),
+          ]);
+          STATE.data = data;
+          STATE.flows = flows;
+          STATE.nodesById = new Map(data.nodes.map((n) => [n.id, n]));
+
+          populateStats(data);
+
+          // Wait for D3 to attach.
+          await new Promise((res) => {
+            if (window.d3) return res();
+            const iv = setInterval(() => {
+              if (window.d3) {
+                clearInterval(iv);
+                res();
+              }
+            }, 30);
+          });
+
+          const frame = document.getElementById("graph-frame");
+          const rect = frame.getBoundingClientRect();
+          assignInitialPositions(rect.width, rect.height);
+          renderGraph();
+          runForceLayout();
+
+          initFilterChips();
+          initLegend();
+          initSearch();
+          initFlowSelect();
+          initFlowControls();
+          initStoryboardClose();
+          initBottomSheetDrag();
+
+          window.addEventListener("resize", debounce(onResize, 200));
+        }
+
+        function debounce(fn, wait) {
+          let t;
+          return (...args) => {
+            clearTimeout(t);
+            t = setTimeout(() => fn.apply(null, args), wait);
+          };
+        }
+
+        // Kick off (wait for DOM + CSS).
+        if (document.readyState === "loading") {
+          document.addEventListener("DOMContentLoaded", () =>
+            boot().catch((err) => {
+              console.error(err);
+              document.getElementById("graph-status").textContent =
+                "Failed to load data: " + err.message;
+              document
+                .getElementById("graph-status")
+                .setAttribute("data-state", "error");
+            }),
+          );
+        } else {
+          boot().catch((err) => {
+            console.error(err);
+            document.getElementById("graph-status").textContent =
+              "Failed to load data: " + err.message;
+            document
+              .getElementById("graph-status")
+              .setAttribute("data-state", "error");
+          });
+        }
+      })();
+    </script>
+  </body>
+</html>
