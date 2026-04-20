@@ -58,3 +58,4 @@ If you catch yourself writing one of these, replace it with the actual content.
 20. Do not say "should work", "probably passes", "looks good" before running the verification command in this turn.
 21. Do not commit, push, or open a PR without running the relevant tests in this turn.
 22. Do not trust subagent success reports without checking the diff yourself.
+23. **Multi-file edits require a gate.** Any turn that touches **3+ files** via `Edit` / `Write` / `MultiEdit` MUST run inside a workflow command (`/ship`, `/tdd`, `/bug`, `multi-edit`) OR fire an explicit Verification Gate (`~/.claude/rules/gates.md` Part 2) in the same turn. Inline multi-file edits with no gate = forbidden. Before claiming done on any such turn, state which gate ran and the captured evidence. "I only changed small things in each file" is not an exception — scope is measured in files touched, not lines changed. See `~/.claude/rules/gates.md` Iron Law.

@@ -5,7 +5,7 @@ description: Heavyweight planning path for refactors, renames, migrations, and c
 
 Purpose: add a stress-test + approval gate on top of the global safe-planner rule, for changes where a wrong plan is expensive to undo.
 
-**Termination contract**: this skill has exactly one success condition — the `qa-loop` skill returns clean after the final edit. Any other exit is a failure. Do not declare the multi-edit complete until qa-loop reports zero findings.
+**Termination contract**: this skill has exactly one success condition — the `/qa-loop` slash command returns clean after the final edit. Any other exit is a failure. Do not declare the multi-edit complete until `/qa-loop` reports zero findings.
 
 ## Step 1 — safe-planner
 
@@ -44,11 +44,11 @@ Proceed only on an **unconditional green light with no new constraints or scope 
 
 Follow the plan. Run typecheck after each logically-complete subset, not just at the end. If reality diverges from the plan mid-execution, stop, report current state (changed / rolled back / untouched), and re-plan before continuing.
 
-## Step 5 — qa-loop (mandatory, non-skippable)
+## Step 5 — /qa-loop (mandatory, non-skippable)
 
-Invoke the `qa-loop` skill. This is the terminal step of multi-edit and it is non-negotiable.
+Invoke the `/qa-loop` slash command via the `Skill` tool (`skill: "qa-loop"`). This is the terminal step of multi-edit and it is non-negotiable.
 
-- Do **not** substitute the global CLAUDE.md "Verification & QA" section for this step. That section covers single-file edits; multi-edit requires the full iterative qa-loop.
-- If qa-loop surfaces bugs, fix them and re-invoke qa-loop. Repeat until it returns clean.
-- Only after qa-loop reports zero findings may you declare the multi-edit complete.
-- A passing typecheck/build alone is not sufficient — qa-loop must run and terminate clean.
+- Do **not** substitute the global CLAUDE.md "Verification & QA" section for this step. That section covers single-file edits; multi-edit requires the full iterative `/qa-loop` convergence.
+- If `/qa-loop` surfaces bugs, fix them and re-invoke `/qa-loop`. Repeat until it returns clean.
+- Only after `/qa-loop` reports zero findings may you declare the multi-edit complete.
+- A passing typecheck/build alone is not sufficient — `/qa-loop` must run and terminate clean.
