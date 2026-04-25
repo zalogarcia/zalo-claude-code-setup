@@ -22,6 +22,8 @@ session-env/
 sessions/
 shell-snapshots/
 stats-cache.json
+mcp-needs-auth-cache.json
+.usage-cache.json
 statsig/
 tasks/
 telemetry/
