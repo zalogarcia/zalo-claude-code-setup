@@ -1,5 +1,5 @@
 ---
-model: opus
+model: claude-opus-4-7
 name: qa-agent
 description: Audits recent code changes for real, reproducible bugs. Use after implementing features, before deployments, or when asked to stress test, verify, or audit code. <example>user: 'I just finished the checkout flow, can you stress test it?' assistant: 'I'll use the qa-agent to find any real bugs in the checkout implementation.'</example>
 tools: Read, Grep, Glob, Bash
