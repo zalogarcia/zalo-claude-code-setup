@@ -102,6 +102,25 @@ Log every decision to `.autopilot/decisions.log` as JSON-lines:
 }
 ```
 
+## Secret & Config Resolution Protocol
+
+When the orchestrator OR any sub-agent encounters a "missing" secret, env var, API key, or config value, **never ask the user**. Resolve via this fallback chain:
+
+1. **Check `.autopilot/project_context.md`** — Phase 0 records discovered config (Supabase secret names, `.env*` keys, MCP creds).
+2. **Check `.env`, `.env.local`, `.env.development`, `.env.production`** in repo root — secrets are usually already configured.
+3. **Check Supabase secrets** (if Supabase project): `supabase secrets list 2>/dev/null` — lists names (not values) of edge function secrets. Existence of the name = configured.
+4. **Check shell env**: `printenv <NAME>` — for things like `OPENAI_API_KEY`, `STRIPE_SECRET_KEY`.
+5. **Check the codebase** for hardcoded references that imply the secret is already wired (e.g. `Deno.env.get("X")` appearing in deployed edge functions means `X` is expected to exist in Supabase secrets).
+
+**If still genuinely missing after all 5 checks:**
+
+- Log to `.autopilot/deferred_issues.md` as `BLOCKED_BY_MISSING_CONFIG: <name> — <where it's needed>`
+- Mark the work unit `status: "deferred"` (not `failed`)
+- Continue with remaining work units
+- Surface in Phase 5 final report under "Remaining Issues"
+
+**Never** emit `checkpoint:human-action`, `AskUserQuestion`, or any pause for missing config. The whole point of `/autopilot` is no user interaction. The user reviews `report.md` after the run and fills in any deferred config then.
+
 ## Sub-Agent Dispatch Rules
 
 ### Prompt Construction
@@ -292,8 +311,12 @@ Inventory this project. Report:
 5. Package manager (npm, pnpm, yarn, bun, pip, cargo, etc.)
 6. Key directories and their purpose (src/, app/, lib/, components/, etc.)
 7. Admin/test email if found in .env*, .env.local, CLAUDE.md (for live testing)
+8. **Available config inventory** (so sub-agents never need to ask the user for secrets):
+   - List all keys (NAMES ONLY, never values) in `.env`, `.env.local`, `.env.development`, `.env.production` if present
+   - If this is a Supabase project (has `supabase/` dir or `@supabase/*` deps), run `supabase secrets list 2>/dev/null` and report the secret names
+   - Note any obvious shell env vars referenced in code (`process.env.X`, `Deno.env.get("X")`) — these are EXPECTED to exist; treat as configured
 
-Write findings to .autopilot/project_context.md as structured markdown.
+Write findings to .autopilot/project_context.md as structured markdown. The "Available config inventory" section is critical — sub-agents will read it to confirm a secret exists before assuming it's missing.
 ```
 
 Parse the agent's findings into state.json fields: `build_command`, `test_command`, `typecheck_command`, `package_manager`, `admin_email`, `live_test_enabled` (false if no admin email found).
@@ -363,6 +386,24 @@ FOR each batch (ordered by dependency):
     """
     You are an autonomous implementation agent for /autopilot.
 
+    ## AUTONOMY CLAUSE — non-negotiable
+    You are running INSIDE /autopilot. The user is NOT watching.
+    - NEVER ask the user anything. NEVER use AskUserQuestion. NEVER emit any checkpoint:* block.
+    - NEVER say "should I...", "do you want...", "please confirm...".
+    - If you would normally pause for clarification → make the simpler/safer choice and log it in your return under "Autonomous decisions".
+    - If you would normally ask for a missing secret/env var/API key → run the Secret & Config Resolution Protocol below. NEVER ask the user for the value.
+
+    ## Secret & Config Resolution Protocol (when something looks "missing")
+    Before treating any config as missing, run ALL of these checks:
+      1. Read .autopilot/project_context.md → "Available config inventory" section. Existence of the NAME = configured.
+      2. Check .env, .env.local, .env.development, .env.production for the key.
+      3. If Supabase project: run `supabase secrets list 2>/dev/null` — if the secret name appears, it IS configured (you cannot read the value, but the edge function can).
+      4. Check shell env: `printenv <NAME>`.
+      5. Grep the codebase for the var name — if other code already references it (e.g. `Deno.env.get("X")`), assume it's configured.
+    If still genuinely absent after ALL 5 checks → write to .autopilot/deferred_issues.md as
+      `BLOCKED_BY_MISSING_CONFIG: <NAME> — needed for {unit.id} ({reason})`
+    then emit ## BLOCKED with reason "missing config: <NAME>". Do NOT ask the user.
+
     ## Your work unit
     ID: {unit.id}
     Task: {unit.description}
@@ -371,7 +412,7 @@ FOR each batch (ordered by dependency):
 
     ## Plan context
     Read .autopilot/plan.md for the overall plan.
-    Read .autopilot/project_context.md for tech stack info.
+    Read .autopilot/project_context.md for tech stack info AND available config inventory.
 
     ## Rules
     - Self-plan before coding:
@@ -390,7 +431,7 @@ FOR each batch (ordered by dependency):
 
     ## Completion
     Emit ## IMPLEMENTATION COMPLETE when done (files staged).
-    If you need more context, emit ## NEEDS_CONTEXT with what's missing.
+    If you need more context, emit ## NEEDS_CONTEXT with what's missing (from disk, NOT from the user).
     If you hit a blocker, emit ## BLOCKED with details.
     """
 
