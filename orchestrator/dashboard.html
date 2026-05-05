@@ -731,9 +731,139 @@
       .loop-type-badge--autoloop,
       .loop-type-badge--autotest,
       .loop-type-badge--autopilot,
-      .loop-type-badge--symphony,
       .loop-type-badge--unknown {
         color: var(--color-slate-dark);
+      }
+      .loop-type-badge--symphony {
+        color: var(--color-clay);
+      }
+      /* Symphony rows awaiting approval — left-border accent in clay. */
+      .project-card.project-card--symphony[data-status="awaiting-approval"] {
+        border-left: 3px solid var(--color-clay);
+      }
+
+      /* -- Symphony plan-approval inline expansion -- */
+      .symphony-approval {
+        padding: 16px;
+        background: var(--color-ivory-light);
+      }
+      .symphony-approval__header {
+        font-family: var(--font-anthropic-sans);
+        font-size: 18px;
+        font-weight: 600;
+        color: var(--color-slate-dark);
+        letter-spacing: -0.005em;
+        margin: 0 0 12px 0;
+      }
+      .symphony-approval__plan {
+        background: var(--color-ivory-medium);
+        padding: 16px;
+        margin-bottom: 16px;
+        max-height: 380px;
+        overflow: auto;
+        font-family: var(--font-anthropic-sans);
+        font-size: 14px;
+        line-height: 1.5;
+        color: var(--color-slate-dark);
+      }
+      .symphony-approval__plan--empty {
+        color: var(--color-cloud-dark);
+        font-style: italic;
+      }
+      .symphony-approval__actions {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      .symphony-approval__actions .btn {
+        height: 36px;
+        padding: 0 16px;
+      }
+      .symphony-approval__reject-row,
+      .symphony-approval__edit-row {
+        margin-top: 12px;
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        align-items: stretch;
+      }
+      .symphony-approval__reject-input {
+        flex: 1;
+        min-width: 240px;
+        height: 36px;
+        padding: 0 12px;
+        border: 1px solid var(--color-slate-dark);
+        border-radius: 0;
+        font-family: var(--font-anthropic-sans);
+        font-size: 14px;
+        background: var(--color-ivory-light);
+        color: var(--color-slate-dark);
+      }
+      .symphony-approval__reject-input:focus-visible {
+        outline: 1px solid var(--color-clay);
+        outline-offset: 1px;
+      }
+      .symphony-approval__edit-textarea {
+        flex: 1 1 100%;
+        min-height: 240px;
+        padding: 12px;
+        border: 1px solid var(--color-slate-dark);
+        border-radius: 0;
+        font-family: var(--font-anthropic-mono);
+        font-size: 13px;
+        line-height: 1.4;
+        background: var(--color-ivory-light);
+        color: var(--color-slate-dark);
+        resize: vertical;
+      }
+      .symphony-approval__edit-textarea:focus-visible {
+        outline: 1px solid var(--color-clay);
+        outline-offset: 1px;
+      }
+      .symphony-approval__edit-actions {
+        display: flex;
+        gap: 8px;
+        flex: 1 1 100%;
+      }
+      .symphony-approval__error {
+        margin-top: 8px;
+        font-family: var(--font-anthropic-mono);
+        font-size: 12px;
+        color: var(--color-accent-ember);
+      }
+
+      /* -- Symphony verification stack progress strip -- */
+      .verification-strip {
+        display: grid;
+        grid-template-columns: repeat(6, 1fr);
+        margin: 12px 0 8px 0;
+        gap: 0;
+      }
+      .verification-strip__cell {
+        height: 28px;
+        border: 1px solid var(--color-slate-dark);
+        margin-left: -1px;
+        background: var(--color-ivory-light);
+        color: var(--color-slate-dark);
+        font-family: var(--font-anthropic-mono);
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 0;
+      }
+      .verification-strip__cell:first-child {
+        margin-left: 0;
+      }
+      .verification-strip__cell--pass {
+        background: var(--color-slate-dark);
+        color: var(--color-ivory-light);
+      }
+      .verification-strip__cell--fail {
+        background: var(--color-accent-ember);
+        color: var(--color-ivory-light);
       }
       .branch-tag {
         display: inline-flex;
@@ -3930,6 +4060,316 @@
         return "--";
       }
 
+      /* ══════════════════════════════════════════════════
+         SYMPHONY: plan-approval body + verification strip
+         ══════════════════════════════════════════════════ */
+      // Cache of fetched ticket aggregates keyed by ticketId.
+      const symphonyTicketCache = {};
+      // Active polling intervals keyed by ticketId so we can tear down on collapse.
+      const symphonyPollers = {};
+      // Per-row UI state: { mode: 'idle'|'rejecting'|'editing'|'pending', error: string|null }.
+      const symphonyApprovalState = {};
+
+      function getSymphonyTicketId(loop) {
+        return loop && (loop.linearTicketId || loop.ticketId || null);
+      }
+
+      async function fetchSymphonyTicket(ticketId) {
+        if (!ticketId) return null;
+        try {
+          const res = await fetch(
+            "/api/symphony/ticket/" + encodeURIComponent(ticketId),
+          );
+          if (!res.ok) throw new Error("HTTP " + res.status);
+          const data = await res.json();
+          symphonyTicketCache[ticketId] = data;
+          return data;
+        } catch (err) {
+          symphonyTicketCache[ticketId] = symphonyTicketCache[ticketId] || {
+            error: err && err.message,
+          };
+          return symphonyTicketCache[ticketId];
+        }
+      }
+
+      function pollSymphonyTicket(ticketId, callback) {
+        if (!ticketId) return () => {};
+        // Tear down any existing poller for the same ticket before starting a new one.
+        if (symphonyPollers[ticketId]) {
+          clearInterval(symphonyPollers[ticketId]);
+        }
+        const tick = async () => {
+          const data = await fetchSymphonyTicket(ticketId);
+          if (typeof callback === "function") callback(data);
+        };
+        tick();
+        symphonyPollers[ticketId] = setInterval(tick, 5000);
+        return () => {
+          if (symphonyPollers[ticketId]) {
+            clearInterval(symphonyPollers[ticketId]);
+            delete symphonyPollers[ticketId];
+          }
+        };
+      }
+
+      function teardownSymphonyPoller(ticketId) {
+        if (ticketId && symphonyPollers[ticketId]) {
+          clearInterval(symphonyPollers[ticketId]);
+          delete symphonyPollers[ticketId];
+        }
+      }
+
+      // ── Action handlers ────────────────────────────────────────────────
+      async function symphonyApprove(index, ticketId) {
+        if (!ticketId) return;
+        symphonyApprovalState[index] = { mode: "pending", error: null };
+        render();
+        try {
+          const res = await fetch(
+            "/api/symphony/approve/" + encodeURIComponent(ticketId),
+            { method: "POST" },
+          );
+          if (res.status !== 202 && !res.ok) {
+            const body = await res.text();
+            throw new Error("HTTP " + res.status + " " + body);
+          }
+          showToast(
+            "success",
+            "Approved",
+            "Execution starting for " + ticketId,
+          );
+          // Collapse the row so it returns to summary view.
+          expanded[index] = false;
+          symphonyApprovalState[index] = { mode: "idle", error: null };
+          render();
+        } catch (err) {
+          symphonyApprovalState[index] = {
+            mode: "idle",
+            error: err && err.message ? err.message : String(err),
+          };
+          showToast(
+            "error",
+            "Approve failed",
+            err && err.message ? err.message : String(err),
+          );
+          render();
+        }
+      }
+
+      function symphonyBeginReject(index) {
+        symphonyApprovalState[index] = {
+          ...(symphonyApprovalState[index] || {}),
+          mode: "rejecting",
+          error: null,
+        };
+        render();
+        // Focus the input on the next paint.
+        setTimeout(() => {
+          const input = document.querySelector(
+            `[data-symphony-reject-input="${index}"]`,
+          );
+          if (input) input.focus();
+        }, 0);
+      }
+
+      async function symphonyConfirmReject(index, ticketId) {
+        if (!ticketId) return;
+        const input = document.querySelector(
+          `[data-symphony-reject-input="${index}"]`,
+        );
+        const reason = input && input.value ? input.value.trim() : "";
+        if (!reason) {
+          symphonyApprovalState[index] = {
+            mode: "rejecting",
+            error: "Reason is required",
+          };
+          render();
+          return;
+        }
+        symphonyApprovalState[index] = { mode: "pending", error: null };
+        render();
+        try {
+          const res = await fetch(
+            "/api/symphony/reject/" + encodeURIComponent(ticketId),
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ reason }),
+            },
+          );
+          if (!res.ok && res.status !== 202) {
+            const body = await res.text();
+            throw new Error("HTTP " + res.status + " " + body);
+          }
+          showToast("success", "Rejected", ticketId + " rejected");
+          expanded[index] = false;
+          symphonyApprovalState[index] = { mode: "idle", error: null };
+          render();
+        } catch (err) {
+          symphonyApprovalState[index] = {
+            mode: "idle",
+            error: err && err.message ? err.message : String(err),
+          };
+          showToast(
+            "error",
+            "Reject failed",
+            err && err.message ? err.message : String(err),
+          );
+          render();
+        }
+      }
+
+      function symphonyCancelReject(index) {
+        symphonyApprovalState[index] = { mode: "idle", error: null };
+        render();
+      }
+
+      function symphonyBeginEdit(index, ticketId) {
+        symphonyApprovalState[index] = {
+          ...(symphonyApprovalState[index] || {}),
+          mode: "editing",
+          error: null,
+        };
+        render();
+      }
+
+      async function symphonySaveEdit(index, ticketId) {
+        if (!ticketId) return;
+        const ta = document.querySelector(
+          `[data-symphony-edit-textarea="${index}"]`,
+        );
+        const plan = ta && ta.value != null ? ta.value : "";
+        if (!plan.trim()) {
+          symphonyApprovalState[index] = {
+            mode: "editing",
+            error: "Plan cannot be empty",
+          };
+          render();
+          return;
+        }
+        symphonyApprovalState[index] = { mode: "pending", error: null };
+        render();
+        try {
+          const res = await fetch(
+            "/api/symphony/edit-and-approve/" + encodeURIComponent(ticketId),
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ plan }),
+            },
+          );
+          if (!res.ok && res.status !== 202) {
+            const body = await res.text();
+            throw new Error("HTTP " + res.status + " " + body);
+          }
+          showToast("success", "Approved", "Edited plan accepted, executing");
+          expanded[index] = false;
+          symphonyApprovalState[index] = { mode: "idle", error: null };
+          render();
+        } catch (err) {
+          symphonyApprovalState[index] = {
+            mode: "idle",
+            error: err && err.message ? err.message : String(err),
+          };
+          showToast(
+            "error",
+            "Save failed",
+            err && err.message ? err.message : String(err),
+          );
+          render();
+        }
+      }
+
+      function symphonyCancelEdit(index) {
+        symphonyApprovalState[index] = { mode: "idle", error: null };
+        render();
+      }
+
+      // ── Renderers ──────────────────────────────────────────────────────
+      function renderVerificationStrip(verification) {
+        const layerOrder = ["tsc", "tests", "lint", "qa", "backend", "visual"];
+        const layers = (verification && verification.layers) || {};
+        const cells = layerOrder
+          .map((name) => {
+            const l = layers[name];
+            let cls = "verification-strip__cell";
+            if (l && l.ran && l.passed === true) {
+              cls += " verification-strip__cell--pass";
+            } else if (l && l.ran && l.passed === false) {
+              cls += " verification-strip__cell--fail";
+            }
+            return `<div class="${cls}" title="${escHtml(name)}${l && l.reason ? ": " + escHtml(l.reason) : ""}">${escHtml(name)}</div>`;
+          })
+          .join("");
+        return `<div class="verification-strip" role="img" aria-label="Verification stack progress">${cells}</div>`;
+      }
+
+      function renderSymphonyApprovalBody(loop, index, ticketId) {
+        const cached = ticketId ? symphonyTicketCache[ticketId] : null;
+        const state = symphonyApprovalState[index] || {
+          mode: "idle",
+          error: null,
+        };
+        const planSrc = cached && cached.plan ? cached.plan : loop.plan || "";
+        const planHtml = planSrc
+          ? `<div class="symphony-approval__plan">${renderMarkdown(planSrc)}</div>`
+          : `<div class="symphony-approval__plan symphony-approval__plan--empty">Loading plan...</div>`;
+
+        const pending = state.mode === "pending";
+        const rejecting = state.mode === "rejecting";
+        const editing = state.mode === "editing";
+
+        let actions = "";
+        if (editing) {
+          actions = `
+            <textarea class="symphony-approval__edit-textarea" data-symphony-edit-textarea="${index}" ${pending ? "disabled" : ""}>${escHtml(planSrc)}</textarea>
+            <div class="symphony-approval__edit-actions">
+              <button class="btn btn--primary" ${pending ? "disabled" : ""} onclick="event.stopPropagation();symphonySaveEdit(${index},'${escHtml(ticketId || "")}')">${pending ? "Saving..." : "Save & Approve"}</button>
+              <button class="btn btn--secondary" ${pending ? "disabled" : ""} onclick="event.stopPropagation();symphonyCancelEdit(${index})">Cancel</button>
+            </div>
+          `;
+        } else if (rejecting) {
+          actions = `
+            <div class="symphony-approval__actions">
+              <button class="btn btn--primary" disabled>Approve</button>
+              <button class="btn btn--secondary" disabled>Reject</button>
+              <button class="btn btn--secondary" disabled>Edit & Approve</button>
+            </div>
+            <div class="symphony-approval__reject-row">
+              <input type="text" class="symphony-approval__reject-input" data-symphony-reject-input="${index}" placeholder="Reason for rejection" ${pending ? "disabled" : ""} />
+              <button class="btn btn--primary" ${pending ? "disabled" : ""} onclick="event.stopPropagation();symphonyConfirmReject(${index},'${escHtml(ticketId || "")}')">${pending ? "Rejecting..." : "Confirm Reject"}</button>
+              <button class="btn btn--secondary" ${pending ? "disabled" : ""} onclick="event.stopPropagation();symphonyCancelReject(${index})">Cancel</button>
+            </div>
+          `;
+        } else {
+          actions = `
+            <div class="symphony-approval__actions">
+              <button class="btn btn--primary" ${pending ? "disabled" : ""} onclick="event.stopPropagation();symphonyApprove(${index},'${escHtml(ticketId || "")}')">${pending ? "Approving..." : "Approve"}</button>
+              <button class="btn btn--secondary" ${pending ? "disabled" : ""} onclick="event.stopPropagation();symphonyBeginReject(${index})">Reject</button>
+              <button class="btn btn--secondary" ${pending ? "disabled" : ""} onclick="event.stopPropagation();symphonyBeginEdit(${index},'${escHtml(ticketId || "")}')">Edit & Approve</button>
+            </div>
+          `;
+        }
+
+        const errorHtml = state.error
+          ? `<div class="symphony-approval__error">${escHtml(state.error)}</div>`
+          : "";
+
+        return `<div class="symphony-approval" onclick="event.stopPropagation()">
+          <h3 class="symphony-approval__header">Plan ready for approval</h3>
+          ${planHtml}
+          ${actions}
+          ${errorHtml}
+        </div>`;
+      }
+
+      function renderSymphonyExecutionBody(loop, index, ticketId, baseBody) {
+        const cached = ticketId ? symphonyTicketCache[ticketId] : null;
+        const verification = cached && cached.verification;
+        const strip = renderVerificationStrip(verification);
+        return `<div onclick="event.stopPropagation()" style="padding:0 16px">${strip}</div>${baseBody}`;
+      }
+
       function renderCard(loop, index) {
         if (!loop.initialized) {
           return `<div class="project-card" data-card-index="${index}" data-status="stopped" style="animation-delay:${index * 40}ms">
@@ -3993,7 +4433,45 @@
           results: summaryContent,
         };
 
-        return `<div class="${cardClasses}" data-card-index="${index}" data-status="${statusClass}" style="animation-delay:${index * 40}ms">
+        // Symphony rows get a separate body branch when awaiting approval, plus a
+        // verification strip overlay when running execution. Non-symphony rows
+        // and idle/other-status symphony rows fall through to the default body.
+        const isSymphony = loop.runType === "symphony";
+        const ticketId = getSymphonyTicketId(loop);
+        const cardModifiers =
+          (isExpanded ? " project-card--expanded" : "") +
+          (isSymphony ? " project-card--symphony" : "");
+        const cardClassesFinal = "project-card" + cardModifiers;
+
+        const defaultBody = `
+            ${renderScoreChartSVG(loop.results, index)}
+            <div class="segmented-control" role="tablist">
+              ${tabs.map((t) => `<button class="segmented-control__btn${activeTab === t.id ? " segmented-control__btn--active" : ""}" role="tab" aria-selected="${activeTab === t.id}" onclick="event.stopPropagation();switchTab(${index},'${t.id}')">${t.label}</button>`).join("")}
+            </div>
+            ${tabs.map((t) => `<div class="tab-panel${activeTab === t.id ? " tab-panel--active" : ""}" role="tabpanel">${tabContents[t.id]}</div>`).join("")}
+        `;
+
+        let bodyHtml;
+        if (isSymphony && loop.status === "awaiting-approval") {
+          bodyHtml = renderSymphonyApprovalBody(loop, index, ticketId);
+        } else if (
+          isSymphony &&
+          loop.status === "running" &&
+          (loop.phase === "executing" ||
+            loop.phase === "verifying" ||
+            loop.phase === "approved")
+        ) {
+          bodyHtml = renderSymphonyExecutionBody(
+            loop,
+            index,
+            ticketId,
+            defaultBody,
+          );
+        } else {
+          bodyHtml = defaultBody;
+        }
+
+        return `<div class="${cardClassesFinal}" data-card-index="${index}" data-status="${statusClass}" style="animation-delay:${index * 40}ms">
           <div class="project-card__header" role="button" tabindex="0" aria-expanded="${isExpanded ? "true" : "false"}" onclick="toggleCard(${index})" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleCard(${index})}">
             <div class="project-card__status"><div class="status-dot status-dot--${statusClass}"></div></div>
             <div class="project-card__info">
@@ -4013,13 +4491,7 @@
               <span class="project-card__chevron">${I.chevronRight()}</span>
             </div>
           </div>
-          <div class="project-card__body">
-            ${renderScoreChartSVG(loop.results, index)}
-            <div class="segmented-control" role="tablist">
-              ${tabs.map((t) => `<button class="segmented-control__btn${activeTab === t.id ? " segmented-control__btn--active" : ""}" role="tab" aria-selected="${activeTab === t.id}" onclick="event.stopPropagation();switchTab(${index},'${t.id}')">${t.label}</button>`).join("")}
-            </div>
-            ${tabs.map((t) => `<div class="tab-panel${activeTab === t.id ? " tab-panel--active" : ""}" role="tabpanel">${tabContents[t.id]}</div>`).join("")}
-          </div>
+          <div class="project-card__body">${bodyHtml}</div>
         </div>`;
       }
 
@@ -4312,10 +4784,25 @@
          ══════════════════════════════════════════════════ */
       function toggleCard(index) {
         expanded[index] = !expanded[index];
+        const loop = loopsData[index];
+        const ticketId = loop ? getSymphonyTicketId(loop) : null;
         if (expanded[index]) {
           fetchLog(index);
           fetchGit(index);
           fetchAgentLog(index);
+          // Symphony rows: kick off ticket polling (or one-shot fetch when awaiting approval)
+          if (loop && loop.runType === "symphony" && ticketId) {
+            if (loop.status === "awaiting-approval") {
+              // One-shot fetch — plan content is static while awaiting.
+              fetchSymphonyTicket(ticketId).then(() => render());
+            } else if (loop.status === "running") {
+              // Active polling for verification strip while expanded.
+              pollSymphonyTicket(ticketId, () => render());
+            }
+          }
+        } else {
+          // Tear down poller when collapsing.
+          if (ticketId) teardownSymphonyPoller(ticketId);
         }
         render();
       }
