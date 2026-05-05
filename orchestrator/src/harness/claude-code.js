@@ -21,9 +21,8 @@ const adapter = {
   },
 
   /**
-   * Stage 0+1 placeholder: spawns a no-op shell command that sleeps briefly,
-   * writes an exit code file, and returns. Sufficient for adapter-shape verification.
-   * Stage 2 will replace the spawned command with the real `claude -p` invocation.
+   * Spawns a real `claude -p` invocation in detached, unattended mode and
+   * heartbeat-registers the PID for budget.killAll().
    * @param {RunIntent} intent
    * @returns {Promise<RunHandle>}
    */
@@ -41,17 +40,45 @@ const adapter = {
     fs.mkdirSync(adapterDir, { recursive: true });
 
     const agentLog = path.join(adapterDir, "agent.log");
-    const exitFile = path.join(adapterDir, "exit-code");
     const pidFile = path.join(adapterDir, "agent.pid");
 
-    // Placeholder no-op command. Stage 2 will replace with real claude -p invocation.
-    const cmd = `echo "claude-code adapter spawn placeholder (stateDir=${intent.stateDir})" > "${agentLog}" 2>&1; sleep 1; echo 0 > "${exitFile}"`;
-    const child = cpSpawn("bash", ["-c", cmd], {
+    // Real claude -p invocation
+    const args = [
+      "--print",
+      "--output-format",
+      "stream-json",
+      "--dangerously-skip-permissions",
+    ];
+    if (intent.systemPromptFile) {
+      args.push("--append-system-prompt-file", intent.systemPromptFile);
+    }
+    // The prompt itself is the LAST positional argument
+    args.push(intent.prompt);
+
+    const logFd = fs.openSync(agentLog, "a");
+    const child = cpSpawn("claude", args, {
       detached: true,
-      stdio: "ignore",
+      stdio: ["ignore", logFd, logFd],
       cwd: intent.workdir,
+      env: {
+        ...process.env,
+        CLAUDE_CODE_UNATTENDED_RETRY: "1",
+      },
     });
+    fs.closeSync(logFd);
     child.unref();
+
+    // Heartbeat-register PID for budget.killAll() — best-effort, no hard dep on budget.js
+    try {
+      const os = require("os");
+      fs.mkdirSync(path.join(os.homedir(), ".symphony"), { recursive: true });
+      fs.appendFileSync(
+        path.join(os.homedir(), ".symphony", "registered-pids.log"),
+        String(child.pid) + "\n",
+      );
+    } catch (_) {
+      /* best-effort */
+    }
 
     fs.writeFileSync(pidFile, String(child.pid));
 
@@ -63,6 +90,13 @@ const adapter = {
       async cancel() {
         try {
           process.kill(-child.pid, "SIGTERM");
+        } catch (_) {
+          /* already gone */
+        }
+        // Give 5s, then SIGKILL
+        await new Promise((r) => setTimeout(r, 5000));
+        try {
+          process.kill(-child.pid, "SIGKILL");
         } catch (_) {
           /* already gone */
         }
@@ -97,7 +131,21 @@ const adapter = {
       exitCode = parseInt(fs.readFileSync(exitFile, "utf8").trim(), 10);
       if (Number.isNaN(exitCode)) exitCode = -1;
     } catch (_) {
-      /* no exit file */
+      /* no exit file written by stream-json mode — derive from process state instead */
+    }
+
+    // Parse H2 markers from log. stream-json output has lines like {"type":"text","content":"..."}.
+    // We grep for ## MARKER_NAME in raw text content.
+    const markers = [];
+    try {
+      const log = fs.readFileSync(handle.agentLog, "utf8");
+      const re = /^## ([A-Z][A-Z _]+)$/gm;
+      let m;
+      while ((m = re.exec(log))) {
+        markers.push(m[1].trim());
+      }
+    } catch (_) {
+      /* no log */
     }
 
     const reason =
@@ -106,16 +154,20 @@ const adapter = {
     return {
       exitCode,
       reason,
-      filesChanged: [], // Stage 2: orchestrator computes via git diff
-      markers: [], // Stage 2: parse agent.log for H2 markers
+      filesChanged: [], // orchestrator computes via git diff
+      markers,
     };
   },
 
   /**
-   * Tier 1 contract requires this to exist; Stage 0+1 wiring is deferred.
+   * Tier 1 contract requires this to exist; Stage 2 spawns separate
+   * `claude -p` invocations directly (see verifier.js for the canonical example).
    */
   async dispatchSubagent(name, prompt, opts) {
-    throw new Error("NotImplemented: claude-code dispatchSubagent (Stage 2)");
+    throw new Error(
+      `NotImplemented: claude-code dispatchSubagent (Stage 2 spawns separate claude -p invocations directly; ` +
+        `verifier.js is the canonical example). Caller wanted: ${name}`,
+    );
   },
 };
 

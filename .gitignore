@@ -30,3 +30,4 @@ telemetry/
 usage-data/
 image-cache/
 orchestrator/.autopilot/
+orchestrator/.autopilot-stage-0-1-archive/
