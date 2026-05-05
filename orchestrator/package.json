@@ -1,7 +1,7 @@
 {
-  "name": "autoloop-dashboard",
+  "name": "orchestrator",
   "version": "1.0.0",
-  "description": "Menu bar + web dashboard for monitoring autoloop processes",
+  "description": "Orchestrator dashboard — manage autoloop, autopilot, and symphony runs",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"

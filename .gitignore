@@ -29,4 +29,4 @@ tasks/
 telemetry/
 usage-data/
 image-cache/
-autoloop-dashboard/.autopilot/
+orchestrator/.autopilot/
