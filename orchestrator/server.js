@@ -3,6 +3,9 @@ const fs = require("fs");
 const path = require("path");
 const { execSync, spawn } = require("child_process");
 
+const { discoverRuns, runTypeForDir } = require("./src/runs/discover");
+const { loadRun } = require("./src/runs/model");
+
 const CONFIG_PATH = path.join(__dirname, "config.json");
 const DASHBOARD_PATH = path.join(__dirname, "dashboard.html");
 const PID_PATH = path.join(__dirname, "server.pid");
@@ -19,66 +22,32 @@ function saveConfig(config) {
   fs.writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2));
 }
 
-// Auto-discover .autoloop/ directories under scanPaths
-function discoverAutoloops() {
+// Auto-discover run-bearing directories (.autoloop / .autopilot / .symphony) under scanPaths.
+// Generalized via src/runs/discover.js. Replaces the legacy discoverAutoloops().
+function discoverRunsConfig() {
   const config = loadConfig();
-  const scanPaths = config.scanPaths || [];
-  if (scanPaths.length === 0) return;
+  const scanRoots = config.scanPaths || [];
+  if (scanRoots.length === 0) return;
 
-  const dismissed = config.dismissedDirectories || [];
-
+  // discoverRuns returns Array<{dir, runType, stateDir}>. We only care about `dir` for config.directories.
+  const discovered = discoverRuns(scanRoots);
+  const dismissed = new Set(config.dismissedDirectories || []);
+  const existing = new Set(config.directories || []);
   let changed = false;
-  for (const scanRoot of scanPaths) {
-    try {
-      if (!fs.existsSync(scanRoot)) continue;
-      const entries = fs.readdirSync(scanRoot, { withFileTypes: true });
-      for (const entry of entries) {
-        if (!entry.isDirectory()) continue;
-        const candidate = path.join(scanRoot, entry.name);
-        const autoloopDir = path.join(candidate, ".autoloop");
-        if (
-          fs.existsSync(autoloopDir) &&
-          !config.directories.includes(candidate) &&
-          !dismissed.includes(candidate)
-        ) {
-          config.directories.push(candidate);
-          changed = true;
-          console.log(`Auto-discovered: ${candidate}`);
-        }
-      }
-    } catch {}
+
+  for (const { dir } of discovered) {
+    if (dismissed.has(dir)) continue;
+    if (!existing.has(dir)) {
+      existing.add(dir);
+      changed = true;
+      console.log(`Auto-discovered: ${dir}`);
+    }
   }
 
-  // Also check directories one level deeper (e.g. ~/Documents/AI Projects/ProjectName/sub-app/)
-  for (const scanRoot of scanPaths) {
-    try {
-      if (!fs.existsSync(scanRoot)) continue;
-      const entries = fs.readdirSync(scanRoot, { withFileTypes: true });
-      for (const entry of entries) {
-        if (!entry.isDirectory()) continue;
-        const subDir = path.join(scanRoot, entry.name);
-        try {
-          const subEntries = fs.readdirSync(subDir, { withFileTypes: true });
-          for (const sub of subEntries) {
-            if (!sub.isDirectory()) continue;
-            const candidate = path.join(subDir, sub.name);
-            const autoloopDir = path.join(candidate, ".autoloop");
-            if (
-              fs.existsSync(autoloopDir) &&
-              !config.directories.includes(candidate) &&
-              !dismissed.includes(candidate)
-            ) {
-              config.directories.push(candidate);
-              changed = true;
-              console.log(`Auto-discovered: ${candidate}`);
-            }
-          }
-        } catch {}
-      }
-    } catch {}
+  if (changed) {
+    config.directories = Array.from(existing);
+    saveConfig(config);
   }
-
-  if (changed) saveConfig(config);
 }
 
 function stripAnsi(str) {
@@ -134,7 +103,7 @@ function getLoopState(dir) {
   const folderName = path.basename(dir);
 
   if (!fs.existsSync(autoloopDir)) {
-    return { name: folderName, dir, initialized: false };
+    return { name: folderName, dir, runType: "autoloop", initialized: false };
   }
 
   // Phase
@@ -201,6 +170,7 @@ function getLoopState(dir) {
   return {
     name: folderName,
     title,
+    runType: "autoloop",
     loopType,
     dir,
     initialized: true,
@@ -215,6 +185,44 @@ function getLoopState(dir) {
     results,
     briefing,
     report,
+  };
+}
+
+// Minimal Run shape for non-autoloop dirs. The full Run model lives in src/runs/model.js
+// but for Stage 0+1 the API only needs the legacy-compatible LoopState shape with runType set.
+function getMinimalRunState(dir, runType) {
+  const name = path.basename(dir);
+  let branch = null;
+  try {
+    branch = execSync(`git -C "${dir}" rev-parse --abbrev-ref HEAD`, {
+      timeout: 3000,
+      encoding: "utf8",
+      stdio: ["pipe", "pipe", "ignore"],
+    })
+      .toString()
+      .trim();
+  } catch (_) {
+    /* not a git repo */
+  }
+  return {
+    name,
+    title: null,
+    runType,
+    loopType: null, // legacy compat field — UI may read it
+    dir,
+    initialized: true,
+    phase: null,
+    status: "idle",
+    pid: null,
+    alive: false,
+    startTime: null,
+    duration: null,
+    retryCount: 0,
+    experiments: 0,
+    results: [],
+    briefing: null,
+    report: null,
+    branch,
   };
 }
 
@@ -263,10 +271,22 @@ async function handleApi(req, res) {
 
   // GET /api/loops
   if (pathname === "/api/loops") {
-    const loops = config.directories.map((dir) => {
-      const state = getLoopState(dir);
-      state.branch = getLoopBranch(dir);
-      return state;
+    const dirs = config.directories || [];
+    const loops = dirs.map((dir, idx) => {
+      const runType = runTypeForDir(dir);
+      let entry;
+      if (runType === "autoloop") {
+        entry = getLoopState(dir);
+        entry.branch = getLoopBranch(dir);
+        entry.runType = "autoloop";
+      } else if (runType === "autopilot" || runType === "symphony") {
+        entry = getMinimalRunState(dir, runType);
+      } else {
+        // Unknown / no marker — still surface so user can dismiss
+        entry = getMinimalRunState(dir, "unknown");
+      }
+      entry.idx = idx;
+      return entry;
     });
     res.end(JSON.stringify(loops));
     return;
@@ -311,6 +331,16 @@ async function handleApi(req, res) {
       res.end(JSON.stringify({ error: "Not found" }));
       return;
     }
+    if (runTypeForDir(dir) !== "autoloop") {
+      res.statusCode = 400;
+      res.end(
+        JSON.stringify({
+          ok: false,
+          error: "Endpoint only supports autoloop runs",
+        }),
+      );
+      return;
+    }
     const autoloopDir = path.join(dir, ".autoloop");
     const pidStr = (
       readFileSafe(path.join(autoloopDir, "harness.pid")) || ""
@@ -337,6 +367,16 @@ async function handleApi(req, res) {
     if (!dir) {
       res.statusCode = 404;
       res.end(JSON.stringify({ error: "Not found" }));
+      return;
+    }
+    if (runTypeForDir(dir) !== "autoloop") {
+      res.statusCode = 400;
+      res.end(
+        JSON.stringify({
+          ok: false,
+          error: "Endpoint only supports autoloop runs",
+        }),
+      );
       return;
     }
     const autoloopDir = path.join(dir, ".autoloop");
@@ -408,6 +448,16 @@ async function handleApi(req, res) {
     if (!dir) {
       res.statusCode = 404;
       res.end(JSON.stringify({ error: "Not found" }));
+      return;
+    }
+    if (runTypeForDir(dir) !== "autoloop") {
+      res.statusCode = 400;
+      res.end(
+        JSON.stringify({
+          ok: false,
+          error: "Endpoint only supports autoloop runs",
+        }),
+      );
       return;
     }
     const autoloopDir = path.join(dir, ".autoloop");
@@ -605,8 +655,8 @@ const server = http.createServer(async (req, res) => {
 });
 
 // Auto-discover on startup and every 30 seconds
-discoverAutoloops();
-setInterval(discoverAutoloops, 30000);
+discoverRunsConfig();
+setInterval(discoverRunsConfig, 30000);
 
 const config = loadConfig();
 const PORT = config.port || 7890;
