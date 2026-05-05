@@ -663,6 +663,152 @@ async function handleApi(req, res) {
     return;
   }
 
+  // GET /api/symphony/runs — Run[] filtered to runType==='symphony'
+  if (pathname === "/api/symphony/runs" && req.method === "GET") {
+    res.setHeader("Content-Type", "application/json");
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    (async () => {
+      try {
+        const render = require("./src/symphony/render");
+        const runs = await render.symphonyRuns(loadConfig());
+        res.statusCode = 200;
+        res.end(JSON.stringify(runs));
+      } catch (e) {
+        res.statusCode = 500;
+        res.end(JSON.stringify({ error: e.message }));
+      }
+    })();
+    return;
+  }
+
+  // GET /api/symphony/ticket/:id — aggregated ticket info
+  const ticketMatch = pathname.match(/^\/api\/symphony\/ticket\/([^\/]+)$/);
+  if (ticketMatch && req.method === "GET") {
+    const id = decodeURIComponent(ticketMatch[1]);
+    res.setHeader("Content-Type", "application/json");
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    (async () => {
+      try {
+        const render = require("./src/symphony/render");
+        const agg = await render.ticketAggregate(loadConfig(), id);
+        res.statusCode = 200;
+        res.end(JSON.stringify(agg));
+      } catch (e) {
+        res.statusCode = 500;
+        res.end(JSON.stringify({ error: e.message }));
+      }
+    })();
+    return;
+  }
+
+  // GET /api/symphony/budget — budget snapshot
+  if (pathname === "/api/symphony/budget" && req.method === "GET") {
+    res.setHeader("Content-Type", "application/json");
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    (async () => {
+      try {
+        const render = require("./src/symphony/render");
+        const snap = render.budgetSnapshot(loadConfig());
+        res.statusCode = 200;
+        res.end(JSON.stringify(snap));
+      } catch (e) {
+        res.statusCode = 500;
+        res.end(JSON.stringify({ error: e.message }));
+      }
+    })();
+    return;
+  }
+
+  // POST /api/symphony/approve/:id — fire-and-forget orchestrator.onApproval
+  const approveMatch = pathname.match(/^\/api\/symphony\/approve\/([^\/]+)$/);
+  if (approveMatch && req.method === "POST") {
+    const id = decodeURIComponent(approveMatch[1]);
+    res.setHeader("Content-Type", "application/json");
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    // Fire-and-forget, but report acceptance
+    res.statusCode = 202;
+    res.end(JSON.stringify({ ok: true, accepted: true, ticketId: id }));
+    // Run in background; errors logged but not surfaced to client (the Linear ticket gets the error comment)
+    (async () => {
+      try {
+        const orchestrator = require("./src/symphony/orchestrator");
+        await orchestrator.onApproval(id);
+      } catch (e) {
+        console.error("[symphony approve]", id, e.message);
+      }
+    })();
+    return;
+  }
+
+  // POST /api/symphony/reject/:id — body: {reason}
+  const rejectMatch = pathname.match(/^\/api\/symphony\/reject\/([^\/]+)$/);
+  if (rejectMatch && req.method === "POST") {
+    const id = decodeURIComponent(rejectMatch[1]);
+    res.setHeader("Content-Type", "application/json");
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    let body = "";
+    req.on("data", (c) => (body += c));
+    req.on("end", async () => {
+      try {
+        const { reason } = body ? JSON.parse(body) : {};
+        const orchestrator = require("./src/symphony/orchestrator");
+        await orchestrator.onRejection(id, reason);
+        res.statusCode = 200;
+        res.end(JSON.stringify({ ok: true }));
+      } catch (e) {
+        res.statusCode = 500;
+        res.end(JSON.stringify({ error: e.message }));
+      }
+    });
+    return;
+  }
+
+  // POST /api/symphony/edit-and-approve/:id — body: {plan}; writes approved-plan.md and triggers onApproval
+  const editMatch = pathname.match(
+    /^\/api\/symphony\/edit-and-approve\/([^\/]+)$/,
+  );
+  if (editMatch && req.method === "POST") {
+    const id = decodeURIComponent(editMatch[1]);
+    res.setHeader("Content-Type", "application/json");
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    let body = "";
+    req.on("data", (c) => (body += c));
+    req.on("end", () => {
+      (async () => {
+        try {
+          const { plan } = JSON.parse(body || "{}");
+          if (!plan || typeof plan !== "string") {
+            res.statusCode = 400;
+            return res.end(JSON.stringify({ error: "missing plan field" }));
+          }
+          // Find stateDir via render
+          const render = require("./src/symphony/render");
+          const agg = await render.ticketAggregate(loadConfig(), id);
+          if (!agg.stateDir) {
+            res.statusCode = 404;
+            return res.end(
+              JSON.stringify({ error: "ticket stateDir not found" }),
+            );
+          }
+          fs.writeFileSync(path.join(agg.stateDir, "approved-plan.md"), plan);
+          res.statusCode = 202;
+          res.end(JSON.stringify({ ok: true, accepted: true, ticketId: id }));
+          // Background execute
+          const orchestrator = require("./src/symphony/orchestrator");
+          orchestrator
+            .onApproval(id)
+            .catch((e) =>
+              console.error("[symphony edit-and-approve]", id, e.message),
+            );
+        } catch (e) {
+          res.statusCode = 500;
+          res.end(JSON.stringify({ error: e.message }));
+        }
+      })();
+    });
+    return;
+  }
+
   res.statusCode = 404;
   res.end(JSON.stringify({ error: "Not found" }));
 }
