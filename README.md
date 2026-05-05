@@ -331,7 +331,7 @@ The **dashboard** is the monitoring and control center for these loops:
 
 ```bash
 # Start the dashboard server
-~/.claude/autoloop-dashboard/start.sh
+~/.claude/orchestrator/start.sh
 
 # Open in browser
 open http://localhost:7890
@@ -529,14 +529,15 @@ If a recommended tool is missing, the relevant hook or MCP will silently skip �
 │   ├── cli_create.py                 # CLI wrapper for graph_create (used by git hook)
 │   ├── post-commit                   # Global git hook (auto-updates knowledge graph)
 │   └── env-template                  # Default .env config for repo-graphrag-mcp
-├── autoloop-dashboard/
+├── orchestrator/
 │   ├── server.js                     # Node.js monitoring server (port 7890)
 │   ├── dashboard.html                # Single-file web UI (Mission Control)
 │   ├── package.json                  # Dependencies (Playwright)
 │   ├── config.example.json           # Example config (edit with your paths)
 │   ├── start.sh                      # Start server
 │   ├── stop.sh                       # Stop server
-│   └── .gitignore
+│   ├── .gitignore
+│   └── (legacy autoloop-dashboard symlink for one release)
 └── xbar/
     └── plugins/
         ├── 001-shortcuts.1d.sh       # Keyboard shortcuts menu

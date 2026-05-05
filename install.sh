@@ -567,26 +567,32 @@ install_graphrag() {
 }
 
 # ============================================================================
-# Install autoloop dashboard
+# Install orchestrator
 # ============================================================================
 
-install_autoloop_dashboard() {
-    info "Installing autoloop dashboard..."
-    local DASH_DIR="$CLAUDE_DIR/autoloop-dashboard"
+install_orchestrator() {
+    info "Installing orchestrator..."
+    local DASH_DIR="$CLAUDE_DIR/orchestrator"
     mkdir -p "$DASH_DIR"
 
     for f in server.js dashboard.html package.json start.sh stop.sh .gitignore; do
-        if [ -f "$SCRIPT_DIR/autoloop-dashboard/$f" ]; then
-            cp "$SCRIPT_DIR/autoloop-dashboard/$f" "$DASH_DIR/$f"
+        if [ -f "$SCRIPT_DIR/orchestrator/$f" ]; then
+            cp "$SCRIPT_DIR/orchestrator/$f" "$DASH_DIR/$f"
         fi
     done
+
+    # Copy src/ subtree (Run model, harness adapters)
+    if [ -d "$SCRIPT_DIR/orchestrator/src" ]; then
+        mkdir -p "$DASH_DIR/src/runs" "$DASH_DIR/src/harness"
+        cp -R "$SCRIPT_DIR/orchestrator/src/." "$DASH_DIR/src/"
+    fi
 
     # Make scripts executable
     chmod +x "$DASH_DIR/start.sh" "$DASH_DIR/stop.sh" 2>/dev/null || true
 
     # Create config.json from example if it doesn't exist
     if [ ! -f "$DASH_DIR/config.json" ]; then
-        sed "s|\\\$HOME|$HOME|g" "$SCRIPT_DIR/autoloop-dashboard/config.example.json" > "$DASH_DIR/config.json"
+        sed "s|\\\$HOME|$HOME|g" "$SCRIPT_DIR/orchestrator/config.example.json" > "$DASH_DIR/config.json"
         ok "  Created config.json (edit to add your project paths)"
     else
         ok "  config.json already exists (preserved)"
@@ -597,7 +603,7 @@ install_autoloop_dashboard() {
         (cd "$DASH_DIR" && npm install --silent 2>/dev/null) || warn "  npm install failed — run manually in $DASH_DIR"
     fi
 
-    ok "Autoloop dashboard installed to $DASH_DIR"
+    ok "Orchestrator installed to $DASH_DIR"
     info "  Start: $DASH_DIR/start.sh"
     info "  Stop:  $DASH_DIR/stop.sh"
     info "  URL:   http://localhost:7890"
@@ -685,7 +691,7 @@ install_mcp_servers
 setup_env_vars
 create_directories
 install_graphrag
-install_autoloop_dashboard
+install_orchestrator
 install_xbar_plugins
 install_memory
 
