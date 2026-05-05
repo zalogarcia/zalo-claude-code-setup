@@ -247,11 +247,9 @@ function layerQa({ stateDir, workdir, filesChanged, coreLayersPassed }) {
 
   const args = [
     "--print",
-    "--output-format",
-    "stream-json",
     "--dangerously-skip-permissions",
-    "--max-turns",
-    "15",
+    // Note: stream-json output requires --verbose; we use plain text and
+    // grep for H2 markers in the log (see line ~326).
   ];
   const filesList = Array.isArray(filesChanged) ? filesChanged.join(", ") : "";
   const prompt =

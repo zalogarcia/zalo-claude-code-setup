@@ -124,7 +124,7 @@ async function getTeamWorkflowStates() {
   if (_stateCacheByTeam[teamId]) {
     return _stateCacheByTeam[teamId]._all;
   }
-  const query = `query TeamStates($teamId: String!) {
+  const query = `query TeamStates($teamId: ID!) {
   workflowStates(filter: { team: { id: { eq: $teamId } } }, first: 100) {
     nodes { id name type }
   }
@@ -195,7 +195,7 @@ async function _getLabelIdByName(labelName) {
   if (cache && Object.prototype.hasOwnProperty.call(cache, labelName)) {
     return cache[labelName];
   }
-  const query = `query TeamLabels($teamId: String!) {
+  const query = `query TeamLabels($teamId: ID!) {
   issueLabels(filter: { team: { id: { eq: $teamId } } }, first: 200) {
     nodes { id name }
   }

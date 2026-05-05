@@ -98,7 +98,15 @@ function filesChangedSince(workdir, baseRef) {
 
 function hasUncommittedChanges(workdir) {
   const out = runGit(workdir, ["status", "--porcelain"]);
-  return out.length > 0;
+  // Exclude Symphony's own state dir — `<workdir>/.symphony/issues/<id>/`
+  // is operational metadata (manifest, plan, agent.log), not user code, and
+  // it lives in the workdir by design (per-project per-ticket isolation).
+  // Users who want it tracked can add it to .gitignore selectively.
+  const lines = out
+    .split("\n")
+    .filter((l) => l.length > 0)
+    .filter((l) => !/\s\.symphony(\/|$)/.test(l));
+  return lines.length > 0;
 }
 
 async function openPR(workdir, { title, body, label, base = "main" } = {}) {
@@ -124,6 +132,45 @@ async function openPR(workdir, { title, body, label, base = "main" } = {}) {
   }
 
   const head = currentBranch(workdir);
+  if (head === base) {
+    throw new Error(
+      `openPR: refusing to PR ${base} into itself — checkout the symphony branch first`,
+    );
+  }
+
+  // Push the symphony branch to origin before opening the PR.
+  // gh pr create requires the branch to exist on the remote.
+  // We use --set-upstream so subsequent pushes from the same branch work.
+  // Note: this is a write to the remote, but it's a NEW symphony/<id> branch,
+  // never to main/master/dev (per ~/.claude/rules/git-safety.md).
+  try {
+    execFileSync(
+      "git",
+      ["-C", workdir, "push", "--set-upstream", "origin", head],
+      { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] },
+    );
+  } catch (e) {
+    const stderr = (e.stderr || e.message || "").toString();
+    throw new Error(`openPR: failed to push branch ${head}: ${stderr}`);
+  }
+
+  // Auto-create the PR label on the GitHub repo if missing.
+  // gh pr create --label fails hard with "not found" if absent.
+  // Idempotent: if it exists, gh exits non-zero with "already exists" — we swallow.
+  try {
+    const color = label.includes("shallow") ? "B0AEA5" : "D97757";
+    const desc = label.includes("shallow")
+      ? "Symphony Tier-2 auto-PR — shallow verification"
+      : "Symphony Tier-1 auto-PR — full QA";
+    execFileSync(
+      "gh",
+      ["label", "create", label, "--color", color, "--description", desc],
+      { cwd: workdir, stdio: ["ignore", "pipe", "pipe"] },
+    );
+  } catch (_) {
+    /* label exists — fine */
+  }
+
   const stdout = execFileSync(
     "gh",
     [

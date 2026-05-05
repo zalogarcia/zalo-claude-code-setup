@@ -42,13 +42,11 @@ const adapter = {
     const agentLog = path.join(adapterDir, "agent.log");
     const pidFile = path.join(adapterDir, "agent.pid");
 
-    // Real claude -p invocation
-    const args = [
-      "--print",
-      "--output-format",
-      "stream-json",
-      "--dangerously-skip-permissions",
-    ];
+    // Real claude -p invocation. Plain text output (claude requires --verbose
+    // for stream-json with --print; we don't parse the stream — the planner
+    // writes plan.md to disk, the executor commits to git, both via the agent's
+    // tool use which goes via the harness, not stdout).
+    const args = ["--print", "--dangerously-skip-permissions"];
     if (intent.systemPromptFile) {
       args.push("--append-system-prompt-file", intent.systemPromptFile);
     }
