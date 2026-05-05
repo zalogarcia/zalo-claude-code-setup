@@ -655,3 +655,4 @@ If brainstorming a deviation from this plan: dispatch `brainstorm` agent with PL
 Append-only log of scope changes, decisions overturned, or new constraints discovered. Format: `YYYY-MM-DD — change — rationale`.
 
 - 2026-05-05 — Initial plan committed. Architecture decisions locked from 3 brainstorm rounds. DESIGN.md (Anthropic warm-ivory) added as design source of truth. Stages 0+1 → 2 → 3 → 4 (deferred) defined.
+- 2026-05-05 — **Stage 0+1 SHIPPED via `/autopilot`.** 7 WUs across 4 batches (1 parallel batch of 4). All 5 acceptance criteria PASS. Final SHA `3c63efc`. 3 deferred non-blocking findings (1 MEDIUM, 2 LOW) at `.autopilot/deferred_issues.md`. Full report at `.autopilot/report.md`. Stage 2 ready: dir is now `~/.claude/orchestrator/`, `pickAdapter` resolves both Tier 1 (claude-code) and Tier 2 (codex stub), `discoverRuns` finds `.autoloop` + `.autopilot` + `.symphony/issues/*` markers, DESIGN.md tokens applied to dashboard.
