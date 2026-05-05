@@ -6,38 +6,82 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, viewport-fit=cover"
     />
-    <title>Autoloop Dashboard</title>
+    <title>Orchestrator</title>
     <link
-      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@400;600&family=JetBrains+Mono:wght@400;500&display=swap"
       rel="stylesheet"
     />
     <style>
       :root {
-        --bg: #0a0a0c;
-        --surface-1: #0e0e10;
-        --surface-1-solid: #0e0e10;
-        --surface-2: #141416;
-        --surface-2-solid: #141416;
-        --border: #1a1a1e;
-        --border-subtle: #141416;
-        --text-primary: #e8e8ec;
-        --text-secondary: #8b8b96;
-        --text-muted: #55555e;
-        --accent: #3b82f6;
-        --accent-light: #60a5fa;
-        --green: #34d399;
-        --yellow: #f59e0b;
-        --red: #ef4444;
-        --orange: #f97316;
-        --purple: #a855f7;
-        --font-mono:
-          "JetBrains Mono", "SF Mono", "Cascadia Code", "Fira Code", Consolas,
-          monospace;
-        --font-ui: var(--font-mono);
+        /* Anthropic palette — DESIGN.md Quick Start */
+        --color-slate-dark: #141413;
+        --color-ivory-light: #faf9f5;
+        --color-ivory-medium: #f0eee6;
+        --color-ivory-dark: #e8e6dc;
+        --color-oat: #e3dacc;
+        --color-cloud-medium: #b0aea5;
+        --color-cloud-light: #d1cfc5;
+        --color-cloud-dark: #87867f;
+        --color-slate-medium: #3d3d3a;
+        --color-slate-light: #5e5d59;
+        --color-clay: #d97757;
+        --color-accent-ember: #c6613f;
+        --color-olive: #788c5d;
+        --color-sky: #6a9bcc;
+        --color-fig: #c46686;
+        --color-cactus: #bcd1ca;
+
+        /* Backwards-compat aliases */
+        --bg: var(--color-ivory-light);
+        --surface-1: var(--color-ivory-medium);
+        --surface-1-solid: var(--color-ivory-medium);
+        --surface-2: var(--color-oat);
+        --surface-2-solid: var(--color-oat);
+        --border: var(--color-slate-dark);
+        --border-subtle: var(--color-cloud-light);
+        --text-primary: var(--color-slate-dark);
+        --text-secondary: var(--color-slate-light);
+        --text-muted: var(--color-cloud-dark);
+        --accent: var(--color-clay);
+        --accent-light: var(--color-accent-ember);
+        --green: var(--color-olive);
+        --yellow: var(--color-clay);
+        --red: var(--color-accent-ember);
+        --orange: var(--color-clay);
+        --purple: var(--color-fig);
+
+        /* Typography */
+        --font-anthropic-sans:
+          "Inter", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+          "Segoe UI", Roboto, sans-serif;
+        --font-anthropic-serif:
+          "Playfair Display", ui-serif, Georgia, "Times New Roman", serif;
+        --font-anthropic-mono:
+          "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco,
+          Consolas, monospace;
+        --font-mono: var(--font-anthropic-mono);
+        --font-ui: var(--font-anthropic-sans);
+
+        /* Type scale */
+        --text-caption: 12px;
+        --text-body-sm: 15px;
+        --text-subheading: 18px;
+        --text-heading-sm: 20px;
+        --text-heading: 24px;
+        --text-heading-lg: 61px;
+        --text-display: 91px;
+
+        /* Radius — buttons stay 0; cards 8; panels 16 */
         --radius-sm: 0px;
-        --radius-md: 2px;
-        --radius-lg: 0px;
-        --radius-xl: 0px;
+        --radius-md: 8px;
+        --radius-lg: 16px;
+        --radius-xl: 24px;
+        --radius-cards: 8px;
+        --radius-badges: 0px;
+        --radius-panels: 16px;
+        --radius-buttons: 0px;
+        --radius-featuredcards: 24px;
+
         --transition: 120ms ease-out;
       }
 
@@ -48,8 +92,8 @@
       }
 
       body {
-        font-family: var(--font-mono);
-        font-size: 13px;
+        font-family: var(--font-anthropic-sans);
+        font-size: 15px;
         line-height: 1.5;
         background: var(--bg);
         color: var(--text-primary);
@@ -59,7 +103,7 @@
       }
 
       ::selection {
-        background: rgba(59, 130, 246, 0.3);
+        background: rgba(217, 119, 87, 0.3);
         color: var(--text-primary);
       }
 
@@ -71,11 +115,11 @@
         background: transparent;
       }
       ::-webkit-scrollbar-thumb {
-        background: rgba(255, 255, 255, 0.08);
+        background: rgba(20, 20, 19, 0.15);
         border-radius: 3px;
       }
       ::-webkit-scrollbar-thumb:hover {
-        background: rgba(255, 255, 255, 0.15);
+        background: rgba(20, 20, 19, 0.3);
       }
 
       /* -- Animations -- */
@@ -173,7 +217,7 @@
         display: flex;
         align-items: center;
         justify-content: space-between;
-        background: #0e0e10;
+        background: var(--color-ivory-medium);
         border-bottom: 1px solid var(--border);
       }
       .top-bar__left {
@@ -355,7 +399,7 @@
         align-items: baseline;
         gap: 8px;
         padding: 0 28px;
-        border-right: 1px solid rgba(255, 255, 255, 0.08);
+        border-right: 1px solid rgba(20, 20, 19, 0.12);
         background: none;
         border-radius: 0;
         border-top: none;
@@ -475,7 +519,7 @@
         border: 1px solid var(--border);
         font-size: 12px;
         font-weight: 500;
-        font-family: var(--font-mono);
+        font-family: var(--font-anthropic-sans);
         cursor: pointer;
         display: inline-flex;
         align-items: center;
@@ -483,13 +527,14 @@
         transition: all var(--transition);
       }
       .btn--primary {
-        background: var(--accent);
-        color: #fff;
-        border-color: var(--accent);
+        background: var(--color-ivory-light);
+        color: var(--color-slate-dark);
+        border-color: var(--color-slate-dark);
       }
       .btn--primary:hover {
-        background: var(--accent-light);
-        border-color: var(--accent-light);
+        background: var(--color-slate-dark);
+        color: var(--color-ivory-light);
+        border-color: var(--color-slate-dark);
       }
       .btn--secondary {
         background: transparent;
@@ -520,8 +565,8 @@
         min-width: 280px;
         display: flex;
         flex-direction: column;
-        background: #0c0c10;
-        border-left: 1px solid rgba(255, 255, 255, 0.06);
+        background: var(--color-ivory-medium);
+        border-left: 1px solid var(--border-subtle);
       }
 
       /* -- Table Header -- */
@@ -536,7 +581,7 @@
         text-transform: uppercase;
         letter-spacing: 0.5px;
         font-family: var(--font-mono);
-        background: rgba(255, 255, 255, 0.015);
+        background: rgba(20, 20, 19, 0.04);
       }
       .mc-th-status {
         width: 72px;
@@ -614,7 +659,7 @@
         min-height: 44px;
       }
       .project-card__header:hover {
-        background: rgba(255, 255, 255, 0.02);
+        background: rgba(20, 20, 19, 0.05);
       }
       .project-card__header:focus-visible {
         outline: 1px solid var(--accent);
@@ -636,7 +681,6 @@
       }
       .status-dot--running {
         background: var(--green);
-        box-shadow: 0 0 6px rgba(52, 211, 153, 0.4);
         animation: breathe 2s ease-in-out infinite;
       }
       .status-dot--completed {
@@ -673,21 +717,23 @@
       .loop-type-badge {
         display: inline-flex;
         align-items: center;
-        font-size: 9px;
-        font-weight: 700;
+        background: transparent;
+        color: var(--color-slate-dark);
+        border: none;
+        border-radius: 0;
+        padding: 0;
+        font-family: var(--font-anthropic-mono);
+        font-size: 12px;
+        font-weight: 400;
         letter-spacing: 0.05em;
-        padding: 1px 5px;
         text-transform: uppercase;
-        font-family: var(--font-mono);
-        border: 1px solid var(--border);
-        color: var(--text-muted);
       }
-      .loop-type-badge--autoloop {
-        color: var(--text-muted);
-      }
-      .loop-type-badge--autotest {
-        color: var(--green);
-        border-color: rgba(52, 211, 153, 0.2);
+      .loop-type-badge--autoloop,
+      .loop-type-badge--autotest,
+      .loop-type-badge--autopilot,
+      .loop-type-badge--symphony,
+      .loop-type-badge--unknown {
+        color: var(--color-slate-dark);
       }
       .branch-tag {
         display: inline-flex;
@@ -723,42 +769,30 @@
         padding-right: 16px;
       }
       .phase-badge {
-        font-size: 10px;
-        font-weight: 600;
-        padding: 2px 8px;
+        background: transparent;
+        color: var(--color-cloud-dark);
+        border: none;
+        border-radius: 0;
+        padding: 0;
+        font-family: var(--font-anthropic-mono);
+        font-size: 12px;
+        font-weight: 400;
+        letter-spacing: 0.05em;
         text-transform: uppercase;
-        letter-spacing: 0.3px;
         white-space: nowrap;
-        font-family: var(--font-mono);
-        border: 1px solid var(--border);
-        color: var(--text-muted);
       }
-      .phase-badge--briefing {
-        color: var(--accent);
-        border-color: rgba(59, 130, 246, 0.2);
-      }
-      .phase-badge--recon {
-        color: var(--yellow);
-        border-color: rgba(245, 158, 11, 0.2);
-      }
-      .phase-badge--sandbox {
-        color: var(--orange);
-        border-color: rgba(249, 115, 22, 0.2);
-      }
-      .phase-badge--integration {
-        color: var(--purple);
-        border-color: rgba(168, 85, 247, 0.2);
-      }
+      .phase-badge--briefing,
+      .phase-badge--recon,
+      .phase-badge--sandbox,
+      .phase-badge--integration,
       .phase-badge--hardening {
-        color: var(--red);
-        border-color: rgba(239, 68, 68, 0.2);
+        color: var(--color-cloud-dark);
       }
       .phase-badge--complete {
-        color: var(--green);
-        border-color: rgba(52, 211, 153, 0.2);
+        color: var(--color-slate-dark);
       }
       .phase-badge--unknown {
-        color: var(--text-muted);
+        color: var(--color-cloud-dark);
       }
 
       .project-card__chevron {
@@ -836,7 +870,7 @@
         width: 8px;
         height: 8px;
         flex: none;
-        background: #1a1a1e;
+        background: var(--color-cloud-light);
       }
       .phase-bar-inline__seg--done {
         background: var(--green);
@@ -1434,7 +1468,7 @@
         transition: background var(--transition);
       }
       .experiments-table tbody tr:hover {
-        background: rgba(255, 255, 255, 0.02);
+        background: rgba(20, 20, 19, 0.05);
       }
       .experiments-table td {
         padding: 6px 10px;
@@ -1592,11 +1626,11 @@
         padding: 10px 14px;
         min-width: 300px;
         max-width: 400px;
-        background: #141416;
+        background: var(--color-ivory-medium);
         border: 1px solid var(--border);
         animation: toast-in 0.2s ease-out;
         cursor: pointer;
-        font-family: var(--font-mono);
+        font-family: var(--font-anthropic-sans);
       }
       .toast--exiting {
         animation: toast-out 0.2s ease-in forwards;
@@ -1670,7 +1704,7 @@
         width: 100%;
         max-width: 480px;
         margin: 0 16px;
-        background: #0e0e10;
+        background: var(--color-ivory-light);
         border: 1px solid var(--border);
         transform: scale(0.98);
         transition: transform 0.15s;
@@ -1750,7 +1784,7 @@
         width: 100%;
         max-width: 480px;
         margin: 0 16px;
-        background: #0e0e10;
+        background: var(--color-ivory-light);
         border: 1px solid var(--border);
         overflow: hidden;
         transform: translateY(-4px);
@@ -1839,9 +1873,9 @@
       .skeleton {
         background: linear-gradient(
           90deg,
-          #141416 25%,
-          #1a1a1e 50%,
-          #141416 75%
+          var(--color-ivory-medium) 25%,
+          var(--color-oat) 50%,
+          var(--color-ivory-medium) 75%
         );
         background-size: 200% 100%;
         animation: shimmer 1.5s infinite;
@@ -1865,7 +1899,7 @@
         display: none;
         width: 100%;
         padding: 12px 16px;
-        background: #0c0c10;
+        background: var(--color-ivory-medium);
         border: none;
         border-top: 1px solid var(--border);
         color: var(--text-muted);
@@ -1882,7 +1916,7 @@
       }
       .mc-terminal-toggle:hover {
         color: var(--text-secondary);
-        background: rgba(255, 255, 255, 0.02);
+        background: rgba(20, 20, 19, 0.05);
       }
       .mc-terminal-toggle:focus-visible {
         outline: 1px solid var(--accent);
@@ -2066,11 +2100,11 @@
         .stat-card {
           border-right: none;
           padding: 8px 12px;
-          border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+          border-bottom: 1px solid rgba(20, 20, 19, 0.08);
           flex: none;
         }
         .stat-card:nth-child(odd) {
-          border-right: 1px solid rgba(255, 255, 255, 0.04);
+          border-right: 1px solid rgba(20, 20, 19, 0.08);
         }
         .stat-card:nth-child(n + 3) {
           border-bottom: none;
@@ -2363,7 +2397,7 @@
     <!-- Top Bar -->
     <header class="top-bar">
       <div class="top-bar__left">
-        <span class="top-bar__wordmark">Autoloop</span>
+        <span class="top-bar__wordmark">Orchestrator</span>
       </div>
       <div class="top-bar__center" id="headerStats"></div>
       <div class="top-bar__right">
@@ -3834,13 +3868,14 @@
         const totalExps = results.length;
         const delta = latestMetric - baseMetric;
         const deltaStr = delta >= 0 ? `+${delta.toFixed(1)}` : delta.toFixed(1);
-        const deltaColor = delta >= 0 ? "#34d399" : "#f87171";
+        const deltaColor =
+          delta >= 0 ? "var(--color-olive)" : "var(--color-accent-ember)";
         let html = `<div class="results-summary"><div class="results-summary__cards">
-          <div class="results-summary__card"><div class="results-summary__value" style="color:#60a5fa">${latestMetric}</div><div class="results-summary__label">Current Score</div></div>
+          <div class="results-summary__card"><div class="results-summary__value" style="color:var(--color-slate-dark)">${latestMetric}</div><div class="results-summary__label">Current Score</div></div>
           <div class="results-summary__card"><div class="results-summary__value" style="color:${deltaColor}">${deltaStr}</div><div class="results-summary__label">vs Baseline (${baseMetric})</div></div>
-          <div class="results-summary__card"><div class="results-summary__value" style="color:#34d399">${improved}</div><div class="results-summary__label">Improvements</div></div>
-          <div class="results-summary__card"><div class="results-summary__value" style="color:#f87171">${worse}</div><div class="results-summary__label">Regressions</div></div>
-          <div class="results-summary__card"><div class="results-summary__value" style="color:#a78bfa">${totalExps}</div><div class="results-summary__label">Total Runs</div></div>
+          <div class="results-summary__card"><div class="results-summary__value" style="color:var(--color-olive)">${improved}</div><div class="results-summary__label">Improvements</div></div>
+          <div class="results-summary__card"><div class="results-summary__value" style="color:var(--color-accent-ember)">${worse}</div><div class="results-summary__label">Regressions</div></div>
+          <div class="results-summary__card"><div class="results-summary__value" style="color:var(--color-slate-dark)">${totalExps}</div><div class="results-summary__label">Total Runs</div></div>
         </div>`;
         html += `<div class="results-summary__recent"><h4 style="color:var(--text-secondary);margin:12px 0 6px;font-size:12px;font-family:var(--font-mono)">Recent Results</h4>`;
         const recent = [...results].reverse().slice(0, 15);
@@ -3964,7 +3999,7 @@
             <div class="project-card__info">
               <div class="project-card__title-row">
                 <h3 class="project-card__name">${escHtml(loop.title || loop.name)}</h3>
-                <span class="loop-type-badge loop-type-badge--${loop.loopType || "autoloop"}">${loop.loopType === "autotest" ? "TEST" : "LOOP"}</span>
+                <span class="loop-type-badge loop-type-badge--${loop.runType || "autoloop"}">${loop.runType === "autopilot" ? "PILOT" : loop.runType === "symphony" ? "SYMPH" : loop.runType === "unknown" ? "UNKWN" : loop.loopType === "autotest" ? "TEST" : "LOOP"}</span>
                 ${loop.branch ? `<span class="branch-tag">${escHtml(loop.branch)}</span>` : ""}
               </div>
             </div>
