@@ -191,6 +191,48 @@ function getLoopState(dir) {
 
 // Minimal Run shape for non-autoloop dirs. The full Run model lives in src/runs/model.js
 // but for Stage 0+1 the API only needs the legacy-compatible LoopState shape with runType set.
+function getSymphonyTicketRows(dir, dirIdx) {
+  const issuesDir = path.join(dir, ".symphony", "issues");
+  if (!fs.existsSync(issuesDir)) return [];
+  let entries;
+  try {
+    entries = fs.readdirSync(issuesDir, { withFileTypes: true });
+  } catch (_) {
+    return [];
+  }
+  const rows = [];
+  for (const ent of entries) {
+    if (!ent.isDirectory()) continue;
+    const ticketId = ent.name;
+    const stateDir = path.join(issuesDir, ticketId);
+    const base = getMinimalRunState(dir, "symphony");
+    base.name = `${path.basename(dir)} / ${ticketId}`;
+    base.linearTicketId = ticketId;
+    base.stateDir = stateDir;
+    base.idx = dirIdx;
+    // Try manifest for status + phase + startedAt
+    try {
+      const m = JSON.parse(
+        fs.readFileSync(path.join(stateDir, "manifest.json"), "utf8"),
+      );
+      if (m.status) base.status = m.status;
+      if (m.phase) base.phase = m.phase;
+      if (m.startedAt) base.startTime = m.startedAt;
+    } catch (_) {
+      /* no manifest yet — leave defaults */
+    }
+    rows.push(base);
+  }
+  // Sort by startTime desc (recent first), null/undefined last
+  rows.sort((a, b) => {
+    if (!a.startTime && !b.startTime) return 0;
+    if (!a.startTime) return 1;
+    if (!b.startTime) return -1;
+    return b.startTime.localeCompare(a.startTime);
+  });
+  return rows;
+}
+
 function getMinimalRunState(dir, runType) {
   const name = path.basename(dir);
   let branch = null;
@@ -273,21 +315,36 @@ async function handleApi(req, res) {
   // GET /api/loops
   if (pathname === "/api/loops") {
     const dirs = config.directories || [];
-    const loops = dirs.map((dir, idx) => {
+    const loops = [];
+    dirs.forEach((dir, dirIdx) => {
       const runType = runTypeForDir(dir);
-      let entry;
       if (runType === "autoloop") {
-        entry = getLoopState(dir);
+        const entry = getLoopState(dir);
         entry.branch = getLoopBranch(dir);
         entry.runType = "autoloop";
-      } else if (runType === "autopilot" || runType === "symphony") {
-        entry = getMinimalRunState(dir, runType);
+        entry.idx = dirIdx;
+        loops.push(entry);
+      } else if (runType === "symphony") {
+        // Expand per-ticket rows from <dir>/.symphony/issues/*/
+        const ticketRows = getSymphonyTicketRows(dir, dirIdx);
+        if (ticketRows.length === 0) {
+          // No tickets discovered yet — surface workdir-level placeholder
+          const entry = getMinimalRunState(dir, "symphony");
+          entry.idx = dirIdx;
+          loops.push(entry);
+        } else {
+          for (const row of ticketRows) loops.push(row);
+        }
+      } else if (runType === "autopilot") {
+        const entry = getMinimalRunState(dir, "autopilot");
+        entry.idx = dirIdx;
+        loops.push(entry);
       } else {
         // Unknown / no marker — still surface so user can dismiss
-        entry = getMinimalRunState(dir, "unknown");
+        const entry = getMinimalRunState(dir, "unknown");
+        entry.idx = dirIdx;
+        loops.push(entry);
       }
-      entry.idx = idx;
-      return entry;
     });
     res.end(JSON.stringify(loops));
     return;
