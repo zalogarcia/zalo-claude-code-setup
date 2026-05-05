@@ -2,5 +2,23 @@
   "port": 7890,
   "directories": [],
   "scanPaths": ["$HOME/Documents", "$HOME/Projects"],
-  "dismissedDirectories": []
+  "dismissedDirectories": [],
+  "linear": {
+    "apiKey": "",
+    "teamId": "",
+    "planLabel": "claude:plan-me",
+    "planningStatus": "Symphony Planning",
+    "awaitingApprovalStatus": "Awaiting Plan Approval",
+    "approvedStatus": "Approved",
+    "inReviewStatus": "In Review",
+    "blockedStatus": "Blocked",
+    "pollIntervalSec": 60
+  },
+  "symphony": {
+    "dailyBudgetUsd": 20,
+    "perTicketBudgetUsd": 10,
+    "prTier1Label": "symphony:verified-rich",
+    "prTier2Label": "symphony:verified-shallow",
+    "prBaseBranch": "main"
+  }
 }

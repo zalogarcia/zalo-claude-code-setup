@@ -1,5 +1,6 @@
 const http = require("http");
 const fs = require("fs");
+const os = require("os");
 const path = require("path");
 const { execSync, spawn } = require("child_process");
 
@@ -620,6 +621,45 @@ async function handleApi(req, res) {
         res.end(JSON.stringify({ error: "Invalid JSON" }));
       }
     });
+    return;
+  }
+
+  // POST /api/symphony/poll — manually trigger orchestrator.processNextTicket()
+  if (pathname === "/api/symphony/poll" && req.method === "POST") {
+    res.setHeader("Content-Type", "application/json");
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    (async () => {
+      try {
+        const orchestrator = require("./src/symphony/orchestrator");
+        const result = await orchestrator.processNextTicket();
+        res.statusCode = 200;
+        res.end(JSON.stringify({ ok: true, result }));
+      } catch (e) {
+        res.statusCode = 500;
+        res.end(JSON.stringify({ ok: false, error: e.message }));
+      }
+    })();
+    return;
+  }
+
+  // POST /api/symphony/kill — touch STOP flag + SIGTERM all registered PIDs
+  if (pathname === "/api/symphony/kill" && req.method === "POST") {
+    res.setHeader("Content-Type", "application/json");
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    (async () => {
+      try {
+        const symDir = path.join(os.homedir(), ".symphony");
+        fs.mkdirSync(symDir, { recursive: true });
+        fs.writeFileSync(path.join(symDir, "STOP"), String(Date.now()));
+        const budget = require("./src/symphony/budget");
+        const killResult = await budget.killAll();
+        res.statusCode = 200;
+        res.end(JSON.stringify({ ok: true, stopFlag: true, ...killResult }));
+      } catch (e) {
+        res.statusCode = 500;
+        res.end(JSON.stringify({ ok: false, error: e.message }));
+      }
+    })();
     return;
   }
 
