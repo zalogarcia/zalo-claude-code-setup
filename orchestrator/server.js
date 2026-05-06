@@ -785,13 +785,32 @@ async function handleApi(req, res) {
     // Fire-and-forget, but report acceptance
     res.statusCode = 202;
     res.end(JSON.stringify({ ok: true, accepted: true, ticketId: id }));
-    // Run in background; errors logged but not surfaced to client (the Linear ticket gets the error comment)
+    // Run in background; surface any failure as a Linear comment so the user
+    // sees it in the ticket (otherwise errors are lost — stderr redirect is
+    // unreliable in dashboard daemonized mode).
     (async () => {
+      const orchestrator = require("./src/symphony/orchestrator");
+      const linear = require("./src/symphony/linear");
       try {
-        const orchestrator = require("./src/symphony/orchestrator");
-        await orchestrator.onApproval(id);
+        const result = await orchestrator.onApproval(id);
+        if (result && result.error) {
+          console.error("[symphony approve]", id, result.error);
+          try {
+            await linear.comment(
+              id,
+              `Symphony onApproval failed: ${result.error}`,
+            );
+          } catch (_) {
+            /* linear unreachable / no key — best-effort */
+          }
+        }
       } catch (e) {
         console.error("[symphony approve]", id, e.message);
+        try {
+          await linear.comment(id, `Symphony onApproval crashed: ${e.message}`);
+        } catch (_) {
+          /* best-effort */
+        }
       }
     })();
     return;

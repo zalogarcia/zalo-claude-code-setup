@@ -162,6 +162,56 @@ function lockExists(stateDir) {
   }
 }
 
+/**
+ * Acquire the per-ticket lock with retry-and-backoff. For `onApproval` only —
+ * `processNextTicket`/`processTicket` keep `tryAcquireLock` (fail-fast for the
+ * polling loop, which moves on to the next ticket).
+ *
+ * Behavior:
+ * - Polls every `backoffMs` (default 1s) up to `maxWaitMs` (default 60s).
+ * - Treats a lock file older than `staleMs` (default 30 min) as abandoned and
+ *   reclaims it (handles crashed orchestrator processes).
+ * - Returns true on acquire, false on timeout.
+ *
+ * @param {string} stateDir
+ * @param {{maxWaitMs?: number, backoffMs?: number, staleMs?: number}} [opts]
+ * @returns {Promise<boolean>}
+ */
+async function acquireLockWithRetry(stateDir, opts) {
+  const maxWaitMs = (opts && opts.maxWaitMs) || 60_000;
+  const backoffMs = (opts && opts.backoffMs) || 1_000;
+  const staleMs = (opts && opts.staleMs) || 30 * 60 * 1_000;
+  fs.mkdirSync(stateDir, { recursive: true });
+  const lockPath = path.join(stateDir, ".lock");
+  const start = Date.now();
+  while (true) {
+    try {
+      const fd = fs.openSync(lockPath, "wx");
+      fs.closeSync(fd);
+      return true;
+    } catch (err) {
+      if (!err || err.code !== "EEXIST") throw err;
+    }
+    // Lock exists. Reclaim if stale.
+    try {
+      const st = fs.statSync(lockPath);
+      if (Date.now() - st.mtimeMs > staleMs) {
+        try {
+          fs.unlinkSync(lockPath);
+        } catch (_) {
+          /* race — someone else released it */
+        }
+        continue; // retry immediately
+      }
+    } catch (_) {
+      // Lock vanished between EEXIST and stat — retry immediately.
+      continue;
+    }
+    if (Date.now() - start >= maxWaitMs) return false;
+    await new Promise((r) => setTimeout(r, backoffMs));
+  }
+}
+
 // ---------- core flows ----------
 
 /**
@@ -419,7 +469,11 @@ async function onApproval(ticketId) {
   }
   const stateDir = ticketStateDir(workdir, ticketId);
 
-  if (!tryAcquireLock(stateDir)) {
+  // Wait up to 60s for the planning lock to release. Common case: human hits
+  // Approve while processTicket is still finishing its commentPlan + transition
+  // step. Stale locks (>30 min, e.g. crashed orchestrator) auto-reclaim.
+  const acquired = await acquireLockWithRetry(stateDir, { maxWaitMs: 60_000 });
+  if (!acquired) {
     return { error: "locked" };
   }
 
@@ -616,5 +670,8 @@ module.exports = {
     ticketStateDir,
     getLinearCfg,
     getSymphonyCfg,
+    acquireLockWithRetry,
+    tryAcquireLock,
+    releaseLock,
   },
 };

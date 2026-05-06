@@ -664,3 +664,78 @@ test("module exports the four documented functions", async (t) => {
   assert.equal(typeof orch.onApproval, "function");
   assert.equal(typeof orch.onRejection, "function");
 });
+
+// =====================================================================
+// acquireLockWithRetry — added in lock-contention robustness fix
+// =====================================================================
+
+// Reuses fs / path / os / test / assert from top of this file.
+const assertStrict = assert;
+
+test("acquireLockWithRetry: returns true when lock is free", async () => {
+  const orch = require("../src/symphony/orchestrator");
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "orch-lock-1-"));
+  const ok = await orch._internals.acquireLockWithRetry(tmp, {
+    maxWaitMs: 1000,
+    backoffMs: 50,
+  });
+  assertStrict.equal(ok, true);
+  assertStrict.ok(fs.existsSync(path.join(tmp, ".lock")));
+  orch._internals.releaseLock(tmp);
+  fs.rmSync(tmp, { recursive: true, force: true });
+});
+
+test("acquireLockWithRetry: waits then succeeds when lock released mid-flight", async () => {
+  const orch = require("../src/symphony/orchestrator");
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "orch-lock-2-"));
+  // Pre-create the lock
+  fs.writeFileSync(path.join(tmp, ".lock"), "holder");
+  // Release after 300ms
+  setTimeout(() => orch._internals.releaseLock(tmp), 300);
+  const start = Date.now();
+  const ok = await orch._internals.acquireLockWithRetry(tmp, {
+    maxWaitMs: 5000,
+    backoffMs: 100,
+  });
+  const waited = Date.now() - start;
+  assertStrict.equal(ok, true);
+  assertStrict.ok(
+    waited >= 200 && waited < 2000,
+    `waited=${waited}ms outside expected 200-2000`,
+  );
+  orch._internals.releaseLock(tmp);
+  fs.rmSync(tmp, { recursive: true, force: true });
+});
+
+test("acquireLockWithRetry: returns false on timeout", async () => {
+  const orch = require("../src/symphony/orchestrator");
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "orch-lock-3-"));
+  fs.writeFileSync(path.join(tmp, ".lock"), "holder");
+  const start = Date.now();
+  const ok = await orch._internals.acquireLockWithRetry(tmp, {
+    maxWaitMs: 500,
+    backoffMs: 100,
+  });
+  const waited = Date.now() - start;
+  assertStrict.equal(ok, false);
+  assertStrict.ok(waited >= 400, `waited=${waited}ms expected >=400`);
+  fs.rmSync(tmp, { recursive: true, force: true });
+});
+
+test("acquireLockWithRetry: reclaims stale lock (>staleMs old)", async () => {
+  const orch = require("../src/symphony/orchestrator");
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "orch-lock-4-"));
+  const lockPath = path.join(tmp, ".lock");
+  fs.writeFileSync(lockPath, "stale-holder");
+  // Backdate lock mtime by 1 hour
+  const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+  fs.utimesSync(lockPath, oneHourAgo, oneHourAgo);
+  const ok = await orch._internals.acquireLockWithRetry(tmp, {
+    maxWaitMs: 1000,
+    backoffMs: 50,
+    staleMs: 30 * 60 * 1000, // 30 min
+  });
+  assertStrict.equal(ok, true, "should have reclaimed stale lock");
+  orch._internals.releaseLock(tmp);
+  fs.rmSync(tmp, { recursive: true, force: true });
+});
