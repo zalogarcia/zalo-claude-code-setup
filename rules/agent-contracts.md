@@ -13,6 +13,8 @@ Completion markers and return contract for `~/.claude/agents/`. Skills/orchestra
 | `live-test`           | `## UI VERIFIED` / `## UI ISSUES FOUND` / `## BLOCKED`                               |
 | `bug-fix`             | `## ROOT CAUSE FOUND` / `## INVESTIGATION INCOMPLETE` / `## BLOCKED`                 |
 | `image-craft-expert`  | `## IMAGE GENERATED` / `## GENERATION FAILED`                                        |
+| `outcomes-grader`     | `## OUTCOMES PASSED` / `## OUTCOMES UNMET` / `## BLOCKED`                            |
+| `dream-consolidator`  | `## DREAM PROPOSAL READY` / `## DREAM NO_CHANGES_NEEDED` / `## BLOCKED`              |
 
 ## Marker Rules
 
