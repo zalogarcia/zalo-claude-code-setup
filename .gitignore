@@ -35,3 +35,9 @@ orchestrator/.autopilot-stage-0-1-archive/
 # Memory consolidation runtime state
 dreams/
 .last-cleanup
+
+# /plan runtime state
+.plan/
+
+# /autopilot runtime state
+.autopilot/
