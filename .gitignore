@@ -31,3 +31,7 @@ usage-data/
 image-cache/
 orchestrator/.autopilot/
 orchestrator/.autopilot-stage-0-1-archive/
+
+# Memory consolidation runtime state
+dreams/
+.last-cleanup
