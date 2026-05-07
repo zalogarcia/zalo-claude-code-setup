@@ -41,3 +41,6 @@ dreams/
 
 # /autopilot runtime state
 .autopilot/
+
+# autopilot prior-run archives
+.autopilot.prev*
