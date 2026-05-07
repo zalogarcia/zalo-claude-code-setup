@@ -586,6 +586,64 @@ Wait for `## PLAN READY`:
 If `## NEEDS DECISION` → Tiered Decision Protocol
 If `## BLOCKED` → Tiered Decision Protocol, re-dispatch (max MAX_AGENT_RETRIES)
 
+#### Phase 1.5: Plan Verification Loop
+
+After `## PLAN READY` and parsing into `work_units`, run the Plan Verification Loop per `~/.claude/rules/plan-verification.md` BEFORE proceeding to Phase 2. This catches conceptual weaknesses (brainstorm-vet) and engineering-principle violations (outcomes-grader against `~/.claude/rules/engineering-principles.md`) while revision is still cheap.
+
+**Skip heuristic** — if `work_units.length ≤ 2`, log `plan_verification_skipped: trivial` to `decisions.log` and proceed directly to Phase 2. (Simple count-based check; see `~/.claude/rules/plan-verification.md` for rationale.)
+
+Otherwise, run both gates **in parallel** (single message, two Agent calls):
+
+```
+# Gate 1 — Brainstorm-vet (correctness/completeness)
+Dispatch brainstorm (model: "opus"):
+  Apply your critical-thinking pass to this plan.
+  Original task: (read .autopilot/task.md)
+  Plan: (read .autopilot/plan.md)
+
+  Apply inversion, simplification cascade, scale game, meta-pattern recognition.
+  Identify hidden assumptions, missing considerations, scope creep,
+  single points of failure, unhandled edge cases, missing rollback paths.
+  Don't rubber-stamp. Concise if sound. Specific if concerns.
+
+  Emit ## EXPLORATION COMPLETE.
+
+# Gate 2 — Principles-vet (alignment with stated standards)
+Dispatch outcomes-grader (model: "opus"):
+  Grade this PLAN (not code) against the engineering-principles rubric.
+  Artifact: (read .autopilot/plan.md)
+  Rubric: (read ~/.claude/rules/engineering-principles.md)
+
+  Per-item PASS / FAIL / AMBIGUOUS with quoted plan evidence.
+  Items not applicable to this plan → mark PASS.
+
+  Emit ## OUTCOMES PASSED if every applicable item passes.
+  Emit ## OUTCOMES UNMET with FAIL details if any fail.
+```
+
+Wait for BOTH markers. Combine findings into `.autopilot/plan_verification.md`:
+
+- **Both gates pass** (no significant brainstorm concerns + `## OUTCOMES PASSED`) → log `plan_verification_passed: 0 revisions` to `decisions.log`. Proceed to Phase 2.
+- **Either gate flagged concerns** → re-dispatch `safe-planner` ONCE with combined findings:
+
+```
+The plan you produced was reviewed. Issues to address:
+
+## Brainstorm critique
+{brainstorm findings, verbatim}
+
+## Principles violations
+{grader's failed rubric items + "what's missing" lines}
+
+Revise .autopilot/plan.md to address each issue. Keep what works.
+Don't expand scope beyond the original task.
+Emit ## PLAN READY when revised.
+```
+
+Wait for revised `## PLAN READY`. Re-parse `work_units`. **Do NOT loop again** — cap at one revision pass.
+
+If unresolved concerns remain after revision, log `plan_verification_max_iterations_hit` to `decisions.log` and proceed to Phase 2 with the best plan available. Surface unresolved items in Phase 5 report under "Plan Verification Concerns".
+
 **→ Write state, compact & continue to Phase 2.**
 
 ### Phase 2: Implement (parallel sub-agents, orchestrator commits)

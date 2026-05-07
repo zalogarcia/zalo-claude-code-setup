@@ -8,6 +8,8 @@ Plan → implement → QA → wait for explicit push approval. The orchestrator 
 @~/.claude/rules/gates.md
 @~/.claude/rules/anti-patterns.md
 @~/.claude/rules/checkpoints.md
+@~/.claude/rules/plan-verification.md
+@~/.claude/rules/engineering-principles.md
 
 ## Workflow
 
@@ -16,6 +18,19 @@ Plan → implement → QA → wait for explicit push approval. The orchestrator 
 If the change touches 3+ files, dispatch `safe-planner`. Otherwise, write a 3-bullet inline plan: affected files, expected behavior, edge cases.
 
 Wait for `## PLAN READY` (or `## NEEDS DECISION` → resolve with user before proceeding).
+
+### 1.5. Plan Verification (only when safe-planner was dispatched)
+
+If you wrote an inline plan in step 1, skip this step.
+
+If `safe-planner` was dispatched, run the Plan Verification Loop per `~/.claude/rules/plan-verification.md` BEFORE moving to Implement:
+
+- **Skip heuristic** — if the plan has ≤ 2 work units, skip verification. Note the skip in the report. (See `~/.claude/rules/plan-verification.md` for rationale.)
+- Otherwise, run **both gates in parallel** (single message, two Agent calls):
+  - **Gate 1 — Brainstorm-vet**: dispatch `brainstorm` with the task + plan; ask for inversion / simplification / scale-game / meta-pattern critique. Expect `## EXPLORATION COMPLETE`.
+  - **Gate 2 — Principles-vet**: dispatch `outcomes-grader` with the plan as artifact and `~/.claude/rules/engineering-principles.md` as rubric. Expect `## OUTCOMES PASSED` or `## OUTCOMES UNMET`.
+- **If both pass** → proceed to Implement. Note "verification passed" in the eventual report.
+- **If either flags concerns** → re-dispatch `safe-planner` ONCE with combined findings. Wait for revised `## PLAN READY`. **No second revision pass** — cap at one. If concerns remain, note them and proceed; the QA loop and final report capture residual risk.
 
 ### 2. Implement
 
@@ -42,6 +57,12 @@ Present:
 
 - Files changed (with one-line summaries)
 - QA evidence (commands run + their output, not "should pass")
+- **Plan Verification status** (one line):
+  - "Plan verification skipped (≤2 work units)" — if skip heuristic fired, OR
+  - "Plan verification passed (no revisions)" — both gates clean on first pass, OR
+  - "Plan verification passed (after 1 revision)" — gates fired, revision applied, accepted, OR
+  - "Plan verification concerns remained" — list residual concerns that the revision didn't resolve, OR
+  - "Inline plan (no verification)" — when step 1 wrote the 3-bullet inline plan instead of dispatching safe-planner
 - Any design decisions that were judgment calls
 - Decisions deferred to user (if any)
 
