@@ -111,6 +111,8 @@ The scratch test must:
 
 If you cannot write a scratch test that runs in this turn → downgrade to Log-only or Unverifiable.
 
+**Fallback for unsupported hypothesis (Reproducible tier):** If the scratch test runs but does NOT demonstrate the buggy behavior (no red), the hypothesis is not supported. Downgrade to Log-only or Unverifiable tier and emit `## INVESTIGATION INCOMPLETE — CONFIDENCE <N>/10` with N reflecting reduced confidence (typically 4-6/10). Do NOT report `## ROOT CAUSE FOUND — CONFIDENCE 10/10` based on a green-only scratch test.
+
 **For Log-only bugs:**
 
 Run a falsification test that confirms the predicted root cause's fingerprint in logs / DB / traces. Examples:

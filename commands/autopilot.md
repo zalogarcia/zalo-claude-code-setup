@@ -500,7 +500,7 @@ Cleared back to `null` when the dispatch returns successfully or hits a non-retr
    5. If in QA loop: re-read .autopilot/bug_tracker.json
    6. If in outcomes loop (state.json.outcomes_iteration > 0): re-read .autopilot/unmet_outcomes.json
    7. If state.json.rubric_path is set: re-read .autopilot/rubric.md
-   8. If state.json.current_dispatch_retry is non-null AND sleep_until_ts is in the future: sleep the remainder, then re-dispatch the same agent + prompt_ref. If sleep_until_ts is in the past: re-dispatch immediately. After dispatch returns, clear current_dispatch_retry to null.
+   8. If state.json.current_dispatch_retry is non-null AND sleep_until_ts is in the future: sleep the remainder, then re-dispatch the same agent + prompt_ref. If sleep_until_ts is in the past: re-dispatch immediately. After dispatch returns, clear current_dispatch_retry to null. If `sleep_until_ts` is missing, malformed, or unparseable as ISO8601, treat it as past (re-dispatch immediately) and log `current_dispatch_retry_corrupt_recovered` to `decisions.log`.
    9. If state.json.api_retry_exhaustions_in_phase >= MAX_PHASE_API_EXHAUSTIONS: circuit breaker tripped — do NOT dispatch further; jump to Phase 5 with status ABORTED_API_OUTAGE.
    Then continue with Phase {next_phase_number}.
    ```
@@ -519,7 +519,7 @@ After every compaction restore, check context usage:
 
 `/autopilot resume`:
 
-1. Read `.autopilot/state.json` → get `current_phase`, all counters (qa_iteration, outcomes_iteration, api_retry_exhaustions_in_phase, etc.)
+1. Read `.autopilot/state.json` → get `current_phase`, all counters (qa_iteration, outcomes_iteration, api_retry_exhaustions_in_phase, etc.). If `api_retry_exhaustions_in_phase` is absent or non-numeric → initialize to 0. If `current_dispatch_retry` is absent → treat as null. Older state.json files predating this protocol resume cleanly with these defaults.
 2. Read `.autopilot/plan.md` → restore plan context
 3. Read `.autopilot/bug_tracker.json` → restore recurring-bug state
 4. If `state.json.outcomes_iteration > 0`: read `.autopilot/unmet_outcomes.json` → restore per-item addressed/deferred state
@@ -724,7 +724,8 @@ Dispatch brainstorm (model: "opus"):
   Original task: (read .autopilot/task.md)
   Plan: (read .autopilot/plan.md)
 
-  Apply inversion, simplification cascade, scale game, meta-pattern recognition.
+  Apply inversion, simplification cascade, meta-pattern recognition.
+  **Apply scale game (MANDATORY when plan involves architectural components, data flow, or throughput-relevant work):** Answer specifically — at 0.1x scale, what's the bottleneck and the failure mode? At 10x scale, same. If the plan is purely cosmetic/refactor with no architectural surface, mark scale-game N/A. Otherwise, vague answers like 'works fine at scale' will be flagged by Gate 2's Outcome 3.5.
   Identify hidden assumptions, missing considerations, scope creep,
   single points of failure, unhandled edge cases, missing rollback paths.
   Don't rubber-stamp. Concise if sound. Specific if concerns.

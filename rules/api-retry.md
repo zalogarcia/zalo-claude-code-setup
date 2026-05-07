@@ -141,6 +141,7 @@ When the orchestrator resumes (post-compaction or post-interrupt), it MUST:
 3. If present:
    - If `sleep_until_ts` is in the past → dispatch the retry immediately
    - If `sleep_until_ts` is in the future → `sleep` the remainder, then dispatch
+   - If `sleep_until_ts` is missing, malformed, or unparseable as ISO8601, treat it as past (re-dispatch immediately) and log `current_dispatch_retry_corrupt_recovered` to `decisions.log`.
 4. After dispatch returns, clear `current_dispatch_retry` (or update to next
    attempt's state)
 
