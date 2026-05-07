@@ -78,7 +78,7 @@ If you've tried 3 distinct fixes and the bug isn't gone:
 - **STOP fixing.**
 - **Question the architecture, not the fix.** The bug is probably not where you've been looking.
 - The system's shape allows the bug to exist. Step back, re-examine assumptions, consider whether the problem is in a different layer entirely.
-- Report this honestly with `## INVESTIGATION INCOMPLETE` rather than continuing to flail.
+- Report this honestly with `## INVESTIGATION INCOMPLETE — CONFIDENCE <N>/10` (where N reflects your remaining confidence after 3+ failed fixes — typically 4-7/10) rather than continuing to flail.
 
 ## Confidence Gate (Pre-Flight to ## ROOT CAUSE FOUND — CONFIDENCE 10/10)
 
