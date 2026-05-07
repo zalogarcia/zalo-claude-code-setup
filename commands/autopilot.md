@@ -63,6 +63,7 @@ After autopilot reports COMPLETE / COMPLETE_WITH_ISSUES:
 @~/.claude/rules/database-safety.md
 @~/.claude/rules/testing-safety.md
 @~/.claude/rules/git-safety.md
+@~/.claude/rules/api-retry.md
 @~/.claude/rules/checkpoints.md
 @~/.claude/rules/context-budget.md
 
@@ -74,6 +75,9 @@ After autopilot reports COMPLETE / COMPLETE_WITH_ISSUES:
 - MAX_SAME_BUG_APPEARANCES = 3
 - MAX_AGENT_RETRIES = 2
 - MAX_OUTCOMES_RETRIES = 3
+- MAX_API_RETRIES = 3
+- MAX_PHASE_API_EXHAUSTIONS = 3
+- API_RETRY_BACKOFF = [30, 60, 120]
 - SUBAGENT_MODEL = "opus"
 
 Every `Agent` tool call MUST include `model: "opus"`. No exceptions. Default models are insufficient for autonomous code work.
@@ -246,6 +250,104 @@ If ALL remaining work units are blocked externally:
 
 When detected → External Blocker Protocol fires, NOT Tiered Decision Protocol.
 
+## API Dispatch Wrapper Protocol
+
+Every Agent dispatch in /autopilot is wrapped by api-retry semantics per `~/.claude/rules/api-retry.md`. This catches transient transport-layer Anthropic API failures (overloaded_error, rate_limit_error, full phrases like "529 overloaded" / "503 Service Unavailable") and retries with exponential backoff before treating the dispatch as truly failed.
+
+**Detection signals (phrase-anchored, NOT bare codes):**
+
+- `overloaded_error`, `rate_limit_error` (Anthropic SDK type names)
+- `Anthropic API` paired with status code in same line
+- Full phrases: `529 overloaded`, `503 Service Unavailable`, `502 Bad Gateway`, `504 Gateway Timeout`
+- Bare 3-digit codes alone (e.g. `503`) are NOT triggers — they false-positive on legitimate code returns mentioning HTTP status.
+
+**Wrapper logic for every Agent dispatch:**
+
+```
+attempt = 0
+WHILE attempt < MAX_API_RETRIES:
+  Dispatch agent
+  IF return body matches retryable signal:
+    attempt += 1
+    last_signal = matched signal
+    sleep_until_ts = now + API_RETRY_BACKOFF[attempt-1]  # 30s, 60s, 120s
+    Persist current_dispatch_retry to state.json:
+      {wu_id, agent, prompt_ref, attempt, last_signal, sleep_until_ts}
+    Log api_retry to decisions.log
+    Sleep until sleep_until_ts
+    Continue loop (re-dispatch same agent + prompt)
+  ELSE:
+    Log api_retry_recovered if attempt > 0
+    Clear current_dispatch_retry from state.json
+    BREAK with successful return
+
+IF loop exhausted without success:
+  api_retry_exhaustions_in_phase += 1
+  Log api_retry_exhausted to decisions.log
+
+  IF api_retry_exhaustions_in_phase >= MAX_PHASE_API_EXHAUSTIONS:
+    # Circuit breaker trips
+    Append to .autopilot/deferred_issues.md: "BLOCKED_BY_API_OUTAGE: phase {N} hit MAX_PHASE_API_EXHAUSTIONS"
+    Log circuit_breaker_tripped to decisions.log
+    Set workflow status to ABORTED_API_OUTAGE
+    Exit cleanly to Phase 5 (Report)
+  ELSE:
+    Mark this work unit failed
+    Continue with remaining work
+```
+
+**Non-retryable signals** (`invalid_api_key`, `authentication_error`, `permission_denied`, `not_found_error`, `invalid_request_error`) are treated as real failures — mark the work unit `failed` with `block_reason = "api_auth_or_perm"` and continue. Do NOT consume retry budget on these.
+
+### Per-phase circuit breaker
+
+`api_retry_exhaustions_in_phase` is a per-phase counter persisted in `state.json`. Scope and behavior:
+
+- **Reset per phase boundary** — counter goes back to 0 at the start of Phase 0 → 1 → 1.5 → 2 → 3 → 4 → 5. Within a phase, exhaustions accumulate across all dispatches.
+- **Increment** — every time a single dispatch exhausts all `MAX_API_RETRIES` retries with a retryable signal still detected.
+- **Trip threshold** — `>= MAX_PHASE_API_EXHAUSTIONS` (3). When tripped, halt the current phase: do not dispatch any more Agent calls in this phase.
+- **Halted-phase work unit handling** — work units already `done` stay `done`. Work units mid-flight when the breaker trips get marked `blocked_by_api_outage` (NOT `failed`). Unstarted work units stay `pending` and are likewise marked `blocked_by_api_outage` for clean reporting. On `/autopilot resume`, these get fresh dispatches (no in-flight retry replay).
+- **Exit path** — write the report and exit with status `ABORTED_API_OUTAGE`. Surfaces in Phase 5 report under "API Stability".
+
+### State persistence (compaction safety)
+
+Long backoff sleeps (up to 120s) can cross a `/compact` boundary. Persist retry state to `state.json` BEFORE every sleep:
+
+```json
+{
+  "current_dispatch_retry": {
+    "wu_id": "<work unit id>",
+    "agent": "<subagent_type>",
+    "prompt_ref": "<key into a prompts dir, OR full prompt if short>",
+    "attempt": 2,
+    "last_signal": "overloaded_error",
+    "sleep_until_ts": "<ISO8601 timestamp when sleep ends>"
+  },
+  "api_retry_exhaustions_in_phase": 0
+}
+```
+
+After dispatch returns successfully (or non-retryable), clear `current_dispatch_retry` to `null`.
+
+### Phases that use this wrapper
+
+The API Dispatch Wrapper Protocol applies to EVERY Agent dispatch in /autopilot. That covers:
+
+- Phase 0 — `Explore` (inventory), `safe-planner` (rubric auto-gen if needed)
+- Phase 1 — `safe-planner` (decompose)
+- Phase 1.5 — `brainstorm` + `outcomes-grader` (plan verification, parallel)
+- Phase 2 — implementation agents (`frontend-specialist`, `general-purpose`), pre-commit hook fixers, integration fixers
+- Phase 3 — `qa-agent`, build/test fix agents, bug-fix agents, `brainstorm` (stall escalation), pre-commit hook fixers
+- Phase 4 — `live-test`, `outcomes-grader`, creation agents for unmet items, gate fix agents
+- Phase 5 — none (terminal phase, no dispatches)
+
+### Distinction from External Blocker Protocol
+
+api-retry handles **transport-layer transient errors** (recoverable in seconds via backoff — Anthropic API itself overloaded). External Blocker Protocol handles **vendor-side waits** (rate-limited account, pending review, multi-minute outages — not retryable in a backoff loop).
+
+When circuit breaker trips, the workflow exits cleanly to Phase 5 — it does NOT loop with `checkpoint:*` prompts (Autonomy Doctrine). The user reads `report.md`, waits for the API outage to clear externally, and re-invokes `/autopilot resume`.
+
+If a return body contains BOTH api-retry signals AND external-blocker signals, External Blocker Protocol wins (mark deferred, continue with other work units).
+
 ## Sub-Agent Dispatch Rules
 
 ### Prompt Construction
@@ -358,12 +460,29 @@ Updated after EVERY micro-step (phase transition, batch completion, QA iteration
   "bugs_fixed": 3,
   "brainstorm_count": 0,
   "decisions_count": 4,
+  "api_retry_exhaustions_in_phase": 0,
+  "current_dispatch_retry": null,
   "phase_results": {
     "plan": "PLAN READY — 3 files, 2 components",
     "implement": "2/2 work units done"
   }
 }
 ```
+
+When `current_dispatch_retry` is active (an Agent dispatch is mid-retry-backoff), it has shape:
+
+```json
+{
+  "wu_id": "<work unit id>",
+  "agent": "<subagent_type>",
+  "prompt_ref": "<key into a prompts dir, OR full prompt if short>",
+  "attempt": 2,
+  "last_signal": "overloaded_error",
+  "sleep_until_ts": "<ISO8601 timestamp when sleep ends>"
+}
+```
+
+Cleared back to `null` when the dispatch returns successfully or hits a non-retryable failure.
 
 ### Compaction Step (after EVERY phase)
 
@@ -381,6 +500,8 @@ Updated after EVERY micro-step (phase transition, batch completion, QA iteration
    5. If in QA loop: re-read .autopilot/bug_tracker.json
    6. If in outcomes loop (state.json.outcomes_iteration > 0): re-read .autopilot/unmet_outcomes.json
    7. If state.json.rubric_path is set: re-read .autopilot/rubric.md
+   8. If state.json.current_dispatch_retry is non-null AND sleep_until_ts is in the future: sleep the remainder, then re-dispatch the same agent + prompt_ref. If sleep_until_ts is in the past: re-dispatch immediately. After dispatch returns, clear current_dispatch_retry to null.
+   9. If state.json.api_retry_exhaustions_in_phase >= MAX_PHASE_API_EXHAUSTIONS: circuit breaker tripped — do NOT dispatch further; jump to Phase 5 with status ABORTED_API_OUTAGE.
    Then continue with Phase {next_phase_number}.
    ```
 3. **Restore** — execute the 5-step restore list above
@@ -398,7 +519,7 @@ After every compaction restore, check context usage:
 
 `/autopilot resume`:
 
-1. Read `.autopilot/state.json` → get `current_phase`, all counters (qa_iteration, outcomes_iteration, etc.)
+1. Read `.autopilot/state.json` → get `current_phase`, all counters (qa_iteration, outcomes_iteration, api_retry_exhaustions_in_phase, etc.)
 2. Read `.autopilot/plan.md` → restore plan context
 3. Read `.autopilot/bug_tracker.json` → restore recurring-bug state
 4. If `state.json.outcomes_iteration > 0`: read `.autopilot/unmet_outcomes.json` → restore per-item addressed/deferred state
@@ -406,7 +527,9 @@ After every compaction restore, check context usage:
 6. Read last 20 lines of `.autopilot/decisions.log`
 7. `git log --oneline -20` → see recent autopilot commits
 8. `git status` → verify clean tree
-9. Resume from `current_phase` at the stored iteration/batch — do NOT restart
+9. If `state.json.current_dispatch_retry` is non-null: sleep remainder of `sleep_until_ts` (or 0 if past), then re-dispatch same agent + prompt. After return, clear `current_dispatch_retry`.
+10. If a prior run exited with `ABORTED_API_OUTAGE`: reset `api_retry_exhaustions_in_phase` to 0 (assume the outage cleared since the user is re-invoking) and re-dispatch any work units marked `blocked_by_api_outage` as fresh dispatches.
+11. Resume from `current_phase` at the stored iteration/batch — do NOT restart
 
 ## Workflow
 
@@ -1092,7 +1215,7 @@ Generate `.autopilot/report.md`:
 # Autopilot Report
 
 **Task:** <summary>
-**Status:** COMPLETE | COMPLETE_WITH_ISSUES | ABORTED
+**Status:** COMPLETE | COMPLETE_WITH_ISSUES | ABORTED | ABORTED_API_OUTAGE
 
 ## Work Units
 
@@ -1149,6 +1272,16 @@ Generate `.autopilot/report.md`:
 ## Deferred Issues
 
 <MEDIUM/LOW not auto-fixed from deferred_issues.md>
+
+## API Stability
+
+(Omit if no api_retry events.)
+
+- Total retries: <N>
+- Recoveries after retry: <N>
+- Exhaustions: <N>
+- Circuit breaker: tripped / not tripped
+- Status if tripped: ABORTED_API_OUTAGE — see deferred_issues.md
 
 ## External Blockers
 
@@ -1210,6 +1343,9 @@ Task: {summary}
 
 ## Anti-Patterns (will not do)
 
+- Mark a work unit `failed` for transient API errors (overloaded_error, rate_limit_error, "529 overloaded", "503 Service Unavailable") without exhausting MAX_API_RETRIES first
+- Dispatch additional Agent calls after the per-phase circuit breaker tripped (`api_retry_exhaustions_in_phase >= MAX_PHASE_API_EXHAUSTIONS`) — exit cleanly to Phase 5 with `ABORTED_API_OUTAGE`
+- Skip persisting `current_dispatch_retry` to state.json before entering a backoff sleep — compaction can cross the sleep boundary; without persistence, the retry is lost
 - Ask the user anything during execution
 - Read or write source code in the orchestrator thread
 - Fix bugs inline — always dispatch sub-agent
