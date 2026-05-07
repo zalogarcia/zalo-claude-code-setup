@@ -4,17 +4,17 @@ Completion markers and return contract for `~/.claude/agents/`. Skills/orchestra
 
 ## Marker Registry
 
-| Agent                 | Markers                                                                              |
-| --------------------- | ------------------------------------------------------------------------------------ |
-| `frontend-specialist` | `## IMPLEMENTATION COMPLETE` / `## IMPLEMENTATION DONE_WITH_CONCERNS` / `## BLOCKED` |
-| `qa-agent`            | `## VERIFICATION PASSED` / `## ISSUES FOUND` / `## BLOCKED`                          |
-| `safe-planner`        | `## PLAN READY` / `## NEEDS DECISION` / `## BLOCKED`                                 |
-| `brainstorm`          | `## EXPLORATION COMPLETE`                                                            |
-| `live-test`           | `## UI VERIFIED` / `## UI ISSUES FOUND` / `## BLOCKED`                               |
-| `bug-fix`             | `## ROOT CAUSE FOUND` / `## INVESTIGATION INCOMPLETE` / `## BLOCKED`                 |
-| `image-craft-expert`  | `## IMAGE GENERATED` / `## GENERATION FAILED`                                        |
-| `outcomes-grader`     | `## OUTCOMES PASSED` / `## OUTCOMES UNMET` / `## BLOCKED`                            |
-| `dream-consolidator`  | `## DREAM PROPOSAL READY` / `## DREAM NO_CHANGES_NEEDED` / `## BLOCKED`              |
+| Agent                 | Markers                                                                                                                |
+| --------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `frontend-specialist` | `## IMPLEMENTATION COMPLETE` / `## IMPLEMENTATION DONE_WITH_CONCERNS` / `## BLOCKED`                                   |
+| `qa-agent`            | `## VERIFICATION PASSED` / `## ISSUES FOUND` / `## BLOCKED`                                                            |
+| `safe-planner`        | `## PLAN READY` / `## NEEDS DECISION` / `## BLOCKED`                                                                   |
+| `brainstorm`          | `## EXPLORATION COMPLETE`                                                                                              |
+| `live-test`           | `## UI VERIFIED` / `## UI ISSUES FOUND` / `## BLOCKED`                                                                 |
+| `bug-fix`             | `## ROOT CAUSE FOUND — CONFIDENCE 10/10` / `## INVESTIGATION INCOMPLETE — CONFIDENCE <N>/10` (N ∈ 1..9) / `## BLOCKED` |
+| `image-craft-expert`  | `## IMAGE GENERATED` / `## GENERATION FAILED`                                                                          |
+| `outcomes-grader`     | `## OUTCOMES PASSED` / `## OUTCOMES UNMET` / `## BLOCKED`                                                              |
+| `dream-consolidator`  | `## DREAM PROPOSAL READY` / `## DREAM NO_CHANGES_NEEDED` / `## BLOCKED`                                                |
 
 ## Marker Rules
 
@@ -22,6 +22,7 @@ Completion markers and return contract for `~/.claude/agents/`. Skills/orchestra
 2. Use ALL-CAPS to maximize regex reliability.
 3. Exactly one terminal marker per dispatch — agents that need multiple states pick the most recent applicable one.
 4. The marker line stands alone; details follow underneath.
+5. Some agents embed structured data in the marker line (e.g., `bug-fix` embeds confidence as `CONFIDENCE 10/10`). Orchestrators MUST parse the marker line via regex, not parse body text for the same data — single source of truth. Canonical separator for embedded data is the em-dash (—), not ASCII hyphen.
 
 ## Status Code Body Protocol
 

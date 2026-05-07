@@ -53,7 +53,7 @@ We just produced a plan via safe-planner. Apply your critical-thinking pass.
 ## What I want
 - Apply inversion: "what if the opposite assumption were true?"
 - Apply simplification cascade: "what would eliminate 5+ steps with one insight?"
-- Apply scale game: "would this work at 0.1x and 10x?"
+- **Apply scale game (MANDATORY when plan involves architectural components, data flow, or throughput-relevant work):** Answer specifically — at 0.1x scale, what's the bottleneck and the failure mode? At 10x scale, same. If the plan is purely cosmetic/refactor with no architectural surface, mark scale-game N/A. Otherwise, vague answers like "works fine at scale" will be flagged by Gate 2's Outcome 3.5.
 - Apply meta-pattern recognition: "have I seen this shape elsewhere — does the established pattern apply?"
 - Identify hidden assumptions, missing considerations, scope creep, premature optimization
 - Identify single points of failure, unhandled edge cases, missing rollback paths

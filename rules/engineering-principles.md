@@ -93,6 +93,22 @@ Add or refine outcomes as patterns emerge from real runs. Each outcome must be:
 - **Measure:** For each work unit involving async processing, external webhook, payment, or background job, the plan names what gets logged (event type, key identifiers, outcome) and via which logger (project's structured logger, edge function logs, Sentry, etc.). Silence on logging for these flows = FAIL.
 - **Applicable when:** plan includes async processing, external webhook, payment flow, or background job.
 
+### Outcome 3.5: Plan stress-tests architecture at 0.1x and 10x scale
+
+- **Why:** Designs that work at the current scale fail at the next scale tier — and the failure mode is usually invisible until production. Naming the bottleneck and the failure mode at design time prevents 3am fire drills.
+- **Measure:** For applicable plans (architectural component / data flow / throughput-implication work), the plan answers two questions concretely:
+  - **At 0.1x scale** (single user, low traffic): what bottleneck exists? what specific failure mode?
+  - **At 10x scale** (10x current users / requests / data volume): what bottleneck exists? what specific failure mode?
+
+  **FAIL conditions** (must be enforced — not optional):
+  - Boilerplate language like "works fine at scale", "scales well", "no concerns" — these = FAIL (any boilerplate phrasing here triggers FAIL)
+  - Generic "we'd add caching" / "we'd add a queue" without naming WHAT bottleneck and WHAT failure mode
+  - 0.1x and 10x answered with the same generic content (no real differentiation)
+
+  PASS requires: a specific component named as the bottleneck (e.g., "Postgres connection pool", "Redis memory", "single Vercel function cold-start") AND a specific user-observable failure mode (e.g., "5xx after 100 concurrent", "queue depth >1000 → 30s latency", "cold-start timeout >10s").
+
+- **Applicable when:** plan introduces architectural components (new service, queue, broker, intermediary) OR new data flow patterns (background jobs, async pipelines, batch processors) OR work with throughput implications (rate-limited APIs, paginated reads, fan-out fan-in).
+
 ---
 
 ## 4. Verifiability

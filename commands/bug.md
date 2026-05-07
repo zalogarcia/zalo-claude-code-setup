@@ -35,9 +35,39 @@ Pass:
 
 Wait for one of:
 
-- `## ROOT CAUSE FOUND` — proceed to Step 3.
-- `## INVESTIGATION INCOMPLETE` — present competing hypotheses to user, ask which lead to pursue, re-dispatch with that lead.
+- `## ROOT CAUSE FOUND — CONFIDENCE 10/10` — proceed to Step 2.5.
+- `## INVESTIGATION INCOMPLETE — CONFIDENCE <N>/10` (N ∈ 1..9) — proceed to Step 2.5 for routing.
 - `## BLOCKED` — investigate the block (missing access, can't repro, etc.) and provide the missing context.
+
+### Step 2.5: Confidence Verification (orchestrator gate)
+
+After `bug-fix` returns, parse the H2 marker line via regex (single source of truth — do NOT parse body text for confidence values). The canonical separator emitted by `bug-fix` is the em-dash (—); the parser below also accepts an ASCII hyphen (-) as defensive coding in case the agent emits a hyphen by mistake. **Em-dash is the canonical form; hyphen-tolerance is defensive, not endorsed.**
+
+```bash
+# Capture the agent's last H2 marker line (defensive: accepts em-dash OR ASCII hyphen)
+marker_line=$(grep -oE '^## (ROOT CAUSE FOUND|INVESTIGATION INCOMPLETE|BLOCKED).*$' "$agent_return_file" | tail -1)
+
+# Strict canonical match (em-dash, confidence-suffixed):
+#   ^## (ROOT CAUSE FOUND|INVESTIGATION INCOMPLETE) — CONFIDENCE [0-9]+/10\s*$
+# Defensive variant (accepts em-dash OR ASCII hyphen):
+#   ^## (ROOT CAUSE FOUND|INVESTIGATION INCOMPLETE)( —| -) CONFIDENCE [0-9]+/10\s*$
+```
+
+**Routing by parsed marker (confidence value extracted from the marker line itself):**
+
+- `^## ROOT CAUSE FOUND( —| -) CONFIDENCE 10/10\s*$` → proceed to Step 3 ONLY if the body contains a `### Confidence Block` section with all four subsections (Reproducibility Class, Evidence, Test-the-theory, Confidence rationale). If the block is missing or incomplete → re-dispatch ONCE with a surgical reminder prompt (do NOT re-walk the 4 phases):
+
+  > "Your previous return emitted `## ROOT CAUSE FOUND — CONFIDENCE 10/10` but the required Confidence Block was missing or incomplete. Re-emit with the full block per the Confidence Gate. If you cannot reach 10/10 with Test-the-theory evidence captured in this turn, emit `## INVESTIGATION INCOMPLETE — CONFIDENCE <N>/10` instead."
+
+  If the second dispatch still fails the gate → present the agent's competing hypotheses to the user and ask which lead to pursue. Do NOT proceed to Step 3 with sub-10/10 confidence.
+
+- `^## INVESTIGATION INCOMPLETE( —| -) CONFIDENCE [1-9]/10\s*$` → present the agent's competing hypotheses to the user and ask which lead to pursue. Do NOT auto-fix. Do NOT proceed to Step 3.
+
+- `^## BLOCKED\s*$` → present the blocker to the user.
+
+- Marker missing or malformed (no match) → re-dispatch ONCE with a surgical reminder prompt asking the agent to emit the canonical confidence-suffixed marker line. Do NOT re-walk the 4 phases.
+
+If marker matches `## ROOT CAUSE FOUND — CONFIDENCE 10/10` and Confidence Block validates → proceed to Step 3.
 
 ### Step 3: 3+ Fixes Rule (Architecture Gate)
 
