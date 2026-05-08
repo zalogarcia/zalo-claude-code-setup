@@ -25,10 +25,27 @@ if [ -n "$REPO_DIR" ] && [ -d "$GRAPHRAG_DIR" ]; then
     fi
 
     STORAGE_NAME="storage_$(basename "$REPO_DIR")"
+
+    # Skip if an indexer for this storage is already running — prevents pile-up
+    # when commits land faster than indexing finishes.
+    if pgrep -f "cli_create\.py .* ${STORAGE_NAME}\$" >/dev/null 2>&1; then
+        echo "$(date '+%Y-%m-%dT%H:%M:%S') skipping ${STORAGE_NAME}: indexer already running" >> /tmp/repo-graphrag.log
+        exit 0
+    fi
+
+    # Watchdog: kill the indexer if it runs longer than INDEXER_TIMEOUT seconds.
+    # Without this, a hung indexer would hold the lock above forever.
+    INDEXER_TIMEOUT=1800
     (
         cd "$GRAPHRAG_DIR"
         # OMP_NUM_THREADS=1 prevents pthread_mutex_init crash on macOS
-        OMP_NUM_THREADS=1 uv run python cli_create.py "$REPO_DIR" "$STORAGE_NAME" >> /tmp/repo-graphrag.log 2>&1 || true
+        # PYTHONDONTWRITEBYTECODE suppresses .pyc noise
+        OMP_NUM_THREADS=1 uv run python cli_create.py "$REPO_DIR" "$STORAGE_NAME" >> /tmp/repo-graphrag.log 2>&1 &
+        indexer_pid=$!
+        ( sleep "$INDEXER_TIMEOUT" && kill -9 "$indexer_pid" 2>/dev/null && echo "$(date '+%Y-%m-%dT%H:%M:%S') TIMEOUT: killed ${STORAGE_NAME} indexer pid=$indexer_pid after ${INDEXER_TIMEOUT}s" >> /tmp/repo-graphrag.log ) &
+        watchdog_pid=$!
+        wait "$indexer_pid" 2>/dev/null
+        kill "$watchdog_pid" 2>/dev/null
     ) &
 fi
 
