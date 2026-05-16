@@ -26,19 +26,6 @@ const AGENT_NAMES = new Set([
 // Hand-authored canonical flows for the primary orchestrator commands.
 // Steps reference node IDs that must exist in data.json (validated below).
 const CANONICAL_FLOWS = {
-  'command.ship': {
-    label: '/ship — Full Feature Delivery',
-    description: 'Plan → Implement → Verify → Audit → Human push-gate',
-    steps: [
-      { node: 'command.ship', caption: 'User invokes /ship with a feature description' },
-      { node: 'rule.questioning', caption: 'Orchestrator consults questioning.md to sharpen scope', via: 'include' },
-      { node: 'agent.safe-planner', caption: 'Dispatch safe-planner for a rollback-ready plan', via: 'dispatch', marker: '## PLAN READY' },
-      { node: 'agent.frontend-specialist', caption: 'Dispatch frontend-specialist to implement', via: 'dispatch', marker: '## IMPLEMENTATION COMPLETE' },
-      { node: 'agent.live-test', caption: 'live-test verifies UI in browser', via: 'dispatch', marker: '## UI VERIFIED' },
-      { node: 'agent.qa-agent', caption: 'qa-agent audits for real bugs', via: 'dispatch', marker: '## VERIFICATION PASSED' },
-      { node: 'rule.checkpoints', caption: 'Emit human push-gate checkpoint — nothing ships until approval', via: 'include' },
-    ],
-  },
   'command.autopilot': {
     label: '/autopilot — Autonomous Multi-Phase Orchestrator',
     description: 'Plan → Implement → QA → Commit, end-to-end with API retry + circuit breaker',
@@ -555,7 +542,7 @@ function main() {
     mcp: graph.nodes.filter((n) => n.kind === 'mcp').length,
     skill: graph.nodes.filter((n) => n.kind === 'skill').length,
   };
-  const minimums = { agent: 7, rule: 11, command: 15, hook: 6, mcp: 8, skill: 7 };
+  const minimums = { agent: 7, rule: 11, command: 13, hook: 2, mcp: 8, skill: 7 };
   const failures = [];
   for (const [k, min] of Object.entries(minimums)) {
     if (counts[k] < min) failures.push(`${k}: ${counts[k]} < ${min}`);

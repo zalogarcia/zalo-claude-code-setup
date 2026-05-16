@@ -1,49 +1,4 @@
 {
-  "command.ship": {
-    "label": "/ship — Full Feature Delivery",
-    "description": "Plan → Implement → Verify → Audit → Human push-gate",
-    "steps": [
-      {
-        "node": "command.ship",
-        "caption": "User invokes /ship with a feature description"
-      },
-      {
-        "node": "rule.questioning",
-        "caption": "Orchestrator consults questioning.md to sharpen scope",
-        "via": "include"
-      },
-      {
-        "node": "agent.safe-planner",
-        "caption": "Dispatch safe-planner for a rollback-ready plan",
-        "via": "dispatch",
-        "marker": "## PLAN READY"
-      },
-      {
-        "node": "agent.frontend-specialist",
-        "caption": "Dispatch frontend-specialist to implement",
-        "via": "dispatch",
-        "marker": "## IMPLEMENTATION COMPLETE"
-      },
-      {
-        "node": "agent.live-test",
-        "caption": "live-test verifies UI in browser",
-        "via": "dispatch",
-        "marker": "## UI VERIFIED"
-      },
-      {
-        "node": "agent.qa-agent",
-        "caption": "qa-agent audits for real bugs",
-        "via": "dispatch",
-        "marker": "## VERIFICATION PASSED"
-      },
-      {
-        "node": "rule.checkpoints",
-        "caption": "Emit human push-gate checkpoint — nothing ships until approval",
-        "via": "include"
-      }
-    ],
-    "canonical": true
-  },
   "command.autopilot": {
     "label": "/autopilot — Autonomous Multi-Phase Orchestrator",
     "description": "Plan → Implement → QA → Commit, end-to-end with API retry + circuit breaker",
@@ -335,21 +290,6 @@
       },
       {
         "node": "command.optimize-video",
-        "caption": "Standalone skill/utility — no subagent dispatch in the core path"
-      }
-    ],
-    "canonical": false
-  },
-  "command.split-screen-video": {
-    "label": "/split-screen-video — Create a polished split-screen video from raw talking-head footage. Top half = B",
-    "description": "Create a polished split-screen video from raw talking-head footage. Top half = B-roll images with annotations, bottom half = zoomed presenter. Includes yellow subtitle bars, enhanced audio, and 1.2x speed.",
-    "steps": [
-      {
-        "node": "command.split-screen-video",
-        "caption": "User invokes /split-screen-video"
-      },
-      {
-        "node": "command.split-screen-video",
         "caption": "Standalone skill/utility — no subagent dispatch in the core path"
       }
     ],

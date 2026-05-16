@@ -11,10 +11,10 @@ Edit this file freely — the `session-start.sh` hook reads it fresh each time.
 
 **Slash commands** — workflow orchestrators (thin; they `@`-include rules + dispatch agents).
 
-- Core delivery: `/autopilot`, `/bug`, `/qa-loop`, `/ship`
+- Core delivery: `/autopilot`, `/bug`, `/qa-loop`
 - Thinking: `/brainstorm`, `/plan`
 - Frontend (opt-in): `/redesign`
-- Media + integrations: `/nano-banana`, `/transcribe`, `/view-video`, `/optimize-video`, `/split-screen-video`, `/enhance-audio`, `/ghl-upload`, `/graph`
+- Media + integrations: `/nano-banana`, `/transcribe`, `/view-video`, `/optimize-video`, `/enhance-audio`, `/ghl-upload`, `/graph`
 
 **Skills** — compound tools.
 

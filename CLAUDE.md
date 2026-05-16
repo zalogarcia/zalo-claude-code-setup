@@ -42,7 +42,6 @@ When starting work on a new project, or when the user asks to initialize/set up 
 - `/qa-loop` — Iterative audit-and-fix loop
 - `/plan` — Plan with brainstorm + principles verification
 - `/brainstorm` — Deep thinking, challenge assumptions
-- `/ship` — Full feature delivery: plan → implement → QA loop → wait for push approval
 
 ## Git & Deployment (IMPORTANT)
 
@@ -96,7 +95,7 @@ Always verify your work. This is the single highest-leverage practice. Apply the
 - **Before marking any feature or fix complete**, invoke the `typecheck-and-build` skill — it standardizes the tsc+build chain with smart failure-region extraction. Do not roll your own `npm run build 2>&1 | tail -N` invocation; the skill picks the right tail and reports exit codes consistently.
 - For commits, invoke the `commit-with-heredoc` skill — it encodes the correct `$(cat <<'EOF' … EOF)` quoting and the Co-Authored-By trailer.
 - For dev-server restarts (after env changes, before live-test, or when the server is stuck), invoke the `dev-server-restart` skill — it kills by port, restarts with nohup, polls for readiness, and smoke-tests a route. Do not hand-write the `pkill && sleep && curl` chain.
-- **3+ file edits → mandatory `/qa-loop`.** Any turn that touches 3 or more files MUST run `/qa-loop` before claiming done. This is the iterative loop: `qa-agent` audits → fix bugs → re-audit → repeat until clean or cap hit. A single build/typecheck is NOT sufficient — `/qa-loop` catches integration bugs, wiring issues, and logic errors that static checks miss. "Small changes across many files" is not an exception — scope is measured in files touched, not lines changed. If already inside `/ship`, `/autopilot`, or `/bug` (which have their own QA phases), that satisfies this rule.
+- **3+ file edits → mandatory `/qa-loop`.** Any turn that touches 3 or more files MUST run `/qa-loop` before claiming done. This is the iterative loop: `qa-agent` audits → fix bugs → re-audit → repeat until clean or cap hit. A single build/typecheck is NOT sufficient — `/qa-loop` catches integration bugs, wiring issues, and logic errors that static checks miss. "Small changes across many files" is not an exception — scope is measured in files touched, not lines changed. If already inside `/autopilot` or `/bug` (which have their own QA phases), that satisfies this rule.
 - **Kill stale background processes** before starting new dev servers or builds (`pkill -f 'next dev' || true`)
 - For "did I really build it?" doubt, apply `~/.claude/rules/verification-patterns.md` — Existence ≠ Implementation; use the stub-detect greps.
 

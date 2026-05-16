@@ -2,7 +2,7 @@
 
 Standalone planning command. Dispatches `safe-planner`, then runs the Plan Verification Loop (brainstorm critique + principles grader) before returning the final plan.
 
-Use this when you want a high-quality plan but **don't** want the full `/ship` or `/autopilot` execution pipeline — e.g., scoping a feature for a future session, getting a second opinion on an approach, or producing a plan to hand off.
+Use this when you want a high-quality plan but **don't** want the full `/autopilot` execution pipeline — e.g., scoping a feature for a future session, getting a second opinion on an approach, or producing a plan to hand off.
 
 For trivial single-file edits, skip /plan and just write the change. The verification overhead isn't worth it for plans with ≤2 work units (the loop's skip heuristic catches this anyway, but you can save the safe-planner dispatch by going inline).
 
@@ -154,12 +154,11 @@ Summary:
 
 Next steps:
   - Review the full plan: cat .claude/.plan/plan.md
-  - To execute, copy the task description (not the plan) and run /autopilot <task>
-    or /ship <task>. They will produce their own plan from the task — but since
-    they include the same Plan Verification Loop, the result will converge with
-    what /plan produced here.
+  - To execute, copy the task description (not the plan) and run /autopilot <task>.
+    It will produce its own plan from the task — but since it includes the same
+    Plan Verification Loop, the result will converge with what /plan produced here.
   - The plan in .claude/.plan/plan.md is for your review/handoff/reference.
-    It is NOT auto-consumed by /autopilot or /ship.
+    It is NOT auto-consumed by /autopilot.
 ```
 
 ## Anti-Patterns (will not do)
@@ -169,4 +168,4 @@ Next steps:
 - Run gates 1 and 2 sequentially when they can run in parallel
 - Use AskUserQuestion or any checkpoint type — /plan is autonomous within a single conversation
 - Write to autopilot's `.autopilot/` directory — /plan uses its own `.claude/.plan/` workspace
-- Auto-execute the plan after producing it — /plan stops at the plan, leaves execution to the user / `/ship` / `/autopilot`
+- Auto-execute the plan after producing it — /plan stops at the plan, leaves execution to the user / `/autopilot`

@@ -1,6 +1,6 @@
 {
   "meta": {
-    "generatedAt": "2026-05-16T03:03:52.423Z",
+    "generatedAt": "2026-05-16T03:43:03.387Z",
     "repo": "zalo-claude-code-setup"
   },
   "nodes": [
@@ -284,37 +284,6 @@
         "agent.frontend-specialist",
         "agent.image-craft-expert"
       ]
-    },
-    {
-      "id": "command.ship",
-      "kind": "command",
-      "label": "/ship",
-      "path": "commands/ship.md",
-      "summary": "Plan → implement → QA → wait for explicit push approval. The orchestrator owns sequencing; subagents do the work.",
-      "includes": [
-        "rule.agent-contracts",
-        "rule.gates",
-        "rule.anti-patterns",
-        "rule.checkpoints",
-        "rule.plan-verification",
-        "rule.engineering-principles"
-      ],
-      "dispatches": [
-        "agent.safe-planner",
-        "agent.brainstorm",
-        "agent.frontend-specialist",
-        "agent.live-test",
-        "agent.qa-agent"
-      ]
-    },
-    {
-      "id": "command.split-screen-video",
-      "kind": "command",
-      "label": "/split-screen-video",
-      "path": "commands/split-screen-video.md",
-      "summary": "Create a polished split-screen video from raw talking-head footage. Top half = B-roll images with annotations, bottom half = zoomed presenter. Includes yellow subtitle bars, enhanced audio, and 1.2x speed.",
-      "includes": [],
-      "dispatches": []
     },
     {
       "id": "command.transcribe",
@@ -989,71 +958,6 @@
     {
       "source": "meta.orchestrator",
       "target": "command.redesign",
-      "type": "routes"
-    },
-    {
-      "source": "command.ship",
-      "target": "rule.agent-contracts",
-      "type": "include"
-    },
-    {
-      "source": "command.ship",
-      "target": "rule.gates",
-      "type": "include"
-    },
-    {
-      "source": "command.ship",
-      "target": "rule.anti-patterns",
-      "type": "include"
-    },
-    {
-      "source": "command.ship",
-      "target": "rule.checkpoints",
-      "type": "include"
-    },
-    {
-      "source": "command.ship",
-      "target": "rule.plan-verification",
-      "type": "include"
-    },
-    {
-      "source": "command.ship",
-      "target": "rule.engineering-principles",
-      "type": "include"
-    },
-    {
-      "source": "command.ship",
-      "target": "agent.safe-planner",
-      "type": "dispatch"
-    },
-    {
-      "source": "command.ship",
-      "target": "agent.brainstorm",
-      "type": "dispatch"
-    },
-    {
-      "source": "command.ship",
-      "target": "agent.frontend-specialist",
-      "type": "dispatch"
-    },
-    {
-      "source": "command.ship",
-      "target": "agent.live-test",
-      "type": "dispatch"
-    },
-    {
-      "source": "command.ship",
-      "target": "agent.qa-agent",
-      "type": "dispatch"
-    },
-    {
-      "source": "meta.orchestrator",
-      "target": "command.ship",
-      "type": "routes"
-    },
-    {
-      "source": "meta.orchestrator",
-      "target": "command.split-screen-video",
       "type": "routes"
     },
     {

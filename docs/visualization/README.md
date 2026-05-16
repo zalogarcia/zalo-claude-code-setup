@@ -22,7 +22,7 @@ node docs/visualization/generate-data.mjs
 node docs/visualization/generate-data.mjs --inline
 ```
 
-Acceptance checks fail the script with exit code 1 if the tree looks unexpectedly thin (≥ 7 agents, ≥ 11 rules, ≥ 15 commands, ≥ 6 hooks, 8 MCP, ≥ 7 skills, all edges reference real nodes).
+Acceptance checks fail the script with exit code 1 if the tree looks unexpectedly thin (≥ 7 agents, ≥ 11 rules, ≥ 13 commands, ≥ 2 hooks, 8 MCP, ≥ 7 skills, all edges reference real nodes).
 
 ## Local dev
 

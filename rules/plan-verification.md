@@ -7,7 +7,6 @@ After `safe-planner` emits `## PLAN READY`, run two verification gates **before*
 Any orchestrator that dispatches `safe-planner` and receives `## PLAN READY` MUST run this loop before proceeding to implementation. This includes:
 
 - `/autopilot` Phase 1
-- `/ship` (when the conditional safe-planner path is taken)
 - `/plan` (standalone)
 - Any future command that dispatches `safe-planner`
 
@@ -15,11 +14,10 @@ Any orchestrator that dispatches `safe-planner` and receives `## PLAN READY` MUS
 
 Each consumer has its own workspace for plans and verification artifacts:
 
-| Orchestrator | Plan path                      | Verification findings path           |
-| ------------ | ------------------------------ | ------------------------------------ |
-| `/autopilot` | `.autopilot/plan.md`           | `.autopilot/plan_verification.md`    |
-| `/plan`      | `.claude/.plan/plan.md`        | `.claude/.plan/plan_verification.md` |
-| `/ship`      | conversation context (no file) | inline (no file; surface in report)  |
+| Orchestrator | Plan path               | Verification findings path           |
+| ------------ | ----------------------- | ------------------------------------ |
+| `/autopilot` | `.autopilot/plan.md`    | `.autopilot/plan_verification.md`    |
+| `/plan`      | `.claude/.plan/plan.md` | `.claude/.plan/plan_verification.md` |
 
 Below, `{plan_path}` refers to the consumer's stored plan location (or "the plan content verbatim" when the consumer keeps the plan inline). `{findings_path}` refers to its verification findings file (or inline). Substitute when applying.
 
@@ -96,7 +94,7 @@ Wait for marker.
 
 ### Combined revision pass
 
-After both gates return, the **orchestrator** (not the agents) writes a combined `{findings_path}` (when applicable — `/ship` keeps it inline) containing:
+After both gates return, the **orchestrator** (not the agents) writes a combined `{findings_path}` containing:
 
 ```markdown
 # Plan Verification Findings — <timestamp>

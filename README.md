@@ -12,7 +12,7 @@ Custom agents, skills, commands, MCP servers, auto-formatting hooks, agentic RAG
 
 ## Interactive Architecture
 
-See how the pieces fit together: 7 agents, 11 shared rules, 15 commands, 7 skills, hooks, MCP servers — plus animated request flows (`/autopilot`, `/bug`, `/qa-loop`, `/ship`, `/redesign`, `/brainstorm`, `/plan` and more).
+See how the pieces fit together: 7 agents, 11 shared rules, 13 commands, 8 skills, hooks, MCP servers — plus animated request flows (`/autopilot`, `/bug`, `/qa-loop`, `/redesign`, `/brainstorm`, `/plan` and more).
 
 **→ [Open the interactive visualization](https://zalogarcia.github.io/zalo-claude-code-setup/visualization/)**
 
@@ -162,29 +162,27 @@ Close and reopen Claude Code to pick up all changes.
 | **image-craft-expert**  | Crafts optimized prompts and generates images on both Gemini Pro (nano-banana) and ChatGPT (gpt-image-1.5) in parallel.                                                                     |
 | **brainstorm**          | Deep-thinking agent that challenges assumptions, eliminates complexity, and stress-tests plans using first principles, Elon Musk's 5-step philosophy, inversion, and second-order thinking. |
 
-### Commands (15)
+### Commands (13)
 
 Slash commands for workflow automation. Invoke with `/<command-name>`.
 
-| Command                | What It Does                                                                                           |
-| ---------------------- | ------------------------------------------------------------------------------------------------------ |
-| **autopilot**          | Autonomous multi-phase orchestrator: plan → implement → QA → commit                                    |
-| **bug**                | Bug-fix workflow: trace, diagnose, fix, validate                                                       |
-| **qa-loop**            | Iterative audit-and-fix loop — finds and fixes bugs until the codebase is clean                        |
-| **ship**               | Full feature delivery: plan → implement → QA loop → wait for push approval                             |
-| **plan**               | Plan something with brainstorm + principles verification                                               |
-| **brainstorm**         | Deep-analyze a problem, plan, or decision with first principles, inversion, and structured elimination |
-| **redesign**           | UI redesign workflow (opt-in): brainstorm, mockup generation, implement, visual verification           |
-| **enhance-audio**      | Audio enhancement using FFmpeg filters (noise removal, normalization)                                  |
-| **ghl-upload**         | Upload media to GoHighLevel                                                                            |
-| **graph**              | Build or rebuild the repo-graphrag knowledge graph for the current project                             |
-| **nano-banana**        | AI image generation with Gemini (multi-resolution, style transfer, green screen)                       |
-| **optimize-video**     | Video optimization and upload to Supabase Storage                                                      |
-| **split-screen-video** | Create split-screen video from talking-head footage with B-roll and subtitles                          |
-| **transcribe**         | Audio/video transcription using OpenAI Whisper (99 languages)                                          |
-| **view-video**         | Extract frames from video for visual analysis                                                          |
+| Command            | What It Does                                                                                           |
+| ------------------ | ------------------------------------------------------------------------------------------------------ |
+| **autopilot**      | Autonomous multi-phase orchestrator: plan → implement → QA → commit                                    |
+| **bug**            | Bug-fix workflow: trace, diagnose, fix, validate                                                       |
+| **qa-loop**        | Iterative audit-and-fix loop — finds and fixes bugs until the codebase is clean                        |
+| **plan**           | Plan something with brainstorm + principles verification                                               |
+| **brainstorm**     | Deep-analyze a problem, plan, or decision with first principles, inversion, and structured elimination |
+| **redesign**       | UI redesign workflow (opt-in): brainstorm, mockup generation, implement, visual verification           |
+| **enhance-audio**  | Audio enhancement using FFmpeg filters (noise removal, normalization)                                  |
+| **ghl-upload**     | Upload media to GoHighLevel                                                                            |
+| **graph**          | Build or rebuild the repo-graphrag knowledge graph for the current project                             |
+| **nano-banana**    | AI image generation with Gemini (multi-resolution, style transfer, green screen)                       |
+| **optimize-video** | Video optimization and upload to Supabase Storage                                                      |
+| **transcribe**     | Audio/video transcription using OpenAI Whisper (99 languages)                                          |
+| **view-video**     | Extract frames from video for visual analysis                                                          |
 
-### Skills (7)
+### Skills (8)
 
 | Skill                   | What It Does                                                                                                                               |
 | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -193,6 +191,7 @@ Slash commands for workflow automation. Invoke with `/<command-name>`.
 | **dev-server-restart**  | Shell script that kills any stale dev server on a port, restarts via `nohup`, polls for readiness, smoke-tests a route.                    |
 | **ui-ux-pro-max**       | Searchable design database: 50 UI styles, 21 color palettes, 50 font pairings, 20 chart types, 8 tech stacks. (Opt-in via frontend chain.) |
 | **frontend-design**     | Anti-slop aesthetic guidelines. Bold design direction, distinctive typography, no generic AI look. (Opt-in via frontend chain.)            |
+| **create-skill**        | Author a new Claude Code skill following the established pattern — decision tree, form factor, template, registration.                     |
 | **cf-crawl**            | Scrape websites via Cloudflare Browser Rendering API. Single page (sync) or multi-page crawl (async).                                      |
 | **telegram**            | Send messages, files, and images to Telegram via Bot API.                                                                                  |
 
@@ -306,19 +305,6 @@ Every time Claude edits a file, it's automatically formatted before you see it:
 | `.ts` `.tsx` `.js` `.jsx` `.css` `.json` `.md` `.html` | **Prettier**                 | `npm install -g prettier` |
 | `.py`                                                  | **Ruff** (format + lint fix) | `pip install ruff`        |
 
-### Vibe Island Integration
-
-Full lifecycle monitoring via hooks — bridges every major event to the Vibe Island notification/telemetry system:
-
-- Session start/end
-- Tool use (pre/post)
-- Permission requests
-- Subagent start/stop
-- Compaction events
-- User prompt submission
-- Stop events
-- Status line display
-
 ### Global CLAUDE.md
 
 Behavioral rules that make Claude Code significantly more effective:
@@ -411,7 +397,6 @@ If a recommended tool is missing, the relevant hook or MCP will silently skip �
 │   ├── autopilot.md                  # Autonomous multi-phase orchestrator
 │   ├── bug.md                        # Bug trace + diagnose + fix + validate
 │   ├── qa-loop.md                    # Iterative audit-and-fix loop
-│   ├── ship.md                       # Full feature delivery
 │   ├── plan.md                       # Plan with brainstorm + principles verification
 │   ├── brainstorm.md                 # Deep-analyze problems and plans
 │   ├── redesign.md                   # UI redesign workflow (opt-in)
@@ -419,14 +404,9 @@ If a recommended tool is missing, the relevant hook or MCP will silently skip �
 │   ├── ghl-upload.md                 # GHL media upload
 │   ├── nano-banana.md                # Image generation
 │   ├── optimize-video.md             # Video optimization
-│   ├── split-screen-video.md         # Split-screen video
 │   ├── transcribe.md                 # Audio transcription
 │   ├── view-video.md                 # Video frame extraction
-│   ├── graph.md                      # Build/rebuild code knowledge graph
-│   └── split-screen-video-scripts/   # Video processing scripts
-│       ├── build_video.sh
-│       ├── annotate_broll.py
-│       └── generate_subtitles.py
+│   └── graph.md                      # Build/rebuild code knowledge graph
 ├── skills/
 │   ├── typecheck-and-build/
 │   │   └── SKILL.md                  # tsc + build with smart failure-region extraction
@@ -439,12 +419,14 @@ If a recommended tool is missing, the relevant hook or MCP will silently skip �
 │   │   └── SKILL.md                  # Design database
 │   ├── frontend-design/
 │   │   └── SKILL.md                  # Anti-slop aesthetics
+│   ├── create-skill/
+│   │   └── SKILL.md                  # Meta-skill: author new skills with the established pattern
 │   ├── cf-crawl/
 │   │   └── SKILL.md                  # Web scraper
 │   └── telegram/
 │       └── SKILL.md                  # Telegram notifications
 ├── hooks/
-│   ├── settings.json                 # Hooks + Vibe Island integration
+│   ├── settings.json                 # Hook configuration (formatters, gitleaks, session-start)
 │   ├── continue-if-incomplete.py     # Stop hook: nudge Claude if it halts mid-task
 │   ├── reset-stop-counter.sh         # UserPromptSubmit hook: reset nudge counter
 │   ├── session-start.sh              # SessionStart hook: inject META_RULE.md
