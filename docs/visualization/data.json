@@ -1,6 +1,6 @@
 {
   "meta": {
-    "generatedAt": "2026-05-16T03:48:17.492Z",
+    "generatedAt": "2026-05-16T04:24:36.943Z",
     "repo": "zalo-claude-code-setup"
   },
   "nodes": [
@@ -519,24 +519,6 @@
       "transport": "stdio"
     },
     {
-      "id": "hook.Notification.0",
-      "kind": "hook",
-      "label": "Notification",
-      "event": "Notification",
-      "matcher": "*",
-      "path": "hooks/settings.json",
-      "summary": "/Users/zalo/.vibe-island/bin/vibe-island-bridge --source claude"
-    },
-    {
-      "id": "hook.PermissionRequest.0",
-      "kind": "hook",
-      "label": "PermissionRequest",
-      "event": "PermissionRequest",
-      "matcher": "*",
-      "path": "hooks/settings.json",
-      "summary": "/Users/zalo/.vibe-island/bin/vibe-island-bridge --source claude"
-    },
-    {
       "id": "hook.PostToolUse.0",
       "kind": "hook",
       "label": "PostToolUse [Edit|Write|MultiEdit]",
@@ -555,34 +537,7 @@
       "summary": "FILE=$(cat | jq -r '.tool_input.file_path // empty'); if [ -n \"$FILE\" ] && echo \"$FILE\" | grep -qE '\\.py$'; then which ruff >/dev/null 2>&1 && ruff format \"$FILE\" 2>/dev/null && ruff check --fix \"$FILE\" 2>/dev/null; fi"
     },
     {
-      "id": "hook.PostToolUse.2",
-      "kind": "hook",
-      "label": "PostToolUse",
-      "event": "PostToolUse",
-      "matcher": "*",
-      "path": "hooks/settings.json",
-      "summary": "/Users/zalo/.vibe-island/bin/vibe-island-bridge --source claude"
-    },
-    {
-      "id": "hook.PreCompact.0",
-      "kind": "hook",
-      "label": "PreCompact",
-      "event": "PreCompact",
-      "matcher": "*",
-      "path": "hooks/settings.json",
-      "summary": "/Users/zalo/.vibe-island/bin/vibe-island-bridge --source claude"
-    },
-    {
       "id": "hook.PreToolUse.0",
-      "kind": "hook",
-      "label": "PreToolUse",
-      "event": "PreToolUse",
-      "matcher": "*",
-      "path": "hooks/settings.json",
-      "summary": "/Users/zalo/.vibe-island/bin/vibe-island-bridge --source claude"
-    },
-    {
-      "id": "hook.PreToolUse.1",
       "kind": "hook",
       "label": "PreToolUse [Bash]",
       "event": "PreToolUse",
@@ -591,22 +546,13 @@
       "summary": "python3 /Users/zalo/.claude/hooks/gitleaks-guard.py"
     },
     {
-      "id": "hook.SessionEnd.0",
-      "kind": "hook",
-      "label": "SessionEnd",
-      "event": "SessionEnd",
-      "matcher": "*",
-      "path": "hooks/settings.json",
-      "summary": "/Users/zalo/.vibe-island/bin/vibe-island-bridge --source claude"
-    },
-    {
       "id": "hook.SessionStart.0",
       "kind": "hook",
       "label": "SessionStart",
       "event": "SessionStart",
       "matcher": "*",
       "path": "hooks/settings.json",
-      "summary": "/Users/zalo/.vibe-island/bin/vibe-island-bridge --source claude"
+      "summary": "/Users/zalo/.claude/hooks/session-start.sh"
     },
     {
       "id": "hook.Stop.0",
@@ -615,25 +561,7 @@
       "event": "Stop",
       "matcher": "*",
       "path": "hooks/settings.json",
-      "summary": "/Users/zalo/.vibe-island/bin/vibe-island-bridge --source claude"
-    },
-    {
-      "id": "hook.SubagentStart.0",
-      "kind": "hook",
-      "label": "SubagentStart",
-      "event": "SubagentStart",
-      "matcher": "*",
-      "path": "hooks/settings.json",
-      "summary": "/Users/zalo/.vibe-island/bin/vibe-island-bridge --source claude"
-    },
-    {
-      "id": "hook.SubagentStop.0",
-      "kind": "hook",
-      "label": "SubagentStop",
-      "event": "SubagentStop",
-      "matcher": "*",
-      "path": "hooks/settings.json",
-      "summary": "/Users/zalo/.vibe-island/bin/vibe-island-bridge --source claude"
+      "summary": "python3 /Users/zalo/.claude/hooks/continue-if-incomplete.py"
     },
     {
       "id": "hook.UserPromptSubmit.0",
@@ -642,7 +570,7 @@
       "event": "UserPromptSubmit",
       "matcher": "*",
       "path": "hooks/settings.json",
-      "summary": "/Users/zalo/.vibe-island/bin/vibe-island-bridge --source claude"
+      "summary": "/Users/zalo/.claude/hooks/reset-stop-counter.sh"
     }
   ],
   "edges": [
