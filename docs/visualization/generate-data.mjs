@@ -39,15 +39,17 @@ const CANONICAL_FLOWS = {
       { node: 'rule.checkpoints', caption: 'Emit human push-gate checkpoint — nothing ships until approval', via: 'include' },
     ],
   },
-  'command.tdd': {
-    label: '/tdd — Test-Driven Development',
-    description: 'Red → Green → Refactor, with the Iron Law of "test first"',
+  'command.autopilot': {
+    label: '/autopilot — Autonomous Multi-Phase Orchestrator',
+    description: 'Plan → Implement → QA → Commit, end-to-end with API retry + circuit breaker',
     steps: [
-      { node: 'command.tdd', caption: 'User invokes /tdd for a new behavior' },
-      { node: 'rule.gates', caption: '@-includes gates.md (Iron Law: no code before a failing test)', via: 'include' },
-      { node: 'agent.safe-planner', caption: 'Plan the test surface and rollback', via: 'dispatch', marker: '## PLAN READY' },
-      { node: 'agent.frontend-specialist', caption: 'Write failing test → minimal impl → refactor', via: 'dispatch', marker: '## IMPLEMENTATION COMPLETE' },
-      { node: 'agent.qa-agent', caption: 'qa-agent confirms coverage and no regressions', via: 'dispatch', marker: '## VERIFICATION PASSED' },
+      { node: 'command.autopilot', caption: 'User invokes /autopilot with a task description' },
+      { node: 'agent.safe-planner', caption: 'Phase 1: dispatch safe-planner for work-unit plan', via: 'dispatch', marker: '## PLAN READY' },
+      { node: 'agent.brainstorm', caption: 'Plan verification gate: brainstorm-vet critique', via: 'dispatch', marker: '## EXPLORATION COMPLETE' },
+      { node: 'agent.outcomes-grader', caption: 'Plan verification gate: rubric grading', via: 'dispatch', marker: '## OUTCOMES PASSED' },
+      { node: 'agent.frontend-specialist', caption: 'Phase 2: implementation work units in parallel where safe', via: 'dispatch', marker: '## IMPLEMENTATION COMPLETE' },
+      { node: 'agent.qa-agent', caption: 'Phase 3: QA loop — audit + fix until clean', via: 'dispatch', marker: '## VERIFICATION PASSED' },
+      { node: 'rule.checkpoints', caption: 'Final commit phase + human push-gate', via: 'include' },
     ],
   },
   'command.bug': {
@@ -72,15 +74,15 @@ const CANONICAL_FLOWS = {
       { node: 'rule.gates', caption: 'Revision gate: loop or escalate per gates.md', via: 'include' },
     ],
   },
-  'command.deploy-validate': {
-    label: '/deploy-validate — Self-Healing Deployment',
-    description: 'Pre-deploy QA → deploy → smoke test → human prod approval',
+  'command.plan': {
+    label: '/plan — Plan with Brainstorm + Principles Verification',
+    description: 'safe-planner → brainstorm critique → rubric grading → revision loop',
     steps: [
-      { node: 'command.deploy-validate', caption: 'User runs /deploy-validate' },
-      { node: 'agent.qa-agent', caption: 'Pre-deploy audit', via: 'dispatch', marker: '## VERIFICATION PASSED' },
-      { node: 'rule.checkpoints', caption: 'checkpoint:human-action for the live deploy', via: 'include' },
-      { node: 'agent.live-test', caption: 'Post-deploy smoke test on prod URL', via: 'dispatch', marker: '## UI VERIFIED' },
-      { node: 'rule.checkpoints', caption: 'Final human approval before marking success', via: 'include' },
+      { node: 'command.plan', caption: 'User invokes /plan with a task' },
+      { node: 'agent.safe-planner', caption: 'Generate work-unit plan with rollback', via: 'dispatch', marker: '## PLAN READY' },
+      { node: 'agent.brainstorm', caption: 'Critical-thinking pass: inversion + scale-game + meta-pattern', via: 'dispatch', marker: '## EXPLORATION COMPLETE' },
+      { node: 'agent.outcomes-grader', caption: 'Grade plan against engineering-principles.md rubric', via: 'dispatch', marker: '## OUTCOMES PASSED' },
+      { node: 'rule.gates', caption: 'Revision gate: one retry pass if either critique flags issues', via: 'include' },
     ],
   },
   'command.redesign': {
@@ -553,7 +555,7 @@ function main() {
     mcp: graph.nodes.filter((n) => n.kind === 'mcp').length,
     skill: graph.nodes.filter((n) => n.kind === 'skill').length,
   };
-  const minimums = { agent: 7, rule: 11, command: 22, hook: 6, mcp: 8, skill: 4 };
+  const minimums = { agent: 7, rule: 11, command: 15, hook: 6, mcp: 8, skill: 7 };
   const failures = [];
   for (const [k, min] of Object.entries(minimums)) {
     if (counts[k] < min) failures.push(`${k}: ${counts[k]} < ${min}`);

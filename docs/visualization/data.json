@@ -1,6 +1,6 @@
 {
   "meta": {
-    "generatedAt": "2026-04-16T22:59:57.597Z",
+    "generatedAt": "2026-05-16T03:03:52.423Z",
     "repo": "zalo-claude-code-setup"
   },
   "nodes": [
@@ -10,13 +10,6 @@
       "label": "META_RULE.md",
       "path": "META_RULE.md",
       "summary": "Re-injected on every `startup`, `/clear`, and `/compact`. Edit this file freely — the `session-start.sh` hook reads it fresh each time."
-    },
-    {
-      "id": "meta.CLAUDE",
-      "kind": "meta",
-      "label": "CLAUDE.md",
-      "path": "claude-md/CLAUDE.md",
-      "summary": "When the user corrects you, says \"no\", \"wrong\", \"don't do that\", \"stop\", or otherwise indicates you made a mistake:"
     },
     {
       "id": "meta.orchestrator",
@@ -40,6 +33,13 @@
       "summary": "Behavioral rules that apply regardless of project. Drawn from both gsd-build/get-shit-done universal anti-patterns and obra/superpowers writing-plans \"No Placeholders\" list."
     },
     {
+      "id": "rule.api-retry",
+      "kind": "rule",
+      "label": "api-retry",
+      "path": "rules/api-retry.md",
+      "summary": "Shared retry-and-recovery protocol for orchestrators that dispatch sub-agents via the `Agent` tool. Use this when the underlying Anthropic API errors transiently (overload, rate limit, 5xx) so that work units don't get marked `failed` for what is actually a recoverable condition."
+    },
+    {
       "id": "rule.checkpoints",
       "kind": "rule",
       "label": "checkpoints",
@@ -52,6 +52,20 @@
       "label": "context-budget",
       "path": "rules/context-budget.md",
       "summary": "Adapted from gsd-build/get-shit-done `references/context-budget.md`. Use this to self-regulate context usage and to recognize degradation before it becomes catastrophic."
+    },
+    {
+      "id": "rule.database-safety",
+      "kind": "rule",
+      "label": "database-safety",
+      "path": "rules/database-safety.md",
+      "summary": "All migrations MUST be additive and non-breaking for existing users. Zero-downtime compatible."
+    },
+    {
+      "id": "rule.engineering-principles",
+      "kind": "rule",
+      "label": "engineering-principles",
+      "path": "rules/engineering-principles.md",
+      "summary": "Used by `outcomes-grader` to evaluate plans (and optionally implementations) against the standards stated in `~/.claude/CLAUDE.md`. Each item describes an **outcome** the plan must exhibit — a measurable property — not a rule to follow. This makes the rubric harder to game and mo"
     },
     {
       "id": "rule.gates",
@@ -75,6 +89,13 @@
       "summary": "Adapted from obra/superpowers `writing-skills/persuasion-principles.md`. Reference when authoring or revising files in `~/.claude/rules/`, `~/.claude/CLAUDE.md`, agent definitions, or skill bodies."
     },
     {
+      "id": "rule.plan-verification",
+      "kind": "rule",
+      "label": "plan-verification",
+      "path": "rules/plan-verification.md",
+      "summary": "After `safe-planner` emits `## PLAN READY`, run two verification gates **before** acting on the plan. Both gates use fresh-context subagents (the value of brainstorm/grader pass is the second-opinion dynamic — same-model self-critique is weaker)."
+    },
+    {
       "id": "rule.problem-solving",
       "kind": "rule",
       "label": "problem-solving",
@@ -87,6 +108,13 @@
       "label": "questioning",
       "path": "rules/questioning.md",
       "summary": "Adapted from gsd-build/get-shit-done `references/questioning.md`. Use this when eliciting requirements, brainstorming, or any \"what do you actually want?\" conversation."
+    },
+    {
+      "id": "rule.testing-safety",
+      "kind": "rule",
+      "label": "testing-safety",
+      "path": "rules/testing-safety.md",
+      "summary": "When testing in a live application (staging or production), protect real user data and accounts."
     },
     {
       "id": "rule.verification-patterns",
@@ -103,34 +131,33 @@
       "summary": "Adapted from obra/superpowers `dispatching-parallel-agents`. Claude Code's `Agent` tool runs multiple invocations concurrently when called in a single message — use this rule to decide when that's appropriate."
     },
     {
-      "id": "command.autoloop",
+      "id": "command.autopilot",
       "kind": "command",
-      "label": "/autoloop",
-      "path": "commands/autoloop.md",
-      "summary": "Autonomous optimization loop that iteratively improves code until it meets a target metric. Based on Karpathy's autoresearch architecture: hypothesis -> modify -> test -> commit/revert.",
-      "includes": [],
+      "label": "/autopilot",
+      "path": "commands/autopilot.md",
+      "summary": "Pure orchestrator that dispatches sub-agents for all work. The main thread never reads code, never writes code, never fixes bugs. It routes, tracks, verifies, and compacts. Sub-agents do the work — in parallel where possible, each with self-planning before coding. The orchestrato",
+      "includes": [
+        "rule.agent-contracts",
+        "rule.gates",
+        "rule.verification-patterns",
+        "rule.anti-patterns",
+        "rule.when-to-parallelize",
+        "rule.problem-solving",
+        "rule.database-safety",
+        "rule.testing-safety",
+        "rule.git-safety",
+        "rule.api-retry",
+        "rule.checkpoints",
+        "rule.context-budget"
+      ],
       "dispatches": [
-        "agent.live-test",
-        "agent.qa-agent"
+        "agent.safe-planner",
+        "agent.brainstorm",
+        "agent.qa-agent",
+        "agent.frontend-specialist",
+        "agent.bug-fix",
+        "agent.live-test"
       ]
-    },
-    {
-      "id": "command.autoloop-harness",
-      "kind": "command",
-      "label": "/autoloop-harness",
-      "path": "commands/autoloop-harness.sh",
-      "summary": "set -euo pipefail",
-      "includes": [],
-      "dispatches": []
-    },
-    {
-      "id": "command.autotest",
-      "kind": "command",
-      "label": "/autotest",
-      "path": "commands/autotest.md",
-      "summary": "Autonomous live testing agent that systematically tests a web application via Playwright. Reads a briefing for the test plan (URL, credentials, test cases) and executes each test, recording pass/fail results. Reusable across any web app.",
-      "includes": [],
-      "dispatches": []
     },
     {
       "id": "command.brainstorm",
@@ -165,38 +192,6 @@
       ]
     },
     {
-      "id": "command.build-fix",
-      "kind": "command",
-      "label": "/build-fix",
-      "path": "commands/build-fix.md",
-      "summary": "Detect and fix build errors iteratively with guardrails.",
-      "includes": [],
-      "dispatches": []
-    },
-    {
-      "id": "command.deploy-validate",
-      "kind": "command",
-      "label": "/deploy-validate",
-      "path": "commands/deploy-validate.md",
-      "summary": "Pre-deploy QA → deploy to staging → smoke test → log audit → human-action checkpoint for production.",
-      "includes": [
-        "rule.agent-contracts",
-        "rule.gates",
-        "rule.checkpoints",
-        "rule.git-safety"
-      ],
-      "dispatches": []
-    },
-    {
-      "id": "command.e2e",
-      "kind": "command",
-      "label": "/e2e",
-      "path": "commands/e2e.md",
-      "summary": "Generate and run end-to-end tests using Playwright.",
-      "includes": [],
-      "dispatches": []
-    },
-    {
       "id": "command.enhance-audio",
       "kind": "command",
       "label": "/enhance-audio",
@@ -224,15 +219,6 @@
       "dispatches": []
     },
     {
-      "id": "command.learn",
-      "kind": "command",
-      "label": "/learn",
-      "path": "commands/learn.md",
-      "summary": "Extract reusable patterns and lessons from the current session and save them to memory.",
-      "includes": [],
-      "dispatches": []
-    },
-    {
       "id": "command.nano-banana",
       "kind": "command",
       "label": "/nano-banana",
@@ -249,6 +235,25 @@
       "summary": "Process and upload optimized videos to Supabase Storage with faststart + compression.",
       "includes": [],
       "dispatches": []
+    },
+    {
+      "id": "command.plan",
+      "kind": "command",
+      "label": "/plan",
+      "path": "commands/plan.md",
+      "summary": "Standalone planning command. Dispatches `safe-planner`, then runs the Plan Verification Loop (brainstorm critique + principles grader) before returning the final plan.",
+      "includes": [
+        "rule.agent-contracts",
+        "rule.plan-verification",
+        "rule.engineering-principles",
+        "rule.anti-patterns",
+        "rule.questioning"
+      ],
+      "dispatches": [
+        "agent.brainstorm",
+        "agent.safe-planner",
+        "agent.frontend-specialist"
+      ]
     },
     {
       "id": "command.qa-loop",
@@ -281,24 +286,6 @@
       ]
     },
     {
-      "id": "command.refactor-clean",
-      "kind": "command",
-      "label": "/refactor-clean",
-      "path": "commands/refactor-clean.md",
-      "summary": "Detect and safely remove dead code, unused dependencies, and unnecessary complexity.",
-      "includes": [],
-      "dispatches": []
-    },
-    {
-      "id": "command.session-save",
-      "kind": "command",
-      "label": "/session-save",
-      "path": "commands/session-save.md",
-      "summary": "Save the current session context to a file for continuity across sessions.",
-      "includes": [],
-      "dispatches": []
-    },
-    {
       "id": "command.ship",
       "kind": "command",
       "label": "/ship",
@@ -308,10 +295,13 @@
         "rule.agent-contracts",
         "rule.gates",
         "rule.anti-patterns",
-        "rule.checkpoints"
+        "rule.checkpoints",
+        "rule.plan-verification",
+        "rule.engineering-principles"
       ],
       "dispatches": [
         "agent.safe-planner",
+        "agent.brainstorm",
         "agent.frontend-specialist",
         "agent.live-test",
         "agent.qa-agent"
@@ -324,19 +314,6 @@
       "path": "commands/split-screen-video.md",
       "summary": "Create a polished split-screen video from raw talking-head footage. Top half = B-roll images with annotations, bottom half = zoomed presenter. Includes yellow subtitle bars, enhanced audio, and 1.2x speed.",
       "includes": [],
-      "dispatches": []
-    },
-    {
-      "id": "command.tdd",
-      "kind": "command",
-      "label": "/tdd",
-      "path": "commands/tdd.md",
-      "summary": "Strict RED → GREEN → REFACTOR. Adapted from obra/superpowers `test-driven-development`.",
-      "includes": [
-        "rule.gates",
-        "rule.anti-patterns",
-        "rule.verification-patterns"
-      ],
       "dispatches": []
     },
     {
@@ -375,8 +352,6 @@
       "path": "agents/bug-fix.md",
       "summary": "Trace the full user flow to find the root cause of a bug. Reads all related code and crafts a comprehensive fix plan before making changes. Use when something is broken and you need a thorough diagnosis. <example>user: 'Users are getting logged out randomly after checkout' assistant: 'I'll use the bug-fix agent to trace the full flow and find the root cause.'</example>",
       "markers": [
-        "## ROOT CAUSE FOUND",
-        "## INVESTIGATION INCOMPLETE",
         "## BLOCKED"
       ],
       "includes": []
@@ -417,6 +392,15 @@
         "## UI ISSUES FOUND",
         "## BLOCKED"
       ],
+      "includes": []
+    },
+    {
+      "id": "agent.outcomes-grader",
+      "kind": "agent",
+      "label": "outcomes-grader",
+      "path": "agents/outcomes-grader.md",
+      "summary": "Grades a delivered artifact against a task-specific rubric. Use to verify task-level success criteria are met, not to hunt for generic bugs. <example>user: 'Did the implementation actually satisfy the rubric in .claude/rubric.md?' assistant: 'I'll use the outcomes-grader to evaluate each rubric item against the delivered code.'</example>",
+      "markers": [],
       "includes": []
     },
     {
@@ -477,6 +461,27 @@
       "summary": "Crawl websites using Cloudflare Browser Rendering API. Use when the user wants to scrape, crawl, or extract content from a website (single page or multi-page). Returns HTML, Markdown, or structured JSON."
     },
     {
+      "id": "skill.commit-with-heredoc",
+      "kind": "skill",
+      "label": "commit-with-heredoc",
+      "path": "skills/commit-with-heredoc",
+      "summary": "Create a multi-line git commit using the correct heredoc-inside-$(...) quoting pattern, with the Co-Authored-By trailer. Use whenever the user asks to commit, when a workflow needs to commit changes, or when a multi-line commit message is required. Eliminates re-deriving the tricky quoting and ensures a consistent commit-message style."
+    },
+    {
+      "id": "skill.create-skill",
+      "kind": "skill",
+      "label": "create-skill",
+      "path": "skills/create-skill",
+      "summary": "Author a new Claude Code skill following the established pattern. Use when the user says \"create a skill\", \"add a skill\", \"let's skill-ify X\", \"promote this to a skill\", or asks \"should this be a skill?\" Guides the decision (is it worth a skill?), picks the form factor (markdown-only vs shell script), generates the SKILL.md from the canonical template, optionally generates an accompanying shell script, and proposes the CLAUDE.md callout for deterministic firing. Replaces ad-hoc skill creation with a consistent shape that matches typecheck-and-build, commit-with-heredoc, dev-server-restart, cf-crawl, and telegram."
+    },
+    {
+      "id": "skill.dev-server-restart",
+      "kind": "skill",
+      "label": "dev-server-restart",
+      "path": "skills/dev-server-restart",
+      "summary": "Kill any stale dev server on a given port, restart it cleanly in the project, poll until it accepts connections, and smoke-test a route — returning HTTP status + log tail. Use before testing UI in the browser, after env changes, or whenever Claude wrote \"pkill -f 'next dev'\" in a previous turn and needs the server back up. Replaces the 100+ hand-written kill+sleep+curl variants."
+    },
+    {
       "id": "skill.frontend-design",
       "kind": "skill",
       "label": "frontend-design",
@@ -484,18 +489,18 @@
       "summary": "Create distinctive, production-grade frontend interfaces with high design quality. Use this skill when the user asks to build web components, pages, or applications. Generates creative, polished code that avoids generic AI aesthetics."
     },
     {
-      "id": "skill.multi-edit",
-      "kind": "skill",
-      "label": "multi-edit",
-      "path": "skills/multi-edit",
-      "summary": "Heavyweight planning path for refactors, renames, migrations, and cross-module changes that are hard to roll back. Runs safe-planner, optionally brainstorm, then blocks on human approval before any edit. Triggers on \"refactor\", \"rename across\", \"migrate\", \"restructure\", \"move X out of\", \"extract into shared\", or any change that crosses module boundaries. Not for new features (use /ship) or single-file fixes."
-    },
-    {
       "id": "skill.telegram",
       "kind": "skill",
       "label": "telegram",
       "path": "skills/telegram",
       "summary": "Send messages, files, images, or documents to the user via their Telegram bot. Use when the user asks to send something to Telegram, notify them, or share content via Telegram."
+    },
+    {
+      "id": "skill.typecheck-and-build",
+      "kind": "skill",
+      "label": "typecheck-and-build",
+      "path": "skills/typecheck-and-build",
+      "summary": "Run TypeScript typecheck and production build for a Node/Next.js/Vite project, capture exit codes, and surface only the failure region (not the full log). Use when verifying changes before commit, in QA loops, after a refactor, or whenever a \"did this build?\" check is needed. Replaces hand-written tsc + build chains with a consistent invocation and consistent output shape."
     },
     {
       "id": "skill.ui-ux-pro-max",
@@ -698,11 +703,6 @@
   "edges": [
     {
       "source": "meta.orchestrator",
-      "target": "meta.CLAUDE",
-      "type": "include"
-    },
-    {
-      "source": "meta.orchestrator",
       "target": "meta.META_RULE",
       "type": "include"
     },
@@ -712,28 +712,98 @@
       "type": "trigger"
     },
     {
-      "source": "command.autoloop",
-      "target": "agent.live-test",
+      "source": "command.autopilot",
+      "target": "rule.agent-contracts",
+      "type": "include"
+    },
+    {
+      "source": "command.autopilot",
+      "target": "rule.gates",
+      "type": "include"
+    },
+    {
+      "source": "command.autopilot",
+      "target": "rule.verification-patterns",
+      "type": "include"
+    },
+    {
+      "source": "command.autopilot",
+      "target": "rule.anti-patterns",
+      "type": "include"
+    },
+    {
+      "source": "command.autopilot",
+      "target": "rule.when-to-parallelize",
+      "type": "include"
+    },
+    {
+      "source": "command.autopilot",
+      "target": "rule.problem-solving",
+      "type": "include"
+    },
+    {
+      "source": "command.autopilot",
+      "target": "rule.database-safety",
+      "type": "include"
+    },
+    {
+      "source": "command.autopilot",
+      "target": "rule.testing-safety",
+      "type": "include"
+    },
+    {
+      "source": "command.autopilot",
+      "target": "rule.git-safety",
+      "type": "include"
+    },
+    {
+      "source": "command.autopilot",
+      "target": "rule.api-retry",
+      "type": "include"
+    },
+    {
+      "source": "command.autopilot",
+      "target": "rule.checkpoints",
+      "type": "include"
+    },
+    {
+      "source": "command.autopilot",
+      "target": "rule.context-budget",
+      "type": "include"
+    },
+    {
+      "source": "command.autopilot",
+      "target": "agent.safe-planner",
       "type": "dispatch"
     },
     {
-      "source": "command.autoloop",
+      "source": "command.autopilot",
+      "target": "agent.brainstorm",
+      "type": "dispatch"
+    },
+    {
+      "source": "command.autopilot",
       "target": "agent.qa-agent",
       "type": "dispatch"
     },
     {
-      "source": "meta.orchestrator",
-      "target": "command.autoloop",
-      "type": "routes"
+      "source": "command.autopilot",
+      "target": "agent.frontend-specialist",
+      "type": "dispatch"
+    },
+    {
+      "source": "command.autopilot",
+      "target": "agent.bug-fix",
+      "type": "dispatch"
+    },
+    {
+      "source": "command.autopilot",
+      "target": "agent.live-test",
+      "type": "dispatch"
     },
     {
       "source": "meta.orchestrator",
-      "target": "command.autoloop-harness",
-      "type": "routes"
-    },
-    {
-      "source": "meta.orchestrator",
-      "target": "command.autotest",
+      "target": "command.autopilot",
       "type": "routes"
     },
     {
@@ -798,41 +868,6 @@
     },
     {
       "source": "meta.orchestrator",
-      "target": "command.build-fix",
-      "type": "routes"
-    },
-    {
-      "source": "command.deploy-validate",
-      "target": "rule.agent-contracts",
-      "type": "include"
-    },
-    {
-      "source": "command.deploy-validate",
-      "target": "rule.gates",
-      "type": "include"
-    },
-    {
-      "source": "command.deploy-validate",
-      "target": "rule.checkpoints",
-      "type": "include"
-    },
-    {
-      "source": "command.deploy-validate",
-      "target": "rule.git-safety",
-      "type": "include"
-    },
-    {
-      "source": "meta.orchestrator",
-      "target": "command.deploy-validate",
-      "type": "routes"
-    },
-    {
-      "source": "meta.orchestrator",
-      "target": "command.e2e",
-      "type": "routes"
-    },
-    {
-      "source": "meta.orchestrator",
       "target": "command.enhance-audio",
       "type": "routes"
     },
@@ -848,17 +883,57 @@
     },
     {
       "source": "meta.orchestrator",
-      "target": "command.learn",
-      "type": "routes"
-    },
-    {
-      "source": "meta.orchestrator",
       "target": "command.nano-banana",
       "type": "routes"
     },
     {
       "source": "meta.orchestrator",
       "target": "command.optimize-video",
+      "type": "routes"
+    },
+    {
+      "source": "command.plan",
+      "target": "rule.agent-contracts",
+      "type": "include"
+    },
+    {
+      "source": "command.plan",
+      "target": "rule.plan-verification",
+      "type": "include"
+    },
+    {
+      "source": "command.plan",
+      "target": "rule.engineering-principles",
+      "type": "include"
+    },
+    {
+      "source": "command.plan",
+      "target": "rule.anti-patterns",
+      "type": "include"
+    },
+    {
+      "source": "command.plan",
+      "target": "rule.questioning",
+      "type": "include"
+    },
+    {
+      "source": "command.plan",
+      "target": "agent.brainstorm",
+      "type": "dispatch"
+    },
+    {
+      "source": "command.plan",
+      "target": "agent.safe-planner",
+      "type": "dispatch"
+    },
+    {
+      "source": "command.plan",
+      "target": "agent.frontend-specialist",
+      "type": "dispatch"
+    },
+    {
+      "source": "meta.orchestrator",
+      "target": "command.plan",
       "type": "routes"
     },
     {
@@ -917,16 +992,6 @@
       "type": "routes"
     },
     {
-      "source": "meta.orchestrator",
-      "target": "command.refactor-clean",
-      "type": "routes"
-    },
-    {
-      "source": "meta.orchestrator",
-      "target": "command.session-save",
-      "type": "routes"
-    },
-    {
       "source": "command.ship",
       "target": "rule.agent-contracts",
       "type": "include"
@@ -948,7 +1013,22 @@
     },
     {
       "source": "command.ship",
+      "target": "rule.plan-verification",
+      "type": "include"
+    },
+    {
+      "source": "command.ship",
+      "target": "rule.engineering-principles",
+      "type": "include"
+    },
+    {
+      "source": "command.ship",
       "target": "agent.safe-planner",
+      "type": "dispatch"
+    },
+    {
+      "source": "command.ship",
+      "target": "agent.brainstorm",
       "type": "dispatch"
     },
     {
@@ -974,26 +1054,6 @@
     {
       "source": "meta.orchestrator",
       "target": "command.split-screen-video",
-      "type": "routes"
-    },
-    {
-      "source": "command.tdd",
-      "target": "rule.gates",
-      "type": "include"
-    },
-    {
-      "source": "command.tdd",
-      "target": "rule.anti-patterns",
-      "type": "include"
-    },
-    {
-      "source": "command.tdd",
-      "target": "rule.verification-patterns",
-      "type": "include"
-    },
-    {
-      "source": "meta.orchestrator",
-      "target": "command.tdd",
       "type": "routes"
     },
     {
@@ -1029,6 +1089,11 @@
     {
       "source": "meta.orchestrator",
       "target": "agent.live-test",
+      "type": "routes"
+    },
+    {
+      "source": "meta.orchestrator",
+      "target": "agent.outcomes-grader",
       "type": "routes"
     },
     {

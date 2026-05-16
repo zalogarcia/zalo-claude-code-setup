@@ -44,36 +44,48 @@
     ],
     "canonical": true
   },
-  "command.tdd": {
-    "label": "/tdd — Test-Driven Development",
-    "description": "Red → Green → Refactor, with the Iron Law of \"test first\"",
+  "command.autopilot": {
+    "label": "/autopilot — Autonomous Multi-Phase Orchestrator",
+    "description": "Plan → Implement → QA → Commit, end-to-end with API retry + circuit breaker",
     "steps": [
       {
-        "node": "command.tdd",
-        "caption": "User invokes /tdd for a new behavior"
-      },
-      {
-        "node": "rule.gates",
-        "caption": "@-includes gates.md (Iron Law: no code before a failing test)",
-        "via": "include"
+        "node": "command.autopilot",
+        "caption": "User invokes /autopilot with a task description"
       },
       {
         "node": "agent.safe-planner",
-        "caption": "Plan the test surface and rollback",
+        "caption": "Phase 1: dispatch safe-planner for work-unit plan",
         "via": "dispatch",
         "marker": "## PLAN READY"
       },
       {
+        "node": "agent.brainstorm",
+        "caption": "Plan verification gate: brainstorm-vet critique",
+        "via": "dispatch",
+        "marker": "## EXPLORATION COMPLETE"
+      },
+      {
+        "node": "agent.outcomes-grader",
+        "caption": "Plan verification gate: rubric grading",
+        "via": "dispatch",
+        "marker": "## OUTCOMES PASSED"
+      },
+      {
         "node": "agent.frontend-specialist",
-        "caption": "Write failing test → minimal impl → refactor",
+        "caption": "Phase 2: implementation work units in parallel where safe",
         "via": "dispatch",
         "marker": "## IMPLEMENTATION COMPLETE"
       },
       {
         "node": "agent.qa-agent",
-        "caption": "qa-agent confirms coverage and no regressions",
+        "caption": "Phase 3: QA loop — audit + fix until clean",
         "via": "dispatch",
         "marker": "## VERIFICATION PASSED"
+      },
+      {
+        "node": "rule.checkpoints",
+        "caption": "Final commit phase + human push-gate",
+        "via": "include"
       }
     ],
     "canonical": true
@@ -146,34 +158,35 @@
     ],
     "canonical": true
   },
-  "command.deploy-validate": {
-    "label": "/deploy-validate — Self-Healing Deployment",
-    "description": "Pre-deploy QA → deploy → smoke test → human prod approval",
+  "command.plan": {
+    "label": "/plan — Plan with Brainstorm + Principles Verification",
+    "description": "safe-planner → brainstorm critique → rubric grading → revision loop",
     "steps": [
       {
-        "node": "command.deploy-validate",
-        "caption": "User runs /deploy-validate"
+        "node": "command.plan",
+        "caption": "User invokes /plan with a task"
       },
       {
-        "node": "agent.qa-agent",
-        "caption": "Pre-deploy audit",
+        "node": "agent.safe-planner",
+        "caption": "Generate work-unit plan with rollback",
         "via": "dispatch",
-        "marker": "## VERIFICATION PASSED"
+        "marker": "## PLAN READY"
       },
       {
-        "node": "rule.checkpoints",
-        "caption": "checkpoint:human-action for the live deploy",
-        "via": "include"
-      },
-      {
-        "node": "agent.live-test",
-        "caption": "Post-deploy smoke test on prod URL",
+        "node": "agent.brainstorm",
+        "caption": "Critical-thinking pass: inversion + scale-game + meta-pattern",
         "via": "dispatch",
-        "marker": "## UI VERIFIED"
+        "marker": "## EXPLORATION COMPLETE"
       },
       {
-        "node": "rule.checkpoints",
-        "caption": "Final human approval before marking success",
+        "node": "agent.outcomes-grader",
+        "caption": "Grade plan against engineering-principles.md rubric",
+        "via": "dispatch",
+        "marker": "## OUTCOMES PASSED"
+      },
+      {
+        "node": "rule.gates",
+        "caption": "Revision gate: one retry pass if either critique flags issues",
         "via": "include"
       }
     ],
@@ -220,59 +233,6 @@
     ],
     "canonical": true
   },
-  "command.autoloop": {
-    "label": "/autoloop — Autonomous optimization loop that iteratively improves code until it meets a tar",
-    "description": "Autonomous optimization loop that iteratively improves code until it meets a target metric. Based on Karpathy's autoresearch architecture: hypothesis -> modify -> test -> commit/revert.",
-    "steps": [
-      {
-        "node": "command.autoloop",
-        "caption": "User invokes /autoloop"
-      },
-      {
-        "node": "agent.live-test",
-        "via": "dispatch",
-        "caption": "Dispatch live-test",
-        "marker": "## UI VERIFIED"
-      },
-      {
-        "node": "agent.qa-agent",
-        "via": "dispatch",
-        "caption": "Dispatch qa-agent",
-        "marker": "## VERIFICATION PASSED"
-      }
-    ],
-    "canonical": false
-  },
-  "command.autoloop-harness": {
-    "label": "/autoloop-harness — set -euo pipefail",
-    "description": "set -euo pipefail",
-    "steps": [
-      {
-        "node": "command.autoloop-harness",
-        "caption": "User invokes /autoloop-harness"
-      },
-      {
-        "node": "command.autoloop-harness",
-        "caption": "Standalone skill/utility — no subagent dispatch in the core path"
-      }
-    ],
-    "canonical": false
-  },
-  "command.autotest": {
-    "label": "/autotest — Autonomous live testing agent that systematically tests a web application via Pl",
-    "description": "Autonomous live testing agent that systematically tests a web application via Playwright. Reads a briefing for the test plan (URL, credentials, test cases) and executes each test, recording pass/fail results. Reusable across any web app.",
-    "steps": [
-      {
-        "node": "command.autotest",
-        "caption": "User invokes /autotest"
-      },
-      {
-        "node": "command.autotest",
-        "caption": "Standalone skill/utility — no subagent dispatch in the core path"
-      }
-    ],
-    "canonical": false
-  },
   "command.brainstorm": {
     "label": "/brainstorm — Dispatch the `brainstorm` agent to apply first principles, inversion, and second",
     "description": "Dispatch the `brainstorm` agent to apply first principles, inversion, and second-order thinking. Surfaces the real problem, not just the presented one.",
@@ -301,36 +261,6 @@
         "node": "rule.problem-solving",
         "via": "include",
         "caption": "@-includes problem-solving"
-      }
-    ],
-    "canonical": false
-  },
-  "command.build-fix": {
-    "label": "/build-fix — Detect and fix build errors iteratively with guardrails.",
-    "description": "Detect and fix build errors iteratively with guardrails.",
-    "steps": [
-      {
-        "node": "command.build-fix",
-        "caption": "User invokes /build-fix"
-      },
-      {
-        "node": "command.build-fix",
-        "caption": "Standalone skill/utility — no subagent dispatch in the core path"
-      }
-    ],
-    "canonical": false
-  },
-  "command.e2e": {
-    "label": "/e2e — Generate and run end-to-end tests using Playwright.",
-    "description": "Generate and run end-to-end tests using Playwright.",
-    "steps": [
-      {
-        "node": "command.e2e",
-        "caption": "User invokes /e2e"
-      },
-      {
-        "node": "command.e2e",
-        "caption": "Standalone skill/utility — no subagent dispatch in the core path"
       }
     ],
     "canonical": false
@@ -380,21 +310,6 @@
     ],
     "canonical": false
   },
-  "command.learn": {
-    "label": "/learn — Extract reusable patterns and lessons from the current session and save them to ",
-    "description": "Extract reusable patterns and lessons from the current session and save them to memory.",
-    "steps": [
-      {
-        "node": "command.learn",
-        "caption": "User invokes /learn"
-      },
-      {
-        "node": "command.learn",
-        "caption": "Standalone skill/utility — no subagent dispatch in the core path"
-      }
-    ],
-    "canonical": false
-  },
   "command.nano-banana": {
     "label": "/nano-banana — Generates AI images using the nano-banana CLI (Gemini 3.1 Flash default, Pro ava",
     "description": "Generates AI images using the nano-banana CLI (Gemini 3.1 Flash default, Pro available). Handles multi-resolution (512-4K), aspect ratios, reference images for style transfer, green screen workflow for transparent assets, cost tracking, and exact dimension control. Use when asked to \"generate an image\", \"create a sprite\", \"make an asset\", \"generate artwork\", or any image generation task for UI mockups, game assets, videos, or marketing materials.",
@@ -420,36 +335,6 @@
       },
       {
         "node": "command.optimize-video",
-        "caption": "Standalone skill/utility — no subagent dispatch in the core path"
-      }
-    ],
-    "canonical": false
-  },
-  "command.refactor-clean": {
-    "label": "/refactor-clean — Detect and safely remove dead code, unused dependencies, and unnecessary complex",
-    "description": "Detect and safely remove dead code, unused dependencies, and unnecessary complexity.",
-    "steps": [
-      {
-        "node": "command.refactor-clean",
-        "caption": "User invokes /refactor-clean"
-      },
-      {
-        "node": "command.refactor-clean",
-        "caption": "Standalone skill/utility — no subagent dispatch in the core path"
-      }
-    ],
-    "canonical": false
-  },
-  "command.session-save": {
-    "label": "/session-save — Save the current session context to a file for continuity across sessions.",
-    "description": "Save the current session context to a file for continuity across sessions.",
-    "steps": [
-      {
-        "node": "command.session-save",
-        "caption": "User invokes /session-save"
-      },
-      {
-        "node": "command.session-save",
         "caption": "Standalone skill/utility — no subagent dispatch in the core path"
       }
     ],
