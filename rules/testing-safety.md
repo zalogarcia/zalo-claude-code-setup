@@ -27,7 +27,7 @@ When testing in a live application (staging or production), protect real user da
 
 ## In Autopilot / Autonomous Mode
 
-When `/autopilot`, `/autotest`, or `/e2e` need to test in a live app:
+When `/autopilot` needs to test in a live app:
 
 1. Check for admin email in project config (`.env*`, `CLAUDE.md`, memory)
 2. If found → use it for all test interactions

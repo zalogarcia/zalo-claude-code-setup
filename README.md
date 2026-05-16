@@ -12,7 +12,7 @@ Custom agents, skills, commands, MCP servers, auto-formatting hooks, agentic RAG
 
 ## Interactive Architecture
 
-See how the pieces fit together: orchestrator, 7 agents, 11 shared rules, 23 commands, hooks, MCP servers — plus animated request flows (`/ship`, `/tdd`, `/bug`, `/qa-loop`, `/deploy-validate`, `/redesign` and more).
+See how the pieces fit together: 7 agents, 11 shared rules, 15 commands, 7 skills, hooks, MCP servers — plus animated request flows (`/autopilot`, `/bug`, `/qa-loop`, `/ship`, `/redesign`, `/brainstorm`, `/plan` and more).
 
 **→ [Open the interactive visualization](https://zalogarcia.github.io/zalo-claude-code-setup/visualization/)**
 
@@ -162,43 +162,39 @@ Close and reopen Claude Code to pick up all changes.
 | **image-craft-expert**  | Crafts optimized prompts and generates images on both Gemini Pro (nano-banana) and ChatGPT (gpt-image-1.5) in parallel.                                                                     |
 | **brainstorm**          | Deep-thinking agent that challenges assumptions, eliminates complexity, and stress-tests plans using first principles, Elon Musk's 5-step philosophy, inversion, and second-order thinking. |
 
-### Commands (24)
+### Commands (15)
 
 Slash commands for workflow automation. Invoke with `/<command-name>`.
 
 | Command                | What It Does                                                                                           |
 | ---------------------- | ------------------------------------------------------------------------------------------------------ |
+| **autopilot**          | Autonomous multi-phase orchestrator: plan → implement → QA → commit                                    |
+| **bug**                | Bug-fix workflow: trace, diagnose, fix, validate                                                       |
+| **qa-loop**            | Iterative audit-and-fix loop — finds and fixes bugs until the codebase is clean                        |
 | **ship**               | Full feature delivery: plan → implement → QA loop → wait for push approval                             |
-| **deploy-validate**    | Self-healing deployment: pre-deploy QA → deploy → smoke test → validate → approval gate                |
-| **autoloop**           | Autonomous optimization loop (Karpathy autoresearch pattern) — iteratively improves code               |
-| **autotest**           | Autonomous Playwright-based testing harness — systematically tests web apps                            |
-| **bug**                | Bug-fix workflow with agent delegation and QA validation                                               |
-| **build-fix**          | Iterative build error detection and fixing                                                             |
-| **e2e**                | Generate and run Playwright end-to-end tests                                                           |
+| **plan**               | Plan something with brainstorm + principles verification                                               |
+| **brainstorm**         | Deep-analyze a problem, plan, or decision with first principles, inversion, and structured elimination |
+| **redesign**           | UI redesign workflow (opt-in): brainstorm, mockup generation, implement, visual verification           |
 | **enhance-audio**      | Audio enhancement using FFmpeg filters (noise removal, normalization)                                  |
 | **ghl-upload**         | Upload media to GoHighLevel                                                                            |
-| **learn**              | Extract reusable patterns and lessons from the current session into memory                             |
+| **graph**              | Build or rebuild the repo-graphrag knowledge graph for the current project                             |
 | **nano-banana**        | AI image generation with Gemini (multi-resolution, style transfer, green screen)                       |
 | **optimize-video**     | Video optimization and upload to Supabase Storage                                                      |
-| **qa-loop**            | Iterative QA loop — finds and fixes bugs until the codebase is clean                                   |
-| **redesign**           | UI redesign workflow: brainstorm, mockup generation, implement, visual verification                    |
-| **refactor-clean**     | Detect and safely remove dead code, unused dependencies, unnecessary complexity                        |
-| **session-save**       | Save session context for continuity across sessions                                                    |
 | **split-screen-video** | Create split-screen video from talking-head footage with B-roll and subtitles                          |
-| **tdd**                | Strict Test-Driven Development (RED-GREEN-REFACTOR)                                                    |
 | **transcribe**         | Audio/video transcription using OpenAI Whisper (99 languages)                                          |
 | **view-video**         | Extract frames from video for visual analysis                                                          |
-| **brainstorm**         | Deep-analyze a problem, plan, or decision with first principles, inversion, and structured elimination |
-| **graph**              | Build or rebuild the repo-graphrag knowledge graph for the current project                             |
 
-### Skills (4)
+### Skills (7)
 
-| Skill               | What It Does                                                                                                                                |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| **ui-ux-pro-max**   | Searchable design database: 50 UI styles, 21 color palettes, 50 font pairings, 20 chart types, 8 tech stacks. Invoke with `/ui-ux-pro-max`. |
-| **frontend-design** | Anti-slop aesthetic guidelines. Bold design direction, distinctive typography, no generic AI look. Invoke with `/frontend-design`.          |
-| **cf-crawl**        | Scrape websites via Cloudflare Browser Rendering API. Single page (sync) or multi-page crawl (async). Invoke with `/cf-crawl`.              |
-| **telegram**        | Send messages, files, and images to Telegram via Bot API. Invoke with `/telegram`.                                                          |
+| Skill                   | What It Does                                                                                                                               |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| **typecheck-and-build** | Standardizes `tsc --noEmit` + production build with smart failure-region extraction and consistent exit codes.                             |
+| **commit-with-heredoc** | Encodes correct `$(cat <<'EOF' … EOF)` quoting for multi-line conventional commits with Co-Authored-By trailer.                            |
+| **dev-server-restart**  | Shell script that kills any stale dev server on a port, restarts via `nohup`, polls for readiness, smoke-tests a route.                    |
+| **ui-ux-pro-max**       | Searchable design database: 50 UI styles, 21 color palettes, 50 font pairings, 20 chart types, 8 tech stacks. (Opt-in via frontend chain.) |
+| **frontend-design**     | Anti-slop aesthetic guidelines. Bold design direction, distinctive typography, no generic AI look. (Opt-in via frontend chain.)            |
+| **cf-crawl**            | Scrape websites via Cloudflare Browser Rendering API. Single page (sync) or multi-page crawl (async).                                      |
+| **telegram**            | Send messages, files, and images to Telegram via Bot API.                                                                                  |
 
 ### Shared Rules (11)
 
@@ -280,78 +276,9 @@ cd ~/repo-graphrag-mcp && uv run python cli_create.py /path/to/repo storage_my-r
 
 **Requires:** Anthropic API key in `~/repo-graphrag-mcp/.env`
 
-### Autoloop Dashboard
-
-<p align="center">
-  <img src="assets/autoloop-infographic.png" alt="Autoloop — Autonomous Code Optimization Loop" width="100%">
-</p>
-
-The autoloop system lets Claude Code run autonomous optimization loops on your codebase — think [Karpathy's autoresearch](https://x.com/karpathy/status/1886192184808149383) but for any project. The `/autoloop` command starts a loop that iteratively improves code against a target metric (test scores, performance, quality) without human intervention.
-
-The **dashboard** is the monitoring and control center for these loops:
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│  Autoloop                                        ● ONLINE  ⌘   │
-├─────────────────────────────────────────────────────────────────┤
-│  0 ACTIVE  │  2 COMPLETED  │  18 EXPERIMENTS  │  38h 6m DUR.  │
-├──────────────────────────────────────┬──────────────────────────┤
-│  STATUS  PROJECT     PROG  SCORE    │  Initializing agent...   │
-│  ● my-api       ■■■■■■  94    │  Loading dataset...      │
-│  ● frontend     ■■■■■■  100   │  Epoch 12/25 Acc: 91.3%  │
-│  ● ml-pipeline  ■■■□□□  87    │  Training model...       │
-└──────────────────────────────────────┴──────────────────────────┘
-```
-
-**How it works:**
-
-1. You run `/autoloop` in a project with a `briefing.md` (target metric, constraints, approach)
-2. The autoloop harness spawns Claude Code in a loop: analyze → plan → implement → test → evaluate score
-3. Each iteration is an "experiment" — if the score improves, changes are committed; if not, they're rolled back
-4. The loop continues until the target score is reached or you stop it
-5. The dashboard shows all active loops, their phases, scores, agent terminal output, and git history
-
-**Dashboard features:**
-
-- **Real-time monitoring** — See which loops are running, their current phase (init → baseline → iterate → evaluate), and live agent output
-- **Score tracking** — Each experiment's score is recorded and charted over time
-- **Agent terminal** — Live streaming output from the Claude Code agent running each loop
-- **Controls** — Start, stop, restart, or reset any loop from the web UI
-- **Auto-discovery** — Scans configured directories for `.autoloop/` folders and picks up new projects automatically
-- **REST API** — `GET /api/loops`, `GET /api/loop/:id/log`, `POST /api/loop/:id/stop`, etc.
-
-**Architecture:**
-
-- **Server:** Node.js HTTP server on port 7890 (`server.js`)
-- **Dashboard:** Single-file SPA with all CSS/JS inline (`dashboard.html`) — Bloomberg-terminal "Mission Control" aesthetic
-- **Harness:** Bash script (`autoloop-harness.sh`) that orchestrates the Claude Code loop per-project
-- **Config:** `config.json` with watched directories and scan paths
-
-**Getting started:**
-
-```bash
-# Start the dashboard server
-~/.claude/orchestrator/start.sh
-
-# Open in browser
-open http://localhost:7890
-
-# In any project, create a briefing and start a loop
-cd ~/my-project
-claude /autoloop
-```
-
 ### xbar Menu Bar Plugins
 
-macOS menu bar integration via [xbar](https://xbarapp.com/) — see autoloop status at a glance without opening the dashboard.
-
-The autoloop xbar plugin (`003-autoloop.5s.sh`) polls every 5 seconds:
-
-- **Menu bar shows:** `AL:2` (green) when 2 loops are running, `AL` (green) when loops completed, `AL` (gray) when idle
-- **Dropdown lists:** Each project with status emoji (🟢 running, ✅ completed, ⚫ stopped) and current phase
-- **Quick action:** Click "Open Dashboard" to launch the web UI (auto-starts server if needed)
-
-Additional xbar plugins:
+macOS menu bar integration via [xbar](https://xbarapp.com/):
 
 | Plugin                           | What It Does                                                      |
 | -------------------------------- | ----------------------------------------------------------------- |
@@ -398,7 +325,7 @@ Behavioral rules that make Claude Code significantly more effective:
 
 - **Self-learning** — When you correct Claude, it saves the lesson to prevent repeating mistakes
 - **Project init** — Auto-scaffolds `.claude/CLAUDE.md` and `.claude/rules/` for new projects
-- **Frontend auto-chain** — Building UI automatically triggers: design search -> aesthetic guidelines -> specialist agent (with Aceternity UI + shadcn/ui MCP access + Apple HIG principles) -> visual verification
+- **Frontend chain (opt-in)** — For UI work, optionally invoke the chain: design search → aesthetic guidelines → specialist agent (with Aceternity UI + shadcn/ui MCP access + Apple HIG principles) → visual verification
 - **Verification-first** — Claude proves changes work (build, test, screenshot) instead of saying "this should work"
 - **Context survival** — Plans are written to files so they survive compaction and session transfers
 - **Subagent orchestration** — Complex work is delegated to specialized agents, keeping the main context clean
@@ -406,16 +333,14 @@ Behavioral rules that make Claude Code significantly more effective:
 
 ---
 
-## Automated Frontend Workflow
+## Frontend Workflow (Opt-In)
 
-When you ask Claude to build any UI (page, component, dashboard, landing page), it automatically chains these steps without you asking:
+When you ask Claude to build non-trivial UI (a new page, a component-library piece, a visual redesign), consider invoking this chain. It's opt-in — skip for trivial copy/style tweaks:
 
-1. **`/ui-ux-pro-max`** — Searches the design database for the right palette, fonts, and style
-2. **`/frontend-design`** — Applies anti-slop aesthetic principles (no generic Inter + purple gradient)
+1. **`ui-ux-pro-max` skill** — Searches the design database for the right palette, fonts, and style
+2. **`frontend-design` skill** — Applies anti-slop aesthetic principles (no generic Inter + purple gradient)
 3. **`frontend-specialist` agent** — Builds production-quality code with Aceternity UI + shadcn/ui component libraries, reads Apple HIG design principles before writing any code
 4. **`live-test` agent** — Opens a browser and screenshots the result for visual verification
-
-No manual invocation needed. Just say "build me a pricing page" and the pipeline runs.
 
 ---
 
@@ -470,8 +395,8 @@ If a recommended tool is missing, the relevant hook or MCP will silently skip �
 ├── README.md
 ├── install.sh                        # One-command installer (backs up first)
 ├── uninstall.sh                      # Restore from backup
-├── claude-md/
-│   └── CLAUDE.md                     # Global behavioral instructions
+├── CLAUDE.md                         # Global behavioral instructions
+├── META_RULE.md                      # Re-injected on every session-start / /clear / /compact
 ├── agents/
 │   ├── qa-agent.md                   # Bug auditor
 │   ├── safe-planner.md               # Risk-aware planner
@@ -479,48 +404,50 @@ If a recommended tool is missing, the relevant hook or MCP will silently skip �
 │   ├── frontend-specialist.md        # UI builder (Aceternity + shadcn MCPs)
 │   ├── bug-fix.md                    # Root cause tracer
 │   ├── image-craft-expert.md         # AI image generation
-│   └── brainstorm.md                 # Deep-thinking problem analyzer
+│   ├── outcomes-grader.md            # Plan/artifact rubric grader
+│   ├── brainstorm.md                 # Deep-thinking problem analyzer
+│   └── templates/                    # Subagent prompt templates (implementer / spec-reviewer / code-quality)
 ├── commands/
-│   ├── autoloop.md                   # Autonomous optimization
-│   ├── autotest.md                   # Autonomous testing
-│   ├── bug.md                        # Bug-fix workflow
-│   ├── build-fix.md                  # Build error fixer
-│   ├── e2e.md                        # E2E test generator
+│   ├── autopilot.md                  # Autonomous multi-phase orchestrator
+│   ├── bug.md                        # Bug trace + diagnose + fix + validate
+│   ├── qa-loop.md                    # Iterative audit-and-fix loop
+│   ├── ship.md                       # Full feature delivery
+│   ├── plan.md                       # Plan with brainstorm + principles verification
+│   ├── brainstorm.md                 # Deep-analyze problems and plans
+│   ├── redesign.md                   # UI redesign workflow (opt-in)
 │   ├── enhance-audio.md              # Audio enhancement
 │   ├── ghl-upload.md                 # GHL media upload
-│   ├── learn.md                      # Pattern extraction
 │   ├── nano-banana.md                # Image generation
 │   ├── optimize-video.md             # Video optimization
-│   ├── qa-loop.md                    # QA iteration loop
-│   ├── redesign.md                   # UI redesign workflow
-│   ├── refactor-clean.md             # Dead code removal
-│   ├── session-save.md               # Session persistence
 │   ├── split-screen-video.md         # Split-screen video
-│   ├── tdd.md                        # Test-driven development
 │   ├── transcribe.md                 # Audio transcription
 │   ├── view-video.md                 # Video frame extraction
-│   ├── brainstorm.md                 # Deep-analyze problems and plans
 │   ├── graph.md                      # Build/rebuild code knowledge graph
-│   ├── autoloop-harness.sh           # Autoloop shell harness
 │   └── split-screen-video-scripts/   # Video processing scripts
 │       ├── build_video.sh
 │       ├── annotate_broll.py
 │       └── generate_subtitles.py
 ├── skills/
+│   ├── typecheck-and-build/
+│   │   └── SKILL.md                  # tsc + build with smart failure-region extraction
+│   ├── commit-with-heredoc/
+│   │   └── SKILL.md                  # Correct heredoc quoting for multi-line commits
+│   ├── dev-server-restart/
+│   │   ├── SKILL.md                  # Dev-server restart contract
+│   │   └── restart.sh                # Kill+nohup+poll+smoke-test executable
 │   ├── ui-ux-pro-max/
 │   │   └── SKILL.md                  # Design database
 │   ├── frontend-design/
 │   │   └── SKILL.md                  # Anti-slop aesthetics
 │   ├── cf-crawl/
 │   │   └── SKILL.md                  # Web scraper
-│   ├── multi-edit/
-│   │   └── SKILL.md                  # Heavyweight planning path for refactors/migrations
 │   └── telegram/
 │       └── SKILL.md                  # Telegram notifications
 ├── hooks/
 │   ├── settings.json                 # Hooks + Vibe Island integration
 │   ├── continue-if-incomplete.py     # Stop hook: nudge Claude if it halts mid-task
 │   ├── reset-stop-counter.sh         # UserPromptSubmit hook: reset nudge counter
+│   ├── session-start.sh              # SessionStart hook: inject META_RULE.md
 │   └── gitleaks-guard.py             # PreToolUse hook: block git commit/push if gitleaks finds secrets
 ├── mcp/
 │   ├── mcp-servers.json              # 8 MCP server configs
@@ -529,20 +456,11 @@ If a recommended tool is missing, the relevant hook or MCP will silently skip �
 │   ├── cli_create.py                 # CLI wrapper for graph_create (used by git hook)
 │   ├── post-commit                   # Global git hook (auto-updates knowledge graph)
 │   └── env-template                  # Default .env config for repo-graphrag-mcp
-├── orchestrator/
-│   ├── server.js                     # Node.js monitoring server (port 7890)
-│   ├── dashboard.html                # Single-file web UI (Mission Control)
-│   ├── package.json                  # Dependencies (Playwright)
-│   ├── config.example.json           # Example config (edit with your paths)
-│   ├── start.sh                      # Start server
-│   ├── stop.sh                       # Stop server
-│   ├── .gitignore
-│   └── (legacy autoloop-dashboard symlink for one release)
+├── .archive/                         # Deprecated subprojects (orchestrator, autoloop-dashboard)
 └── xbar/
     └── plugins/
         ├── 001-shortcuts.1d.sh       # Keyboard shortcuts menu
         ├── 002-clipboard-snippets.1d.sh  # Clipboard snippets
-        ├── 003-autoloop.5s.sh        # Autoloop menu bar monitor
         └── scripts/                  # 21 helper scripts (launchers, clips, layout)
 ```
 

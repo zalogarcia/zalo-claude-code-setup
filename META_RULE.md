@@ -11,11 +11,16 @@ Edit this file freely — the `session-start.sh` hook reads it fresh each time.
 
 **Slash commands** — workflow orchestrators (thin; they `@`-include rules + dispatch agents).
 
-- `/ship`, `/tdd`, `/bug`, `/qa-loop`, `/deploy-validate`, `/brainstorm`, `/build-fix`, `/refactor-clean`, `/learn`, `/session-save`, `/autoloop`, `/autotest`, `/e2e`, `/redesign`, ...
+- Core delivery: `/autopilot`, `/bug`, `/qa-loop`, `/ship`
+- Thinking: `/brainstorm`, `/plan`
+- Frontend (opt-in): `/redesign`
+- Media + integrations: `/nano-banana`, `/transcribe`, `/view-video`, `/optimize-video`, `/split-screen-video`, `/enhance-audio`, `/ghl-upload`, `/graph`
 
 **Skills** — compound tools.
 
-- `frontend-design`, `multi-edit`, `cf-crawl`, `telegram`
+- Workflow helpers: `typecheck-and-build`, `commit-with-heredoc`, `dev-server-restart`
+- Frontend (opt-in): `frontend-design`, `ui-ux-pro-max`
+- Integrations: `cf-crawl`, `telegram`
 
 **Shared rules** at `~/.claude/rules/` (treat as authoritative reference; `@`-included by commands/agents):
 
@@ -24,7 +29,7 @@ Edit this file freely — the `session-start.sh` hook reads it fresh each time.
 - `checkpoints.md` — human-in-loop XML schema (human-verify / decision / human-action)
 - `verification-patterns.md` — "Existence ≠ Implementation" + stub-detect greps + Common Failures table
 - `anti-patterns.md` — universal anti-patterns + No-Placeholders list
-- `questioning.md` — dream extraction philosophy for requirements
+- `questioning.md` — collaborative-extraction philosophy for requirements
 - `context-budget.md` — PEAK / GOOD / DEGRADING / POOR tier behaviors + degradation warning signs
 - `persuasion-principles.md` — Authority/Commitment/Scarcity/Social-Proof/Unity for writing rules that stick
 - `when-to-parallelize.md` — 4-criteria decision rule for parallel agent dispatch

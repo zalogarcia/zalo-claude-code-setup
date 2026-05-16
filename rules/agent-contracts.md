@@ -14,7 +14,6 @@ Completion markers and return contract for `~/.claude/agents/`. Skills/orchestra
 | `bug-fix`             | `## ROOT CAUSE FOUND — CONFIDENCE 10/10` / `## INVESTIGATION INCOMPLETE — CONFIDENCE <N>/10` (N ∈ 1..9) / `## BLOCKED` |
 | `image-craft-expert`  | `## IMAGE GENERATED` / `## GENERATION FAILED`                                                                          |
 | `outcomes-grader`     | `## OUTCOMES PASSED` / `## OUTCOMES UNMET` / `## BLOCKED`                                                              |
-| `dream-consolidator`  | `## DREAM PROPOSAL READY` / `## DREAM NO_CHANGES_NEEDED` / `## BLOCKED`                                                |
 
 ## Marker Rules
 

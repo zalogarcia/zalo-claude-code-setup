@@ -31,7 +31,7 @@ When you detect degradation:
 2. **Stop starting new complex work.** Finish the current step cleanly, then pause.
 3. **Delegate aggressively.** A fresh subagent = clean 200K context.
 4. **Read summaries, not bodies.** Frontmatter, exit codes, last 20 lines of output.
-5. **At POOR (70%+):** save state via `/session-save` or write a `PLAN.md` checkpoint file before any further work.
+5. **At POOR (70%+):** write a `PLAN.md` checkpoint file before any further work.
 
 ## Cannot-Verify-Semantic-Correctness
 

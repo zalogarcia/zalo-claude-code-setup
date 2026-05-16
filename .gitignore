@@ -44,3 +44,11 @@ dreams/
 
 # autopilot prior-run archives
 .autopilot.prev*
+
+# Claude Code internal runtime state
+daemon/
+daemon.log
+jobs/
+
+# Archived deprecated subprojects (kept locally, not in repo)
+.archive/

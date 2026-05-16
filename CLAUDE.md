@@ -37,14 +37,12 @@ When starting work on a new project, or when the user asks to initialize/set up 
 
 ## Workflow Commands
 
-- `/build-fix` — Iteratively fix build errors
-- `/refactor-clean` — Detect and remove dead code
-- `/tdd` — Test-driven development
-- `/e2e` — Generate Playwright end-to-end tests
-- `/learn` — Extract reusable patterns from session into memory
-- `/session-save` — Save session context for cross-session continuity
+- `/autopilot` — Autonomous multi-phase orchestrator: plan → implement → QA → commit
+- `/bug` — Trace, diagnose, fix, validate
+- `/qa-loop` — Iterative audit-and-fix loop
+- `/plan` — Plan with brainstorm + principles verification
+- `/brainstorm` — Deep thinking, challenge assumptions
 - `/ship` — Full feature delivery: plan → implement → QA loop → wait for push approval
-- `/deploy-validate` — Self-healing deployment: pre-deploy QA → deploy → smoke test → validate → wait for prod approval
 
 ## Git & Deployment (IMPORTANT)
 
@@ -95,12 +93,10 @@ Always verify your work. This is the single highest-leverage practice. Apply the
 - After API changes: curl the endpoint or run the test suite
 - If there's no automated way to verify, tell the user what to check manually
 - Never say "this should work" — prove it works (per the Iron Law in `~/.claude/rules/gates.md`)
-- **Before marking any feature or fix complete**, run a full QA loop:
-  1. `npx tsc --noEmit` (typecheck)
-  2. `npm run build` (build)
-  3. Run relevant tests if they exist
-  4. Fix all findings before reporting results
-- **3+ file edits → mandatory `/qa-loop`.** Any turn that touches 3 or more files MUST run `/qa-loop` before claiming done. This is the iterative loop: `qa-agent` audits → fix bugs → re-audit → repeat until clean or cap hit. A single build/typecheck is NOT sufficient — `/qa-loop` catches integration bugs, wiring issues, and logic errors that static checks miss. "Small changes across many files" is not an exception — scope is measured in files touched, not lines changed. If already inside `/ship`, `/autopilot`, `/tdd`, or `/bug` (which have their own QA phases), that satisfies this rule.
+- **Before marking any feature or fix complete**, invoke the `typecheck-and-build` skill — it standardizes the tsc+build chain with smart failure-region extraction. Do not roll your own `npm run build 2>&1 | tail -N` invocation; the skill picks the right tail and reports exit codes consistently.
+- For commits, invoke the `commit-with-heredoc` skill — it encodes the correct `$(cat <<'EOF' … EOF)` quoting and the Co-Authored-By trailer.
+- For dev-server restarts (after env changes, before live-test, or when the server is stuck), invoke the `dev-server-restart` skill — it kills by port, restarts with nohup, polls for readiness, and smoke-tests a route. Do not hand-write the `pkill && sleep && curl` chain.
+- **3+ file edits → mandatory `/qa-loop`.** Any turn that touches 3 or more files MUST run `/qa-loop` before claiming done. This is the iterative loop: `qa-agent` audits → fix bugs → re-audit → repeat until clean or cap hit. A single build/typecheck is NOT sufficient — `/qa-loop` catches integration bugs, wiring issues, and logic errors that static checks miss. "Small changes across many files" is not an exception — scope is measured in files touched, not lines changed. If already inside `/ship`, `/autopilot`, or `/bug` (which have their own QA phases), that satisfies this rule.
 - **Kill stale background processes** before starting new dev servers or builds (`pkill -f 'next dev' || true`)
 - For "did I really build it?" doubt, apply `~/.claude/rules/verification-patterns.md` — Existence ≠ Implementation; use the stub-detect greps.
 
@@ -123,16 +119,16 @@ When the user doesn't specify, default to:
 - For CSS/UI fixes: **audit all style sources** (parent components, layouts, global CSS, Tailwind config) before making changes. Account for specificity, inheritance, and layout conflicts in a single pass — don't iterate blindly.
 - Prefer flat, obvious implementations over abstracted clever ones.
 
-## Frontend Workflow (Auto-Chain)
+## Frontend Workflow (Opt-In)
 
-When the user asks to build, design, or create any frontend UI (page, component, landing page, dashboard, etc.), automatically run this pipeline — do NOT wait to be asked:
+When the user asks to build, design, or create frontend UI (page, component, landing page, dashboard, etc.), **consider** this pipeline. It's opt-in, not mandatory — invoke when the work is genuinely UI-design-heavy (a new page, a component library piece, a visual redesign). Skip for trivial copy/style tweaks or one-line CSS fixes.
 
-1. **Design** — Invoke `/ui-ux-pro-max` to get concrete palette, font pairing, and style recommendations for the context
-2. **Create** — Apply `/frontend-design` principles (bold direction, anti-slop aesthetics) while writing the code, using the design database output from step 1
-3. **Build** — **ALWAYS** use the `frontend-specialist` agent for implementation. It has scoped MCP servers for Aceternity UI and shadcn/ui — never build frontend inline in the main thread. The agent will pull real component docs and examples before writing code. **Before writing any code, the agent must read `~/.claude/projects/-Users-zalo/memory/apple_hig_design_principles.md`** and apply those principles throughout.
-4. **Verify** — Launch `live-test` agent to screenshot and confirm it looks right in the browser
+1. **Design** — Invoke the `ui-ux-pro-max` skill to get concrete palette, font pairing, and style recommendations for the context.
+2. **Create** — Apply the `frontend-design` skill's principles (bold direction, anti-slop aesthetics) while writing the code.
+3. **Build** — For non-trivial implementation, use the `frontend-specialist` agent. It has scoped MCP servers for Aceternity UI and shadcn/ui. **The agent must read `~/.claude/projects/-Users-zalo/memory/apple_hig_design_principles.md`** before writing code and apply those principles throughout.
+4. **Verify** — Launch the `live-test` agent to screenshot and confirm it looks right in the browser.
 
-Skip steps that don't apply (e.g., skip step 4 if no dev server is running), but **never skip step 3** — all frontend code must go through the `frontend-specialist` agent.
+This chain has been historically underused — don't force it for small changes. For full-page or component-library work, the full chain is high-value.
 
 ## When to Use Subagents
 
@@ -172,9 +168,14 @@ When compacting (`/compact`):
 - If a plan file exists, re-read it after compaction to restore full context.
 - Never compact mid-step — finish the current step first, update the plan file, then compact.
 
-## Context Window
+## Context Window & MCP vs CLI
 
-Prefer CLI tools (gh, supabase CLI) over MCP for simple one-off operations. MCPs consume context.
+Most MCP tools are **deferred** (schemas not loaded until invoked via `ToolSearch`), so the old "MCPs consume context" concern no longer applies broadly. Choose per case:
+
+- **`gh` CLI** — preferred over the GitHub MCP. The CLI is lightweight and pulls no secrets into the prompt.
+- **Supabase MCP** — **PREFERRED** over raw `curl` against `api.supabase.com` or inline access tokens. Use `mcp__supabase__execute_sql`, `mcp__supabase__deploy_edge_function`, `mcp__supabase__get_logs`, `mcp__supabase__apply_migration`, etc. The MCP server holds the `SUPABASE_ACCESS_TOKEN` — never echo it inline. **Writing `Authorization: Bearer sbp_...` in a Bash command is a security bug; use the MCP instead.**
+- **Supabase CLI** — fine for local-dev workflows (`supabase start`, `supabase functions serve`) where no token is involved. Avoid for management-plane operations.
+- **Other MCPs** (Playwright, Knowledge Graph, Qdrant, repo-graphrag, Context7, Vercel) — use as designed; they're all deferred.
 
 ## Persistent Memory & Agentic RAG
 
