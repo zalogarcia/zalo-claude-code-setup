@@ -66,7 +66,7 @@ After the H2 marker, the agent's body must signal one of four states (adapted fr
 Without contracts, subagent returns are prose blobs the orchestrator must re-read entirely. Contracts let:
 
 - The main thread regex-detect terminal state and route accordingly.
-- Multi-stage pipelines (implementer → spec-reviewer → code-quality-reviewer) chain reliably.
+- Multi-stage pipelines (planner → implementer → reviewer) chain reliably.
 - The user see at a glance what the agent actually decided.
 
 Treat the marker as a public commitment. If the agent emits `## VERIFICATION PASSED`, the verification was actually run.

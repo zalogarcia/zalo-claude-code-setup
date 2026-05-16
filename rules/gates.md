@@ -20,7 +20,7 @@ Adapted from gsd-build/get-shit-done. Every validation checkpoint maps to one of
 **Purpose:** Evaluates output quality and routes to revision if insufficient.
 **Behavior:** Loops back to producer with specific feedback. Bounded by iteration cap (typically 3).
 **Recovery:** Producer addresses feedback; checker re-evaluates. Escalates early if issue count does not decrease between consecutive iterations (stall detection). After max iterations, escalates unconditionally.
-**Examples:** `qa-agent` reviewing implementation; spec-reviewer/code-quality-reviewer pair; `live-test` finding UI bugs.
+**Examples:** `qa-agent` reviewing implementation; `live-test` finding UI bugs; `outcomes-grader` checking a plan against the rubric.
 
 ### Escalation Gate
 

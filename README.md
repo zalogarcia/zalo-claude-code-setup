@@ -217,16 +217,6 @@ Authoritative reference docs at `~/.claude/rules/`. Commands and agents `@`-incl
 
 `~/.claude/META_RULE.md` is automatically re-injected at every `startup`, `/clear`, and `/compact` via the `session-start.sh` hook. It names the available primitives (subagents, slash commands, skills, shared rules) and the discipline for routing work — so the orchestrator never forgets the system's shape. Edit freely; the hook reads it fresh each time.
 
-### Agent Prompt Templates (3)
-
-Reusable subagent dispatch templates at `~/.claude/agents/templates/` (from `obra/superpowers` two-stage review pattern):
-
-| Template                            | Used By                                                                   |
-| ----------------------------------- | ------------------------------------------------------------------------- |
-| **implementer-prompt.md**           | Standard fresh-context implementation dispatch with H2 marker integration |
-| **spec-reviewer-prompt.md**         | Stage 1 of two-stage review — verifies spec compliance only               |
-| **code-quality-reviewer-prompt.md** | Stage 2 of two-stage review — ship-it judgment with severity buckets      |
-
 ### MCP Servers (8)
 
 | Server              | What It Does                                                                                                    |
@@ -391,8 +381,7 @@ If a recommended tool is missing, the relevant hook or MCP will silently skip �
 │   ├── bug-fix.md                    # Root cause tracer
 │   ├── image-craft-expert.md         # AI image generation
 │   ├── outcomes-grader.md            # Plan/artifact rubric grader
-│   ├── brainstorm.md                 # Deep-thinking problem analyzer
-│   └── templates/                    # Subagent prompt templates (implementer / spec-reviewer / code-quality)
+│   └── brainstorm.md                 # Deep-thinking problem analyzer
 ├── commands/
 │   ├── autopilot.md                  # Autonomous multi-phase orchestrator
 │   ├── bug.md                        # Bug trace + diagnose + fix + validate

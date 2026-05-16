@@ -203,24 +203,6 @@ function scanAgents() {
   return out;
 }
 
-function scanAgentTemplates() {
-  const out = [];
-  const dir = path.join(REPO_ROOT, 'agents', 'templates');
-  for (const file of listMdFiles(dir)) {
-    const name = path.basename(file, '.md');
-    const text = fs.readFileSync(file, 'utf8');
-    out.push({
-      id: `agent-template.${name}`,
-      kind: 'agent-template',
-      label: name,
-      path: path.relative(REPO_ROOT, file),
-      summary: firstParagraph(text),
-      includes: extractAtIncludes(text),
-    });
-  }
-  return out;
-}
-
 function scanRules() {
   const out = [];
   for (const file of listMdFiles(path.join(REPO_ROOT, 'rules'))) {
@@ -368,7 +350,6 @@ function buildGraph() {
     ...scanRules(),
     ...scanCommands(),
     ...scanAgents(),
-    ...scanAgentTemplates(),
     ...scanSkills(),
     ...scanMcp(),
     ...scanHooks(),
@@ -400,11 +381,6 @@ function buildGraph() {
   // agents: orchestrator routes to them directly
   for (const n of nodes.filter((x) => x.kind === 'agent')) {
     addEdge('meta.orchestrator', n.id, 'routes');
-    for (const inc of n.includes || []) addEdge(n.id, inc, 'include');
-  }
-
-  // agent-templates
-  for (const n of nodes.filter((x) => x.kind === 'agent-template')) {
     for (const inc of n.includes || []) addEdge(n.id, inc, 'include');
   }
 

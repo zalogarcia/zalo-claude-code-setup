@@ -1,6 +1,6 @@
 {
   "meta": {
-    "generatedAt": "2026-05-16T03:43:03.387Z",
+    "generatedAt": "2026-05-16T03:48:17.492Z",
     "repo": "zalo-claude-code-setup"
   },
   "nodes": [
@@ -396,30 +396,6 @@
         "## NEEDS DECISION",
         "## BLOCKED"
       ],
-      "includes": []
-    },
-    {
-      "id": "agent-template.code-quality-reviewer-prompt",
-      "kind": "agent-template",
-      "label": "code-quality-reviewer-prompt",
-      "path": "agents/templates/code-quality-reviewer-prompt.md",
-      "summary": "Source: obra/superpowers `subagent-driven-development/code-quality-reviewer-prompt.md`. Use this template for **stage 2** of two-stage review, after spec-compliance has passed. This is the \"would I approve this PR?\" pass.",
-      "includes": []
-    },
-    {
-      "id": "agent-template.implementer-prompt",
-      "kind": "agent-template",
-      "label": "implementer-prompt",
-      "path": "agents/templates/implementer-prompt.md",
-      "summary": "Source: obra/superpowers `subagent-driven-development/implementer-prompt.md`. Use this template when dispatching a subagent to implement a discrete task. Fill in `[bracketed]` slots with concrete content — never paste this template verbatim with placeholders intact.",
-      "includes": []
-    },
-    {
-      "id": "agent-template.spec-reviewer-prompt",
-      "kind": "agent-template",
-      "label": "spec-reviewer-prompt",
-      "path": "agents/templates/spec-reviewer-prompt.md",
-      "summary": "Source: obra/superpowers `subagent-driven-development/spec-reviewer-prompt.md`. Use this template when dispatching the **first stage** of two-stage review (spec compliance, before code quality). Pair with `code-quality-reviewer-prompt.md`.",
       "includes": []
     },
     {
