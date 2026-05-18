@@ -154,6 +154,12 @@ If the revision still has unresolved concerns from the original review, log `pla
 
 Substitute the resolved `${RUN_DIR}` (e.g. `.claude/.plan/20260518-093015`) into every path below — print real paths, not placeholders. The `.claude/.plan/latest` symlink updated in Step 1 always points at the most-recent run, so users get a stable shortcut even though each invocation lives in its own dir.
 
+**Build the copy-pasteable autopilot command:** read `${RUN_DIR}/task.md`, collapse all whitespace runs (including newlines) into single spaces, trim leading/trailing whitespace. The result is the task string to print after `/autopilot `. Example construction:
+
+```bash
+TASK_ONE_LINE=$(tr -s '[:space:]' ' ' < "${RUN_DIR}/task.md" | sed -e 's/^ //' -e 's/ $//')
+```
+
 Print to terminal:
 
 ```
@@ -168,14 +174,19 @@ Summary:
   Migrations: <yes/no>
   Testing strategy: <one line>
 
-Next steps:
-  - Review the full plan: cat <RUN_DIR>/plan.md   (or: cat .claude/.plan/latest/plan.md)
-  - To execute, copy the task description (not the plan) and run /autopilot <task>.
-    It will produce its own plan from the task — but since it includes the same
-    Plan Verification Loop, the result will converge with what /plan produced here.
-  - The plan in <RUN_DIR>/plan.md is for your review/handoff/reference.
-    It is NOT auto-consumed by /autopilot.
+Review the full plan: cat <RUN_DIR>/plan.md   (or: cat .claude/.plan/latest/plan.md)
+
+The plan in <RUN_DIR>/plan.md is for your review/handoff. It is NOT
+auto-consumed by /autopilot — /autopilot will produce its own plan
+from the task below. Both runs share the same Plan Verification Loop,
+so the result converges with what /plan produced here.
+
+To execute, copy-paste the line below:
+
+/autopilot ${TASK_ONE_LINE}
 ```
+
+**This last block is mandatory.** Every /plan invocation that reaches Step 6 (whether verification passed, was skipped as trivial, or finished with concerns remaining) MUST end with the literal `/autopilot ${TASK_ONE_LINE}` line as the final printed line. No exceptions — the user grabs this command without re-reading the task. If `${RUN_DIR}/task.md` is somehow empty (Step 1 ABORT should have caught this), print `/autopilot <TASK MISSING — re-invoke /plan with a task description>` as a visible failure rather than skipping the line.
 
 ## Anti-Patterns (will not do)
 
