@@ -130,6 +130,11 @@ Dispatch a sub-agent. "Just this once" = autopilot violation.
 - Commit sequentially from the orchestrator (sub-agents stage only)
 - Write phase state to disk and compact after each phase
 - Keep dispatching until all work units are `done`, `failed`, or `deferred` — then write report and exit. No interim sign-offs.
+- **Mid-run halts are FORBIDDEN** except for these three explicit exits:
+  (a) API circuit breaker tripped (`ABORTED_API_OUTAGE`) — see API Dispatch Wrapper Protocol
+  (b) Context Budget Gate exceeded 70% twice in a row AFTER a compaction restore (`aborted`) — NOT mid-phase
+  (c) `git worktree add` failed during Phase 0 (cannot create isolated workspace)
+  Heavy sub-agent returns are NOT a legitimate exit. "Run paused", "Batch N complete (X of Y units)", "preserving resume point", "context approaching POOR" mid-phase — these are doctrine violations. Sub-agents are capped to 50-line returns by the Return Contract (see Sub-Agent Dispatch Rules); if a return blew the cap, the agent violated contract — log `agent_return_oversized` and continue. Compaction happens **between phases**, not mid-phase.
 
 ## Tiered Decision Protocol
 
@@ -389,7 +394,43 @@ If ANY criterion fails → sequential dispatch.
 
 Note: For bug fixing, dispatch `general-purpose` (model: "opus") with explicit instructions to diagnose AND fix. The `bug-fix` agent type only diagnoses (emits `ROOT CAUSE FOUND`), it does not ship code.
 
+### Return Contract
+
+The orchestrator's context fills up when sub-agents return prose dumps with inlined code, diffs, or command output. Three parallel agents each returning ~100K tokens push the orchestrator into POOR tier in one batch — that triggered a doctrine violation in a prior run. Hard cap, no exceptions.
+
+**Hard cap: 50 lines of return body per agent** (excluding the H2 marker line).
+
+**Required shape** (consistent with `~/.claude/rules/agent-contracts.md` Standard Return Template):
+
+```
+## <MARKER>
+
+**Status:** DONE | DONE_WITH_CONCERNS | NEEDS_CONTEXT | BLOCKED
+**Summary:** <1-2 sentences>
+**Files staged:** <paths only, one per line>
+**Verification:** <command run + result, one line>
+**Concerns / Notes:** <≤ 5 bullets, optional>
+```
+
+**Forbidden in return body** — the orchestrator does not read this; it inspects disk:
+
+- Code blocks > 10 lines (reference `path:line` instead)
+- Full file bodies, raw diffs (use `git diff --stat` summary if any)
+- Full command output (one-line summary only)
+- Full error traces (`path:line` + 1-line message only)
+- Inlined logs, JSON dumps, schemas
+
+**Overflow channel:** if an agent has detail that exceeds the 50-line cap, it writes to `.autopilot/agent_returns/<wu_id>.md` and references the path in its **Concerns / Notes**. The orchestrator reads the overflow file ONLY when the marker is `DONE_WITH_CONCERNS` or `BLOCKED` and the structured fields aren't enough to route.
+
+This contract MUST be reproduced in every Phase 2 / Phase 3 / Phase 4 dispatch prompt. Agents do not have this section memorized — embed it in the prompt.
+
 ### Marker Handling
+
+**Read ONLY the marker line + the structured fields above** — do not scan past line 50 of the return body. Verify the agent's claims by inspecting disk state (`git status`, `git diff --stat`, `git diff --name-only {pre_autopilot_sha}..HEAD`, file existence), not by reading the agent's prose. The marker + structured fields are the contract; prose is informational.
+
+If a return exceeds 50 lines, log `agent_return_oversized` to `decisions.log` with `wu_id` and the line count, then continue parsing only the structured fields. Do NOT halt — see Anti-Patterns.
+
+If the marker says `DONE` but `git diff` shows no staged changes for the agent's claimed files, treat as `BLOCKED` regardless of what the prose claims.
 
 Every dispatch must handle ALL possible markers:
 
@@ -405,19 +446,20 @@ Every dispatch must handle ALL possible markers:
 
 ### `.autopilot/` File Map
 
-| File                  | Purpose                                                            | Written by                        |
-| --------------------- | ------------------------------------------------------------------ | --------------------------------- |
-| `state.json`          | Phase, work units, commits, counters, commands                     | Orchestrator (every micro-step)   |
-| `plan.md`             | Full decomposed plan from safe-planner                             | Phase 1                           |
-| `task.md`             | Original task description                                          | Phase 0                           |
-| `rubric.md`           | Outcomes-style success criteria (if provided)                      | Phase 0 (copied from user path)   |
-| `unmet_outcomes.json` | Rubric items that failed grading + grader's "what's missing" notes | Phase 4 step 7 (each iteration)   |
-| `project_context.md`  | Tech stack, build/test commands, key dirs                          | Phase 0 (Explore agent)           |
-| `decisions.log`       | JSON-lines of every decision                                       | Orchestrator (append-only)        |
-| `bug_tracker.json`    | `{signature: count}` for recurring bug detection                   | Orchestrator (every QA iteration) |
-| `scope.txt`           | Files touched by autopilot                                         | Phase 2 (after all batches)       |
-| `deferred_issues.md`  | MEDIUM/LOW issues not auto-fixed                                   | Phase 3 (append)                  |
-| `report.md`           | Final report                                                       | Phase 5                           |
+| File                    | Purpose                                                                           | Written by                                     |
+| ----------------------- | --------------------------------------------------------------------------------- | ---------------------------------------------- |
+| `state.json`            | Phase, work units, commits, counters, commands                                    | Orchestrator (every micro-step)                |
+| `plan.md`               | Full decomposed plan from safe-planner                                            | Phase 1                                        |
+| `task.md`               | Original task description                                                         | Phase 0                                        |
+| `rubric.md`             | Outcomes-style success criteria (if provided)                                     | Phase 0 (copied from user path)                |
+| `unmet_outcomes.json`   | Rubric items that failed grading + grader's "what's missing" notes                | Phase 4 step 7 (each iteration)                |
+| `project_context.md`    | Tech stack, build/test commands, key dirs                                         | Phase 0 (Explore agent)                        |
+| `decisions.log`         | JSON-lines of every decision                                                      | Orchestrator (append-only)                     |
+| `bug_tracker.json`      | `{signature: count}` for recurring bug detection                                  | Orchestrator (every QA iteration)              |
+| `scope.txt`             | Files touched by autopilot                                                        | Phase 2 (after all batches)                    |
+| `deferred_issues.md`    | MEDIUM/LOW issues not auto-fixed                                                  | Phase 3 (append)                               |
+| `agent_returns/<id>.md` | Overflow detail when a sub-agent return exceeds the 50-line cap (Return Contract) | Sub-agent writes; orchestrator reads on demand |
+| `report.md`             | Final report                                                                      | Phase 5                                        |
 
 ### State File: `.autopilot/state.json`
 
@@ -473,7 +515,7 @@ Updated after EVERY micro-step (phase transition, batch completion, QA iteration
 }
 ```
 
-`worktree_spawned` / `worktree_path` / `worktree_branch` are set during Phase 0 by the Concurrency Guard. `terminal_state` is `null` while running; the final Phase 5 (or any abort path) sets it to one of `"complete" | "complete_with_issues" | "aborted" | "aborted_api_outage"` BEFORE deleting `.autopilot/lock`. The next `/autopilot` invocation in the same directory reads `terminal_state` to decide whether to reuse the directory (terminal set) or auto-spawn a worktree (terminal still null AND lock present = active run).
+`worktree_spawned` / `worktree_path` / `worktree_branch` are set during Phase 0 by the Workspace Isolation block (always `true` on fresh invocations under the always-worktree policy). `terminal_state` is `null` while running; the final Phase 5 (or any abort path) sets it to one of `"complete" | "complete_with_issues" | "aborted" | "aborted_api_outage"` BEFORE deleting `.autopilot/lock`. `/autopilot resume` reads `terminal_state` from the local worktree's `.autopilot/state.json` — if set, the prior run already terminated; abort with "Nothing to resume."
 
 When `current_dispatch_retry` is active (an Agent dispatch is mid-retry-backoff), it has shape:
 
@@ -516,6 +558,8 @@ Cleared back to `null` when the dispatch returns successfully or hits a non-retr
 
 ### Context Budget Gate
 
+This gate fires ONLY at the moment after a compaction restore. Mid-phase context pressure (e.g., a batch returned heavy) is **never** a trigger — it indicates one or more sub-agents violated the Return Contract. Log `agent_return_oversized` and continue. The forbidden phrases "Run paused", "preserving resume point", "context approaching POOR" must NEVER appear in main-thread output (see Autonomy Doctrine + Anti-Patterns).
+
 After every compaction restore, check context usage:
 
 - If > 70% (POOR tier per context-budget.md) → force another compact
@@ -523,7 +567,7 @@ After every compaction restore, check context usage:
 
 ### Resume Protocol
 
-`/autopilot resume` operates on the LOCAL `.autopilot/` only. **The Concurrency Guard (Phase 0) is SKIPPED on resume** — resume never spawns a worktree. If the user wants to resume a run that was previously auto-spawned into a worktree, they `cd` into that worktree first, then invoke `/autopilot resume`. If resume finds `.autopilot/state.json.terminal_state` is already set (the prior run terminated cleanly), abort with: "Prior run already terminated (status: <terminal_state>). Nothing to resume."
+`/autopilot resume` operates on the LOCAL `.autopilot/` only. **The Workspace Isolation block (Phase 0) is SKIPPED on resume** — resume never spawns a new worktree. The user must `cd` into the worktree they want to resume (its path was reported in the prior run's Phase 5 output or visible via `git worktree list`), then invoke `/autopilot resume`. If resume finds `.autopilot/state.json.terminal_state` is already set (the prior run terminated cleanly), abort with: "Prior run already terminated (status: <terminal_state>). Nothing to resume."
 
 1. Read `.autopilot/state.json` → get `current_phase`, all counters (qa_iteration, outcomes_iteration, api_retry_exhaustions_in_phase, etc.). If `api_retry_exhaustions_in_phase` is absent or non-numeric → initialize to 0. If `current_dispatch_retry` is absent → treat as null. Older state.json files predating this protocol resume cleanly with these defaults.
 2. Read `.autopilot/plan.md` → restore plan context
@@ -541,105 +585,65 @@ After every compaction restore, check context usage:
 
 ### Phase 0: Pre-flight & Inventory
 
-**Concurrency Guard & Worktree Auto-Spawn (runs FIRST — before any state writes):**
+**Workspace Isolation (runs FIRST — before any state writes):**
 
-Two concurrent `/autopilot` invocations in the same repo would clobber each other on `.autopilot/state.json`, `plan.md`, `decisions.log`, etc. To prevent this, every fresh invocation runs this guard before creating `.autopilot/`. **`/autopilot resume` SKIPS this guard entirely** — resume always operates on the local `.autopilot/`, never spawns a worktree.
+Every fresh `/autopilot` invocation spawns its own isolated worktree on a new branch. No lock check, no stale-lock detection, no race window. The main repo never carries a `/autopilot` run, and concurrent invocations cannot collide because each lives in a separate worktree+branch keyed by `$(date +%Y%m%d-%H%M%S)-$$`. **`/autopilot resume` SKIPS this block entirely** — resume always operates on the worktree the user `cd`'d into.
+
+Prior versions of this protocol used check-then-spawn with `noclobber` lock acquisition + stale-lock detection. That worked in theory but had a TOCTOU race: a second invocation could see the lock file exist while state.json was not yet written, mistake it for a crashed run, and steal the lock. Always-worktree eliminates the race entirely. Trade-off: every fresh run leaves a worktree directory the user prunes later via `git worktree remove`.
 
 For a fresh invocation:
 
 ```bash
-# Concurrency guard — atomic lock acquisition with stale-lock detection.
-# Uses bash `noclobber` (O_EXCL) so the lock file's own creation is the
-# atomic test-and-set — no `[ -f ]`-then-`cat >` TOCTOU window.
+# Always-worktree policy. No lock race, no stale-detect, no collision.
 
-WORKTREE_SPAWNED=false
-WT_PATH=""
-WT_BRANCH=""
-
-# Stable per-invocation suffix used by worktree TS and lock content.
-# `$$` distinguishes same-wallclock-second concurrent invocations.
 INVOCATION_SUFFIX="$(date +%Y%m%d-%H%M%S)-$$"
 
-try_acquire_lock() {
-  # Returns 0 on success, 1 if lock already exists.
-  # Atomic via bash `noclobber` — `>` errors if file exists, no race window.
-  mkdir -p .autopilot
-  ( set -o noclobber
-    printf '{"pid":%d,"ts":"%s","invocation":"%s","worktree_spawned":%s}\n' \
-      $$ "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$INVOCATION_SUFFIX" "$WORKTREE_SPAWNED" \
-      > .autopilot/lock
-  ) 2>/dev/null
-}
+# Resolve the main repo path even if we're already inside a worktree.
+# git rev-parse --show-toplevel gives the current worktree's top, not
+# the main repo's, so use --git-common-dir + dirname for the canonical
+# main path. New worktrees go as siblings of the main repo.
+GIT_COMMON_DIR=$(git rev-parse --git-common-dir)
+MAIN_REPO_ROOT=$(cd "$GIT_COMMON_DIR/.." && pwd)
+MAIN_REPO_NAME=$(basename "$MAIN_REPO_ROOT")
 
-if try_acquire_lock; then
-  : # First mover — no collision, lock acquired.
-else
-  # Lock already exists. Disambiguate active-run vs stale-lock via TWO signals:
-  #   (a) state.json.terminal_state set → prior run terminated cleanly
-  #   (b) state.json missing OR lock's pid not alive → prior run crashed
-  TERMINAL=$(jq -r '.terminal_state // ""' .autopilot/state.json 2>/dev/null || echo "")
-  LOCK_PID=$(jq -r '.pid // 0' .autopilot/lock 2>/dev/null || echo 0)
+WT_PATH="${MAIN_REPO_ROOT%/*}/${MAIN_REPO_NAME}-autopilot-${INVOCATION_SUFFIX}"
+WT_BRANCH="autopilot/${INVOCATION_SUFFIX}"
 
-  IS_STALE=false
-  if [ -n "$TERMINAL" ] && [ "$TERMINAL" != "null" ]; then
-    IS_STALE=true                                     # clean termination
-  elif [ "$LOCK_PID" -gt 0 ] 2>/dev/null && ! kill -0 "$LOCK_PID" 2>/dev/null; then
-    IS_STALE=true                                     # holder process is dead
-  elif [ ! -f .autopilot/state.json ]; then
-    IS_STALE=true                                     # crashed before first state write
-  fi
-
-  if [ "$IS_STALE" = "true" ]; then
-    rm -f .autopilot/lock
-    try_acquire_lock || { echo "ERROR: lock re-acquire after stale-clear failed" >&2; exit 1; }
-  else
-    # Genuinely active run — spawn isolated worktree on a new branch.
-    REPO_ROOT=$(git rev-parse --show-toplevel)
-    REPO_NAME=$(basename "$REPO_ROOT")
-    WT_PATH="${REPO_ROOT%/*}/${REPO_NAME}-autopilot-${INVOCATION_SUFFIX}"
-    WT_BRANCH="autopilot/${INVOCATION_SUFFIX}"
-    if ! git worktree add "$WT_PATH" -b "$WT_BRANCH"; then
-      echo "ERROR: git worktree add failed for $WT_PATH on branch $WT_BRANCH" >&2
-      exit 1
-    fi
-    cd "$WT_PATH"
-    WORKTREE_SPAWNED=true
-    try_acquire_lock || { echo "ERROR: lock acquire in new worktree failed" >&2; exit 1; }
-    # Original repo's .autopilot/lock STAYS — the original run owns it.
-  fi
+if ! git worktree add "$WT_PATH" -b "$WT_BRANCH"; then
+  echo "ERROR: git worktree add failed for $WT_PATH on branch $WT_BRANCH" >&2
+  exit 1
 fi
+cd "$WT_PATH"
 
-# Seed state.json with worktree + terminal fields. The Phase 0 inventory
-# write later in this phase merges additional fields via `jq`; these four
-# must be present from the start so downstream phases and the next /autopilot
-# invocation see them.
-WT_PATH_JSON="null"
-WT_BRANCH_JSON="null"
-if [ "$WORKTREE_SPAWNED" = "true" ]; then
-  WT_PATH_JSON="\"$(pwd)\""
-  WT_BRANCH_JSON="\"${WT_BRANCH}\""
-fi
+# Fresh worktree has a fresh tree — no .autopilot/ collision possible.
+# Lock file is still written so resume can detect a clean terminal_state
+# from a prior run in THIS worktree.
+mkdir -p .autopilot .autopilot/agent_returns
+printf '{"pid":%d,"ts":"%s","invocation":"%s","worktree_spawned":true}\n' \
+  $$ "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$INVOCATION_SUFFIX" \
+  > .autopilot/lock
+
+# Seed state.json with the four durable fields. Phase 0 inventory below
+# merges additional fields via `jq` — never overwrite wholesale.
 cat > .autopilot/state.json <<EOF
 {
-  "worktree_spawned": ${WORKTREE_SPAWNED},
-  "worktree_path": ${WT_PATH_JSON},
-  "worktree_branch": ${WT_BRANCH_JSON},
+  "worktree_spawned": true,
+  "worktree_path": "$(pwd)",
+  "worktree_branch": "${WT_BRANCH}",
   "terminal_state": null
 }
 EOF
 
-# Log start
+# Log start + worktree spawn.
 echo "{\"ts\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\",\"tier\":\"system\",\"decision\":\"autopilot started\",\"reasoning\":\"$(pwd)\"}" >> .autopilot/decisions.log
-
-# If worktree was spawned, log the auto-spawn decision too
-if [ "$WORKTREE_SPAWNED" = "true" ]; then
-  echo "{\"ts\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\",\"tier\":\"system\",\"decision\":\"worktree_auto_spawned\",\"reasoning\":\"collision: active .autopilot/ lock in main repo\",\"worktree_path\":\"$(pwd)\",\"worktree_branch\":\"${WT_BRANCH}\"}" >> .autopilot/decisions.log
-fi
+echo "{\"ts\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\",\"tier\":\"system\",\"decision\":\"worktree_spawned\",\"reasoning\":\"always-worktree policy — isolated workspace per fresh /autopilot invocation\",\"worktree_path\":\"$(pwd)\",\"worktree_branch\":\"${WT_BRANCH}\"}" >> .autopilot/decisions.log
 ```
 
-**After the guard, the orchestrator's CWD is the worktree** (when spawned) or the original repo. The bash `cd` persists across Bash tool calls per the harness contract, so subsequent bash snippets in this document (state.json writes, git commits, sub-agent dispatches that read `.autopilot/...`) all resolve relative paths inside the worktree. For Read/Edit/Write tool calls that require absolute paths, derive them from `state.json.worktree_path` (already seeded above) or from a fresh `pwd` capture. Sub-agents inherit the orchestrator's CWD, so prompts saying "read `.autopilot/plan.md`" resolve correctly without modification.
+**After this block, the orchestrator's CWD is the new worktree.** The bash `cd` persists across Bash tool calls per the harness contract, so subsequent bash snippets in this document (state.json writes, git commits, sub-agent dispatches that read `.autopilot/...`) all resolve relative paths inside the worktree. For Read/Edit/Write tool calls that require absolute paths, derive them from `state.json.worktree_path` (already seeded above) or from a fresh `pwd` capture. Sub-agents inherit the orchestrator's CWD, so prompts saying "read `.autopilot/plan.md`" resolve correctly without modification.
 
 The four state.json fields (`worktree_spawned`, `worktree_path`, `worktree_branch`, `terminal_state`) are now durable on disk from this point forward — every subsequent state write must use `jq` (or equivalent) to MERGE additional fields rather than overwriting state.json wholesale, or these four will be lost.
+
+**Worktree cleanup**: After a clean Phase 5 terminal_state (`complete` or `complete_with_issues`), the worktree remains on disk for the user to inspect/push. The user prunes via `git worktree remove <path>` once they've reviewed the run. Autopilot does NOT auto-remove the worktree (the user may want to inspect commits or resume).
 
 **Pre-flight checks (deterministic auto-resolution — NEVER render a recovery menu):**
 
@@ -692,7 +696,7 @@ Write findings to .autopilot/project_context.md as structured markdown. The "Ava
 
 Parse the agent's findings into state.json fields: `build_command`, `test_command`, `typecheck_command`, `package_manager`, `admin_email`, `live_test_enabled` (false if no admin email found).
 
-**MERGE these fields into `.autopilot/state.json` — do NOT overwrite.** The Concurrency Guard already seeded `worktree_spawned`, `worktree_path`, `worktree_branch`, and `terminal_state`; a wholesale `cat > state.json` here would wipe them and break stale-lock detection + the worktree banner. Use `jq` to merge:
+**MERGE these fields into `.autopilot/state.json` — do NOT overwrite.** The Workspace Isolation block already seeded `worktree_spawned`, `worktree_path`, `worktree_branch`, and `terminal_state`; a wholesale `cat > state.json` here would wipe them and break the worktree banner + the resume contract. Use `jq` to merge:
 
 ```bash
 jq --arg bc "$BUILD_CMD" \
@@ -724,7 +728,7 @@ jq --arg bc "$BUILD_CMD" \
    && mv .autopilot/state.json.tmp .autopilot/state.json
 ```
 
-The same merge pattern (`'. + {…}'` or `'.field = $value'`) applies to every subsequent state.json write throughout the workflow — phase transitions, batch completions, QA iterations, API-retry persistence, etc. Wholesale overwrite is forbidden after the Concurrency Guard.
+The same merge pattern (`'. + {…}'` or `'.field = $value'`) applies to every subsequent state.json write throughout the workflow — phase transitions, batch completions, QA iterations, API-retry persistence, etc. Wholesale overwrite is forbidden after the Workspace Isolation block.
 
 Initialize `.autopilot/bug_tracker.json` as `{}`.
 
@@ -964,6 +968,36 @@ FOR each batch (ordered by dependency):
     - Never use git add -A or git add .
     - Never push to remote
 
+    ## Return contract (HARD LIMIT — read this carefully)
+    Your return body MUST be ≤ 50 lines (excluding the H2 marker line).
+    The orchestrator's context fills up if returns are prose dumps; three
+    parallel agents each returning 100K tokens triggers a doctrine violation.
+
+    Use this exact shape:
+
+      ## IMPLEMENTATION COMPLETE  (or DONE_WITH_CONCERNS / NEEDS_CONTEXT / BLOCKED)
+
+      **Status:** DONE | DONE_WITH_CONCERNS | NEEDS_CONTEXT | BLOCKED
+      **Summary:** <1-2 sentences>
+      **Files staged:** <paths, one per line>
+      **Verification:** <what you ran + result, one line>
+      **Concerns / Notes:** <≤ 5 bullets, optional>
+
+    DO NOT paste in your return body:
+    - Code blocks > 10 lines (reference path:line instead)
+    - Full file bodies, raw diffs (use `git diff --stat` summary only)
+    - Full command output (one-line summary only)
+    - Full error traces (path:line + 1-line message only)
+    - Inlined logs, JSON dumps, schemas
+
+    If you have detail that exceeds 50 lines, write it to
+    `.autopilot/agent_returns/{unit.id}.md` and reference the path in
+    your **Concerns / Notes**. The orchestrator only reads the first
+    50 lines of your return — anything beyond is invisible.
+
+    CONFIRM-AFTER-RUN prefixed lines (per Autonomy Doctrine above) still
+    apply and count toward the 50-line cap.
+
     ## Completion
     Emit ## IMPLEMENTATION COMPLETE when done (files staged).
     If you need more context, emit ## NEEDS_CONTEXT with what's missing (from disk, NOT from the user).
@@ -998,6 +1032,9 @@ FOR each batch (ordered by dependency):
         Dispatch general-purpose agent (model: "opus"):
           "Type errors after integrating batch {N}: {errors}.
            Fix the integration issues. Stage fixes only, do not commit.
+           Return contract: ≤50 lines, structured (Status/Summary/Files staged/Verification/Concerns).
+           No code blocks >10 lines, no full error traces — path:line + 1-line summary only.
+           Overflow → .autopilot/agent_returns/integration-fix-{N}.md.
            Emit ## IMPLEMENTATION COMPLETE when done."
         Run: {typecheck_command}
         attempts += 1
@@ -1051,6 +1088,9 @@ LOOP:
         "Build/typecheck errors (attempt {build_attempts}/{MAX_BUILD_FIX_ATTEMPTS}):
          {error output}
          Diagnose the root cause. Fix the code. Stage fixes only, do not commit.
+         Return contract: ≤50 lines, structured (Status/Summary/Files staged/Verification/Concerns).
+         No code blocks >10 lines, no full error traces — path:line + 1-line summary only.
+         Overflow → .autopilot/agent_returns/build-fix-iter{iteration}.md.
          Emit ## IMPLEMENTATION COMPLETE when fixed."
 
       Wait for return. If BLOCKED → Tiered Decision Protocol.
@@ -1067,7 +1107,10 @@ LOOP:
     IF failures:
       Dispatch general-purpose agent (model: "opus"):
         "Test failures: {output}. Fix the CODE, not the tests.
-         Stage fixes. Do not commit. Emit ## IMPLEMENTATION COMPLETE."
+         Stage fixes. Do not commit.
+         Return contract: ≤50 lines, structured (Status/Summary/Files staged/Verification/Concerns).
+         No code blocks >10 lines. Overflow → .autopilot/agent_returns/test-fix-iter{iteration}.md.
+         Emit ## IMPLEMENTATION COMPLETE."
       Wait. If fixed → orchestrator commits: "[autopilot] QA iter {iteration} test fix"
 
   # ── Step 3: QA audit (sub-agent) ──
@@ -1080,13 +1123,26 @@ LOOP:
        HIGH = wrong behavior visible to users
        MEDIUM = wrong behavior in edge cases only
        LOW = code smell, minor inconsistency
-     Categorize every finding."
+     Categorize every finding.
+
+     Return contract: write the FULL findings list to
+     .autopilot/qa_findings_iter{iteration}.md (one section per bug, with severity,
+     file, line, description, suggested fix). In your return body (≤50 lines),
+     emit ONLY: marker, Status, Summary (counts per severity), path to the
+     findings file, and any blockers. Do NOT inline the bug list in the return
+     body — the orchestrator reads the findings file from disk."
 
   Wait for:
     ## VERIFICATION PASSED → BREAK (all clean!)
     ## ISSUES FOUND → continue to step 4
     ## BLOCKED → Tiered Decision Protocol, re-dispatch
     ## NEEDS_CONTEXT → supply, re-dispatch (max MAX_AGENT_RETRIES)
+
+  # On ## ISSUES FOUND, read the findings file from disk (NOT from the return body):
+  issues = parse(.autopilot/qa_findings_iter{iteration}.md)
+  # If the findings file is missing or unparseable, re-dispatch qa-agent ONCE
+  # with explicit reminder of the file path + structured format. If still
+  # missing after retry, log "qa_findings_parse_failure" and BREAK with current state.
 
   # ── Step 4: Stall detection ──
   current_issues = normalize each issue to (file, first_8_words_of_description)
@@ -1127,12 +1183,17 @@ LOOP:
            This has been 'fixed' {count} times and keeps coming back.
            Trace the actual root cause — don't patch symptoms.
            Self-plan: read the file, trace data flow, find the real issue.
-           Stage fixes. Do not commit. Emit ## IMPLEMENTATION COMPLETE."
+           Stage fixes. Do not commit.
+           Return contract: ≤50 lines, structured (Status/Summary/Files staged/Verification/Concerns).
+           No code blocks >10 lines. Overflow → .autopilot/agent_returns/qa-fix-iter{iteration}-{file_slug}.md.
+           Emit ## IMPLEMENTATION COMPLETE."
       ELSE:
         Dispatch general-purpose (model: "opus"):
           "Fix these bugs in {file}: {bug_list}.
            Self-plan: read the file, understand full context, then fix.
            Minimal changes only. Stage fixes. Do not commit.
+           Return contract: ≤50 lines, structured (Status/Summary/Files staged/Verification/Concerns).
+           No code blocks >10 lines. Overflow → .autopilot/agent_returns/qa-fix-iter{iteration}-{file_slug}.md.
            Emit ## IMPLEMENTATION COMPLETE."
   ELSE:
     FOR each group (SEQUENTIAL):
@@ -1202,10 +1263,18 @@ Orchestrator runs all verification commands directly:
        Scope: (read .autopilot/scope.txt)
        Project context: (read .autopilot/project_context.md)
 
-       For each rubric item, return PASS / FAIL / AMBIGUOUS with concrete evidence.
+       For each rubric item, evaluate PASS / FAIL / AMBIGUOUS with concrete evidence.
+
+       Return contract: write the FULL per-item grading (each item under
+       #### N. <item> with **Verdict:** and **What's missing:** lines, per
+       outcomes-grader.md output schema) to
+       .autopilot/outcomes_findings_iter{iteration}.md. In your return body
+       (≤50 lines), emit ONLY: marker, Status, Summary (counts: N pass / N fail /
+       N ambiguous), and the path to the findings file. Do NOT inline the full
+       grading in the return body — the orchestrator reads the file from disk.
+
        Emit ## OUTCOMES PASSED if every item passes.
-       Emit ## OUTCOMES UNMET if any item fails or is ambiguous — include
-         per-item "What's missing" descriptions.
+       Emit ## OUTCOMES UNMET if any item fails or is ambiguous.
        Emit ## BLOCKED if you cannot evaluate.
        """
 
@@ -1215,7 +1284,8 @@ Orchestrator runs all verification commands directly:
 
      IF ## OUTCOMES UNMET:
        # ── Step 7b: Persist unmet items ──
-       Parse grader output (per outcomes-grader.md output schema) →
+       Parse .autopilot/outcomes_findings_iter{iteration}.md (NOT the agent's
+       return body) per outcomes-grader.md output schema →
          extract every FAIL or AMBIGUOUS item with its "What's missing" line.
        Write .autopilot/unmet_outcomes.json:
          [
@@ -1224,11 +1294,12 @@ Orchestrator runs all verification commands directly:
          ]
 
        # Parse-failure fallback: marker is UNMET but no items extracted
-       IF parsed items list is empty:
+       IF parsed items list is empty (findings file missing OR unparseable):
          Re-dispatch outcomes-grader once with explicit reminder:
            "Your previous output emitted ## OUTCOMES UNMET but no FAIL/AMBIGUOUS
-            items were parseable. Re-grade and follow the output schema in
-            outcomes-grader.md exactly: each item under #### N. <item> with a
+            items were parseable in .autopilot/outcomes_findings_iter{iteration}.md.
+            Re-grade and write the full findings to that file, following the output
+            schema in outcomes-grader.md exactly: each item under #### N. <item> with a
             **Verdict:** line and (for FAIL) a **What's missing:** line."
          IF still 0 items after retry:
            Log to .autopilot/deferred_issues.md as "outcomes_parse_failure: grader
@@ -1274,6 +1345,11 @@ Orchestrator runs all verification commands directly:
 
            Read ~/.claude/rules/database-safety.md, testing-safety.md, git-safety.md.
 
+           ## Return contract (HARD LIMIT)
+           ≤50 lines, structured (Status/Summary/Files staged/Verification/Concerns).
+           No code blocks >10 lines, no full file bodies, no raw diffs.
+           Overflow → .autopilot/agent_returns/outcomes-iter{iteration}-{item_slug}.md.
+
            ## Completion
            Emit ## IMPLEMENTATION COMPLETE when staged.
            Emit ## NEEDS_CONTEXT if information is missing (from disk, not the user).
@@ -1312,6 +1388,8 @@ Orchestrator runs all verification commands directly:
              "Outcomes-iter {iteration} introduced gate failures (attempt {attempts}/{MAX_BUILD_FIX_ATTEMPTS}):
               {error output}
               Fix the CODE (not the test, not the gate command). Stage fixes only.
+              Return contract: ≤50 lines, structured. No code blocks >10 lines.
+              Overflow → .autopilot/agent_returns/outcomes-gate-fix-iter{iteration}.md.
               Emit ## IMPLEMENTATION COMPLETE when fixed."
            Wait for return. If BLOCKED → Tiered Decision Protocol.
 
@@ -1455,7 +1533,7 @@ Compute via:
 - If user authorized push in advance via the user prompt: `PUSH_PENDING: SUPPRESSED — user pre-authorized in this session`
 ```
 
-**Terminal Cleanup Block (named, referenced — runs BEFORE the terminal summary on every Phase 5 exit AND every ABORT path that occurs after the Concurrency Guard acquired a lock):**
+**Terminal Cleanup Block (named, referenced — runs BEFORE the terminal summary on every Phase 5 exit AND every ABORT path that occurs after the Workspace Isolation block wrote `.autopilot/lock`):**
 
 ```bash
 # Set terminal_state in state.json — values: complete | complete_with_issues | aborted | aborted_api_outage
@@ -1468,7 +1546,7 @@ jq --arg s "$STATUS_LOWER" '.terminal_state = $s' .autopilot/state.json > .autop
 rm -f .autopilot/lock
 ```
 
-**Abort-path coverage rule (binding):** Every `ABORT:` instruction in this document that fires AFTER the Concurrency Guard acquired the lock MUST execute the Terminal Cleanup Block (with appropriate `<STATUS>`) before emitting the user-facing abort message. The PID-liveness check in the guard provides a backstop — a crashed run that skipped cleanup will be detected as stale on the next invocation — but cleanup-on-abort is the primary path; the backstop exists for true crashes (SIGKILL, power loss), not for documented abort paths.
+**Abort-path coverage rule (binding):** Every `ABORT:` instruction in this document that fires AFTER the Workspace Isolation block wrote `.autopilot/lock` MUST execute the Terminal Cleanup Block (with appropriate `<STATUS>`) before emitting the user-facing abort message. Under the always-worktree policy there is no shared lock to race against, so the backstop concern of prior versions (stale-lock detection on a concurrent invocation) no longer applies — each invocation owns its own worktree's `.autopilot/lock` exclusively. Cleanup-on-abort still matters because `/autopilot resume` inside the same worktree reads `terminal_state` to decide whether resume is meaningful.
 
 Concrete sites in this document that MUST invoke Terminal Cleanup before aborting (status in parens):
 
@@ -1477,7 +1555,7 @@ Concrete sites in this document that MUST invoke Terminal Cleanup before abortin
 - Phase 2/3 "ABORT to Phase 5" sites (`aborted`) — Phase 5's own cleanup covers these IF the path actually transitions to Phase 5; if the abort exits directly, invoke cleanup inline
 - Circuit breaker exit (`aborted_api_outage`) — already routes to Phase 5, which runs cleanup
 
-Pre-flight ABORTs that occur BEFORE lock acquisition (none currently — the Concurrency Guard is the first action) would skip cleanup since there's no lock to release.
+Pre-flight ABORTs that occur BEFORE lock acquisition (none currently — the Workspace Isolation block is the first action of Phase 0) would skip cleanup since there's no lock to release.
 
 **Terminal summary** (last thing the orchestrator emits before hard exit — NO questions, NO "want me to" sign-offs):
 
@@ -1535,3 +1613,8 @@ Task: {summary}
 - Skip compaction between phases
 - Auto-claim uncommitted changes as task
 - Trust ephemeral in-memory state — persist everything to .autopilot/
+- **Halt mid-phase with "Run paused" / "preserves resume point" / "context approaching POOR" because sub-agent returns were heavy.** Sub-agent returns are capped at 50 lines per the Return Contract. If a return blew the cap, the agent violated contract — log `agent_return_oversized` to `decisions.log` and continue dispatching. The only legitimate mid-run exits are listed in Autonomy Doctrine.
+- Inline a sub-agent's full return body into orchestrator context. Read marker + structured fields only; verify work from disk (`git diff --stat`, `git diff --name-only`, file existence checks).
+- Trust an agent's prose claim that "I implemented X" without running `git diff --name-only {pre_autopilot_sha}..HEAD` to confirm staged changes match the agent's claimed files.
+- Parse a sub-agent's prose body for structured data (bug lists, grader findings, etc.). When the contract specifies a findings file (e.g., `.autopilot/qa_findings_iter{N}.md`, `.autopilot/outcomes_findings_iter{N}.md`), parse the file from disk, never the return body.
+- Hand-roll lock acquisition or stale-lock detection on `.autopilot/lock`. The always-worktree policy in Phase 0 guarantees no collision — each invocation owns its own worktree's `.autopilot/lock` exclusively.
