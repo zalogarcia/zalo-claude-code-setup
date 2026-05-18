@@ -39,7 +39,7 @@ PATH	BRANCH	TERMINAL_STATE	COMMITS_AHEAD_OF_dev	FILES_TOUCHED	TASK_SUMMARY
 - `complete_with_issues` — Phase 5 exit with deferred issues; mergeable but review the deferred_issues.md
 - `aborted` — exited early (pre-flight failure, context exhaustion); usually NOT mergeable, inspect first
 - `aborted_api_outage` — API circuit breaker tripped; partial work, may be mergeable
-- `running` — still active; `.autopilot/lock` present, do NOT merge
+- `running` — `state.json.terminal_state` is null. Usually means still active, but could also be a crashed run that died before writing terminal_state. Do NOT merge; inspect (check `.autopilot/lock` mtime + PID liveness) before deciding to resume vs. discard
 - `missing-state` — no `.autopilot/state.json` at all; corrupt or pre-protocol run, inspect manually
 
 ## Parsing in Claude

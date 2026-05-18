@@ -73,12 +73,20 @@ while IFS=$'\t' read -r wt_path branch; do
   fi
 
   # Commits ahead of base. `git rev-list --count` returns the integer.
+  # `cmd || echo "?"` is safe under `set -e` because the OR short-circuits.
   ahead=$(git rev-list --count "${BASE_BRANCH}..${branch}" 2>/dev/null || echo "?")
 
   # File count touched on this branch relative to merge-base with target.
   # `...` (three dots) gives changes from the merge-base, which is what merging
   # actually applies, so it matches what the user will see in the merge commit.
-  files=$(git diff --name-only "${BASE_BRANCH}...${branch}" 2>/dev/null | wc -l | tr -d ' ')
+  #
+  # The `{ git diff ... || true; } | wc -l | tr -d ' '` shape is NOT optional
+  # under `set -euo pipefail`. A bare `git diff ... 2>/dev/null | wc -l` would
+  # trip pipefail when git exits non-zero (bad ref, missing merge-base, etc.)
+  # and `set -e` would abort the whole script mid-loop — silently truncating
+  # the TSV. The brace-group + `|| true` masks git's failure inside the
+  # pipeline so `wc` always runs on (possibly empty) input.
+  files=$( { git diff --name-only "${BASE_BRANCH}...${branch}" 2>/dev/null || true; } | wc -l | tr -d ' ')
 
   # Trim task to 80 chars and squash any tabs/newlines so the TSV stays valid.
   task_short=$(printf '%s' "$task" | tr -s '[:space:]' ' ' | cut -c1-80)
