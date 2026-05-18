@@ -462,12 +462,18 @@ Updated after EVERY micro-step (phase transition, batch completion, QA iteration
   "decisions_count": 4,
   "api_retry_exhaustions_in_phase": 0,
   "current_dispatch_retry": null,
+  "worktree_spawned": false,
+  "worktree_path": null,
+  "worktree_branch": null,
+  "terminal_state": null,
   "phase_results": {
     "plan": "PLAN READY — 3 files, 2 components",
     "implement": "2/2 work units done"
   }
 }
 ```
+
+`worktree_spawned` / `worktree_path` / `worktree_branch` are set during Phase 0 by the Concurrency Guard. `terminal_state` is `null` while running; the final Phase 5 (or any abort path) sets it to one of `"complete" | "complete_with_issues" | "aborted" | "aborted_api_outage"` BEFORE deleting `.autopilot/lock`. The next `/autopilot` invocation in the same directory reads `terminal_state` to decide whether to reuse the directory (terminal set) or auto-spawn a worktree (terminal still null AND lock present = active run).
 
 When `current_dispatch_retry` is active (an Agent dispatch is mid-retry-backoff), it has shape:
 
@@ -513,11 +519,11 @@ Cleared back to `null` when the dispatch returns successfully or hits a non-retr
 After every compaction restore, check context usage:
 
 - If > 70% (POOR tier per context-budget.md) → force another compact
-- If still > 70% after second compact → write state, ABORT: "Context exhausted at Phase {N}. Resume with `/autopilot resume`."
+- If still > 70% after second compact → write state, run **Terminal Cleanup Block** with `<STATUS>=aborted` (sets `terminal_state="aborted"` + removes `.autopilot/lock`), then ABORT: "Context exhausted at Phase {N}. Resume with `/autopilot resume`."
 
 ### Resume Protocol
 
-`/autopilot resume`:
+`/autopilot resume` operates on the LOCAL `.autopilot/` only. **The Concurrency Guard (Phase 0) is SKIPPED on resume** — resume never spawns a worktree. If the user wants to resume a run that was previously auto-spawned into a worktree, they `cd` into that worktree first, then invoke `/autopilot resume`. If resume finds `.autopilot/state.json.terminal_state` is already set (the prior run terminated cleanly), abort with: "Prior run already terminated (status: <terminal_state>). Nothing to resume."
 
 1. Read `.autopilot/state.json` → get `current_phase`, all counters (qa_iteration, outcomes_iteration, api_retry_exhaustions_in_phase, etc.). If `api_retry_exhaustions_in_phase` is absent or non-numeric → initialize to 0. If `current_dispatch_retry` is absent → treat as null. Older state.json files predating this protocol resume cleanly with these defaults.
 2. Read `.autopilot/plan.md` → restore plan context
@@ -535,10 +541,105 @@ After every compaction restore, check context usage:
 
 ### Phase 0: Pre-flight & Inventory
 
+**Concurrency Guard & Worktree Auto-Spawn (runs FIRST — before any state writes):**
+
+Two concurrent `/autopilot` invocations in the same repo would clobber each other on `.autopilot/state.json`, `plan.md`, `decisions.log`, etc. To prevent this, every fresh invocation runs this guard before creating `.autopilot/`. **`/autopilot resume` SKIPS this guard entirely** — resume always operates on the local `.autopilot/`, never spawns a worktree.
+
+For a fresh invocation:
+
 ```bash
-mkdir -p .autopilot
-echo '{"ts":"'$(date -u +%Y-%m-%dT%H:%M:%SZ)'","tier":"system","decision":"autopilot started","reasoning":"'$(pwd)'"}' >> .autopilot/decisions.log
+# Concurrency guard — atomic lock acquisition with stale-lock detection.
+# Uses bash `noclobber` (O_EXCL) so the lock file's own creation is the
+# atomic test-and-set — no `[ -f ]`-then-`cat >` TOCTOU window.
+
+WORKTREE_SPAWNED=false
+WT_PATH=""
+WT_BRANCH=""
+
+# Stable per-invocation suffix used by worktree TS and lock content.
+# `$$` distinguishes same-wallclock-second concurrent invocations.
+INVOCATION_SUFFIX="$(date +%Y%m%d-%H%M%S)-$$"
+
+try_acquire_lock() {
+  # Returns 0 on success, 1 if lock already exists.
+  # Atomic via bash `noclobber` — `>` errors if file exists, no race window.
+  mkdir -p .autopilot
+  ( set -o noclobber
+    printf '{"pid":%d,"ts":"%s","invocation":"%s","worktree_spawned":%s}\n' \
+      $$ "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$INVOCATION_SUFFIX" "$WORKTREE_SPAWNED" \
+      > .autopilot/lock
+  ) 2>/dev/null
+}
+
+if try_acquire_lock; then
+  : # First mover — no collision, lock acquired.
+else
+  # Lock already exists. Disambiguate active-run vs stale-lock via TWO signals:
+  #   (a) state.json.terminal_state set → prior run terminated cleanly
+  #   (b) state.json missing OR lock's pid not alive → prior run crashed
+  TERMINAL=$(jq -r '.terminal_state // ""' .autopilot/state.json 2>/dev/null || echo "")
+  LOCK_PID=$(jq -r '.pid // 0' .autopilot/lock 2>/dev/null || echo 0)
+
+  IS_STALE=false
+  if [ -n "$TERMINAL" ] && [ "$TERMINAL" != "null" ]; then
+    IS_STALE=true                                     # clean termination
+  elif [ "$LOCK_PID" -gt 0 ] 2>/dev/null && ! kill -0 "$LOCK_PID" 2>/dev/null; then
+    IS_STALE=true                                     # holder process is dead
+  elif [ ! -f .autopilot/state.json ]; then
+    IS_STALE=true                                     # crashed before first state write
+  fi
+
+  if [ "$IS_STALE" = "true" ]; then
+    rm -f .autopilot/lock
+    try_acquire_lock || { echo "ERROR: lock re-acquire after stale-clear failed" >&2; exit 1; }
+  else
+    # Genuinely active run — spawn isolated worktree on a new branch.
+    REPO_ROOT=$(git rev-parse --show-toplevel)
+    REPO_NAME=$(basename "$REPO_ROOT")
+    WT_PATH="${REPO_ROOT%/*}/${REPO_NAME}-autopilot-${INVOCATION_SUFFIX}"
+    WT_BRANCH="autopilot/${INVOCATION_SUFFIX}"
+    if ! git worktree add "$WT_PATH" -b "$WT_BRANCH"; then
+      echo "ERROR: git worktree add failed for $WT_PATH on branch $WT_BRANCH" >&2
+      exit 1
+    fi
+    cd "$WT_PATH"
+    WORKTREE_SPAWNED=true
+    try_acquire_lock || { echo "ERROR: lock acquire in new worktree failed" >&2; exit 1; }
+    # Original repo's .autopilot/lock STAYS — the original run owns it.
+  fi
+fi
+
+# Seed state.json with worktree + terminal fields. The Phase 0 inventory
+# write later in this phase merges additional fields via `jq`; these four
+# must be present from the start so downstream phases and the next /autopilot
+# invocation see them.
+WT_PATH_JSON="null"
+WT_BRANCH_JSON="null"
+if [ "$WORKTREE_SPAWNED" = "true" ]; then
+  WT_PATH_JSON="\"$(pwd)\""
+  WT_BRANCH_JSON="\"${WT_BRANCH}\""
+fi
+cat > .autopilot/state.json <<EOF
+{
+  "worktree_spawned": ${WORKTREE_SPAWNED},
+  "worktree_path": ${WT_PATH_JSON},
+  "worktree_branch": ${WT_BRANCH_JSON},
+  "terminal_state": null
+}
+EOF
+
+# Log start
+echo "{\"ts\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\",\"tier\":\"system\",\"decision\":\"autopilot started\",\"reasoning\":\"$(pwd)\"}" >> .autopilot/decisions.log
+
+# If worktree was spawned, log the auto-spawn decision too
+if [ "$WORKTREE_SPAWNED" = "true" ]; then
+  echo "{\"ts\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\",\"tier\":\"system\",\"decision\":\"worktree_auto_spawned\",\"reasoning\":\"collision: active .autopilot/ lock in main repo\",\"worktree_path\":\"$(pwd)\",\"worktree_branch\":\"${WT_BRANCH}\"}" >> .autopilot/decisions.log
+fi
 ```
+
+**After the guard, the orchestrator's CWD is the worktree** (when spawned) or the original repo. The bash `cd` persists across Bash tool calls per the harness contract, so subsequent bash snippets in this document (state.json writes, git commits, sub-agent dispatches that read `.autopilot/...`) all resolve relative paths inside the worktree. For Read/Edit/Write tool calls that require absolute paths, derive them from `state.json.worktree_path` (already seeded above) or from a fresh `pwd` capture. Sub-agents inherit the orchestrator's CWD, so prompts saying "read `.autopilot/plan.md`" resolve correctly without modification.
+
+The four state.json fields (`worktree_spawned`, `worktree_path`, `worktree_branch`, `terminal_state`) are now durable on disk from this point forward — every subsequent state write must use `jq` (or equivalent) to MERGE additional fields rather than overwriting state.json wholesale, or these four will be lost.
 
 **Pre-flight checks (deterministic auto-resolution — NEVER render a recovery menu):**
 
@@ -591,7 +692,40 @@ Write findings to .autopilot/project_context.md as structured markdown. The "Ava
 
 Parse the agent's findings into state.json fields: `build_command`, `test_command`, `typecheck_command`, `package_manager`, `admin_email`, `live_test_enabled` (false if no admin email found).
 
-Write initial state to `.autopilot/state.json`.
+**MERGE these fields into `.autopilot/state.json` — do NOT overwrite.** The Concurrency Guard already seeded `worktree_spawned`, `worktree_path`, `worktree_branch`, and `terminal_state`; a wholesale `cat > state.json` here would wipe them and break stale-lock detection + the worktree banner. Use `jq` to merge:
+
+```bash
+jq --arg bc "$BUILD_CMD" \
+   --arg tc "$TEST_CMD" \
+   --arg yc "$TYPECHECK_CMD" \
+   --arg pm "$PACKAGE_MANAGER" \
+   --arg ae "$ADMIN_EMAIL" \
+   --argjson lte "$LIVE_TEST_ENABLED" \
+   '. + {
+     task_summary: "<from .autopilot/task.md>",
+     build_command: $bc,
+     test_command: $tc,
+     typecheck_command: $yc,
+     package_manager: $pm,
+     admin_email: $ae,
+     live_test_enabled: $lte,
+     work_units: [],
+     files_touched: [],
+     commits: [],
+     qa_iteration: 0,
+     bugs_fixed: 0,
+     brainstorm_count: 0,
+     decisions_count: 0,
+     api_retry_exhaustions_in_phase: 0,
+     current_dispatch_retry: null,
+     phase_results: {}
+   }' \
+   .autopilot/state.json > .autopilot/state.json.tmp \
+   && mv .autopilot/state.json.tmp .autopilot/state.json
+```
+
+The same merge pattern (`'. + {…}'` or `'.field = $value'`) applies to every subsequent state.json write throughout the workflow — phase transitions, batch completions, QA iterations, API-retry persistence, etc. Wholesale overwrite is forbidden after the Concurrency Guard.
+
 Initialize `.autopilot/bug_tracker.json` as `{}`.
 
 **Determine rubric (Outcomes-style task-specific success criteria):**
@@ -1218,6 +1352,15 @@ Generate `.autopilot/report.md`:
 **Task:** <summary>
 **Status:** COMPLETE | COMPLETE_WITH_ISSUES | ABORTED | ABORTED_API_OUTAGE
 
+<!-- Worktree banner — include ONLY if state.json.worktree_spawned == true -->
+
+> **Ran in worktree:** `<worktree_path>` on branch `<worktree_branch>`
+> (auto-spawned because another autopilot was active in the main repo).
+>
+> **Review:** `cd <worktree_path> && git log --oneline <pre_autopilot_sha>..HEAD`
+> **Merge back (from main repo):** `git merge <worktree_branch>` (or open a PR)
+> **Clean up:** `git worktree remove <worktree_path>` after merging
+
 ## Work Units
 
 | ID   | Description | Status | Agent               |
@@ -1312,9 +1455,34 @@ Compute via:
 - If user authorized push in advance via the user prompt: `PUSH_PENDING: SUPPRESSED — user pre-authorized in this session`
 ```
 
+**Terminal Cleanup Block (named, referenced — runs BEFORE the terminal summary on every Phase 5 exit AND every ABORT path that occurs after the Concurrency Guard acquired a lock):**
+
+```bash
+# Set terminal_state in state.json — values: complete | complete_with_issues | aborted | aborted_api_outage
+STATUS_LOWER=$(echo "<STATUS>" | tr '[:upper:]' '[:lower:]')
+jq --arg s "$STATUS_LOWER" '.terminal_state = $s' .autopilot/state.json > .autopilot/state.json.tmp \
+  && mv .autopilot/state.json.tmp .autopilot/state.json
+
+# Release lock LAST — state must be durable on disk before lock is removed,
+# so the next /autopilot invocation reads a coherent terminal_state.
+rm -f .autopilot/lock
+```
+
+**Abort-path coverage rule (binding):** Every `ABORT:` instruction in this document that fires AFTER the Concurrency Guard acquired the lock MUST execute the Terminal Cleanup Block (with appropriate `<STATUS>`) before emitting the user-facing abort message. The PID-liveness check in the guard provides a backstop — a crashed run that skipped cleanup will be detected as stale on the next invocation — but cleanup-on-abort is the primary path; the backstop exists for true crashes (SIGKILL, power loss), not for documented abort paths.
+
+Concrete sites in this document that MUST invoke Terminal Cleanup before aborting (status in parens):
+
+- "Context exhausted at Phase {N}" (`aborted`) — after Context Budget Gate
+- Pre-flight table rows: "Initialize the repo…", "Cannot auto-stash residual changes…", "Another git process is running.", "No task found." (all `aborted`)
+- Phase 2/3 "ABORT to Phase 5" sites (`aborted`) — Phase 5's own cleanup covers these IF the path actually transitions to Phase 5; if the abort exits directly, invoke cleanup inline
+- Circuit breaker exit (`aborted_api_outage`) — already routes to Phase 5, which runs cleanup
+
+Pre-flight ABORTs that occur BEFORE lock acquisition (none currently — the Concurrency Guard is the first action) would skip cleanup since there's no lock to release.
+
 **Terminal summary** (last thing the orchestrator emits before hard exit — NO questions, NO "want me to" sign-offs):
 
 - Status (COMPLETE / COMPLETE_WITH_ISSUES / ABORTED)
+- **If `worktree_spawned == true`:** the single line `WORKTREE: <worktree_path> (branch <worktree_branch>) — merge back when ready`
 - Files changed (count + list)
 - Bugs fixed (count)
 - Verification status (pass/fail per gate)

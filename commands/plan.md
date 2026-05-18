@@ -32,19 +32,32 @@ Examples:
 
 Verify a task description was provided. If empty → ABORT: "Usage: /plan <task description>".
 
-Save task to `.claude/.plan/task.md` (working directory `.claude/.plan/` — separate from autopilot's `.autopilot/`).
+Each `/plan` invocation gets its own subdirectory under `.claude/.plan/<run-id>/` so concurrent runs in the same repo can't clobber each other. The parent `.claude/.plan/` is shared (separate from autopilot's `.autopilot/`); each run writes only inside its own `<run-id>` dir.
 
 ```bash
 mkdir -p .claude/.plan
-echo "<task verbatim>" > .claude/.plan/task.md
+# `$$` PID suffix prevents same-wallclock-second RUN_ID collisions between
+# concurrent /plan invocations (timestamp alone has 1s resolution).
+RUN_ID="$(date +%Y%m%d-%H%M%S)-$$"
+RUN_DIR=".claude/.plan/${RUN_ID}"
+mkdir -p "$RUN_DIR"
+echo "<task verbatim>" > "${RUN_DIR}/task.md"
+
+# Atomic "latest" symlink update — `mv` over a symlink is rename(2), POSIX-atomic.
+# Per-PID temp name (`latest.tmp.$$`) prevents two concurrent runs from racing
+# on a shared temp filename and producing dangling or mis-pointing symlinks.
+ln -sfn "$RUN_ID" ".claude/.plan/latest.tmp.$$" \
+  && mv -f ".claude/.plan/latest.tmp.$$" .claude/.plan/latest
 ```
+
+Throughout the rest of this workflow, `${RUN_DIR}` refers to the resolved path `.claude/.plan/<run-id>/` for this invocation. The orchestrator substitutes the actual path when constructing agent prompts — agents see the literal path (e.g. `.claude/.plan/20260518-093015/plan.md`), not the placeholder.
 
 ### Step 2: Dispatch safe-planner
 
 Dispatch `safe-planner` (model: "opus") with:
 
 ```
-Task: (read .claude/.plan/task.md)
+Task: (read ${RUN_DIR}/task.md)
 
 Decompose into work units. For each:
 1. ID (wu-1, wu-2, ...)
@@ -61,7 +74,7 @@ Identify:
 - Testing strategy
 - Risks and rollback plan for irreversible changes
 
-Output as structured markdown to .claude/.plan/plan.md.
+Output as structured markdown to ${RUN_DIR}/plan.md.
 
 Emit ## PLAN READY when written.
 ```
@@ -70,9 +83,9 @@ Wait for `## PLAN READY`. Verify file exists and is non-empty before proceeding.
 
 ### Step 3: Skip heuristic check
 
-Parse `.claude/.plan/plan.md` and count work units.
+Parse `${RUN_DIR}/plan.md` and count work units.
 
-If `work_units ≤ 2` → **skip verification**. Log decision to `.claude/.plan/decisions.log` and jump to Step 6. (See `~/.claude/rules/plan-verification.md` for rationale on the simple count-based heuristic.)
+If `work_units ≤ 2` → **skip verification**. Log decision to `${RUN_DIR}/decisions.log` and jump to Step 6. (See `~/.claude/rules/plan-verification.md` for rationale on the simple count-based heuristic.)
 
 ### Step 4: Plan Verification Loop (per `~/.claude/rules/plan-verification.md`)
 
@@ -85,8 +98,8 @@ Dispatch brainstorm (model: "opus"):
 
   Apply your critical-thinking pass to this plan.
 
-  Original task: (read .claude/.plan/task.md)
-  Plan: (read .claude/.plan/plan.md)
+  Original task: (read ${RUN_DIR}/task.md)
+  Plan: (read ${RUN_DIR}/plan.md)
 
   - Apply inversion, simplification cascade, scale game, meta-pattern recognition
   - Identify hidden assumptions, missing considerations, scope creep
@@ -103,7 +116,7 @@ Dispatch outcomes-grader (model: "opus"):
 
   Grade this PLAN (not code) against the engineering-principles rubric.
 
-  Artifact: (read .claude/.plan/plan.md)
+  Artifact: (read ${RUN_DIR}/plan.md)
   Rubric: (read ~/.claude/rules/engineering-principles.md)
 
   Per-item PASS / FAIL / AMBIGUOUS with quoted evidence from the plan.
@@ -118,7 +131,7 @@ Dispatch outcomes-grader (model: "opus"):
 Wait for both markers. Combine findings:
 
 - If brainstorm has no significant concerns AND grader emits `## OUTCOMES PASSED` → both gates passed, no revision needed. Skip to Step 6.
-- If either flagged concerns → write `.claude/.plan/plan_verification.md` with combined findings, then re-dispatch `safe-planner` ONCE with:
+- If either flagged concerns → write `${RUN_DIR}/plan_verification.md` with combined findings, then re-dispatch `safe-planner` ONCE with:
 
 ```
 The plan you produced was reviewed. Issues to address:
@@ -135,14 +148,17 @@ Emit ## PLAN READY when revised.
 
 Wait for revised `## PLAN READY`. **Do NOT loop again** — cap at one revision per plan.
 
-If the revision still has unresolved concerns from the original review, log `plan_verification_max_iterations_hit` to `.claude/.plan/decisions.log` and proceed with the best version. Note unresolved concerns in the final output.
+If the revision still has unresolved concerns from the original review, log `plan_verification_max_iterations_hit` to `${RUN_DIR}/decisions.log` and proceed with the best version. Note unresolved concerns in the final output.
 
 ### Step 6: Output the plan
+
+Substitute the resolved `${RUN_DIR}` (e.g. `.claude/.plan/20260518-093015`) into every path below — print real paths, not placeholders. The `.claude/.plan/latest` symlink updated in Step 1 always points at the most-recent run, so users get a stable shortcut even though each invocation lives in its own dir.
 
 Print to terminal:
 
 ```
-Plan ready: .claude/.plan/plan.md
+Plan ready: <RUN_DIR>/plan.md
+Shortcut:   .claude/.plan/latest/plan.md  (symlink → this run)
 Verification: <PASSED in 0 revisions | PASSED after revision | SKIPPED (trivial) | CONCERNS REMAIN — see plan_verification.md>
 
 Summary:
@@ -153,11 +169,11 @@ Summary:
   Testing strategy: <one line>
 
 Next steps:
-  - Review the full plan: cat .claude/.plan/plan.md
+  - Review the full plan: cat <RUN_DIR>/plan.md   (or: cat .claude/.plan/latest/plan.md)
   - To execute, copy the task description (not the plan) and run /autopilot <task>.
     It will produce its own plan from the task — but since it includes the same
     Plan Verification Loop, the result will converge with what /plan produced here.
-  - The plan in .claude/.plan/plan.md is for your review/handoff/reference.
+  - The plan in <RUN_DIR>/plan.md is for your review/handoff/reference.
     It is NOT auto-consumed by /autopilot.
 ```
 
