@@ -78,6 +78,8 @@ After autopilot reports COMPLETE / COMPLETE_WITH_ISSUES:
 - MAX_API_RETRIES = 3
 - MAX_PHASE_API_EXHAUSTIONS = 3
 - API_RETRY_BACKOFF = [30, 60, 120]
+- MAX_QA_AUDIT_PARTITIONS = 5
+- QA_FANOUT_THRESHOLD = 8
 - SUBAGENT_MODEL = "opus"
 
 Every `Agent` tool call MUST include `model: "opus"`. No exceptions. Default models are insufficient for autonomous code work.
@@ -446,20 +448,22 @@ Every dispatch must handle ALL possible markers:
 
 ### `.autopilot/` File Map
 
-| File                    | Purpose                                                                           | Written by                                     |
-| ----------------------- | --------------------------------------------------------------------------------- | ---------------------------------------------- |
-| `state.json`            | Phase, work units, commits, counters, commands                                    | Orchestrator (every micro-step)                |
-| `plan.md`               | Full decomposed plan from safe-planner                                            | Phase 1                                        |
-| `task.md`               | Original task description                                                         | Phase 0                                        |
-| `rubric.md`             | Outcomes-style success criteria (if provided)                                     | Phase 0 (copied from user path)                |
-| `unmet_outcomes.json`   | Rubric items that failed grading + grader's "what's missing" notes                | Phase 4 step 7 (each iteration)                |
-| `project_context.md`    | Tech stack, build/test commands, key dirs                                         | Phase 0 (Explore agent)                        |
-| `decisions.log`         | JSON-lines of every decision                                                      | Orchestrator (append-only)                     |
-| `bug_tracker.json`      | `{signature: count}` for recurring bug detection                                  | Orchestrator (every QA iteration)              |
-| `scope.txt`             | Files touched by autopilot                                                        | Phase 2 (after all batches)                    |
-| `deferred_issues.md`    | MEDIUM/LOW issues not auto-fixed                                                  | Phase 3 (append)                               |
-| `agent_returns/<id>.md` | Overflow detail when a sub-agent return exceeds the 50-line cap (Return Contract) | Sub-agent writes; orchestrator reads on demand |
-| `report.md`             | Final report                                                                      | Phase 5                                        |
+| File                              | Purpose                                                                           | Written by                                           |
+| --------------------------------- | --------------------------------------------------------------------------------- | ---------------------------------------------------- |
+| `state.json`                      | Phase, work units, commits, counters, commands                                    | Orchestrator (every micro-step)                      |
+| `plan.md`                         | Full decomposed plan from safe-planner                                            | Phase 1                                              |
+| `task.md`                         | Original task description                                                         | Phase 0                                              |
+| `rubric.md`                       | Outcomes-style success criteria (if provided)                                     | Phase 0 (copied from user path)                      |
+| `unmet_outcomes.json`             | Rubric items that failed grading + grader's "what's missing" notes                | Phase 4 step 7 (each iteration)                      |
+| `project_context.md`              | Tech stack, build/test commands, key dirs                                         | Phase 0 (Explore agent)                              |
+| `decisions.log`                   | JSON-lines of every decision                                                      | Orchestrator (append-only)                           |
+| `bug_tracker.json`                | `{signature: count}` for recurring bug detection                                  | Orchestrator (every QA iteration)                    |
+| `scope.txt`                       | Files touched by autopilot                                                        | Phase 2 (after all batches)                          |
+| `deferred_issues.md`              | MEDIUM/LOW issues not auto-fixed                                                  | Phase 3 (append)                                     |
+| `qa_findings_iter{N}_part_{P}.md` | Per-partition QA findings (one per parallel qa-agent during audit fan-out)        | Phase 3 (qa-agent writes; orchestrator concatenates) |
+| `qa_findings_iter{N}.md`          | Aggregated QA findings for iteration N (concatenation of partition files)         | Orchestrator (Phase 3, after fan-out collect)        |
+| `agent_returns/<id>.md`           | Overflow detail when a sub-agent return exceeds the 50-line cap (Return Contract) | Sub-agent writes; orchestrator reads on demand       |
+| `report.md`                       | Final report                                                                      | Phase 5                                              |
 
 ### State File: `.autopilot/state.json`
 
@@ -1113,34 +1117,93 @@ LOOP:
          Emit ## IMPLEMENTATION COMPLETE."
       Wait. If fixed → orchestrator commits: "[autopilot] QA iter {iteration} test fix"
 
-  # ── Step 3: QA audit (sub-agent) ──
-  Read .autopilot/scope.txt
-  Dispatch qa-agent (model: "opus"):
-    "Audit these files: {scope}.
-     Only flag bugs that affect runtime behavior. Skip style/naming/formatting.
-     Severity rubric:
-       CRITICAL = data loss, security vulnerability, crash
-       HIGH = wrong behavior visible to users
-       MEDIUM = wrong behavior in edge cases only
-       LOW = code smell, minor inconsistency
-     Categorize every finding.
+  # ── Step 3: QA audit (parallel fan-out) ──
+  Read .autopilot/scope.txt → scope_files
 
-     Return contract: write the FULL findings list to
-     .autopilot/qa_findings_iter{iteration}.md (one section per bug, with severity,
-     file, line, description, suggested fix). In your return body (≤50 lines),
-     emit ONLY: marker, Status, Summary (counts per severity), path to the
-     findings file, and any blockers. Do NOT inline the bug list in the return
-     body — the orchestrator reads the findings file from disk."
+  # ── Partition scope_files into K disjoint subsets ──
+  # Goal: dispatch K qa-agents in parallel, each owning a disjoint slice of
+  # the diff. Read-only → safe per ~/.claude/rules/when-to-parallelize.md.
+  # Audit step is the slowest single step in QA; fan-out gives ~K× speedup.
+  IF len(scope_files) < QA_FANOUT_THRESHOLD OR len(state.json.work_units) <= 1:
+    # Too small to benefit — single dispatch (preserves prior behavior).
+    partitions = [("all", scope_files)]
+  ELSE:
+    # Partition by work-unit-owned-files (matches Phase 2 ownership).
+    partitions_map = {}  # wu_id → list of files
+    unowned = []
+    FOR each file in scope_files:
+      owners = [wu.id for wu in state.json.work_units if file in wu.files]
+      IF len(owners) == 0:
+        unowned.append(file)
+      ELSE:
+        # Deterministic assignment: first wu alphabetically by id
+        partitions_map[sorted(owners)[0]].append(file)
 
-  Wait for:
-    ## VERIFICATION PASSED → BREAK (all clean!)
-    ## ISSUES FOUND → continue to step 4
-    ## BLOCKED → Tiered Decision Protocol, re-dispatch
-    ## NEEDS_CONTEXT → supply, re-dispatch (max MAX_AGENT_RETRIES)
+    # Merge partitions while count > MAX_QA_AUDIT_PARTITIONS — combine the
+    # two smallest by file count until under the cap.
+    WHILE len(partitions_map) > MAX_QA_AUDIT_PARTITIONS:
+      a, b = two partitions with smallest file counts
+      partitions_map[a+"+"+b] = partitions_map[a] + partitions_map[b]
+      delete partitions_map[a], partitions_map[b]
 
-  # On ## ISSUES FOUND, read the findings file from disk (NOT from the return body):
+    # Distribute unowned files into the smallest existing partition.
+    IF unowned:
+      smallest = partition key with fewest files
+      partitions_map[smallest].extend(unowned)
+
+    partitions = list of (partition_id, files) from partitions_map
+    # Skip empty partitions (defensive — shouldn't happen post-merge)
+    partitions = [(pid, files) for (pid, files) in partitions if files]
+
+  # ── Dispatch all partitions in PARALLEL ──
+  # Single message, one Agent call per partition, all model: "opus"
+  FOR each (partition_id, files) in partitions (PARALLEL):
+    Dispatch qa-agent (model: "opus"):
+      "Audit these files: {files}.
+       You are auditing a SUBSET of the changed files; other qa-agents are
+       auditing other subsets in parallel. You MAY read files outside your
+       subset for context (imports, type definitions, callers) — but only
+       FLAG bugs in files within your subset. Bugs in files outside your
+       subset will be caught by the partition that owns them.
+
+       Only flag bugs that affect runtime behavior. Skip style/naming/formatting.
+       Severity rubric:
+         CRITICAL = data loss, security vulnerability, crash
+         HIGH = wrong behavior visible to users
+         MEDIUM = wrong behavior in edge cases only
+         LOW = code smell, minor inconsistency
+       Categorize every finding.
+
+       Return contract: write the FULL findings list to
+       .autopilot/qa_findings_iter{iteration}_part_{partition_id}.md (one section
+       per bug, with severity, file, line, description, suggested fix). In your
+       return body (≤50 lines), emit ONLY: marker, Status, Summary (counts per
+       severity), path to YOUR findings file, and any blockers. Do NOT inline
+       the bug list — orchestrator reads it from disk."
+
+  # ── Collect parallel returns ──
+  all_passed = true
+  any_blocked = false
+  partition_files = []  # paths to findings files from partitions that emitted ISSUES FOUND
+
+  FOR each returned qa-agent:
+    IF ## VERIFICATION PASSED → continue
+    IF ## ISSUES FOUND → all_passed = false; partition_files.append(its findings path)
+    IF ## BLOCKED → Tiered Decision Protocol, re-dispatch that partition only
+    IF ## NEEDS_CONTEXT → supply, re-dispatch that partition only (max MAX_AGENT_RETRIES)
+    IF no marker → treat as BLOCKED, re-dispatch that partition with marker reminder
+
+  IF all_passed: BREAK (all clean!)
+
+  # ── Aggregate partition findings into single iteration findings file ──
+  # Downstream fix loop expects .autopilot/qa_findings_iter{iteration}.md
+  # Each partition's bugs are in disjoint files → simple concatenation, no dedup
+  cat {partition_files joined by space} > .autopilot/qa_findings_iter{iteration}.md
+
+  # On any ## ISSUES FOUND, read the aggregated findings file from disk:
   issues = parse(.autopilot/qa_findings_iter{iteration}.md)
-  # If the findings file is missing or unparseable, re-dispatch qa-agent ONCE
+  # If the aggregated file is missing or empty (partition return claimed ISSUES
+  # FOUND but didn't write its file), re-dispatch the offending partition ONCE
   # with explicit reminder of the file path + structured format. If still
   # missing after retry, log "qa_findings_parse_failure" and BREAK with current state.
 
