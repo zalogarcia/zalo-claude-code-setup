@@ -39,9 +39,13 @@ Example `.claude/rubric.md`:
 /autopilot "build a user settings page with dark mode toggle"
 # or with explicit rubric path:
 /autopilot "build a user settings page" --rubric=./my-rubric.md
+# or consume a plan already produced by /plan (skips Phase 1 decompose + Phase 1.5 verification):
+/autopilot "build a user settings page" --plan=.claude/.plan/20260518-093015-12345/plan.md
 # resume after a stop:
 /autopilot resume
 ```
+
+**About `--plan=<path>`:** When `/plan` is run beforehand, it writes the decomposed and verified plan to `.claude/.plan/<run-id>/plan.md` and prints a copy-pasteable `/autopilot ... --plan=<that-path>` command. Passing `--plan` skips Phase 1 (safe-planner decompose) and Phase 1.5 (verification loop) because `/plan` already ran both. Phase 0 (workspace setup, inventory, rubric resolution) still runs because those are autopilot-specific. The supplied plan file is copied into `.autopilot/plan.md` so the rest of the workflow is unchanged.
 
 **Step 3 — Review the run.**
 
@@ -666,12 +670,12 @@ After all checks: record `pre_autopilot_sha` via `git rev-parse HEAD` → state.
 
 | Sources present                                                         | Resolution                                                                                                                                                                                                                                                                                                              |
 | ----------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/autopilot <args>` provided                                            | Args are the task. Strip `--rubric=<path>` flag first.                                                                                                                                                                                                                                                                  |
+| `/autopilot <args>` provided                                            | Args are the task. Strip `--rubric=<path>` AND `--plan=<path>` flags first (either order, either may be absent).                                                                                                                                                                                                        |
 | `/autopilot resume` provided                                            | Read state.json, skip to stored phase. (PLAN.md is ignored — resume restores prior context.)                                                                                                                                                                                                                            |
 | No args, `PLAN.md` exists                                               | Use PLAN.md as task.                                                                                                                                                                                                                                                                                                    |
 | No args, `.claude/PLAN.md` exists (and no top-level PLAN.md)            | Use `.claude/PLAN.md`.                                                                                                                                                                                                                                                                                                  |
 | No args, BOTH `PLAN.md` AND `.claude/PLAN.md` exist (different content) | Append to `.autopilot/deferred_issues.md`: `BLOCKED_BY_AMBIGUOUS_PLAN: two PLAN files differ — using PLAN.md as canonical, archived .claude/PLAN.md ref`. Use top-level `PLAN.md`. Phase 5 report's External Blockers + Confirm-After-Run sections both read from `deferred_issues.md`, so this surfaces automatically. |
-| No args AND no PLAN file                                                | Hard ABORT: "No task found. Usage: /autopilot <what to build> [--rubric=<path>]"                                                                                                                                                                                                                                        |
+| No args AND no PLAN file                                                | Hard ABORT: "No task found. Usage: /autopilot <what to build> [--rubric=<path>] [--plan=<path>]"                                                                                                                                                                                                                        |
 
 **Never** render a "which task source should I use?" menu. The above table resolves every combination deterministically.
 
@@ -804,11 +808,38 @@ checking file presence + non-emptiness, not by marker content.)
 
 If safe-planner emits `## BLOCKED` AND no file was written → treat as autogen failure (same null state above + log).
 
+**Determine plan source (pre-supplied vs auto-decompose):**
+
+Runs AFTER rubric resolution so state.json.rubric_path is already set.
+
+Resolution:
+
+1. If `--plan=<path>` flag is in args → use that path
+2. Else → no pre-supplied plan; Phase 1 will dispatch `safe-planner` to decompose
+
+If a `--plan=<path>` flag is present:
+
+- Verify the file exists and is non-empty (`test -s "$PLAN_PATH"`). If missing or empty → hard ABORT: `"--plan path does not exist or is empty: $PLAN_PATH"`. Do NOT fall back to auto-decompose; the user explicitly asked for that plan and silent fallback would hide the typo.
+- Copy it to `.autopilot/plan.md` (so state survives if the source moves):
+  ```bash
+  cp "$PLAN_PATH" .autopilot/plan.md
+  ```
+- Set `state.json.plan_source = "supplied"`
+- Set `state.json.plan_supplied_from = "$PLAN_PATH"` (for the Phase 5 report)
+- Log to `decisions.log`: `plan_resolved_from_supplied_path` with `$PLAN_PATH`
+
+If no `--plan` flag was passed:
+
+- Set `state.json.plan_source = "auto"`
+- Phase 1 proceeds with the normal safe-planner dispatch below
+
 **→ Compact & continue to Phase 1.**
 
 ### Phase 1: Decompose (safe-planner)
 
-Dispatch `safe-planner` (model: "opus") with:
+**Pre-supplied plan branch:** If `state.json.plan_source == "supplied"`, skip the safe-planner dispatch below — the plan is already at `.autopilot/plan.md`. Parse it into `work_units` (same parsing logic as the auto-decompose branch), then **skip Phase 1.5 entirely** (the supplied plan was already verified by `/plan`'s verification loop — re-running brainstorm + grader would be redundant work the user explicitly opted out of). Log `plan_verification_skipped: supplied` to `decisions.log` and proceed directly to Phase 2.
+
+**Auto-decompose branch (default):** Dispatch `safe-planner` (model: "opus") with:
 
 ```
 Task: {task_description}
@@ -854,6 +885,8 @@ If `## BLOCKED` → Tiered Decision Protocol, re-dispatch (max MAX_AGENT_RETRIES
 #### Phase 1.5: Plan Verification Loop
 
 After `## PLAN READY` and parsing into `work_units`, run the Plan Verification Loop per `~/.claude/rules/plan-verification.md` BEFORE proceeding to Phase 2. This catches conceptual weaknesses (brainstorm-vet) and engineering-principle violations (outcomes-grader against `~/.claude/rules/engineering-principles.md`) while revision is still cheap.
+
+**Pre-supplied plan skip** — if `state.json.plan_source == "supplied"`, skip this phase entirely. `/plan` already ran the verification loop against the same plan with the same rubric source, so re-running both gates would be redundant. Phase 1's pre-supplied branch has already logged `plan_verification_skipped: supplied`; just proceed to Phase 2.
 
 **Skip heuristic** — if `work_units.length ≤ 2`, log `plan_verification_skipped: trivial` to `decisions.log` and proceed directly to Phase 2. (Simple count-based check; see `~/.claude/rules/plan-verification.md` for rationale.)
 

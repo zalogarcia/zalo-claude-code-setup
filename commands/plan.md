@@ -176,17 +176,16 @@ Summary:
 
 Review the full plan: cat <RUN_DIR>/plan.md   (or: cat .claude/.plan/latest/plan.md)
 
-The plan in <RUN_DIR>/plan.md is for your review/handoff. It is NOT
-auto-consumed by /autopilot — /autopilot will produce its own plan
-from the task below. Both runs share the same Plan Verification Loop,
-so the result converges with what /plan produced here.
+To execute, copy-paste the line below. The `--plan=` flag tells /autopilot
+to consume this exact plan, skipping its own Phase 1 (safe-planner decompose)
+and Phase 1.5 (verification loop) — that work has already been done here.
+Phase 0 (workspace, inventory, rubric) and Phase 2+ (implement, QA, commit)
+still run normally.
 
-To execute, copy-paste the line below:
-
-/autopilot ${TASK_ONE_LINE}
+/autopilot ${TASK_ONE_LINE} --plan=${RUN_DIR}/plan.md
 ```
 
-**This last block is mandatory.** Every /plan invocation that reaches Step 6 (whether verification passed, was skipped as trivial, or finished with concerns remaining) MUST end with the literal `/autopilot ${TASK_ONE_LINE}` line as the final printed line. No exceptions — the user grabs this command without re-reading the task. If `${RUN_DIR}/task.md` is somehow empty (Step 1 ABORT should have caught this), print `/autopilot <TASK MISSING — re-invoke /plan with a task description>` as a visible failure rather than skipping the line.
+**This last block is mandatory.** Every /plan invocation that reaches Step 6 (whether verification passed, was skipped as trivial, or finished with concerns remaining) MUST end with the literal `/autopilot ${TASK_ONE_LINE} --plan=${RUN_DIR}/plan.md` line as the final printed line. No exceptions — the user grabs this command without re-reading the task. Use the **resolved RUN_DIR**, not the `.claude/.plan/latest` symlink — a later `/plan` run would shift the symlink and silently re-target the user's autopilot invocation at a different plan. If `${RUN_DIR}/task.md` is somehow empty (Step 1 ABORT should have caught this), print `/autopilot <TASK MISSING — re-invoke /plan with a task description>` as a visible failure rather than skipping the line.
 
 ## Anti-Patterns (will not do)
 
