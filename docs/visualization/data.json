@@ -1,6 +1,6 @@
 {
   "meta": {
-    "generatedAt": "2026-05-16T04:24:36.943Z",
+    "generatedAt": "2026-05-22T20:13:22.476Z",
     "repo": "zalo-claude-code-setup"
   },
   "nodes": [
@@ -158,6 +158,20 @@
         "agent.bug-fix",
         "agent.live-test"
       ]
+    },
+    {
+      "id": "command.autopilot-merge",
+      "kind": "command",
+      "label": "/autopilot-merge",
+      "path": "commands/autopilot-merge.md",
+      "summary": "Sequential `--no-ff` merge of every completed `autopilot/*` branch in this repo onto a target branch (default `dev`). Preserves per-run commit history with one merge commit per autopilot run. Pauses on conflicts for human resolution. Does NOT auto-clean worktrees or branches.",
+      "includes": [
+        "rule.git-safety",
+        "rule.gates",
+        "rule.checkpoints",
+        "rule.anti-patterns"
+      ],
+      "dispatches": []
     },
     {
       "id": "command.brainstorm",
@@ -399,6 +413,13 @@
       "includes": []
     },
     {
+      "id": "skill.autopilot-collect",
+      "kind": "skill",
+      "label": "autopilot-collect",
+      "path": "skills/autopilot-collect",
+      "summary": "List all /autopilot worktrees + branches in the current repo with their terminal_state, commits ahead of a base, files touched, and task summary. Use when the user asks \"which autopilots finished\", \"show pending autopilot runs\", \"what's left to merge\", or as the discovery step inside /autopilot-merge. Returns a TSV table — parse it; don't paste it raw into the conversation."
+    },
+    {
       "id": "skill.cf-crawl",
       "kind": "skill",
       "label": "cf-crawl",
@@ -432,6 +453,20 @@
       "label": "frontend-design",
       "path": "skills/frontend-design",
       "summary": "Create distinctive, production-grade frontend interfaces with high design quality. Use this skill when the user asks to build web components, pages, or applications. Generates creative, polished code that avoids generic AI aesthetics."
+    },
+    {
+      "id": "skill.seedance",
+      "kind": "skill",
+      "label": "seedance",
+      "path": "skills/seedance",
+      "summary": "Generates videos via Segmind Seedance 2.0 (ByteDance). Text-to-video and image-to-video with native synced audio, multi-shot prompts, 4-15s duration, 480p/720p/1080p, aspect ratios 16:9/9:16/1:1/4:3/3:4/21:9/adaptive, first/last-frame conditioning for clip chaining, up to 9 reference images for character/style consistency. Use when asked to \"generate a video\", \"make a clip\", \"create b-roll\", \"animate this image\", \"make a 5 second video of X\", or any AI video generation task."
+    },
+    {
+      "id": "skill.seedance-video-prompt-builder",
+      "kind": "skill",
+      "label": "seedance-video-prompt-builder",
+      "path": "skills/seedance-video-prompt-builder",
+      "summary": "Generate a detailed, shot-by-shot, copy-and-paste-ready video prompt for Seedance 2.0 from a creative brief. Use this skill whenever the user wants to create a Seedance video prompt, write a shot list, plan a video sequence, or describe a video concept for AI generation, or mentions Seedance. Also trigger when the user describes a scene, ad concept, brand film, product video, or any visual sequence they want turned into a generation-ready prompt — even if they don't explicitly say \"video prompt.\" Trigger on phrases like \"write me a video prompt\", \"Seedance prompt\", \"shot list\", \"plan a video\", \"video concept\", \"create a sequence\", \"brand film prompt\", \"ad prompt\", or any time the user describes what they want to happen in a video and needs it translated into a copy-paste-ready prompt."
     },
     {
       "id": "skill.telegram",
@@ -677,6 +712,31 @@
     {
       "source": "meta.orchestrator",
       "target": "command.autopilot",
+      "type": "routes"
+    },
+    {
+      "source": "command.autopilot-merge",
+      "target": "rule.git-safety",
+      "type": "include"
+    },
+    {
+      "source": "command.autopilot-merge",
+      "target": "rule.gates",
+      "type": "include"
+    },
+    {
+      "source": "command.autopilot-merge",
+      "target": "rule.checkpoints",
+      "type": "include"
+    },
+    {
+      "source": "command.autopilot-merge",
+      "target": "rule.anti-patterns",
+      "type": "include"
+    },
+    {
+      "source": "meta.orchestrator",
+      "target": "command.autopilot-merge",
       "type": "routes"
     },
     {

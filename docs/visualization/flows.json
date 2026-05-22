@@ -188,6 +188,37 @@
     ],
     "canonical": true
   },
+  "command.autopilot-merge": {
+    "label": "/autopilot-merge — Sequential `--no-ff` merge of every completed `autopilot/*` branch in this repo ",
+    "description": "Sequential `--no-ff` merge of every completed `autopilot/*` branch in this repo onto a target branch (default `dev`). Preserves per-run commit history with one merge commit per autopilot run. Pauses on conflicts for human resolution. Does NOT auto-clean worktrees or branches.",
+    "steps": [
+      {
+        "node": "command.autopilot-merge",
+        "caption": "User invokes /autopilot-merge"
+      },
+      {
+        "node": "rule.git-safety",
+        "via": "include",
+        "caption": "@-includes git-safety"
+      },
+      {
+        "node": "rule.gates",
+        "via": "include",
+        "caption": "@-includes gates"
+      },
+      {
+        "node": "rule.checkpoints",
+        "via": "include",
+        "caption": "@-includes checkpoints"
+      },
+      {
+        "node": "rule.anti-patterns",
+        "via": "include",
+        "caption": "@-includes anti-patterns"
+      }
+    ],
+    "canonical": false
+  },
   "command.brainstorm": {
     "label": "/brainstorm — Dispatch the `brainstorm` agent to apply first principles, inversion, and second",
     "description": "Dispatch the `brainstorm` agent to apply first principles, inversion, and second-order thinking. Surfaces the real problem, not just the presented one.",
