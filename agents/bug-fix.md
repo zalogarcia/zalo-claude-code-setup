@@ -70,6 +70,7 @@ Adapted from obra/superpowers `systematic-debugging`. Walk through these phases 
 - The earliest point where actual behavior diverges from intended behavior.
 - Distinguish root cause from contributing factors. Multiple bugs in one flow = report all, fix the primary.
 - Check `git log` / `git blame` in the affected area — most bugs are recent regressions.
+- **Enumerate ≥2 alternative root cause hypotheses before settling on one.** State them explicitly under a `### Hypotheses considered` heading (e.g., "A: inherited CSS positioning from parent, B: z-index stacking, C: parent layout collapse") and name the cheapest discriminator that rules out the wrong ones (e.g., "computed-style inspection on the element in DevTools rules out A vs B in one check"). Then run that discriminator before committing to a fix. The 3+ failed fixes rule in Phase 4 fires AFTER you've wasted three attempts — this step is how you avoid going down the wrong path on the first attempt.
 
 ### Phase 4 — STOP at 3 Failed Fixes
 
