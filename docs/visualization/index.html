@@ -3432,6 +3432,66 @@
         text-decoration: underline;
       }
 
+      /* "What's already encoded" subsection inside CLAUDE.md personalize step */
+      .how-claudemd-subhead {
+        margin: 40px 0 12px;
+        font-size: 13px;
+        line-height: 1;
+        font-weight: 600;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--accent);
+      }
+      .how-claudemd-intro {
+        margin: 0 0 18px !important;
+        font-size: 16px;
+        line-height: 1.6;
+        color: var(--text-primary);
+      }
+      .how-claudemd-rules {
+        margin: 0 0 18px;
+        padding: 0;
+        list-style: none;
+      }
+      .how-claudemd-rules li {
+        position: relative;
+        padding: 14px 0 14px 22px;
+        font-size: 15px;
+        line-height: 1.6;
+        color: var(--text-primary);
+        border-bottom: 1px solid var(--border);
+      }
+      .how-claudemd-rules li:last-child {
+        border-bottom: none;
+      }
+      .how-claudemd-rules li::before {
+        content: "›";
+        position: absolute;
+        left: 0;
+        top: 14px;
+        color: var(--accent);
+        font-weight: 700;
+        font-size: 18px;
+        line-height: 1.45;
+      }
+      .how-claudemd-rules li strong {
+        font-weight: 600;
+        color: var(--text-primary);
+      }
+      .how-claudemd-outro {
+        margin: 18px 0 0 !important;
+        font-size: 15px;
+        line-height: 1.6;
+        color: var(--text-secondary);
+        font-style: italic;
+      }
+      @media (max-width: 640px) {
+        .how-claudemd-rules li {
+          font-size: 14px;
+          padding-left: 18px;
+        }
+      }
+
       .how-codeblock {
         position: relative;
         margin: 16px 0;
@@ -4126,6 +4186,61 @@ cd ~/.claude-setup &amp;&amp; ./install.sh</code></pre>
             For project-specific overrides, drop
             <code>.claude/CLAUDE.md</code> in any repo. Same format, scoped to
             that codebase. Project rules win over global.
+          </p>
+
+          <h3 class="how-claudemd-subhead">What's already encoded</h3>
+          <p class="how-claudemd-intro">
+            The starter <code>CLAUDE.md</code> ships with the principles that
+            make <code>/plan</code> and <code>/autopilot</code> behave the way
+            they do. A taste:
+          </p>
+          <ul class="how-claudemd-rules">
+            <li>
+              <strong>"Never push without explicit permission."</strong>
+              Safety boundary that makes <code>/autopilot</code> commit freely
+              but stop at the push gate. Surprise pushes break teammates and CI.
+            </li>
+            <li>
+              <strong>"3+ file edits → mandatory /qa-loop."</strong> Build and
+              typecheck catch syntax; <code>/qa-loop</code> catches the
+              integration bugs and wiring issues that static checks miss by
+              design.
+            </li>
+            <li>
+              <strong>Verification Gate Function.</strong> Every claim of "done"
+              requires a runnable command + its output in the same turn. "Should
+              work" is how broken code gets shipped — this forces evidence.
+            </li>
+            <li>
+              <strong>Debug from live logs first.</strong> Form hypotheses
+              <em>after</em> reading the actual error, not before. Saves the
+              hours wasted on theories that contradict the runtime evidence.
+            </li>
+            <li>
+              <strong>Plans 3+ steps go to <code>docs/PLAN.md</code>.</strong>
+              Long workflows survive <code>/compact</code> and context limits;
+              re-read after compaction to restore state.
+            </li>
+            <li>
+              <strong>Direct/simple approach first.</strong> Agents love to
+              propose queues, intermediaries, and abstractions for hypothetical
+              futures. This principle keeps proposals flat and obvious.
+            </li>
+            <li>
+              <strong>Subagent discipline.</strong> A table tells Claude when to
+              use <code>safe-planner</code>, <code>qa-agent</code>,
+              <code>brainstorm</code>, <code>live-test</code>. The main thread
+              orchestrates; subagents do the heavy lifting in fresh context.
+            </li>
+            <li>
+              <strong>Default stack.</strong> TypeScript + Supabase + Vercel.
+              Stops Claude from suggesting AWS Lambda when you're a Next.js
+              shop. Override per-project as needed.
+            </li>
+          </ul>
+          <p class="how-claudemd-outro">
+            That's a slice of what's in there. Open it. Read it. Edit it. It's
+            yours now.
           </p>
         </section>
 
