@@ -124,7 +124,7 @@ When the user asks to build, design, or create frontend UI (page, component, lan
 
 1. **Design** — Invoke the `ui-ux-pro-max` skill to get concrete palette, font pairing, and style recommendations for the context.
 2. **Create** — Apply the `frontend-design` skill's principles (bold direction, anti-slop aesthetics) while writing the code.
-3. **Build** — For non-trivial implementation, use the `frontend-specialist` agent. It has scoped MCP servers for Aceternity UI and shadcn/ui. **The agent must read `~/.claude/projects/-Users-zalo/memory/apple_hig_design_principles.md`** before writing code and apply those principles throughout.
+3. **Build** — For non-trivial implementation, use the `frontend-specialist` agent. It has scoped MCP servers for Aceternity UI and shadcn/ui. Apply Apple HIG-quality design principles (bold direction, anti-slop aesthetics, generous whitespace, clear hierarchy, no decoration without function).
 4. **Verify** — Launch the `live-test` agent to screenshot and confirm it looks right in the browser.
 
 This chain has been historically underused — don't force it for small changes. For full-page or component-library work, the full chain is high-value.
@@ -139,7 +139,6 @@ Subagents protect the main context window and enable parallelism. Use them delib
 | `qa-agent`            | After implementing a feature or before deployment — audit for real bugs                          |
 | `safe-planner`        | Before complex refactors, migrations, or multi-file changes — map risks first                    |
 | `frontend-specialist` | For building UI components, styling, responsive design, accessibility                            |
-| `image-craft-expert`  | For ALL image generation — produces better prompts than inline                                   |
 | `brainstorm`          | For deep problem analysis, challenging assumptions, and stress-testing plans before committing   |
 | `Explore`             | For broad codebase questions that need multiple searches — keeps exploration out of main context |
 
@@ -174,39 +173,7 @@ Most MCP tools are **deferred** (schemas not loaded until invoked via `ToolSearc
 - **`gh` CLI** — preferred over the GitHub MCP. The CLI is lightweight and pulls no secrets into the prompt.
 - **Supabase MCP** — **PREFERRED** over raw `curl` against `api.supabase.com` or inline access tokens. Use `mcp__supabase__execute_sql`, `mcp__supabase__deploy_edge_function`, `mcp__supabase__get_logs`, `mcp__supabase__apply_migration`, etc. The MCP server holds the `SUPABASE_ACCESS_TOKEN` — never echo it inline. **Writing `Authorization: Bearer sbp_...` in a Bash command is a security bug; use the MCP instead.**
 - **Supabase CLI** — fine for local-dev workflows (`supabase start`, `supabase functions serve`) where no token is involved. Avoid for management-plane operations.
-- **Other MCPs** (Playwright, Knowledge Graph, Qdrant, repo-graphrag, Context7, Vercel) — use as designed; they're all deferred.
-
-## Persistent Memory & Agentic RAG
-
-Three memory/RAG MCPs are active:
-
-- **Qdrant** — semantic vector search for patterns, solutions, decisions
-- **Knowledge Graph** — structured facts, entity relationships, configs
-- **repo-graphrag** — code-aware structural knowledge graph (Tree-sitter + LightRAG)
-
-**Goal**: Important non-obvious learnings survive across conversations. Deduplicate before storing. Skip routine edits, info already in docs, and temporary state.
-
-### repo-graphrag Setup
-
-**Graph updates are deterministic via a global git post-commit hook** (`~/.git-hooks/post-commit`).
-
-- **Auto-enabled** for repos with 30+ tracked code/doc files — small repos are skipped automatically
-- **Force enable** a small repo: `touch /path/to/repo/.graphrag`
-- **Force disable** any repo: `touch /path/to/repo/.no-graphrag`
-- **Storage naming**: each repo gets `storage_<repo-dirname>` (e.g., `storage_my-app`)
-- **Hook behavior**: runs `graph_create` incrementally in the background after every commit (non-blocking)
-- **Manual rebuild**: `cd ~/repo-graphrag-mcp && uv run python cli_create.py /path/to/repo [storage_name]`
-- **Logs**: `/tmp/repo-graphrag.log`
-
-### repo-graphrag Auto-Usage
-
-**Do NOT wait to be asked — use repo-graphrag proactively:**
-
-1. **Before implementation planning**: Always use `graph_plan` with `storage_name=storage_<repo-dirname>` to generate structurally-aware plans.
-2. **When answering code questions**: Use `graph_query` before grep/read when the question is about architecture, relationships between components, or "how does X work".
-3. **When the graph doesn't exist yet**: If `graph_query`/`graph_plan` fails because no graph exists, run `graph_create` with `storage_name=storage_<repo-dirname>`, then retry.
-4. **On project init**: If no git hook is installed for the repo, install it: `~/repo-graphrag-mcp/install-hook.sh <repo_path>`
-5. **Skip** for trivial tasks (single-file edits, typo fixes, config changes).
+- **Other MCPs** (Playwright, Context7, Vercel) — use as designed; they're all deferred.
 
 ## Code Quality
 

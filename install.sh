@@ -58,11 +58,6 @@ check_prerequisites() {
         warn "  Install: pip install ruff"
     fi
 
-    if ! command -v uvx >/dev/null 2>&1; then
-        warn "uvx not found. Qdrant memory MCP won't work."
-        warn "  Install: pip install uv"
-    fi
-
     ok "Prerequisites check complete"
 }
 
@@ -226,7 +221,7 @@ install_claude_md() {
         if grep -q "## Learned Mistakes" "$CLAUDE_DIR/CLAUDE.md"; then
             LEARNED=$(sed -n '/^## Learned Mistakes$/,$ p' "$CLAUDE_DIR/CLAUDE.md" | tail -n +2)
         fi
-        cp "$SCRIPT_DIR/claude-md/CLAUDE.md" "$CLAUDE_DIR/CLAUDE.md"
+        cp "$SCRIPT_DIR/CLAUDE.md" "$CLAUDE_DIR/CLAUDE.md"
         # Re-append preserved Learned Mistakes entries if any existed
         if [ -n "$LEARNED" ]; then
             # Remove the empty placeholder from the new file and append the real entries
@@ -237,7 +232,7 @@ install_claude_md() {
             ok "CLAUDE.md installed"
         fi
     else
-        cp "$SCRIPT_DIR/claude-md/CLAUDE.md" "$CLAUDE_DIR/CLAUDE.md"
+        cp "$SCRIPT_DIR/CLAUDE.md" "$CLAUDE_DIR/CLAUDE.md"
         ok "CLAUDE.md installed"
     fi
 }
@@ -369,8 +364,6 @@ servers_str = json.dumps(servers)
 servers_str = servers_str.replace('__HOME__', home)
 servers_str = servers_str.replace('__GITHUB_PAT__', github_pat)
 servers_str = servers_str.replace('__SUPABASE_ACCESS_TOKEN__', supabase_token)
-servers_str = servers_str.replace('__N8N_HOST__', '__N8N_HOST__')
-servers_str = servers_str.replace('__N8N_API_KEY__', '__N8N_API_KEY__')
 servers = json.loads(servers_str)
 
 config = {'mcpServers': servers}
@@ -402,8 +395,6 @@ servers_str = json.dumps(new_servers)
 servers_str = servers_str.replace('__HOME__', home)
 servers_str = servers_str.replace('__GITHUB_PAT__', github_pat)
 servers_str = servers_str.replace('__SUPABASE_ACCESS_TOKEN__', supabase_token)
-servers_str = servers_str.replace('__N8N_HOST__', '__N8N_HOST__')
-servers_str = servers_str.replace('__N8N_API_KEY__', '__N8N_API_KEY__')
 new_servers = json.loads(servers_str)
 
 if 'mcpServers' not in config:
@@ -488,82 +479,8 @@ with open(settings_path, 'w') as f:
 
 create_directories() {
     info "Creating required directories..."
-    mkdir -p "$HOME/.qdrant/storage"
-    mkdir -p "$HOME/.git-hooks"
-    ok "Qdrant storage directory ready"
-    ok "Git hooks directory ready"
-}
-
-# ============================================================================
-# Install repo-graphrag (code knowledge graph)
-# ============================================================================
-
-install_graphrag() {
-    info "Installing repo-graphrag..."
-
-    local GRAPHRAG_DIR="$HOME/repo-graphrag-mcp"
-
-    # Clone repo-graphrag-mcp if not already present
-    if [ ! -d "$GRAPHRAG_DIR" ]; then
-        info "  Cloning repo-graphrag-mcp..."
-        if git clone https://github.com/yumeiriowl/repo-graphrag-mcp.git "$GRAPHRAG_DIR" 2>/dev/null; then
-            ok "  Cloned repo-graphrag-mcp"
-        else
-            warn "  Failed to clone repo-graphrag-mcp. Install manually:"
-            warn "  git clone https://github.com/yumeiriowl/repo-graphrag-mcp.git ~/repo-graphrag-mcp"
-            return
-        fi
-    else
-        ok "  repo-graphrag-mcp already exists at $GRAPHRAG_DIR"
-    fi
-
-    # Install dependencies
-    if command -v uv >/dev/null 2>&1; then
-        info "  Installing Python dependencies..."
-        (cd "$GRAPHRAG_DIR" && uv sync 2>/dev/null) && ok "  Dependencies installed" || warn "  uv sync failed — run manually: cd $GRAPHRAG_DIR && uv sync"
-    else
-        warn "  uv not found. Run: pip install uv && cd $GRAPHRAG_DIR && uv sync"
-    fi
-
-    # Copy cli_create.py
-    cp "$SCRIPT_DIR/graphrag/cli_create.py" "$GRAPHRAG_DIR/cli_create.py"
-    chmod +x "$GRAPHRAG_DIR/cli_create.py"
-    ok "  cli_create.py installed"
-
-    # Configure .env if not already present
-    if [ ! -f "$GRAPHRAG_DIR/.env" ]; then
-        cp "$SCRIPT_DIR/graphrag/env-template" "$GRAPHRAG_DIR/.env"
-        warn "  Created .env with defaults — edit $GRAPHRAG_DIR/.env to add your Anthropic API key"
-    else
-        ok "  .env already exists (preserved)"
-    fi
-
-    # Install global git post-commit hook (backup existing first)
-    if [ -f "$HOME/.git-hooks/post-commit" ]; then
-        cp "$HOME/.git-hooks/post-commit" "$BACKUP_DIR/post-commit.bak"
-        warn "  Existing post-commit hook backed up to $BACKUP_DIR/post-commit.bak"
-    fi
-    cp "$SCRIPT_DIR/graphrag/post-commit" "$HOME/.git-hooks/post-commit"
-    chmod +x "$HOME/.git-hooks/post-commit"
-    ok "  Global post-commit hook installed"
-
-    # Set global git hooks path (only if not already set)
-    local CURRENT_HOOKS_PATH
-    CURRENT_HOOKS_PATH=$(git config --global core.hooksPath 2>/dev/null || echo "")
-    if [ -z "$CURRENT_HOOKS_PATH" ]; then
-        git config --global core.hooksPath "$HOME/.git-hooks"
-        ok "  Global git hooksPath set to ~/.git-hooks"
-    elif [ "$CURRENT_HOOKS_PATH" = "$HOME/.git-hooks" ]; then
-        ok "  Global git hooksPath already set"
-    else
-        warn "  core.hooksPath already set to: $CURRENT_HOOKS_PATH"
-        warn "  Copy $HOME/.git-hooks/post-commit into that directory manually"
-    fi
-
-    ok "repo-graphrag installed"
-    info "  Graph auto-builds on commit for repos with 30+ code files"
-    info "  Force enable small repo: touch <repo>/.graphrag"
-    info "  Force disable any repo: touch <repo>/.no-graphrag"
+    mkdir -p "$HOME/.claude"
+    ok "Claude directory ready"
 }
 
 # ============================================================================
@@ -690,7 +607,6 @@ install_hooks
 install_mcp_servers
 setup_env_vars
 create_directories
-install_graphrag
 install_orchestrator
 install_xbar_plugins
 install_memory
@@ -701,14 +617,12 @@ echo -e "  ${GREEN}Installation complete!${NC}"
 echo "============================================"
 echo ""
 echo "What was installed:"
-echo "  - 22 slash commands (autoloop, autotest, brainstorm, bug, build-fix, e2e, graph, and more)"
-echo "  - 7 custom agents (qa-agent, safe-planner, live-test, frontend-specialist, bug-fix, image-craft-expert, brainstorm)"
-echo "  - 4 skills (ui-ux-pro-max, frontend-design, cf-crawl, telegram)"
+echo "  - 5 slash commands (autopilot, bug, qa-loop, plan, brainstorm)"
+echo "  - 6 custom agents (qa-agent, safe-planner, live-test, frontend-specialist, bug-fix, brainstorm)"
+echo "  - 7 skills (typecheck-and-build, commit-with-heredoc, dev-server-restart, ui-ux-pro-max, frontend-design, create-skill, cf-crawl)"
 echo "  - Global CLAUDE.md with workflow automation"
 echo "  - Hooks: PostToolUse formatting (Prettier + Ruff) + Vibe Island bridge (all events)"
-echo "  - 8 MCP servers (context7, playwright, github, n8n-api, supabase, qdrant-memory, knowledge-graph, repo-graphrag)"
-echo "  - repo-graphrag: code knowledge graph with auto-update via git post-commit hook"
-echo "  - Autoloop dashboard (monitor autonomous AI loops at localhost:7890)"
+echo "  - 4 MCP servers (context7, playwright, github, supabase)"
 echo "  - xbar plugins (menu bar status for autoloop + quick launchers)"
 echo ""
 echo "Next steps:"

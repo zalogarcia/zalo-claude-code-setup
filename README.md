@@ -12,7 +12,7 @@ Custom agents, skills, commands, MCP servers, auto-formatting hooks, agentic RAG
 
 ## Interactive Architecture
 
-See how the pieces fit together: 7 agents, 11 shared rules, 13 commands, 8 skills, hooks, MCP servers — plus animated request flows (`/autopilot`, `/bug`, `/qa-loop`, `/redesign`, `/brainstorm`, `/plan` and more).
+See how the pieces fit together: 7 agents, 11 shared rules, 6 commands, 8 skills, hooks, MCP servers — plus animated request flows (`/autopilot`, `/bug`, `/qa-loop`, `/brainstorm`, `/plan`).
 
 **→ [Open the interactive visualization](https://zalogarcia.github.io/zalo-claude-code-setup/visualization/)**
 
@@ -58,7 +58,7 @@ Make sure these are installed first:
 | **jq**            | `brew install jq`                                        | Required for hook JSON parsing                    |
 | **Prettier**      | `npm install -g prettier`                                | Auto-formats TS/JS/CSS/JSON/MD/HTML on every edit |
 | **Ruff**          | `pip install ruff`                                       | Auto-formats and lints Python on every edit       |
-| **uv**            | `pip install uv`                                         | Required for Qdrant memory MCP and repo-graphrag  |
+| **uv**            | `pip install uv`                                         | Optional — used by some skills' Python scripts    |
 | **Git**           | `brew install git`                                       | Required for cloning UI/UX Pro Max data           |
 
 ### Run the Installer
@@ -73,14 +73,13 @@ The installer will:
 
 1. **Back up** all your existing Claude Code configs to `~/.claude/backups/`
 2. **Copy** agents to `~/.claude/agents/`
-3. **Copy** commands to `~/.claude/commands/` (21 workflow automations)
+3. **Copy** commands to `~/.claude/commands/`
 4. **Copy** skills to `~/.claude/skills/` (clones UI/UX Pro Max data from GitHub)
 5. **Install** global `CLAUDE.md` to `~/.claude/`
 6. **Merge** hooks into `~/.claude/settings.json` (preserves your existing hooks)
 7. **Merge** MCP servers into `~/.claude.json` (skips servers you already have)
 8. **Prompt for API keys** — enters them directly into MCP server configs where they're needed
 9. **Create** `~/.claude/settings.local.json` with env var placeholders for Bash tools (if not exists)
-10. **Install** repo-graphrag — clones, installs dependencies, configures global git hook for auto-updating code knowledge graphs
 
 Safe to run multiple times — it deduplicates and never overwrites your existing configs.
 
@@ -117,19 +116,6 @@ The installer will prompt you for these during setup. Here's how to get each one
 4. Copy the token
 5. Find your Account ID in the Cloudflare dashboard sidebar
 
-### Telegram Bot Token (optional — for Telegram notifications)
-
-1. Message [@BotFather](https://t.me/BotFather) on Telegram
-2. Send `/newbot` and follow the prompts
-3. Copy the bot token
-4. Send a message to your bot, then call `https://api.telegram.org/bot<TOKEN>/getUpdates` to find your Chat ID
-
-### n8n API Key (optional — for n8n workflow automation)
-
-1. Open your n8n instance settings
-2. Go to API > API Keys
-3. Generate a new key
-
 ### Where Keys End Up
 
 | Key              | Location                                   | Used By                   |
@@ -137,8 +123,6 @@ The installer will prompt you for these during setup. Here's how to get each one
 | GitHub PAT       | `~/.claude.json` > mcpServers.github.env   | GitHub MCP server         |
 | Supabase token   | `~/.claude.json` > mcpServers.supabase.env | Supabase MCP server       |
 | Cloudflare token | `~/.claude/settings.local.json` > env      | cf-crawl skill (via Bash) |
-| Telegram token   | `~/.claude/settings.local.json` > env      | Telegram skill (via Bash) |
-| n8n API key      | `~/.claude.json` > mcpServers.n8n-api.env  | n8n MCP server            |
 
 `~/.claude.json` is local-only and never committed to git. `settings.local.json` is `chmod 600` (owner-only).
 
@@ -159,28 +143,20 @@ Close and reopen Claude Code to pick up all changes.
 | **live-test**           | Opens the app in a real browser via Playwright. Screenshots happy path, edge cases, and 3 responsive breakpoints.                                                                           |
 | **frontend-specialist** | Builds production-quality UI with Aceternity UI and shadcn/ui MCP access. Reads Apple HIG principles before coding.                                                                         |
 | **bug-fix**             | Traces the full user flow to find root cause. Reads all related code and crafts a comprehensive fix plan before changes.                                                                    |
-| **image-craft-expert**  | Crafts optimized prompts and generates images on both Gemini Pro (nano-banana) and ChatGPT (gpt-image-1.5) in parallel.                                                                     |
 | **brainstorm**          | Deep-thinking agent that challenges assumptions, eliminates complexity, and stress-tests plans using first principles, Elon Musk's 5-step philosophy, inversion, and second-order thinking. |
 
-### Commands (13)
+### Commands (6)
 
 Slash commands for workflow automation. Invoke with `/<command-name>`.
 
-| Command            | What It Does                                                                                           |
-| ------------------ | ------------------------------------------------------------------------------------------------------ |
-| **autopilot**      | Autonomous multi-phase orchestrator: plan → implement → QA → commit                                    |
-| **bug**            | Bug-fix workflow: trace, diagnose, fix, validate                                                       |
-| **qa-loop**        | Iterative audit-and-fix loop — finds and fixes bugs until the codebase is clean                        |
-| **plan**           | Plan something with brainstorm + principles verification                                               |
-| **brainstorm**     | Deep-analyze a problem, plan, or decision with first principles, inversion, and structured elimination |
-| **redesign**       | UI redesign workflow (opt-in): brainstorm, mockup generation, implement, visual verification           |
-| **enhance-audio**  | Audio enhancement using FFmpeg filters (noise removal, normalization)                                  |
-| **ghl-upload**     | Upload media to GoHighLevel                                                                            |
-| **graph**          | Build or rebuild the repo-graphrag knowledge graph for the current project                             |
-| **nano-banana**    | AI image generation with Gemini (multi-resolution, style transfer, green screen)                       |
-| **optimize-video** | Video optimization and upload to Supabase Storage                                                      |
-| **transcribe**     | Audio/video transcription using OpenAI Whisper (99 languages)                                          |
-| **view-video**     | Extract frames from video for visual analysis                                                          |
+| Command             | What It Does                                                                                           |
+| ------------------- | ------------------------------------------------------------------------------------------------------ |
+| **autopilot**       | Autonomous multi-phase orchestrator: plan → implement → QA → commit                                    |
+| **autopilot-merge** | Consolidates completed autopilot worktrees back into the main branch                                   |
+| **bug**             | Bug-fix workflow: trace, diagnose, fix, validate                                                       |
+| **qa-loop**         | Iterative audit-and-fix loop — finds and fixes bugs until the codebase is clean                        |
+| **plan**            | Plan something with brainstorm + principles verification                                               |
+| **brainstorm**      | Deep-analyze a problem, plan, or decision with first principles, inversion, and structured elimination |
 
 ### Skills (8)
 
@@ -189,11 +165,11 @@ Slash commands for workflow automation. Invoke with `/<command-name>`.
 | **typecheck-and-build** | Standardizes `tsc --noEmit` + production build with smart failure-region extraction and consistent exit codes.                             |
 | **commit-with-heredoc** | Encodes correct `$(cat <<'EOF' … EOF)` quoting for multi-line conventional commits with Co-Authored-By trailer.                            |
 | **dev-server-restart**  | Shell script that kills any stale dev server on a port, restarts via `nohup`, polls for readiness, smoke-tests a route.                    |
+| **autopilot-collect**   | Used by `/autopilot` worktrees to bundle their diff + decisions log into a single review-ready artifact.                                   |
 | **ui-ux-pro-max**       | Searchable design database: 50 UI styles, 21 color palettes, 50 font pairings, 20 chart types, 8 tech stacks. (Opt-in via frontend chain.) |
 | **frontend-design**     | Anti-slop aesthetic guidelines. Bold design direction, distinctive typography, no generic AI look. (Opt-in via frontend chain.)            |
 | **create-skill**        | Author a new Claude Code skill following the established pattern — decision tree, form factor, template, registration.                     |
 | **cf-crawl**            | Scrape websites via Cloudflare Browser Rendering API. Single page (sync) or multi-page crawl (async).                                      |
-| **telegram**            | Send messages, files, and images to Telegram via Bot API.                                                                                  |
 
 ### Shared Rules (11)
 
@@ -217,53 +193,14 @@ Authoritative reference docs at `~/.claude/rules/`. Commands and agents `@`-incl
 
 `~/.claude/META_RULE.md` is automatically re-injected at every `startup`, `/clear`, and `/compact` via the `session-start.sh` hook. It names the available primitives (subagents, slash commands, skills, shared rules) and the discipline for routing work — so the orchestrator never forgets the system's shape. Edit freely; the hook reads it fresh each time.
 
-### MCP Servers (8)
+### MCP Servers (4)
 
-| Server              | What It Does                                                                                                    |
-| ------------------- | --------------------------------------------------------------------------------------------------------------- |
-| **context7**        | Documentation lookup for any library or framework (React, Next.js, Supabase, etc.). Always up-to-date.          |
-| **playwright**      | Browser automation — navigate, click, fill forms, screenshot. Powers the `live-test` agent.                     |
-| **github**          | Full GitHub API — create PRs, manage issues, search code, push files. Requires `GITHUB_PAT`.                    |
-| **supabase**        | Manage Supabase projects — run SQL, deploy edge functions, manage migrations. Requires `SUPABASE_ACCESS_TOKEN`. |
-| **qdrant-memory**   | Local semantic search memory. Stores patterns, solutions, and decisions across conversations.                   |
-| **knowledge-graph** | Local structured memory. Stores entity relationships, configs, and facts across conversations.                  |
-| **repo-graphrag**   | Code-aware knowledge graph. Uses Tree-sitter + LightRAG for structural code understanding and planning.         |
-| **n8n-api**         | n8n workflow automation API. Trigger workflows, manage executions. Requires `N8N_API_KEY`.                      |
-
-### Agentic RAG — repo-graphrag
-
-Code-aware knowledge graph that gives Claude structural understanding of your codebase — call chains, class hierarchies, cross-file dependencies — not just text search.
-
-**How it works:**
-
-1. **Tree-sitter** parses code into structural entities (classes, functions, methods)
-2. **LightRAG** builds a knowledge graph from those entities + documentation
-3. Claude uses `graph_query` and `graph_plan` to answer architecture questions and plan implementations
-
-**Automatic updates via git hook:**
-
-A global `post-commit` hook (`~/.git-hooks/post-commit`) incrementally updates the graph after every commit. It's smart about when to run:
-
-| Repo size                   | Behavior                  |
-| --------------------------- | ------------------------- |
-| **< 30 code/doc files**     | Skipped (grep is enough)  |
-| **30+ files**               | Auto-enabled              |
-| **Has `.graphrag` file**    | Force enabled (any size)  |
-| **Has `.no-graphrag` file** | Force disabled (any size) |
-
-The hook runs in the background — commits are never blocked. Each repo gets its own storage (`storage_<repo-name>`).
-
-**Manual usage:**
-
-```bash
-# Build/rebuild graph for current project
-claude /graph
-
-# CLI (outside Claude Code)
-cd ~/repo-graphrag-mcp && uv run python cli_create.py /path/to/repo storage_my-repo
-```
-
-**Requires:** Anthropic API key in `~/repo-graphrag-mcp/.env`
+| Server         | What It Does                                                                                                    |
+| -------------- | --------------------------------------------------------------------------------------------------------------- |
+| **context7**   | Documentation lookup for any library or framework (React, Next.js, Supabase, etc.). Always up-to-date.          |
+| **playwright** | Browser automation — navigate, click, fill forms, screenshot. Powers the `live-test` agent.                     |
+| **github**     | Full GitHub API — create PRs, manage issues, search code, push files. Requires `GITHUB_PAT`.                    |
+| **supabase**   | Manage Supabase projects — run SQL, deploy edge functions, manage migrations. Requires `SUPABASE_ACCESS_TOKEN`. |
 
 ### xbar Menu Bar Plugins
 
@@ -305,7 +242,7 @@ Behavioral rules that make Claude Code significantly more effective:
 - **Verification-first** — Claude proves changes work (build, test, screenshot) instead of saying "this should work"
 - **Context survival** — Plans are written to files so they survive compaction and session transfers
 - **Subagent orchestration** — Complex work is delegated to specialized agents, keeping the main context clean
-- **Persistent memory** — Qdrant (semantic search) + Knowledge Graph (structured facts) + repo-graphrag (code structure) survive across conversations
+- **Compact + plan files** — long workflows write to `docs/PLAN.md` so they survive `/compact` and context limits
 
 ---
 
@@ -350,15 +287,15 @@ npm install -g prettier
 pip install ruff uv
 ```
 
-| Dependency    | Required By                                                 | Required?   |
-| ------------- | ----------------------------------------------------------- | ----------- |
-| Node.js + npm | MCP servers (github, supabase, playwright, knowledge-graph) | Yes         |
-| Python 3      | UI/UX Pro Max search, installer scripts                     | Yes         |
-| jq            | Hook JSON parsing                                           | Yes         |
-| Git           | Installer (clones UI/UX Pro Max data)                       | Yes         |
-| Prettier      | Auto-format hook (TS/JS/CSS/JSON/MD/HTML)                   | Recommended |
-| Ruff          | Auto-format hook (Python)                                   | Recommended |
-| uv/uvx        | Qdrant memory MCP server                                    | Recommended |
+| Dependency    | Required By                                | Required?   |
+| ------------- | ------------------------------------------ | ----------- |
+| Node.js + npm | MCP servers (github, supabase, playwright) | Yes         |
+| Python 3      | UI/UX Pro Max search, installer scripts    | Yes         |
+| jq            | Hook JSON parsing                          | Yes         |
+| Git           | Installer (clones UI/UX Pro Max data)      | Yes         |
+| Prettier      | Auto-format hook (TS/JS/CSS/JSON/MD/HTML)  | Recommended |
+| Ruff          | Auto-format hook (Python)                  | Recommended |
+| uv/uvx        | Optional — Python tooling for some skills  | Optional    |
 
 If a recommended tool is missing, the relevant hook or MCP will silently skip — nothing breaks.
 
@@ -379,23 +316,15 @@ If a recommended tool is missing, the relevant hook or MCP will silently skip �
 │   ├── live-test.md                  # Browser verification
 │   ├── frontend-specialist.md        # UI builder (Aceternity + shadcn MCPs)
 │   ├── bug-fix.md                    # Root cause tracer
-│   ├── image-craft-expert.md         # AI image generation
 │   ├── outcomes-grader.md            # Plan/artifact rubric grader
 │   └── brainstorm.md                 # Deep-thinking problem analyzer
 ├── commands/
 │   ├── autopilot.md                  # Autonomous multi-phase orchestrator
+│   ├── autopilot-merge.md            # Consolidate autopilot worktrees back into main
 │   ├── bug.md                        # Bug trace + diagnose + fix + validate
 │   ├── qa-loop.md                    # Iterative audit-and-fix loop
 │   ├── plan.md                       # Plan with brainstorm + principles verification
-│   ├── brainstorm.md                 # Deep-analyze problems and plans
-│   ├── redesign.md                   # UI redesign workflow (opt-in)
-│   ├── enhance-audio.md              # Audio enhancement
-│   ├── ghl-upload.md                 # GHL media upload
-│   ├── nano-banana.md                # Image generation
-│   ├── optimize-video.md             # Video optimization
-│   ├── transcribe.md                 # Audio transcription
-│   ├── view-video.md                 # Video frame extraction
-│   └── graph.md                      # Build/rebuild code knowledge graph
+│   └── brainstorm.md                 # Deep-analyze problems and plans
 ├── skills/
 │   ├── typecheck-and-build/
 │   │   └── SKILL.md                  # tsc + build with smart failure-region extraction
@@ -404,16 +333,17 @@ If a recommended tool is missing, the relevant hook or MCP will silently skip �
 │   ├── dev-server-restart/
 │   │   ├── SKILL.md                  # Dev-server restart contract
 │   │   └── restart.sh                # Kill+nohup+poll+smoke-test executable
+│   ├── autopilot-collect/
+│   │   ├── SKILL.md                  # Bundle worktree diff + decisions log
+│   │   └── collect.sh                # Collection runner
 │   ├── ui-ux-pro-max/
 │   │   └── SKILL.md                  # Design database
 │   ├── frontend-design/
 │   │   └── SKILL.md                  # Anti-slop aesthetics
 │   ├── create-skill/
 │   │   └── SKILL.md                  # Meta-skill: author new skills with the established pattern
-│   ├── cf-crawl/
-│   │   └── SKILL.md                  # Web scraper
-│   └── telegram/
-│       └── SKILL.md                  # Telegram notifications
+│   └── cf-crawl/
+│       └── SKILL.md                  # Web scraper
 ├── hooks/
 │   ├── settings.json                 # Hook configuration (formatters, gitleaks, session-start)
 │   ├── continue-if-incomplete.py     # Stop hook: nudge Claude if it halts mid-task
@@ -421,12 +351,8 @@ If a recommended tool is missing, the relevant hook or MCP will silently skip �
 │   ├── session-start.sh              # SessionStart hook: inject META_RULE.md
 │   └── gitleaks-guard.py             # PreToolUse hook: block git commit/push if gitleaks finds secrets
 ├── mcp/
-│   ├── mcp-servers.json              # 8 MCP server configs
+│   ├── mcp-servers.json              # MCP server configs
 │   └── env-template.json             # API key placeholders
-├── graphrag/
-│   ├── cli_create.py                 # CLI wrapper for graph_create (used by git hook)
-│   ├── post-commit                   # Global git hook (auto-updates knowledge graph)
-│   └── env-template                  # Default .env config for repo-graphrag-mcp
 ├── .archive/                         # Deprecated subprojects (orchestrator, autoloop-dashboard)
 └── xbar/
     └── plugins/

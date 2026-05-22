@@ -89,18 +89,6 @@ const CANONICAL_FLOWS = {
       { node: 'rule.gates', caption: 'Revision gate: one retry pass if either critique flags issues', via: 'include' },
     ],
   },
-  'command.redesign': {
-    label: '/redesign — Collaborative UI Redesign',
-    description: 'Capture → brainstorm → generate mockups → implement → verify',
-    steps: [
-      { node: 'command.redesign', caption: 'User requests a UI redesign' },
-      { node: 'agent.live-test', caption: 'Capture current state screenshots', via: 'dispatch', marker: '## UI VERIFIED' },
-      { node: 'agent.brainstorm', caption: '2+ loops: challenge assumptions, propose directions', via: 'dispatch', marker: '## EXPLORATION COMPLETE' },
-      { node: 'agent.image-craft-expert', caption: '3 options × 2 generators = 6 mockups in parallel', via: 'dispatch', marker: '## IMAGE GENERATED' },
-      { node: 'agent.frontend-specialist', caption: 'Implement chosen direction', via: 'dispatch', marker: '## IMPLEMENTATION COMPLETE' },
-      { node: 'agent.live-test', caption: 'Verify against mockup', via: 'dispatch', marker: '## UI VERIFIED' },
-    ],
-  },
 };
 
 // ---------- utilities ----------
@@ -538,7 +526,7 @@ function main() {
     mcp: graph.nodes.filter((n) => n.kind === 'mcp').length,
     skill: graph.nodes.filter((n) => n.kind === 'skill').length,
   };
-  const minimums = { agent: 7, rule: 11, command: 13, hook: 2, mcp: 8, skill: 7 };
+  const minimums = { agent: 6, rule: 11, command: 5, hook: 2, mcp: 4, skill: 7 };
   const failures = [];
   for (const [k, min] of Object.entries(minimums)) {
     if (counts[k] < min) failures.push(`${k}: ${counts[k]} < ${min}`);

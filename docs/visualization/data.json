@@ -1,6 +1,6 @@
 {
   "meta": {
-    "generatedAt": "2026-05-22T21:03:44.342Z",
+    "generatedAt": "2026-05-22T22:22:19.211Z",
     "repo": "zalo-claude-code-setup"
   },
   "nodes": [
@@ -206,51 +206,6 @@
       ]
     },
     {
-      "id": "command.enhance-audio",
-      "kind": "command",
-      "label": "/enhance-audio",
-      "path": "commands/enhance-audio.md",
-      "summary": "Enhance and clean up audio in video/audio files using FFmpeg filters. Removes noise, normalizes volume, and improves speech clarity.",
-      "includes": [],
-      "dispatches": []
-    },
-    {
-      "id": "command.ghl-upload",
-      "kind": "command",
-      "label": "/ghl-upload",
-      "path": "commands/ghl-upload.md",
-      "summary": "Upload files to GoHighLevel's media library via API.",
-      "includes": [],
-      "dispatches": []
-    },
-    {
-      "id": "command.graph",
-      "kind": "command",
-      "label": "/graph",
-      "path": "commands/graph.md",
-      "summary": "Build or rebuild the repo-graphrag knowledge graph for the current project.",
-      "includes": [],
-      "dispatches": []
-    },
-    {
-      "id": "command.nano-banana",
-      "kind": "command",
-      "label": "/nano-banana",
-      "path": "commands/nano-banana.md",
-      "summary": "Generates AI images using the nano-banana CLI (Gemini 3.1 Flash default, Pro available). Handles multi-resolution (512-4K), aspect ratios, reference images for style transfer, green screen workflow for transparent assets, cost tracking, and exact dimension control. Use when asked to \"generate an image\", \"create a sprite\", \"make an asset\", \"generate artwork\", or any image generation task for UI mockups, game assets, videos, or marketing materials.",
-      "includes": [],
-      "dispatches": []
-    },
-    {
-      "id": "command.optimize-video",
-      "kind": "command",
-      "label": "/optimize-video",
-      "path": "commands/optimize-video.md",
-      "summary": "Process and upload optimized videos to Supabase Storage with faststart + compression.",
-      "includes": [],
-      "dispatches": []
-    },
-    {
       "id": "command.plan",
       "kind": "command",
       "label": "/plan",
@@ -286,38 +241,6 @@
       ]
     },
     {
-      "id": "command.redesign",
-      "kind": "command",
-      "label": "/redesign",
-      "path": "commands/redesign.md",
-      "summary": "Redesign an existing UI through collaborative brainstorming, mockup generation, implementation, and visual verification.",
-      "includes": [],
-      "dispatches": [
-        "agent.brainstorm",
-        "agent.live-test",
-        "agent.frontend-specialist",
-        "agent.image-craft-expert"
-      ]
-    },
-    {
-      "id": "command.transcribe",
-      "kind": "command",
-      "label": "/transcribe",
-      "path": "commands/transcribe.md",
-      "summary": "Transcribe audio/video files using OpenAI Whisper. Supports 99 languages with automatic detection.",
-      "includes": [],
-      "dispatches": []
-    },
-    {
-      "id": "command.view-video",
-      "kind": "command",
-      "label": "/view-video",
-      "path": "commands/view-video.md",
-      "summary": "Extract frames from a video using ffmpeg so Claude can visually analyze the content.",
-      "includes": [],
-      "dispatches": []
-    },
-    {
       "id": "agent.brainstorm",
       "kind": "agent",
       "label": "brainstorm",
@@ -349,18 +272,6 @@
         "## IMPLEMENTATION COMPLETE",
         "## IMPLEMENTATION DONE_WITH_CONCERNS",
         "## BLOCKED"
-      ],
-      "includes": []
-    },
-    {
-      "id": "agent.image-craft-expert",
-      "kind": "agent",
-      "label": "image-craft-expert",
-      "path": "agents/image-craft-expert.md",
-      "summary": "Crafts optimized text-to-image prompts and generates images using Gemini (nano-banana) and/or ChatGPT (gpt-image-1.5). Use for any image generation task. <example>user: 'Create an image of a fantasy castle at sunset' assistant: 'I'll use the image-craft-expert to craft a detailed generation prompt.'</example>",
-      "markers": [
-        "## IMAGE GENERATED",
-        "## GENERATION FAILED"
       ],
       "includes": []
     },
@@ -455,27 +366,6 @@
       "summary": "Create distinctive, production-grade frontend interfaces with high design quality. Use this skill when the user asks to build web components, pages, or applications. Generates creative, polished code that avoids generic AI aesthetics."
     },
     {
-      "id": "skill.seedance",
-      "kind": "skill",
-      "label": "seedance",
-      "path": "skills/seedance",
-      "summary": "Generates videos via Segmind Seedance 2.0 (ByteDance). Text-to-video and image-to-video with native synced audio, multi-shot prompts, 4-15s duration, 480p/720p/1080p, aspect ratios 16:9/9:16/1:1/4:3/3:4/21:9/adaptive, first/last-frame conditioning for clip chaining, up to 9 reference images for character/style consistency. Use when asked to \"generate a video\", \"make a clip\", \"create b-roll\", \"animate this image\", \"make a 5 second video of X\", or any AI video generation task."
-    },
-    {
-      "id": "skill.seedance-video-prompt-builder",
-      "kind": "skill",
-      "label": "seedance-video-prompt-builder",
-      "path": "skills/seedance-video-prompt-builder",
-      "summary": "Generate a detailed, shot-by-shot, copy-and-paste-ready video prompt for Seedance 2.0 from a creative brief. Use this skill whenever the user wants to create a Seedance video prompt, write a shot list, plan a video sequence, or describe a video concept for AI generation, or mentions Seedance. Also trigger when the user describes a scene, ad concept, brand film, product video, or any visual sequence they want turned into a generation-ready prompt — even if they don't explicitly say \"video prompt.\" Trigger on phrases like \"write me a video prompt\", \"Seedance prompt\", \"shot list\", \"plan a video\", \"video concept\", \"create a sequence\", \"brand film prompt\", \"ad prompt\", or any time the user describes what they want to happen in a video and needs it translated into a copy-paste-ready prompt."
-    },
-    {
-      "id": "skill.telegram",
-      "kind": "skill",
-      "label": "telegram",
-      "path": "skills/telegram",
-      "summary": "Send messages, files, images, or documents to the user via their Telegram bot. Use when the user asks to send something to Telegram, notify them, or share content via Telegram."
-    },
-    {
       "id": "skill.typecheck-and-build",
       "kind": "skill",
       "label": "typecheck-and-build",
@@ -514,43 +404,11 @@
       "transport": "stdio"
     },
     {
-      "id": "mcp.n8n-api",
-      "kind": "mcp",
-      "label": "n8n-api",
-      "path": "mcp/mcp-servers.json",
-      "summary": "stdio: node __HOME__/Documents/AI Projects/n8n-zk/n8n-mcp-server/index.js",
-      "transport": "stdio"
-    },
-    {
       "id": "mcp.supabase",
       "kind": "mcp",
       "label": "supabase",
       "path": "mcp/mcp-servers.json",
       "summary": "stdio: npx -y @supabase/mcp-server-supabase@latest",
-      "transport": "stdio"
-    },
-    {
-      "id": "mcp.qdrant-memory",
-      "kind": "mcp",
-      "label": "qdrant-memory",
-      "path": "mcp/mcp-servers.json",
-      "summary": "stdio: uvx mcp-server-qdrant",
-      "transport": "stdio"
-    },
-    {
-      "id": "mcp.knowledge-graph",
-      "kind": "mcp",
-      "label": "knowledge-graph",
-      "path": "mcp/mcp-servers.json",
-      "summary": "stdio: npx -y @modelcontextprotocol/server-memory",
-      "transport": "stdio"
-    },
-    {
-      "id": "mcp.repo-graphrag",
-      "kind": "mcp",
-      "label": "repo-graphrag",
-      "path": "mcp/mcp-servers.json",
-      "summary": "stdio: uv --directory __HOME__/repo-graphrag-mcp run server.py",
       "transport": "stdio"
     },
     {
@@ -800,31 +658,6 @@
       "type": "routes"
     },
     {
-      "source": "meta.orchestrator",
-      "target": "command.enhance-audio",
-      "type": "routes"
-    },
-    {
-      "source": "meta.orchestrator",
-      "target": "command.ghl-upload",
-      "type": "routes"
-    },
-    {
-      "source": "meta.orchestrator",
-      "target": "command.graph",
-      "type": "routes"
-    },
-    {
-      "source": "meta.orchestrator",
-      "target": "command.nano-banana",
-      "type": "routes"
-    },
-    {
-      "source": "meta.orchestrator",
-      "target": "command.optimize-video",
-      "type": "routes"
-    },
-    {
       "source": "command.plan",
       "target": "rule.agent-contracts",
       "type": "include"
@@ -900,41 +733,6 @@
       "type": "routes"
     },
     {
-      "source": "command.redesign",
-      "target": "agent.brainstorm",
-      "type": "dispatch"
-    },
-    {
-      "source": "command.redesign",
-      "target": "agent.live-test",
-      "type": "dispatch"
-    },
-    {
-      "source": "command.redesign",
-      "target": "agent.frontend-specialist",
-      "type": "dispatch"
-    },
-    {
-      "source": "command.redesign",
-      "target": "agent.image-craft-expert",
-      "type": "dispatch"
-    },
-    {
-      "source": "meta.orchestrator",
-      "target": "command.redesign",
-      "type": "routes"
-    },
-    {
-      "source": "meta.orchestrator",
-      "target": "command.transcribe",
-      "type": "routes"
-    },
-    {
-      "source": "meta.orchestrator",
-      "target": "command.view-video",
-      "type": "routes"
-    },
-    {
       "source": "meta.orchestrator",
       "target": "agent.brainstorm",
       "type": "routes"
@@ -947,11 +745,6 @@
     {
       "source": "meta.orchestrator",
       "target": "agent.frontend-specialist",
-      "type": "routes"
-    },
-    {
-      "source": "meta.orchestrator",
-      "target": "agent.image-craft-expert",
       "type": "routes"
     },
     {

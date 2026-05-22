@@ -17,48 +17,12 @@
       "GITHUB_PERSONAL_ACCESS_TOKEN": "__GITHUB_PAT__"
     }
   },
-  "n8n-api": {
-    "type": "stdio",
-    "command": "node",
-    "args": ["__HOME__/Documents/AI Projects/n8n-zk/n8n-mcp-server/index.js"],
-    "env": {
-      "N8N_HOST": "__N8N_HOST__",
-      "N8N_API_KEY": "__N8N_API_KEY__",
-      "NODE_TLS_REJECT_UNAUTHORIZED": "0"
-    }
-  },
   "supabase": {
     "type": "stdio",
     "command": "npx",
     "args": ["-y", "@supabase/mcp-server-supabase@latest"],
     "env": {
       "SUPABASE_ACCESS_TOKEN": "__SUPABASE_ACCESS_TOKEN__"
-    }
-  },
-  "qdrant-memory": {
-    "type": "stdio",
-    "command": "uvx",
-    "args": ["mcp-server-qdrant"],
-    "env": {
-      "QDRANT_LOCAL_PATH": "__HOME__/.qdrant/storage",
-      "COLLECTION_NAME": "claude-memory",
-      "EMBEDDING_MODEL": "sentence-transformers/all-MiniLM-L6-v2"
-    }
-  },
-  "knowledge-graph": {
-    "type": "stdio",
-    "command": "npx",
-    "args": ["-y", "@modelcontextprotocol/server-memory"],
-    "env": {
-      "MEMORY_FILE_PATH": "__HOME__/.claude/memory.jsonl"
-    }
-  },
-  "repo-graphrag": {
-    "type": "stdio",
-    "command": "uv",
-    "args": ["--directory", "__HOME__/repo-graphrag-mcp", "run", "server.py"],
-    "env": {
-      "OMP_NUM_THREADS": "1"
     }
   }
 }
