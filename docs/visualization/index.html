@@ -37,11 +37,1364 @@
 -->
 
     <script type="application/json" id="graph-data">
-{"meta":{"generatedAt":"2026-05-22T21:03:44.342Z","repo":"zalo-claude-code-setup"},"nodes":[{"id":"meta.META_RULE","kind":"meta","label":"META_RULE.md","path":"META_RULE.md","summary":"Re-injected on every `startup`, `/clear`, and `/compact`. Edit this file freely — the `session-start.sh` hook reads it fresh each time."},{"id":"meta.orchestrator","kind":"meta","label":"Main Thread (Orchestrator)","path":"","summary":"The main conversation thread. Routes requests, reads rules, dispatches fresh-context subagents, and owns the user relationship. Never does heavy lifting itself."},{"id":"rule.agent-contracts","kind":"rule","label":"agent-contracts","path":"rules/agent-contracts.md","summary":"Completion markers and return contract for `~/.claude/agents/`. Skills/orchestrators detect agent completion by regex-matching these H2 markers in the agent's final output."},{"id":"rule.anti-patterns","kind":"rule","label":"anti-patterns","path":"rules/anti-patterns.md","summary":"Behavioral rules that apply regardless of project. Drawn from both gsd-build/get-shit-done universal anti-patterns and obra/superpowers writing-plans \"No Placeholders\" list."},{"id":"rule.api-retry","kind":"rule","label":"api-retry","path":"rules/api-retry.md","summary":"Shared retry-and-recovery protocol for orchestrators that dispatch sub-agents via the `Agent` tool. Use this when the underlying Anthropic API errors transiently (overload, rate limit, 5xx) so that work units don't get marked `failed` for what is actually a recoverable condition."},{"id":"rule.checkpoints","kind":"rule","label":"checkpoints","path":"rules/checkpoints.md","summary":"Adapted from gsd-build/get-shit-done. When an orchestrator needs human input, emit a **readable markdown checkpoint block** and **stop** — do not continue past the gate."},{"id":"rule.context-budget","kind":"rule","label":"context-budget","path":"rules/context-budget.md","summary":"Adapted from gsd-build/get-shit-done `references/context-budget.md`. Use this to self-regulate context usage and to recognize degradation before it becomes catastrophic."},{"id":"rule.database-safety","kind":"rule","label":"database-safety","path":"rules/database-safety.md","summary":"All migrations MUST be additive and non-breaking for existing users. Zero-downtime compatible."},{"id":"rule.engineering-principles","kind":"rule","label":"engineering-principles","path":"rules/engineering-principles.md","summary":"Used by `outcomes-grader` to evaluate plans (and optionally implementations) against the standards stated in `~/.claude/CLAUDE.md`. Each item describes an **outcome** the plan must exhibit — a measurable property — not a rule to follow. This makes the rubric harder to game and mo"},{"id":"rule.gates","kind":"rule","label":"gates","path":"rules/gates.md","summary":"Two distinct kinds of gates: **workflow gates** (when to advance/loop/stop in a multi-step orchestration) and the **Verification Gate Function** (when an agent claims a task is done)."},{"id":"rule.git-safety","kind":"rule","label":"git-safety","path":"rules/git-safety.md","summary":"Combined from obra/superpowers `using-git-worktrees` and gsd-build/get-shit-done universal anti-patterns."},{"id":"rule.persuasion-principles","kind":"rule","label":"persuasion-principles","path":"rules/persuasion-principles.md","summary":"Adapted from obra/superpowers `writing-skills/persuasion-principles.md`. Reference when authoring or revising files in `~/.claude/rules/`, `~/.claude/CLAUDE.md`, agent definitions, or skill bodies."},{"id":"rule.plan-verification","kind":"rule","label":"plan-verification","path":"rules/plan-verification.md","summary":"After `safe-planner` emits `## PLAN READY`, run two verification gates **before** acting on the plan. Both gates use fresh-context subagents (the value of brainstorm/grader pass is the second-opinion dynamic — same-model self-critique is weaker)."},{"id":"rule.problem-solving","kind":"rule","label":"problem-solving","path":"rules/problem-solving.md","summary":"Adapted from obra/superpowers-skills `problem-solving/when-stuck`. When you (or a subagent) feel stuck, name the symptom and pick the matching technique. Don't keep retrying the same approach."},{"id":"rule.questioning","kind":"rule","label":"questioning","path":"rules/questioning.md","summary":"Adapted from gsd-build/get-shit-done `references/questioning.md`. Use this when eliciting requirements, brainstorming, or any \"what do you actually want?\" conversation."},{"id":"rule.testing-safety","kind":"rule","label":"testing-safety","path":"rules/testing-safety.md","summary":"When testing in a live application (staging or production), protect real user data and accounts."},{"id":"rule.verification-patterns","kind":"rule","label":"verification-patterns","path":"rules/verification-patterns.md","summary":"The defining principle for `qa-agent`, `live-test`, and any \"is it actually done?\" check."},{"id":"rule.when-to-parallelize","kind":"rule","label":"when-to-parallelize","path":"rules/when-to-parallelize.md","summary":"Adapted from obra/superpowers `dispatching-parallel-agents`. Claude Code's `Agent` tool runs multiple invocations concurrently when called in a single message — use this rule to decide when that's appropriate."},{"id":"command.autopilot","kind":"command","label":"/autopilot","path":"commands/autopilot.md","summary":"Pure orchestrator that dispatches sub-agents for all work. The main thread never reads code, never writes code, never fixes bugs. It routes, tracks, verifies, and compacts. Sub-agents do the work — in parallel where possible, each with self-planning before coding. The orchestrato","includes":["rule.agent-contracts","rule.gates","rule.verification-patterns","rule.anti-patterns","rule.when-to-parallelize","rule.problem-solving","rule.database-safety","rule.testing-safety","rule.git-safety","rule.api-retry","rule.checkpoints","rule.context-budget"],"dispatches":["agent.safe-planner","agent.brainstorm","agent.qa-agent","agent.frontend-specialist","agent.bug-fix","agent.live-test"]},{"id":"command.autopilot-merge","kind":"command","label":"/autopilot-merge","path":"commands/autopilot-merge.md","summary":"Sequential `--no-ff` merge of every completed `autopilot/*` branch in this repo onto a target branch (default `dev`). Preserves per-run commit history with one merge commit per autopilot run. Pauses on conflicts for human resolution. Does NOT auto-clean worktrees or branches.","includes":["rule.git-safety","rule.gates","rule.checkpoints","rule.anti-patterns"],"dispatches":[]},{"id":"command.brainstorm","kind":"command","label":"/brainstorm","path":"commands/brainstorm.md","summary":"Dispatch the `brainstorm` agent to apply first principles, inversion, and second-order thinking. Surfaces the real problem, not just the presented one.","includes":["rule.agent-contracts","rule.questioning","rule.problem-solving"],"dispatches":["agent.brainstorm"]},{"id":"command.bug","kind":"command","label":"/bug","path":"commands/bug.md","summary":"Trace the full flow → identify root cause → fix narrowly → QA. Built around the `bug-fix` agent's 4-phase systematic debugging.","includes":["rule.agent-contracts","rule.problem-solving","rule.gates","rule.verification-patterns"],"dispatches":["agent.bug-fix","agent.brainstorm"]},{"id":"command.enhance-audio","kind":"command","label":"/enhance-audio","path":"commands/enhance-audio.md","summary":"Enhance and clean up audio in video/audio files using FFmpeg filters. Removes noise, normalizes volume, and improves speech clarity.","includes":[],"dispatches":[]},{"id":"command.ghl-upload","kind":"command","label":"/ghl-upload","path":"commands/ghl-upload.md","summary":"Upload files to GoHighLevel's media library via API.","includes":[],"dispatches":[]},{"id":"command.graph","kind":"command","label":"/graph","path":"commands/graph.md","summary":"Build or rebuild the repo-graphrag knowledge graph for the current project.","includes":[],"dispatches":[]},{"id":"command.nano-banana","kind":"command","label":"/nano-banana","path":"commands/nano-banana.md","summary":"Generates AI images using the nano-banana CLI (Gemini 3.1 Flash default, Pro available). Handles multi-resolution (512-4K), aspect ratios, reference images for style transfer, green screen workflow for transparent assets, cost tracking, and exact dimension control. Use when asked to \"generate an image\", \"create a sprite\", \"make an asset\", \"generate artwork\", or any image generation task for UI mockups, game assets, videos, or marketing materials.","includes":[],"dispatches":[]},{"id":"command.optimize-video","kind":"command","label":"/optimize-video","path":"commands/optimize-video.md","summary":"Process and upload optimized videos to Supabase Storage with faststart + compression.","includes":[],"dispatches":[]},{"id":"command.plan","kind":"command","label":"/plan","path":"commands/plan.md","summary":"Standalone planning command. Dispatches `safe-planner`, then runs the Plan Verification Loop (brainstorm critique + principles grader) before returning the final plan.","includes":["rule.agent-contracts","rule.plan-verification","rule.engineering-principles","rule.anti-patterns","rule.questioning"],"dispatches":["agent.brainstorm","agent.safe-planner","agent.frontend-specialist"]},{"id":"command.qa-loop","kind":"command","label":"/qa-loop","path":"commands/qa-loop.md","summary":"Revision Gate that converges on a clean state. Iterates `qa-agent` audits + minimal fixes until no real bugs remain.","includes":["rule.agent-contracts","rule.gates","rule.verification-patterns","rule.anti-patterns"],"dispatches":["agent.qa-agent"]},{"id":"command.redesign","kind":"command","label":"/redesign","path":"commands/redesign.md","summary":"Redesign an existing UI through collaborative brainstorming, mockup generation, implementation, and visual verification.","includes":[],"dispatches":["agent.brainstorm","agent.live-test","agent.frontend-specialist","agent.image-craft-expert"]},{"id":"command.transcribe","kind":"command","label":"/transcribe","path":"commands/transcribe.md","summary":"Transcribe audio/video files using OpenAI Whisper. Supports 99 languages with automatic detection.","includes":[],"dispatches":[]},{"id":"command.view-video","kind":"command","label":"/view-video","path":"commands/view-video.md","summary":"Extract frames from a video using ffmpeg so Claude can visually analyze the content.","includes":[],"dispatches":[]},{"id":"agent.brainstorm","kind":"agent","label":"brainstorm","path":"agents/brainstorm.md","summary":"Deep-thinking agent that prevents expensive mistakes by challenging assumptions, eliminating complexity, and stress-testing ideas before committing. Applies first principles, Elon Musk's 5-step philosophy, inversion, and second-order thinking. Use for any problem, plan, architecture decision, or strategy that deserves rigorous thought before action. <example>user: 'I need to figure out the best architecture for our real-time notification system' assistant: 'I'll use the brainstorm agent to break this down from first principles and challenge our assumptions.'</example>","markers":["## EXPLORATION COMPLETE"],"includes":[]},{"id":"agent.bug-fix","kind":"agent","label":"bug-fix","path":"agents/bug-fix.md","summary":"Trace the full user flow to find the root cause of a bug. Reads all related code and crafts a comprehensive fix plan before making changes. Use when something is broken and you need a thorough diagnosis. <example>user: 'Users are getting logged out randomly after checkout' assistant: 'I'll use the bug-fix agent to trace the full flow and find the root cause.'</example>","markers":["## BLOCKED"],"includes":[]},{"id":"agent.frontend-specialist","kind":"agent","label":"frontend-specialist","path":"agents/frontend-specialist.md","summary":"Builds and optimizes frontend UI — components, styling, responsiveness, accessibility, and performance. Use for any client-side development task. <example>user: 'I need to build a mobile-friendly navigation bar that collapses on smaller screens' assistant: 'I'll use the frontend-specialist agent to create a responsive navigation component.'</example>","markers":["## IMPLEMENTATION COMPLETE","## IMPLEMENTATION DONE_WITH_CONCERNS","## BLOCKED"],"includes":[]},{"id":"agent.image-craft-expert","kind":"agent","label":"image-craft-expert","path":"agents/image-craft-expert.md","summary":"Crafts optimized text-to-image prompts and generates images using Gemini (nano-banana) and/or ChatGPT (gpt-image-1.5). Use for any image generation task. <example>user: 'Create an image of a fantasy castle at sunset' assistant: 'I'll use the image-craft-expert to craft a detailed generation prompt.'</example>","markers":["## IMAGE GENERATED","## GENERATION FAILED"],"includes":[]},{"id":"agent.live-test","kind":"agent","label":"live-test","path":"agents/live-test.md","summary":"Visually verifies code changes work in the browser using Playwright. Use after implementing features, fixing bugs, or making UI changes to confirm they work as intended before shipping. <example>user: 'I just added the new pricing page, can you verify it looks right?' assistant: 'I'll use the live-test agent to open the app in the browser and verify the pricing page.'</example>","markers":["## UI VERIFIED","## UI ISSUES FOUND","## BLOCKED"],"includes":[]},{"id":"agent.outcomes-grader","kind":"agent","label":"outcomes-grader","path":"agents/outcomes-grader.md","summary":"Grades a delivered artifact against a task-specific rubric. Use to verify task-level success criteria are met, not to hunt for generic bugs. <example>user: 'Did the implementation actually satisfy the rubric in .claude/rubric.md?' assistant: 'I'll use the outcomes-grader to evaluate each rubric item against the delivered code.'</example>","markers":[],"includes":[]},{"id":"agent.qa-agent","kind":"agent","label":"qa-agent","path":"agents/qa-agent.md","summary":"Audits recent code changes for real, reproducible bugs. Use after implementing features, before deployments, or when asked to stress test, verify, or audit code. <example>user: 'I just finished the checkout flow, can you stress test it?' assistant: 'I'll use the qa-agent to find any real bugs in the checkout implementation.'</example>","markers":["## VERIFICATION PASSED","## ISSUES FOUND","## BLOCKED"],"includes":[]},{"id":"agent.safe-planner","kind":"agent","label":"safe-planner","path":"agents/safe-planner.md","summary":"Plans implementation changes safely by reading all related code, mapping dependencies, identifying risks, and producing a rollback-ready plan for approval. Use before features, refactors, migrations, or any non-trivial changes. <example>user: 'I need to add Stripe webhooks to our checkout flow' assistant: 'I'll use the safe-planner agent to map dependencies and create a safe implementation plan before we touch anything.'</example>","markers":["## PLAN READY","## NEEDS DECISION","## BLOCKED"],"includes":[]},{"id":"skill.autopilot-collect","kind":"skill","label":"autopilot-collect","path":"skills/autopilot-collect","summary":"List all /autopilot worktrees + branches in the current repo with their terminal_state, commits ahead of a base, files touched, and task summary. Use when the user asks \"which autopilots finished\", \"show pending autopilot runs\", \"what's left to merge\", or as the discovery step inside /autopilot-merge. Returns a TSV table — parse it; don't paste it raw into the conversation."},{"id":"skill.cf-crawl","kind":"skill","label":"cf-crawl","path":"skills/cf-crawl","summary":"Crawl websites using Cloudflare Browser Rendering API. Use when the user wants to scrape, crawl, or extract content from a website (single page or multi-page). Returns HTML, Markdown, or structured JSON."},{"id":"skill.commit-with-heredoc","kind":"skill","label":"commit-with-heredoc","path":"skills/commit-with-heredoc","summary":"Create a multi-line git commit using the correct heredoc-inside-$(...) quoting pattern, with the Co-Authored-By trailer. Use whenever the user asks to commit, when a workflow needs to commit changes, or when a multi-line commit message is required. Eliminates re-deriving the tricky quoting and ensures a consistent commit-message style."},{"id":"skill.create-skill","kind":"skill","label":"create-skill","path":"skills/create-skill","summary":"Author a new Claude Code skill following the established pattern. Use when the user says \"create a skill\", \"add a skill\", \"let's skill-ify X\", \"promote this to a skill\", or asks \"should this be a skill?\" Guides the decision (is it worth a skill?), picks the form factor (markdown-only vs shell script), generates the SKILL.md from the canonical template, optionally generates an accompanying shell script, and proposes the CLAUDE.md callout for deterministic firing. Replaces ad-hoc skill creation with a consistent shape that matches typecheck-and-build, commit-with-heredoc, dev-server-restart, cf-crawl, and telegram."},{"id":"skill.dev-server-restart","kind":"skill","label":"dev-server-restart","path":"skills/dev-server-restart","summary":"Kill any stale dev server on a given port, restart it cleanly in the project, poll until it accepts connections, and smoke-test a route — returning HTTP status + log tail. Use before testing UI in the browser, after env changes, or whenever Claude wrote \"pkill -f 'next dev'\" in a previous turn and needs the server back up. Replaces the 100+ hand-written kill+sleep+curl variants."},{"id":"skill.frontend-design","kind":"skill","label":"frontend-design","path":"skills/frontend-design","summary":"Create distinctive, production-grade frontend interfaces with high design quality. Use this skill when the user asks to build web components, pages, or applications. Generates creative, polished code that avoids generic AI aesthetics."},{"id":"skill.seedance","kind":"skill","label":"seedance","path":"skills/seedance","summary":"Generates videos via Segmind Seedance 2.0 (ByteDance). Text-to-video and image-to-video with native synced audio, multi-shot prompts, 4-15s duration, 480p/720p/1080p, aspect ratios 16:9/9:16/1:1/4:3/3:4/21:9/adaptive, first/last-frame conditioning for clip chaining, up to 9 reference images for character/style consistency. Use when asked to \"generate a video\", \"make a clip\", \"create b-roll\", \"animate this image\", \"make a 5 second video of X\", or any AI video generation task."},{"id":"skill.seedance-video-prompt-builder","kind":"skill","label":"seedance-video-prompt-builder","path":"skills/seedance-video-prompt-builder","summary":"Generate a detailed, shot-by-shot, copy-and-paste-ready video prompt for Seedance 2.0 from a creative brief. Use this skill whenever the user wants to create a Seedance video prompt, write a shot list, plan a video sequence, or describe a video concept for AI generation, or mentions Seedance. Also trigger when the user describes a scene, ad concept, brand film, product video, or any visual sequence they want turned into a generation-ready prompt — even if they don't explicitly say \"video prompt.\" Trigger on phrases like \"write me a video prompt\", \"Seedance prompt\", \"shot list\", \"plan a video\", \"video concept\", \"create a sequence\", \"brand film prompt\", \"ad prompt\", or any time the user describes what they want to happen in a video and needs it translated into a copy-paste-ready prompt."},{"id":"skill.telegram","kind":"skill","label":"telegram","path":"skills/telegram","summary":"Send messages, files, images, or documents to the user via their Telegram bot. Use when the user asks to send something to Telegram, notify them, or share content via Telegram."},{"id":"skill.typecheck-and-build","kind":"skill","label":"typecheck-and-build","path":"skills/typecheck-and-build","summary":"Run TypeScript typecheck and production build for a Node/Next.js/Vite project, capture exit codes, and surface only the failure region (not the full log). Use when verifying changes before commit, in QA loops, after a refactor, or whenever a \"did this build?\" check is needed. Replaces hand-written tsc + build chains with a consistent invocation and consistent output shape."},{"id":"skill.ui-ux-pro-max","kind":"skill","label":"ui-ux-pro-max","path":"skills/ui-ux-pro-max","summary":"UI/UX design intelligence. 50 styles, 21 palettes, 50 font pairings, 20 charts, 8 stacks (React, Next.js, Vue, Svelte, SwiftUI, React Native, Flutter, Tailwind). Actions: plan, build, create, design, implement, review, fix, improve, optimize, enhance, refactor, check UI/UX code. Projects: website, landing page, dashboard, admin panel, e-commerce, SaaS, portfolio, blog, mobile app, .html, .tsx, .vue, .svelte. Elements: button, modal, navbar, sidebar, card, table, form, chart. Styles: glassmorphism, claymorphism, minimalism, brutalism, neumorphism, bento grid, dark mode, responsive, skeuomorphism, flat design. Topics: color palette, accessibility, animation, layout, typography, font pairing, spacing, hover, shadow, gradient."},{"id":"mcp.context7","kind":"mcp","label":"context7","path":"mcp/mcp-servers.json","summary":"HTTP endpoint: https://mcp.context7.com/mcp","transport":"http"},{"id":"mcp.playwright","kind":"mcp","label":"playwright","path":"mcp/mcp-servers.json","summary":"stdio: npx -y @playwright/mcp@latest","transport":"stdio"},{"id":"mcp.github","kind":"mcp","label":"github","path":"mcp/mcp-servers.json","summary":"stdio: npx -y @modelcontextprotocol/server-github","transport":"stdio"},{"id":"mcp.n8n-api","kind":"mcp","label":"n8n-api","path":"mcp/mcp-servers.json","summary":"stdio: node __HOME__/Documents/AI Projects/n8n-zk/n8n-mcp-server/index.js","transport":"stdio"},{"id":"mcp.supabase","kind":"mcp","label":"supabase","path":"mcp/mcp-servers.json","summary":"stdio: npx -y @supabase/mcp-server-supabase@latest","transport":"stdio"},{"id":"mcp.qdrant-memory","kind":"mcp","label":"qdrant-memory","path":"mcp/mcp-servers.json","summary":"stdio: uvx mcp-server-qdrant","transport":"stdio"},{"id":"mcp.knowledge-graph","kind":"mcp","label":"knowledge-graph","path":"mcp/mcp-servers.json","summary":"stdio: npx -y @modelcontextprotocol/server-memory","transport":"stdio"},{"id":"mcp.repo-graphrag","kind":"mcp","label":"repo-graphrag","path":"mcp/mcp-servers.json","summary":"stdio: uv --directory __HOME__/repo-graphrag-mcp run server.py","transport":"stdio"},{"id":"hook.PostToolUse.0","kind":"hook","label":"PostToolUse [Edit|Write|MultiEdit]","event":"PostToolUse","matcher":"Edit|Write|MultiEdit","path":"hooks/settings.json","summary":"FILE=$(cat | jq -r '.tool_input.file_path // empty'); if [ -n \"$FILE\" ] && echo \"$FILE\" | grep -qE '\\.(ts|tsx|js|jsx|css|json|md|html)$'; then prettier --write \"$FILE\" 2>/dev/null; fi"},{"id":"hook.PostToolUse.1","kind":"hook","label":"PostToolUse [Edit|Write|MultiEdit]","event":"PostToolUse","matcher":"Edit|Write|MultiEdit","path":"hooks/settings.json","summary":"FILE=$(cat | jq -r '.tool_input.file_path // empty'); if [ -n \"$FILE\" ] && echo \"$FILE\" | grep -qE '\\.py$'; then which ruff >/dev/null 2>&1 && ruff format \"$FILE\" 2>/dev/null && ruff check --fix \"$FILE\" 2>/dev/null; fi"},{"id":"hook.PreToolUse.0","kind":"hook","label":"PreToolUse [Bash]","event":"PreToolUse","matcher":"Bash","path":"hooks/settings.json","summary":"python3 /Users/zalo/.claude/hooks/gitleaks-guard.py"},{"id":"hook.SessionStart.0","kind":"hook","label":"SessionStart","event":"SessionStart","matcher":"*","path":"hooks/settings.json","summary":"/Users/zalo/.claude/hooks/session-start.sh"},{"id":"hook.Stop.0","kind":"hook","label":"Stop","event":"Stop","matcher":"*","path":"hooks/settings.json","summary":"python3 /Users/zalo/.claude/hooks/continue-if-incomplete.py"},{"id":"hook.UserPromptSubmit.0","kind":"hook","label":"UserPromptSubmit","event":"UserPromptSubmit","matcher":"*","path":"hooks/settings.json","summary":"/Users/zalo/.claude/hooks/reset-stop-counter.sh"}],"edges":[{"source":"meta.orchestrator","target":"meta.META_RULE","type":"include"},{"source":"hook.SessionStart.0","target":"meta.META_RULE","type":"trigger"},{"source":"command.autopilot","target":"rule.agent-contracts","type":"include"},{"source":"command.autopilot","target":"rule.gates","type":"include"},{"source":"command.autopilot","target":"rule.verification-patterns","type":"include"},{"source":"command.autopilot","target":"rule.anti-patterns","type":"include"},{"source":"command.autopilot","target":"rule.when-to-parallelize","type":"include"},{"source":"command.autopilot","target":"rule.problem-solving","type":"include"},{"source":"command.autopilot","target":"rule.database-safety","type":"include"},{"source":"command.autopilot","target":"rule.testing-safety","type":"include"},{"source":"command.autopilot","target":"rule.git-safety","type":"include"},{"source":"command.autopilot","target":"rule.api-retry","type":"include"},{"source":"command.autopilot","target":"rule.checkpoints","type":"include"},{"source":"command.autopilot","target":"rule.context-budget","type":"include"},{"source":"command.autopilot","target":"agent.safe-planner","type":"dispatch"},{"source":"command.autopilot","target":"agent.brainstorm","type":"dispatch"},{"source":"command.autopilot","target":"agent.qa-agent","type":"dispatch"},{"source":"command.autopilot","target":"agent.frontend-specialist","type":"dispatch"},{"source":"command.autopilot","target":"agent.bug-fix","type":"dispatch"},{"source":"command.autopilot","target":"agent.live-test","type":"dispatch"},{"source":"meta.orchestrator","target":"command.autopilot","type":"routes"},{"source":"command.autopilot-merge","target":"rule.git-safety","type":"include"},{"source":"command.autopilot-merge","target":"rule.gates","type":"include"},{"source":"command.autopilot-merge","target":"rule.checkpoints","type":"include"},{"source":"command.autopilot-merge","target":"rule.anti-patterns","type":"include"},{"source":"meta.orchestrator","target":"command.autopilot-merge","type":"routes"},{"source":"command.brainstorm","target":"rule.agent-contracts","type":"include"},{"source":"command.brainstorm","target":"rule.questioning","type":"include"},{"source":"command.brainstorm","target":"rule.problem-solving","type":"include"},{"source":"command.brainstorm","target":"agent.brainstorm","type":"dispatch"},{"source":"meta.orchestrator","target":"command.brainstorm","type":"routes"},{"source":"command.bug","target":"rule.agent-contracts","type":"include"},{"source":"command.bug","target":"rule.problem-solving","type":"include"},{"source":"command.bug","target":"rule.gates","type":"include"},{"source":"command.bug","target":"rule.verification-patterns","type":"include"},{"source":"command.bug","target":"agent.bug-fix","type":"dispatch"},{"source":"command.bug","target":"agent.brainstorm","type":"dispatch"},{"source":"meta.orchestrator","target":"command.bug","type":"routes"},{"source":"meta.orchestrator","target":"command.enhance-audio","type":"routes"},{"source":"meta.orchestrator","target":"command.ghl-upload","type":"routes"},{"source":"meta.orchestrator","target":"command.graph","type":"routes"},{"source":"meta.orchestrator","target":"command.nano-banana","type":"routes"},{"source":"meta.orchestrator","target":"command.optimize-video","type":"routes"},{"source":"command.plan","target":"rule.agent-contracts","type":"include"},{"source":"command.plan","target":"rule.plan-verification","type":"include"},{"source":"command.plan","target":"rule.engineering-principles","type":"include"},{"source":"command.plan","target":"rule.anti-patterns","type":"include"},{"source":"command.plan","target":"rule.questioning","type":"include"},{"source":"command.plan","target":"agent.brainstorm","type":"dispatch"},{"source":"command.plan","target":"agent.safe-planner","type":"dispatch"},{"source":"command.plan","target":"agent.frontend-specialist","type":"dispatch"},{"source":"meta.orchestrator","target":"command.plan","type":"routes"},{"source":"command.qa-loop","target":"rule.agent-contracts","type":"include"},{"source":"command.qa-loop","target":"rule.gates","type":"include"},{"source":"command.qa-loop","target":"rule.verification-patterns","type":"include"},{"source":"command.qa-loop","target":"rule.anti-patterns","type":"include"},{"source":"command.qa-loop","target":"agent.qa-agent","type":"dispatch"},{"source":"meta.orchestrator","target":"command.qa-loop","type":"routes"},{"source":"command.redesign","target":"agent.brainstorm","type":"dispatch"},{"source":"command.redesign","target":"agent.live-test","type":"dispatch"},{"source":"command.redesign","target":"agent.frontend-specialist","type":"dispatch"},{"source":"command.redesign","target":"agent.image-craft-expert","type":"dispatch"},{"source":"meta.orchestrator","target":"command.redesign","type":"routes"},{"source":"meta.orchestrator","target":"command.transcribe","type":"routes"},{"source":"meta.orchestrator","target":"command.view-video","type":"routes"},{"source":"meta.orchestrator","target":"agent.brainstorm","type":"routes"},{"source":"meta.orchestrator","target":"agent.bug-fix","type":"routes"},{"source":"meta.orchestrator","target":"agent.frontend-specialist","type":"routes"},{"source":"meta.orchestrator","target":"agent.image-craft-expert","type":"routes"},{"source":"meta.orchestrator","target":"agent.live-test","type":"routes"},{"source":"meta.orchestrator","target":"agent.outcomes-grader","type":"routes"},{"source":"meta.orchestrator","target":"agent.qa-agent","type":"routes"},{"source":"meta.orchestrator","target":"agent.safe-planner","type":"routes"}]}
-</script>
+      {
+        "meta": {
+          "generatedAt": "2026-05-22T21:03:44.342Z",
+          "repo": "zalo-claude-code-setup"
+        },
+        "nodes": [
+          {
+            "id": "meta.META_RULE",
+            "kind": "meta",
+            "label": "META_RULE.md",
+            "path": "META_RULE.md",
+            "summary": "Re-injected on every `startup`, `/clear`, and `/compact`. Edit this file freely — the `session-start.sh` hook reads it fresh each time."
+          },
+          {
+            "id": "meta.orchestrator",
+            "kind": "meta",
+            "label": "Main Thread (Orchestrator)",
+            "path": "",
+            "summary": "The main conversation thread. Routes requests, reads rules, dispatches fresh-context subagents, and owns the user relationship. Never does heavy lifting itself."
+          },
+          {
+            "id": "rule.agent-contracts",
+            "kind": "rule",
+            "label": "agent-contracts",
+            "path": "rules/agent-contracts.md",
+            "summary": "Completion markers and return contract for `~/.claude/agents/`. Skills/orchestrators detect agent completion by regex-matching these H2 markers in the agent's final output."
+          },
+          {
+            "id": "rule.anti-patterns",
+            "kind": "rule",
+            "label": "anti-patterns",
+            "path": "rules/anti-patterns.md",
+            "summary": "Behavioral rules that apply regardless of project. Drawn from both gsd-build/get-shit-done universal anti-patterns and obra/superpowers writing-plans \"No Placeholders\" list."
+          },
+          {
+            "id": "rule.api-retry",
+            "kind": "rule",
+            "label": "api-retry",
+            "path": "rules/api-retry.md",
+            "summary": "Shared retry-and-recovery protocol for orchestrators that dispatch sub-agents via the `Agent` tool. Use this when the underlying Anthropic API errors transiently (overload, rate limit, 5xx) so that work units don't get marked `failed` for what is actually a recoverable condition."
+          },
+          {
+            "id": "rule.checkpoints",
+            "kind": "rule",
+            "label": "checkpoints",
+            "path": "rules/checkpoints.md",
+            "summary": "Adapted from gsd-build/get-shit-done. When an orchestrator needs human input, emit a **readable markdown checkpoint block** and **stop** — do not continue past the gate."
+          },
+          {
+            "id": "rule.context-budget",
+            "kind": "rule",
+            "label": "context-budget",
+            "path": "rules/context-budget.md",
+            "summary": "Adapted from gsd-build/get-shit-done `references/context-budget.md`. Use this to self-regulate context usage and to recognize degradation before it becomes catastrophic."
+          },
+          {
+            "id": "rule.database-safety",
+            "kind": "rule",
+            "label": "database-safety",
+            "path": "rules/database-safety.md",
+            "summary": "All migrations MUST be additive and non-breaking for existing users. Zero-downtime compatible."
+          },
+          {
+            "id": "rule.engineering-principles",
+            "kind": "rule",
+            "label": "engineering-principles",
+            "path": "rules/engineering-principles.md",
+            "summary": "Used by `outcomes-grader` to evaluate plans (and optionally implementations) against the standards stated in `~/.claude/CLAUDE.md`. Each item describes an **outcome** the plan must exhibit — a measurable property — not a rule to follow. This makes the rubric harder to game and mo"
+          },
+          {
+            "id": "rule.gates",
+            "kind": "rule",
+            "label": "gates",
+            "path": "rules/gates.md",
+            "summary": "Two distinct kinds of gates: **workflow gates** (when to advance/loop/stop in a multi-step orchestration) and the **Verification Gate Function** (when an agent claims a task is done)."
+          },
+          {
+            "id": "rule.git-safety",
+            "kind": "rule",
+            "label": "git-safety",
+            "path": "rules/git-safety.md",
+            "summary": "Combined from obra/superpowers `using-git-worktrees` and gsd-build/get-shit-done universal anti-patterns."
+          },
+          {
+            "id": "rule.persuasion-principles",
+            "kind": "rule",
+            "label": "persuasion-principles",
+            "path": "rules/persuasion-principles.md",
+            "summary": "Adapted from obra/superpowers `writing-skills/persuasion-principles.md`. Reference when authoring or revising files in `~/.claude/rules/`, `~/.claude/CLAUDE.md`, agent definitions, or skill bodies."
+          },
+          {
+            "id": "rule.plan-verification",
+            "kind": "rule",
+            "label": "plan-verification",
+            "path": "rules/plan-verification.md",
+            "summary": "After `safe-planner` emits `## PLAN READY`, run two verification gates **before** acting on the plan. Both gates use fresh-context subagents (the value of brainstorm/grader pass is the second-opinion dynamic — same-model self-critique is weaker)."
+          },
+          {
+            "id": "rule.problem-solving",
+            "kind": "rule",
+            "label": "problem-solving",
+            "path": "rules/problem-solving.md",
+            "summary": "Adapted from obra/superpowers-skills `problem-solving/when-stuck`. When you (or a subagent) feel stuck, name the symptom and pick the matching technique. Don't keep retrying the same approach."
+          },
+          {
+            "id": "rule.questioning",
+            "kind": "rule",
+            "label": "questioning",
+            "path": "rules/questioning.md",
+            "summary": "Adapted from gsd-build/get-shit-done `references/questioning.md`. Use this when eliciting requirements, brainstorming, or any \"what do you actually want?\" conversation."
+          },
+          {
+            "id": "rule.testing-safety",
+            "kind": "rule",
+            "label": "testing-safety",
+            "path": "rules/testing-safety.md",
+            "summary": "When testing in a live application (staging or production), protect real user data and accounts."
+          },
+          {
+            "id": "rule.verification-patterns",
+            "kind": "rule",
+            "label": "verification-patterns",
+            "path": "rules/verification-patterns.md",
+            "summary": "The defining principle for `qa-agent`, `live-test`, and any \"is it actually done?\" check."
+          },
+          {
+            "id": "rule.when-to-parallelize",
+            "kind": "rule",
+            "label": "when-to-parallelize",
+            "path": "rules/when-to-parallelize.md",
+            "summary": "Adapted from obra/superpowers `dispatching-parallel-agents`. Claude Code's `Agent` tool runs multiple invocations concurrently when called in a single message — use this rule to decide when that's appropriate."
+          },
+          {
+            "id": "command.autopilot",
+            "kind": "command",
+            "label": "/autopilot",
+            "path": "commands/autopilot.md",
+            "summary": "Pure orchestrator that dispatches sub-agents for all work. The main thread never reads code, never writes code, never fixes bugs. It routes, tracks, verifies, and compacts. Sub-agents do the work — in parallel where possible, each with self-planning before coding. The orchestrato",
+            "includes": [
+              "rule.agent-contracts",
+              "rule.gates",
+              "rule.verification-patterns",
+              "rule.anti-patterns",
+              "rule.when-to-parallelize",
+              "rule.problem-solving",
+              "rule.database-safety",
+              "rule.testing-safety",
+              "rule.git-safety",
+              "rule.api-retry",
+              "rule.checkpoints",
+              "rule.context-budget"
+            ],
+            "dispatches": [
+              "agent.safe-planner",
+              "agent.brainstorm",
+              "agent.qa-agent",
+              "agent.frontend-specialist",
+              "agent.bug-fix",
+              "agent.live-test"
+            ]
+          },
+          {
+            "id": "command.autopilot-merge",
+            "kind": "command",
+            "label": "/autopilot-merge",
+            "path": "commands/autopilot-merge.md",
+            "summary": "Sequential `--no-ff` merge of every completed `autopilot/*` branch in this repo onto a target branch (default `dev`). Preserves per-run commit history with one merge commit per autopilot run. Pauses on conflicts for human resolution. Does NOT auto-clean worktrees or branches.",
+            "includes": [
+              "rule.git-safety",
+              "rule.gates",
+              "rule.checkpoints",
+              "rule.anti-patterns"
+            ],
+            "dispatches": []
+          },
+          {
+            "id": "command.brainstorm",
+            "kind": "command",
+            "label": "/brainstorm",
+            "path": "commands/brainstorm.md",
+            "summary": "Dispatch the `brainstorm` agent to apply first principles, inversion, and second-order thinking. Surfaces the real problem, not just the presented one.",
+            "includes": [
+              "rule.agent-contracts",
+              "rule.questioning",
+              "rule.problem-solving"
+            ],
+            "dispatches": ["agent.brainstorm"]
+          },
+          {
+            "id": "command.bug",
+            "kind": "command",
+            "label": "/bug",
+            "path": "commands/bug.md",
+            "summary": "Trace the full flow → identify root cause → fix narrowly → QA. Built around the `bug-fix` agent's 4-phase systematic debugging.",
+            "includes": [
+              "rule.agent-contracts",
+              "rule.problem-solving",
+              "rule.gates",
+              "rule.verification-patterns"
+            ],
+            "dispatches": ["agent.bug-fix", "agent.brainstorm"]
+          },
+          {
+            "id": "command.enhance-audio",
+            "kind": "command",
+            "label": "/enhance-audio",
+            "path": "commands/enhance-audio.md",
+            "summary": "Enhance and clean up audio in video/audio files using FFmpeg filters. Removes noise, normalizes volume, and improves speech clarity.",
+            "includes": [],
+            "dispatches": []
+          },
+          {
+            "id": "command.ghl-upload",
+            "kind": "command",
+            "label": "/ghl-upload",
+            "path": "commands/ghl-upload.md",
+            "summary": "Upload files to GoHighLevel's media library via API.",
+            "includes": [],
+            "dispatches": []
+          },
+          {
+            "id": "command.graph",
+            "kind": "command",
+            "label": "/graph",
+            "path": "commands/graph.md",
+            "summary": "Build or rebuild the repo-graphrag knowledge graph for the current project.",
+            "includes": [],
+            "dispatches": []
+          },
+          {
+            "id": "command.nano-banana",
+            "kind": "command",
+            "label": "/nano-banana",
+            "path": "commands/nano-banana.md",
+            "summary": "Generates AI images using the nano-banana CLI (Gemini 3.1 Flash default, Pro available). Handles multi-resolution (512-4K), aspect ratios, reference images for style transfer, green screen workflow for transparent assets, cost tracking, and exact dimension control. Use when asked to \"generate an image\", \"create a sprite\", \"make an asset\", \"generate artwork\", or any image generation task for UI mockups, game assets, videos, or marketing materials.",
+            "includes": [],
+            "dispatches": []
+          },
+          {
+            "id": "command.optimize-video",
+            "kind": "command",
+            "label": "/optimize-video",
+            "path": "commands/optimize-video.md",
+            "summary": "Process and upload optimized videos to Supabase Storage with faststart + compression.",
+            "includes": [],
+            "dispatches": []
+          },
+          {
+            "id": "command.plan",
+            "kind": "command",
+            "label": "/plan",
+            "path": "commands/plan.md",
+            "summary": "Standalone planning command. Dispatches `safe-planner`, then runs the Plan Verification Loop (brainstorm critique + principles grader) before returning the final plan.",
+            "includes": [
+              "rule.agent-contracts",
+              "rule.plan-verification",
+              "rule.engineering-principles",
+              "rule.anti-patterns",
+              "rule.questioning"
+            ],
+            "dispatches": [
+              "agent.brainstorm",
+              "agent.safe-planner",
+              "agent.frontend-specialist"
+            ]
+          },
+          {
+            "id": "command.qa-loop",
+            "kind": "command",
+            "label": "/qa-loop",
+            "path": "commands/qa-loop.md",
+            "summary": "Revision Gate that converges on a clean state. Iterates `qa-agent` audits + minimal fixes until no real bugs remain.",
+            "includes": [
+              "rule.agent-contracts",
+              "rule.gates",
+              "rule.verification-patterns",
+              "rule.anti-patterns"
+            ],
+            "dispatches": ["agent.qa-agent"]
+          },
+          {
+            "id": "command.redesign",
+            "kind": "command",
+            "label": "/redesign",
+            "path": "commands/redesign.md",
+            "summary": "Redesign an existing UI through collaborative brainstorming, mockup generation, implementation, and visual verification.",
+            "includes": [],
+            "dispatches": [
+              "agent.brainstorm",
+              "agent.live-test",
+              "agent.frontend-specialist",
+              "agent.image-craft-expert"
+            ]
+          },
+          {
+            "id": "command.transcribe",
+            "kind": "command",
+            "label": "/transcribe",
+            "path": "commands/transcribe.md",
+            "summary": "Transcribe audio/video files using OpenAI Whisper. Supports 99 languages with automatic detection.",
+            "includes": [],
+            "dispatches": []
+          },
+          {
+            "id": "command.view-video",
+            "kind": "command",
+            "label": "/view-video",
+            "path": "commands/view-video.md",
+            "summary": "Extract frames from a video using ffmpeg so Claude can visually analyze the content.",
+            "includes": [],
+            "dispatches": []
+          },
+          {
+            "id": "agent.brainstorm",
+            "kind": "agent",
+            "label": "brainstorm",
+            "path": "agents/brainstorm.md",
+            "summary": "Deep-thinking agent that prevents expensive mistakes by challenging assumptions, eliminating complexity, and stress-testing ideas before committing. Applies first principles, Elon Musk's 5-step philosophy, inversion, and second-order thinking. Use for any problem, plan, architecture decision, or strategy that deserves rigorous thought before action. <example>user: 'I need to figure out the best architecture for our real-time notification system' assistant: 'I'll use the brainstorm agent to break this down from first principles and challenge our assumptions.'</example>",
+            "markers": ["## EXPLORATION COMPLETE"],
+            "includes": []
+          },
+          {
+            "id": "agent.bug-fix",
+            "kind": "agent",
+            "label": "bug-fix",
+            "path": "agents/bug-fix.md",
+            "summary": "Trace the full user flow to find the root cause of a bug. Reads all related code and crafts a comprehensive fix plan before making changes. Use when something is broken and you need a thorough diagnosis. <example>user: 'Users are getting logged out randomly after checkout' assistant: 'I'll use the bug-fix agent to trace the full flow and find the root cause.'</example>",
+            "markers": ["## BLOCKED"],
+            "includes": []
+          },
+          {
+            "id": "agent.frontend-specialist",
+            "kind": "agent",
+            "label": "frontend-specialist",
+            "path": "agents/frontend-specialist.md",
+            "summary": "Builds and optimizes frontend UI — components, styling, responsiveness, accessibility, and performance. Use for any client-side development task. <example>user: 'I need to build a mobile-friendly navigation bar that collapses on smaller screens' assistant: 'I'll use the frontend-specialist agent to create a responsive navigation component.'</example>",
+            "markers": [
+              "## IMPLEMENTATION COMPLETE",
+              "## IMPLEMENTATION DONE_WITH_CONCERNS",
+              "## BLOCKED"
+            ],
+            "includes": []
+          },
+          {
+            "id": "agent.image-craft-expert",
+            "kind": "agent",
+            "label": "image-craft-expert",
+            "path": "agents/image-craft-expert.md",
+            "summary": "Crafts optimized text-to-image prompts and generates images using Gemini (nano-banana) and/or ChatGPT (gpt-image-1.5). Use for any image generation task. <example>user: 'Create an image of a fantasy castle at sunset' assistant: 'I'll use the image-craft-expert to craft a detailed generation prompt.'</example>",
+            "markers": ["## IMAGE GENERATED", "## GENERATION FAILED"],
+            "includes": []
+          },
+          {
+            "id": "agent.live-test",
+            "kind": "agent",
+            "label": "live-test",
+            "path": "agents/live-test.md",
+            "summary": "Visually verifies code changes work in the browser using Playwright. Use after implementing features, fixing bugs, or making UI changes to confirm they work as intended before shipping. <example>user: 'I just added the new pricing page, can you verify it looks right?' assistant: 'I'll use the live-test agent to open the app in the browser and verify the pricing page.'</example>",
+            "markers": ["## UI VERIFIED", "## UI ISSUES FOUND", "## BLOCKED"],
+            "includes": []
+          },
+          {
+            "id": "agent.outcomes-grader",
+            "kind": "agent",
+            "label": "outcomes-grader",
+            "path": "agents/outcomes-grader.md",
+            "summary": "Grades a delivered artifact against a task-specific rubric. Use to verify task-level success criteria are met, not to hunt for generic bugs. <example>user: 'Did the implementation actually satisfy the rubric in .claude/rubric.md?' assistant: 'I'll use the outcomes-grader to evaluate each rubric item against the delivered code.'</example>",
+            "markers": [],
+            "includes": []
+          },
+          {
+            "id": "agent.qa-agent",
+            "kind": "agent",
+            "label": "qa-agent",
+            "path": "agents/qa-agent.md",
+            "summary": "Audits recent code changes for real, reproducible bugs. Use after implementing features, before deployments, or when asked to stress test, verify, or audit code. <example>user: 'I just finished the checkout flow, can you stress test it?' assistant: 'I'll use the qa-agent to find any real bugs in the checkout implementation.'</example>",
+            "markers": [
+              "## VERIFICATION PASSED",
+              "## ISSUES FOUND",
+              "## BLOCKED"
+            ],
+            "includes": []
+          },
+          {
+            "id": "agent.safe-planner",
+            "kind": "agent",
+            "label": "safe-planner",
+            "path": "agents/safe-planner.md",
+            "summary": "Plans implementation changes safely by reading all related code, mapping dependencies, identifying risks, and producing a rollback-ready plan for approval. Use before features, refactors, migrations, or any non-trivial changes. <example>user: 'I need to add Stripe webhooks to our checkout flow' assistant: 'I'll use the safe-planner agent to map dependencies and create a safe implementation plan before we touch anything.'</example>",
+            "markers": ["## PLAN READY", "## NEEDS DECISION", "## BLOCKED"],
+            "includes": []
+          },
+          {
+            "id": "skill.autopilot-collect",
+            "kind": "skill",
+            "label": "autopilot-collect",
+            "path": "skills/autopilot-collect",
+            "summary": "List all /autopilot worktrees + branches in the current repo with their terminal_state, commits ahead of a base, files touched, and task summary. Use when the user asks \"which autopilots finished\", \"show pending autopilot runs\", \"what's left to merge\", or as the discovery step inside /autopilot-merge. Returns a TSV table — parse it; don't paste it raw into the conversation."
+          },
+          {
+            "id": "skill.cf-crawl",
+            "kind": "skill",
+            "label": "cf-crawl",
+            "path": "skills/cf-crawl",
+            "summary": "Crawl websites using Cloudflare Browser Rendering API. Use when the user wants to scrape, crawl, or extract content from a website (single page or multi-page). Returns HTML, Markdown, or structured JSON."
+          },
+          {
+            "id": "skill.commit-with-heredoc",
+            "kind": "skill",
+            "label": "commit-with-heredoc",
+            "path": "skills/commit-with-heredoc",
+            "summary": "Create a multi-line git commit using the correct heredoc-inside-$(...) quoting pattern, with the Co-Authored-By trailer. Use whenever the user asks to commit, when a workflow needs to commit changes, or when a multi-line commit message is required. Eliminates re-deriving the tricky quoting and ensures a consistent commit-message style."
+          },
+          {
+            "id": "skill.create-skill",
+            "kind": "skill",
+            "label": "create-skill",
+            "path": "skills/create-skill",
+            "summary": "Author a new Claude Code skill following the established pattern. Use when the user says \"create a skill\", \"add a skill\", \"let's skill-ify X\", \"promote this to a skill\", or asks \"should this be a skill?\" Guides the decision (is it worth a skill?), picks the form factor (markdown-only vs shell script), generates the SKILL.md from the canonical template, optionally generates an accompanying shell script, and proposes the CLAUDE.md callout for deterministic firing. Replaces ad-hoc skill creation with a consistent shape that matches typecheck-and-build, commit-with-heredoc, dev-server-restart, cf-crawl, and telegram."
+          },
+          {
+            "id": "skill.dev-server-restart",
+            "kind": "skill",
+            "label": "dev-server-restart",
+            "path": "skills/dev-server-restart",
+            "summary": "Kill any stale dev server on a given port, restart it cleanly in the project, poll until it accepts connections, and smoke-test a route — returning HTTP status + log tail. Use before testing UI in the browser, after env changes, or whenever Claude wrote \"pkill -f 'next dev'\" in a previous turn and needs the server back up. Replaces the 100+ hand-written kill+sleep+curl variants."
+          },
+          {
+            "id": "skill.frontend-design",
+            "kind": "skill",
+            "label": "frontend-design",
+            "path": "skills/frontend-design",
+            "summary": "Create distinctive, production-grade frontend interfaces with high design quality. Use this skill when the user asks to build web components, pages, or applications. Generates creative, polished code that avoids generic AI aesthetics."
+          },
+          {
+            "id": "skill.seedance",
+            "kind": "skill",
+            "label": "seedance",
+            "path": "skills/seedance",
+            "summary": "Generates videos via Segmind Seedance 2.0 (ByteDance). Text-to-video and image-to-video with native synced audio, multi-shot prompts, 4-15s duration, 480p/720p/1080p, aspect ratios 16:9/9:16/1:1/4:3/3:4/21:9/adaptive, first/last-frame conditioning for clip chaining, up to 9 reference images for character/style consistency. Use when asked to \"generate a video\", \"make a clip\", \"create b-roll\", \"animate this image\", \"make a 5 second video of X\", or any AI video generation task."
+          },
+          {
+            "id": "skill.seedance-video-prompt-builder",
+            "kind": "skill",
+            "label": "seedance-video-prompt-builder",
+            "path": "skills/seedance-video-prompt-builder",
+            "summary": "Generate a detailed, shot-by-shot, copy-and-paste-ready video prompt for Seedance 2.0 from a creative brief. Use this skill whenever the user wants to create a Seedance video prompt, write a shot list, plan a video sequence, or describe a video concept for AI generation, or mentions Seedance. Also trigger when the user describes a scene, ad concept, brand film, product video, or any visual sequence they want turned into a generation-ready prompt — even if they don't explicitly say \"video prompt.\" Trigger on phrases like \"write me a video prompt\", \"Seedance prompt\", \"shot list\", \"plan a video\", \"video concept\", \"create a sequence\", \"brand film prompt\", \"ad prompt\", or any time the user describes what they want to happen in a video and needs it translated into a copy-paste-ready prompt."
+          },
+          {
+            "id": "skill.telegram",
+            "kind": "skill",
+            "label": "telegram",
+            "path": "skills/telegram",
+            "summary": "Send messages, files, images, or documents to the user via their Telegram bot. Use when the user asks to send something to Telegram, notify them, or share content via Telegram."
+          },
+          {
+            "id": "skill.typecheck-and-build",
+            "kind": "skill",
+            "label": "typecheck-and-build",
+            "path": "skills/typecheck-and-build",
+            "summary": "Run TypeScript typecheck and production build for a Node/Next.js/Vite project, capture exit codes, and surface only the failure region (not the full log). Use when verifying changes before commit, in QA loops, after a refactor, or whenever a \"did this build?\" check is needed. Replaces hand-written tsc + build chains with a consistent invocation and consistent output shape."
+          },
+          {
+            "id": "skill.ui-ux-pro-max",
+            "kind": "skill",
+            "label": "ui-ux-pro-max",
+            "path": "skills/ui-ux-pro-max",
+            "summary": "UI/UX design intelligence. 50 styles, 21 palettes, 50 font pairings, 20 charts, 8 stacks (React, Next.js, Vue, Svelte, SwiftUI, React Native, Flutter, Tailwind). Actions: plan, build, create, design, implement, review, fix, improve, optimize, enhance, refactor, check UI/UX code. Projects: website, landing page, dashboard, admin panel, e-commerce, SaaS, portfolio, blog, mobile app, .html, .tsx, .vue, .svelte. Elements: button, modal, navbar, sidebar, card, table, form, chart. Styles: glassmorphism, claymorphism, minimalism, brutalism, neumorphism, bento grid, dark mode, responsive, skeuomorphism, flat design. Topics: color palette, accessibility, animation, layout, typography, font pairing, spacing, hover, shadow, gradient."
+          },
+          {
+            "id": "mcp.context7",
+            "kind": "mcp",
+            "label": "context7",
+            "path": "mcp/mcp-servers.json",
+            "summary": "HTTP endpoint: https://mcp.context7.com/mcp",
+            "transport": "http"
+          },
+          {
+            "id": "mcp.playwright",
+            "kind": "mcp",
+            "label": "playwright",
+            "path": "mcp/mcp-servers.json",
+            "summary": "stdio: npx -y @playwright/mcp@latest",
+            "transport": "stdio"
+          },
+          {
+            "id": "mcp.github",
+            "kind": "mcp",
+            "label": "github",
+            "path": "mcp/mcp-servers.json",
+            "summary": "stdio: npx -y @modelcontextprotocol/server-github",
+            "transport": "stdio"
+          },
+          {
+            "id": "mcp.n8n-api",
+            "kind": "mcp",
+            "label": "n8n-api",
+            "path": "mcp/mcp-servers.json",
+            "summary": "stdio: node __HOME__/Documents/AI Projects/n8n-zk/n8n-mcp-server/index.js",
+            "transport": "stdio"
+          },
+          {
+            "id": "mcp.supabase",
+            "kind": "mcp",
+            "label": "supabase",
+            "path": "mcp/mcp-servers.json",
+            "summary": "stdio: npx -y @supabase/mcp-server-supabase@latest",
+            "transport": "stdio"
+          },
+          {
+            "id": "mcp.qdrant-memory",
+            "kind": "mcp",
+            "label": "qdrant-memory",
+            "path": "mcp/mcp-servers.json",
+            "summary": "stdio: uvx mcp-server-qdrant",
+            "transport": "stdio"
+          },
+          {
+            "id": "mcp.knowledge-graph",
+            "kind": "mcp",
+            "label": "knowledge-graph",
+            "path": "mcp/mcp-servers.json",
+            "summary": "stdio: npx -y @modelcontextprotocol/server-memory",
+            "transport": "stdio"
+          },
+          {
+            "id": "mcp.repo-graphrag",
+            "kind": "mcp",
+            "label": "repo-graphrag",
+            "path": "mcp/mcp-servers.json",
+            "summary": "stdio: uv --directory __HOME__/repo-graphrag-mcp run server.py",
+            "transport": "stdio"
+          },
+          {
+            "id": "hook.PostToolUse.0",
+            "kind": "hook",
+            "label": "PostToolUse [Edit|Write|MultiEdit]",
+            "event": "PostToolUse",
+            "matcher": "Edit|Write|MultiEdit",
+            "path": "hooks/settings.json",
+            "summary": "FILE=$(cat | jq -r '.tool_input.file_path // empty'); if [ -n \"$FILE\" ] && echo \"$FILE\" | grep -qE '\\.(ts|tsx|js|jsx|css|json|md|html)$'; then prettier --write \"$FILE\" 2>/dev/null; fi"
+          },
+          {
+            "id": "hook.PostToolUse.1",
+            "kind": "hook",
+            "label": "PostToolUse [Edit|Write|MultiEdit]",
+            "event": "PostToolUse",
+            "matcher": "Edit|Write|MultiEdit",
+            "path": "hooks/settings.json",
+            "summary": "FILE=$(cat | jq -r '.tool_input.file_path // empty'); if [ -n \"$FILE\" ] && echo \"$FILE\" | grep -qE '\\.py$'; then which ruff >/dev/null 2>&1 && ruff format \"$FILE\" 2>/dev/null && ruff check --fix \"$FILE\" 2>/dev/null; fi"
+          },
+          {
+            "id": "hook.PreToolUse.0",
+            "kind": "hook",
+            "label": "PreToolUse [Bash]",
+            "event": "PreToolUse",
+            "matcher": "Bash",
+            "path": "hooks/settings.json",
+            "summary": "python3 /Users/zalo/.claude/hooks/gitleaks-guard.py"
+          },
+          {
+            "id": "hook.SessionStart.0",
+            "kind": "hook",
+            "label": "SessionStart",
+            "event": "SessionStart",
+            "matcher": "*",
+            "path": "hooks/settings.json",
+            "summary": "/Users/zalo/.claude/hooks/session-start.sh"
+          },
+          {
+            "id": "hook.Stop.0",
+            "kind": "hook",
+            "label": "Stop",
+            "event": "Stop",
+            "matcher": "*",
+            "path": "hooks/settings.json",
+            "summary": "python3 /Users/zalo/.claude/hooks/continue-if-incomplete.py"
+          },
+          {
+            "id": "hook.UserPromptSubmit.0",
+            "kind": "hook",
+            "label": "UserPromptSubmit",
+            "event": "UserPromptSubmit",
+            "matcher": "*",
+            "path": "hooks/settings.json",
+            "summary": "/Users/zalo/.claude/hooks/reset-stop-counter.sh"
+          }
+        ],
+        "edges": [
+          {
+            "source": "meta.orchestrator",
+            "target": "meta.META_RULE",
+            "type": "include"
+          },
+          {
+            "source": "hook.SessionStart.0",
+            "target": "meta.META_RULE",
+            "type": "trigger"
+          },
+          {
+            "source": "command.autopilot",
+            "target": "rule.agent-contracts",
+            "type": "include"
+          },
+          {
+            "source": "command.autopilot",
+            "target": "rule.gates",
+            "type": "include"
+          },
+          {
+            "source": "command.autopilot",
+            "target": "rule.verification-patterns",
+            "type": "include"
+          },
+          {
+            "source": "command.autopilot",
+            "target": "rule.anti-patterns",
+            "type": "include"
+          },
+          {
+            "source": "command.autopilot",
+            "target": "rule.when-to-parallelize",
+            "type": "include"
+          },
+          {
+            "source": "command.autopilot",
+            "target": "rule.problem-solving",
+            "type": "include"
+          },
+          {
+            "source": "command.autopilot",
+            "target": "rule.database-safety",
+            "type": "include"
+          },
+          {
+            "source": "command.autopilot",
+            "target": "rule.testing-safety",
+            "type": "include"
+          },
+          {
+            "source": "command.autopilot",
+            "target": "rule.git-safety",
+            "type": "include"
+          },
+          {
+            "source": "command.autopilot",
+            "target": "rule.api-retry",
+            "type": "include"
+          },
+          {
+            "source": "command.autopilot",
+            "target": "rule.checkpoints",
+            "type": "include"
+          },
+          {
+            "source": "command.autopilot",
+            "target": "rule.context-budget",
+            "type": "include"
+          },
+          {
+            "source": "command.autopilot",
+            "target": "agent.safe-planner",
+            "type": "dispatch"
+          },
+          {
+            "source": "command.autopilot",
+            "target": "agent.brainstorm",
+            "type": "dispatch"
+          },
+          {
+            "source": "command.autopilot",
+            "target": "agent.qa-agent",
+            "type": "dispatch"
+          },
+          {
+            "source": "command.autopilot",
+            "target": "agent.frontend-specialist",
+            "type": "dispatch"
+          },
+          {
+            "source": "command.autopilot",
+            "target": "agent.bug-fix",
+            "type": "dispatch"
+          },
+          {
+            "source": "command.autopilot",
+            "target": "agent.live-test",
+            "type": "dispatch"
+          },
+          {
+            "source": "meta.orchestrator",
+            "target": "command.autopilot",
+            "type": "routes"
+          },
+          {
+            "source": "command.autopilot-merge",
+            "target": "rule.git-safety",
+            "type": "include"
+          },
+          {
+            "source": "command.autopilot-merge",
+            "target": "rule.gates",
+            "type": "include"
+          },
+          {
+            "source": "command.autopilot-merge",
+            "target": "rule.checkpoints",
+            "type": "include"
+          },
+          {
+            "source": "command.autopilot-merge",
+            "target": "rule.anti-patterns",
+            "type": "include"
+          },
+          {
+            "source": "meta.orchestrator",
+            "target": "command.autopilot-merge",
+            "type": "routes"
+          },
+          {
+            "source": "command.brainstorm",
+            "target": "rule.agent-contracts",
+            "type": "include"
+          },
+          {
+            "source": "command.brainstorm",
+            "target": "rule.questioning",
+            "type": "include"
+          },
+          {
+            "source": "command.brainstorm",
+            "target": "rule.problem-solving",
+            "type": "include"
+          },
+          {
+            "source": "command.brainstorm",
+            "target": "agent.brainstorm",
+            "type": "dispatch"
+          },
+          {
+            "source": "meta.orchestrator",
+            "target": "command.brainstorm",
+            "type": "routes"
+          },
+          {
+            "source": "command.bug",
+            "target": "rule.agent-contracts",
+            "type": "include"
+          },
+          {
+            "source": "command.bug",
+            "target": "rule.problem-solving",
+            "type": "include"
+          },
+          {
+            "source": "command.bug",
+            "target": "rule.gates",
+            "type": "include"
+          },
+          {
+            "source": "command.bug",
+            "target": "rule.verification-patterns",
+            "type": "include"
+          },
+          {
+            "source": "command.bug",
+            "target": "agent.bug-fix",
+            "type": "dispatch"
+          },
+          {
+            "source": "command.bug",
+            "target": "agent.brainstorm",
+            "type": "dispatch"
+          },
+          {
+            "source": "meta.orchestrator",
+            "target": "command.bug",
+            "type": "routes"
+          },
+          {
+            "source": "meta.orchestrator",
+            "target": "command.enhance-audio",
+            "type": "routes"
+          },
+          {
+            "source": "meta.orchestrator",
+            "target": "command.ghl-upload",
+            "type": "routes"
+          },
+          {
+            "source": "meta.orchestrator",
+            "target": "command.graph",
+            "type": "routes"
+          },
+          {
+            "source": "meta.orchestrator",
+            "target": "command.nano-banana",
+            "type": "routes"
+          },
+          {
+            "source": "meta.orchestrator",
+            "target": "command.optimize-video",
+            "type": "routes"
+          },
+          {
+            "source": "command.plan",
+            "target": "rule.agent-contracts",
+            "type": "include"
+          },
+          {
+            "source": "command.plan",
+            "target": "rule.plan-verification",
+            "type": "include"
+          },
+          {
+            "source": "command.plan",
+            "target": "rule.engineering-principles",
+            "type": "include"
+          },
+          {
+            "source": "command.plan",
+            "target": "rule.anti-patterns",
+            "type": "include"
+          },
+          {
+            "source": "command.plan",
+            "target": "rule.questioning",
+            "type": "include"
+          },
+          {
+            "source": "command.plan",
+            "target": "agent.brainstorm",
+            "type": "dispatch"
+          },
+          {
+            "source": "command.plan",
+            "target": "agent.safe-planner",
+            "type": "dispatch"
+          },
+          {
+            "source": "command.plan",
+            "target": "agent.frontend-specialist",
+            "type": "dispatch"
+          },
+          {
+            "source": "meta.orchestrator",
+            "target": "command.plan",
+            "type": "routes"
+          },
+          {
+            "source": "command.qa-loop",
+            "target": "rule.agent-contracts",
+            "type": "include"
+          },
+          {
+            "source": "command.qa-loop",
+            "target": "rule.gates",
+            "type": "include"
+          },
+          {
+            "source": "command.qa-loop",
+            "target": "rule.verification-patterns",
+            "type": "include"
+          },
+          {
+            "source": "command.qa-loop",
+            "target": "rule.anti-patterns",
+            "type": "include"
+          },
+          {
+            "source": "command.qa-loop",
+            "target": "agent.qa-agent",
+            "type": "dispatch"
+          },
+          {
+            "source": "meta.orchestrator",
+            "target": "command.qa-loop",
+            "type": "routes"
+          },
+          {
+            "source": "command.redesign",
+            "target": "agent.brainstorm",
+            "type": "dispatch"
+          },
+          {
+            "source": "command.redesign",
+            "target": "agent.live-test",
+            "type": "dispatch"
+          },
+          {
+            "source": "command.redesign",
+            "target": "agent.frontend-specialist",
+            "type": "dispatch"
+          },
+          {
+            "source": "command.redesign",
+            "target": "agent.image-craft-expert",
+            "type": "dispatch"
+          },
+          {
+            "source": "meta.orchestrator",
+            "target": "command.redesign",
+            "type": "routes"
+          },
+          {
+            "source": "meta.orchestrator",
+            "target": "command.transcribe",
+            "type": "routes"
+          },
+          {
+            "source": "meta.orchestrator",
+            "target": "command.view-video",
+            "type": "routes"
+          },
+          {
+            "source": "meta.orchestrator",
+            "target": "agent.brainstorm",
+            "type": "routes"
+          },
+          {
+            "source": "meta.orchestrator",
+            "target": "agent.bug-fix",
+            "type": "routes"
+          },
+          {
+            "source": "meta.orchestrator",
+            "target": "agent.frontend-specialist",
+            "type": "routes"
+          },
+          {
+            "source": "meta.orchestrator",
+            "target": "agent.image-craft-expert",
+            "type": "routes"
+          },
+          {
+            "source": "meta.orchestrator",
+            "target": "agent.live-test",
+            "type": "routes"
+          },
+          {
+            "source": "meta.orchestrator",
+            "target": "agent.outcomes-grader",
+            "type": "routes"
+          },
+          {
+            "source": "meta.orchestrator",
+            "target": "agent.qa-agent",
+            "type": "routes"
+          },
+          {
+            "source": "meta.orchestrator",
+            "target": "agent.safe-planner",
+            "type": "routes"
+          }
+        ]
+      }
+    </script>
     <script type="application/json" id="flow-data">
-{"workflow.daily-use":{"label":"Daily Workflow — /plan → /autopilot → verify → /compact","description":"How you actually work: one terminal orchestrates with /plan, a second terminal runs /autopilot, then back to the first to verify and merge","steps":[{"node":"meta.orchestrator","caption":"Open your first terminal. Tell Claude what you want to build, in plain English."},{"node":"command.plan","caption":"Run /plan. Claude breaks your task down before writing any code.","via":"dispatch"},{"node":"agent.safe-planner","caption":"A specialist sub-task figures out every file to change, in what order, and how to undo it if something goes wrong.","via":"dispatch","marker":"## PLAN READY"},{"node":"rule.plan-verification","caption":"Two more sub-tasks pressure-test the plan — one challenges the assumptions, one grades it against engineering rules. The plan is revised until both pass.","via":"include"},{"node":"command.autopilot","caption":"Open a second terminal. Paste the /autopilot command /plan handed you. It runs the plan on its own while you do other things."},{"node":"agent.qa-agent","caption":"A QA sub-task audits every change and re-checks until the work is clean. No \"should work\" — only verified.","via":"dispatch","marker":"## VERIFICATION PASSED"},{"node":"rule.checkpoints","caption":"Switch back to your first terminal. Claude waits for you to confirm before pushing anything.","via":"include"},{"node":"meta.orchestrator","caption":"When you're done, run /compact. It throws away the noise and keeps your next conversation lean."}],"canonical":true},"command.autopilot":{"label":"/autopilot — Autonomous Multi-Phase Orchestrator","description":"Plan → Implement → QA → Commit, end-to-end with API retry + circuit breaker","steps":[{"node":"command.autopilot","caption":"User invokes /autopilot with a task description"},{"node":"agent.safe-planner","caption":"Phase 1: dispatch safe-planner for work-unit plan","via":"dispatch","marker":"## PLAN READY"},{"node":"agent.brainstorm","caption":"Plan verification gate: brainstorm-vet critique","via":"dispatch","marker":"## EXPLORATION COMPLETE"},{"node":"agent.outcomes-grader","caption":"Plan verification gate: rubric grading","via":"dispatch","marker":"## OUTCOMES PASSED"},{"node":"agent.frontend-specialist","caption":"Phase 2: implementation work units in parallel where safe","via":"dispatch","marker":"## IMPLEMENTATION COMPLETE"},{"node":"agent.qa-agent","caption":"Phase 3: QA loop — audit + fix until clean","via":"dispatch","marker":"## VERIFICATION PASSED"},{"node":"rule.checkpoints","caption":"Final commit phase + human push-gate","via":"include"}],"canonical":true},"command.bug":{"label":"/bug — Trace, Diagnose, Fix, Validate","description":"4-phase systematic debugging, stops at 3+ failed fixes","steps":[{"node":"command.bug","caption":"User reports symptom"},{"node":"rule.problem-solving","caption":"@-includes problem-solving.md (symptom→technique dispatch)","via":"include"},{"node":"agent.bug-fix","caption":"Dispatch bug-fix: trace flow → identify root cause","via":"dispatch","marker":"## ROOT CAUSE FOUND"},{"node":"agent.frontend-specialist","caption":"Apply narrow fix at root cause","via":"dispatch","marker":"## IMPLEMENTATION COMPLETE"},{"node":"agent.qa-agent","caption":"qa-agent confirms symptom gone, no regressions","via":"dispatch","marker":"## VERIFICATION PASSED"}],"canonical":true},"command.qa-loop":{"label":"/qa-loop — Iterative Audit-and-Fix","description":"Revision gate: audit → fix → re-audit until clean (max 3 iterations)","steps":[{"node":"command.qa-loop","caption":"User triggers /qa-loop on recent changes"},{"node":"agent.qa-agent","caption":"qa-agent finds bugs","via":"dispatch","marker":"## ISSUES FOUND"},{"node":"agent.frontend-specialist","caption":"Fix CRITICAL/HIGH findings","via":"dispatch","marker":"## IMPLEMENTATION COMPLETE"},{"node":"agent.qa-agent","caption":"Re-audit until PASSED or max-iterations","via":"dispatch","marker":"## VERIFICATION PASSED"},{"node":"rule.gates","caption":"Revision gate: loop or escalate per gates.md","via":"include"}],"canonical":true},"command.plan":{"label":"/plan — Plan with Brainstorm + Principles Verification","description":"safe-planner → brainstorm critique → rubric grading → revision loop","steps":[{"node":"command.plan","caption":"User invokes /plan with a task"},{"node":"agent.safe-planner","caption":"Generate work-unit plan with rollback","via":"dispatch","marker":"## PLAN READY"},{"node":"agent.brainstorm","caption":"Critical-thinking pass: inversion + scale-game + meta-pattern","via":"dispatch","marker":"## EXPLORATION COMPLETE"},{"node":"agent.outcomes-grader","caption":"Grade plan against engineering-principles.md rubric","via":"dispatch","marker":"## OUTCOMES PASSED"},{"node":"rule.gates","caption":"Revision gate: one retry pass if either critique flags issues","via":"include"}],"canonical":true},"command.redesign":{"label":"/redesign — Collaborative UI Redesign","description":"Capture → brainstorm → generate mockups → implement → verify","steps":[{"node":"command.redesign","caption":"User requests a UI redesign"},{"node":"agent.live-test","caption":"Capture current state screenshots","via":"dispatch","marker":"## UI VERIFIED"},{"node":"agent.brainstorm","caption":"2+ loops: challenge assumptions, propose directions","via":"dispatch","marker":"## EXPLORATION COMPLETE"},{"node":"agent.image-craft-expert","caption":"3 options × 2 generators = 6 mockups in parallel","via":"dispatch","marker":"## IMAGE GENERATED"},{"node":"agent.frontend-specialist","caption":"Implement chosen direction","via":"dispatch","marker":"## IMPLEMENTATION COMPLETE"},{"node":"agent.live-test","caption":"Verify against mockup","via":"dispatch","marker":"## UI VERIFIED"}],"canonical":true},"command.autopilot-merge":{"label":"/autopilot-merge — Sequential `--no-ff` merge of every completed `autopilot/*` branch in this repo ","description":"Sequential `--no-ff` merge of every completed `autopilot/*` branch in this repo onto a target branch (default `dev`). Preserves per-run commit history with one merge commit per autopilot run. Pauses on conflicts for human resolution. Does NOT auto-clean worktrees or branches.","steps":[{"node":"command.autopilot-merge","caption":"User invokes /autopilot-merge"},{"node":"rule.git-safety","via":"include","caption":"@-includes git-safety"},{"node":"rule.gates","via":"include","caption":"@-includes gates"},{"node":"rule.checkpoints","via":"include","caption":"@-includes checkpoints"},{"node":"rule.anti-patterns","via":"include","caption":"@-includes anti-patterns"}],"canonical":false},"command.brainstorm":{"label":"/brainstorm — Dispatch the `brainstorm` agent to apply first principles, inversion, and second","description":"Dispatch the `brainstorm` agent to apply first principles, inversion, and second-order thinking. Surfaces the real problem, not just the presented one.","steps":[{"node":"command.brainstorm","caption":"User invokes /brainstorm"},{"node":"agent.brainstorm","via":"dispatch","caption":"Dispatch brainstorm","marker":"## EXPLORATION COMPLETE"},{"node":"rule.agent-contracts","via":"include","caption":"@-includes agent-contracts"},{"node":"rule.questioning","via":"include","caption":"@-includes questioning"},{"node":"rule.problem-solving","via":"include","caption":"@-includes problem-solving"}],"canonical":false},"command.enhance-audio":{"label":"/enhance-audio — Enhance and clean up audio in video/audio files using FFmpeg filters. Removes no","description":"Enhance and clean up audio in video/audio files using FFmpeg filters. Removes noise, normalizes volume, and improves speech clarity.","steps":[{"node":"command.enhance-audio","caption":"User invokes /enhance-audio"},{"node":"command.enhance-audio","caption":"Standalone skill/utility — no subagent dispatch in the core path"}],"canonical":false},"command.ghl-upload":{"label":"/ghl-upload — Upload files to GoHighLevel's media library via API.","description":"Upload files to GoHighLevel's media library via API.","steps":[{"node":"command.ghl-upload","caption":"User invokes /ghl-upload"},{"node":"command.ghl-upload","caption":"Standalone skill/utility — no subagent dispatch in the core path"}],"canonical":false},"command.graph":{"label":"/graph — Build or rebuild the repo-graphrag knowledge graph for the current project.","description":"Build or rebuild the repo-graphrag knowledge graph for the current project.","steps":[{"node":"command.graph","caption":"User invokes /graph"},{"node":"command.graph","caption":"Standalone skill/utility — no subagent dispatch in the core path"}],"canonical":false},"command.nano-banana":{"label":"/nano-banana — Generates AI images using the nano-banana CLI (Gemini 3.1 Flash default, Pro ava","description":"Generates AI images using the nano-banana CLI (Gemini 3.1 Flash default, Pro available). Handles multi-resolution (512-4K), aspect ratios, reference images for style transfer, green screen workflow for transparent assets, cost tracking, and exact dimension control. Use when asked to \"generate an image\", \"create a sprite\", \"make an asset\", \"generate artwork\", or any image generation task for UI mockups, game assets, videos, or marketing materials.","steps":[{"node":"command.nano-banana","caption":"User invokes /nano-banana"},{"node":"command.nano-banana","caption":"Standalone skill/utility — no subagent dispatch in the core path"}],"canonical":false},"command.optimize-video":{"label":"/optimize-video — Process and upload optimized videos to Supabase Storage with faststart + compres","description":"Process and upload optimized videos to Supabase Storage with faststart + compression.","steps":[{"node":"command.optimize-video","caption":"User invokes /optimize-video"},{"node":"command.optimize-video","caption":"Standalone skill/utility — no subagent dispatch in the core path"}],"canonical":false},"command.transcribe":{"label":"/transcribe — Transcribe audio/video files using OpenAI Whisper. Supports 99 languages with au","description":"Transcribe audio/video files using OpenAI Whisper. Supports 99 languages with automatic detection.","steps":[{"node":"command.transcribe","caption":"User invokes /transcribe"},{"node":"command.transcribe","caption":"Standalone skill/utility — no subagent dispatch in the core path"}],"canonical":false},"command.view-video":{"label":"/view-video — Extract frames from a video using ffmpeg so Claude can visually analyze the cont","description":"Extract frames from a video using ffmpeg so Claude can visually analyze the content.","steps":[{"node":"command.view-video","caption":"User invokes /view-video"},{"node":"command.view-video","caption":"Standalone skill/utility — no subagent dispatch in the core path"}],"canonical":false}}
-</script>
+      {
+        "workflow.daily-use": {
+          "label": "Daily Workflow — /plan → /autopilot → verify → /compact",
+          "description": "How you actually work: one terminal orchestrates with /plan, a second terminal runs /autopilot, then back to the first to verify and merge",
+          "steps": [
+            {
+              "node": "meta.orchestrator",
+              "caption": "Open your first terminal. Tell Claude what you want to build, in plain English."
+            },
+            {
+              "node": "command.plan",
+              "caption": "Run /plan. Claude breaks your task down before writing any code.",
+              "via": "dispatch"
+            },
+            {
+              "node": "agent.safe-planner",
+              "caption": "A specialist sub-task figures out every file to change, in what order, and how to undo it if something goes wrong.",
+              "via": "dispatch",
+              "marker": "## PLAN READY"
+            },
+            {
+              "node": "rule.plan-verification",
+              "caption": "Two more sub-tasks pressure-test the plan — one challenges the assumptions, one grades it against engineering rules. The plan is revised until both pass.",
+              "via": "include"
+            },
+            {
+              "node": "command.autopilot",
+              "caption": "Open a second terminal. Paste the /autopilot command /plan handed you. It runs the plan on its own while you do other things."
+            },
+            {
+              "node": "agent.qa-agent",
+              "caption": "A QA sub-task audits every change and re-checks until the work is clean. No \"should work\" — only verified.",
+              "via": "dispatch",
+              "marker": "## VERIFICATION PASSED"
+            },
+            {
+              "node": "rule.checkpoints",
+              "caption": "Switch back to your first terminal. Claude waits for you to confirm before pushing anything.",
+              "via": "include"
+            },
+            {
+              "node": "meta.orchestrator",
+              "caption": "When you're done, run /compact. It throws away the noise and keeps your next conversation lean."
+            }
+          ],
+          "canonical": true
+        },
+        "command.autopilot": {
+          "label": "/autopilot — Autonomous Multi-Phase Orchestrator",
+          "description": "Plan → Implement → QA → Commit, end-to-end with API retry + circuit breaker",
+          "steps": [
+            {
+              "node": "command.autopilot",
+              "caption": "User invokes /autopilot with a task description"
+            },
+            {
+              "node": "agent.safe-planner",
+              "caption": "Phase 1: dispatch safe-planner for work-unit plan",
+              "via": "dispatch",
+              "marker": "## PLAN READY"
+            },
+            {
+              "node": "agent.brainstorm",
+              "caption": "Plan verification gate: brainstorm-vet critique",
+              "via": "dispatch",
+              "marker": "## EXPLORATION COMPLETE"
+            },
+            {
+              "node": "agent.outcomes-grader",
+              "caption": "Plan verification gate: rubric grading",
+              "via": "dispatch",
+              "marker": "## OUTCOMES PASSED"
+            },
+            {
+              "node": "agent.frontend-specialist",
+              "caption": "Phase 2: implementation work units in parallel where safe",
+              "via": "dispatch",
+              "marker": "## IMPLEMENTATION COMPLETE"
+            },
+            {
+              "node": "agent.qa-agent",
+              "caption": "Phase 3: QA loop — audit + fix until clean",
+              "via": "dispatch",
+              "marker": "## VERIFICATION PASSED"
+            },
+            {
+              "node": "rule.checkpoints",
+              "caption": "Final commit phase + human push-gate",
+              "via": "include"
+            }
+          ],
+          "canonical": true
+        },
+        "command.bug": {
+          "label": "/bug — Trace, Diagnose, Fix, Validate",
+          "description": "4-phase systematic debugging, stops at 3+ failed fixes",
+          "steps": [
+            { "node": "command.bug", "caption": "User reports symptom" },
+            {
+              "node": "rule.problem-solving",
+              "caption": "@-includes problem-solving.md (symptom→technique dispatch)",
+              "via": "include"
+            },
+            {
+              "node": "agent.bug-fix",
+              "caption": "Dispatch bug-fix: trace flow → identify root cause",
+              "via": "dispatch",
+              "marker": "## ROOT CAUSE FOUND"
+            },
+            {
+              "node": "agent.frontend-specialist",
+              "caption": "Apply narrow fix at root cause",
+              "via": "dispatch",
+              "marker": "## IMPLEMENTATION COMPLETE"
+            },
+            {
+              "node": "agent.qa-agent",
+              "caption": "qa-agent confirms symptom gone, no regressions",
+              "via": "dispatch",
+              "marker": "## VERIFICATION PASSED"
+            }
+          ],
+          "canonical": true
+        },
+        "command.qa-loop": {
+          "label": "/qa-loop — Iterative Audit-and-Fix",
+          "description": "Revision gate: audit → fix → re-audit until clean (max 3 iterations)",
+          "steps": [
+            {
+              "node": "command.qa-loop",
+              "caption": "User triggers /qa-loop on recent changes"
+            },
+            {
+              "node": "agent.qa-agent",
+              "caption": "qa-agent finds bugs",
+              "via": "dispatch",
+              "marker": "## ISSUES FOUND"
+            },
+            {
+              "node": "agent.frontend-specialist",
+              "caption": "Fix CRITICAL/HIGH findings",
+              "via": "dispatch",
+              "marker": "## IMPLEMENTATION COMPLETE"
+            },
+            {
+              "node": "agent.qa-agent",
+              "caption": "Re-audit until PASSED or max-iterations",
+              "via": "dispatch",
+              "marker": "## VERIFICATION PASSED"
+            },
+            {
+              "node": "rule.gates",
+              "caption": "Revision gate: loop or escalate per gates.md",
+              "via": "include"
+            }
+          ],
+          "canonical": true
+        },
+        "command.plan": {
+          "label": "/plan — Plan with Brainstorm + Principles Verification",
+          "description": "safe-planner → brainstorm critique → rubric grading → revision loop",
+          "steps": [
+            {
+              "node": "command.plan",
+              "caption": "User invokes /plan with a task"
+            },
+            {
+              "node": "agent.safe-planner",
+              "caption": "Generate work-unit plan with rollback",
+              "via": "dispatch",
+              "marker": "## PLAN READY"
+            },
+            {
+              "node": "agent.brainstorm",
+              "caption": "Critical-thinking pass: inversion + scale-game + meta-pattern",
+              "via": "dispatch",
+              "marker": "## EXPLORATION COMPLETE"
+            },
+            {
+              "node": "agent.outcomes-grader",
+              "caption": "Grade plan against engineering-principles.md rubric",
+              "via": "dispatch",
+              "marker": "## OUTCOMES PASSED"
+            },
+            {
+              "node": "rule.gates",
+              "caption": "Revision gate: one retry pass if either critique flags issues",
+              "via": "include"
+            }
+          ],
+          "canonical": true
+        },
+        "command.redesign": {
+          "label": "/redesign — Collaborative UI Redesign",
+          "description": "Capture → brainstorm → generate mockups → implement → verify",
+          "steps": [
+            {
+              "node": "command.redesign",
+              "caption": "User requests a UI redesign"
+            },
+            {
+              "node": "agent.live-test",
+              "caption": "Capture current state screenshots",
+              "via": "dispatch",
+              "marker": "## UI VERIFIED"
+            },
+            {
+              "node": "agent.brainstorm",
+              "caption": "2+ loops: challenge assumptions, propose directions",
+              "via": "dispatch",
+              "marker": "## EXPLORATION COMPLETE"
+            },
+            {
+              "node": "agent.image-craft-expert",
+              "caption": "3 options × 2 generators = 6 mockups in parallel",
+              "via": "dispatch",
+              "marker": "## IMAGE GENERATED"
+            },
+            {
+              "node": "agent.frontend-specialist",
+              "caption": "Implement chosen direction",
+              "via": "dispatch",
+              "marker": "## IMPLEMENTATION COMPLETE"
+            },
+            {
+              "node": "agent.live-test",
+              "caption": "Verify against mockup",
+              "via": "dispatch",
+              "marker": "## UI VERIFIED"
+            }
+          ],
+          "canonical": true
+        },
+        "command.autopilot-merge": {
+          "label": "/autopilot-merge — Sequential `--no-ff` merge of every completed `autopilot/*` branch in this repo ",
+          "description": "Sequential `--no-ff` merge of every completed `autopilot/*` branch in this repo onto a target branch (default `dev`). Preserves per-run commit history with one merge commit per autopilot run. Pauses on conflicts for human resolution. Does NOT auto-clean worktrees or branches.",
+          "steps": [
+            {
+              "node": "command.autopilot-merge",
+              "caption": "User invokes /autopilot-merge"
+            },
+            {
+              "node": "rule.git-safety",
+              "via": "include",
+              "caption": "@-includes git-safety"
+            },
+            {
+              "node": "rule.gates",
+              "via": "include",
+              "caption": "@-includes gates"
+            },
+            {
+              "node": "rule.checkpoints",
+              "via": "include",
+              "caption": "@-includes checkpoints"
+            },
+            {
+              "node": "rule.anti-patterns",
+              "via": "include",
+              "caption": "@-includes anti-patterns"
+            }
+          ],
+          "canonical": false
+        },
+        "command.brainstorm": {
+          "label": "/brainstorm — Dispatch the `brainstorm` agent to apply first principles, inversion, and second",
+          "description": "Dispatch the `brainstorm` agent to apply first principles, inversion, and second-order thinking. Surfaces the real problem, not just the presented one.",
+          "steps": [
+            {
+              "node": "command.brainstorm",
+              "caption": "User invokes /brainstorm"
+            },
+            {
+              "node": "agent.brainstorm",
+              "via": "dispatch",
+              "caption": "Dispatch brainstorm",
+              "marker": "## EXPLORATION COMPLETE"
+            },
+            {
+              "node": "rule.agent-contracts",
+              "via": "include",
+              "caption": "@-includes agent-contracts"
+            },
+            {
+              "node": "rule.questioning",
+              "via": "include",
+              "caption": "@-includes questioning"
+            },
+            {
+              "node": "rule.problem-solving",
+              "via": "include",
+              "caption": "@-includes problem-solving"
+            }
+          ],
+          "canonical": false
+        },
+        "command.enhance-audio": {
+          "label": "/enhance-audio — Enhance and clean up audio in video/audio files using FFmpeg filters. Removes no",
+          "description": "Enhance and clean up audio in video/audio files using FFmpeg filters. Removes noise, normalizes volume, and improves speech clarity.",
+          "steps": [
+            {
+              "node": "command.enhance-audio",
+              "caption": "User invokes /enhance-audio"
+            },
+            {
+              "node": "command.enhance-audio",
+              "caption": "Standalone skill/utility — no subagent dispatch in the core path"
+            }
+          ],
+          "canonical": false
+        },
+        "command.ghl-upload": {
+          "label": "/ghl-upload — Upload files to GoHighLevel's media library via API.",
+          "description": "Upload files to GoHighLevel's media library via API.",
+          "steps": [
+            {
+              "node": "command.ghl-upload",
+              "caption": "User invokes /ghl-upload"
+            },
+            {
+              "node": "command.ghl-upload",
+              "caption": "Standalone skill/utility — no subagent dispatch in the core path"
+            }
+          ],
+          "canonical": false
+        },
+        "command.graph": {
+          "label": "/graph — Build or rebuild the repo-graphrag knowledge graph for the current project.",
+          "description": "Build or rebuild the repo-graphrag knowledge graph for the current project.",
+          "steps": [
+            { "node": "command.graph", "caption": "User invokes /graph" },
+            {
+              "node": "command.graph",
+              "caption": "Standalone skill/utility — no subagent dispatch in the core path"
+            }
+          ],
+          "canonical": false
+        },
+        "command.nano-banana": {
+          "label": "/nano-banana — Generates AI images using the nano-banana CLI (Gemini 3.1 Flash default, Pro ava",
+          "description": "Generates AI images using the nano-banana CLI (Gemini 3.1 Flash default, Pro available). Handles multi-resolution (512-4K), aspect ratios, reference images for style transfer, green screen workflow for transparent assets, cost tracking, and exact dimension control. Use when asked to \"generate an image\", \"create a sprite\", \"make an asset\", \"generate artwork\", or any image generation task for UI mockups, game assets, videos, or marketing materials.",
+          "steps": [
+            {
+              "node": "command.nano-banana",
+              "caption": "User invokes /nano-banana"
+            },
+            {
+              "node": "command.nano-banana",
+              "caption": "Standalone skill/utility — no subagent dispatch in the core path"
+            }
+          ],
+          "canonical": false
+        },
+        "command.optimize-video": {
+          "label": "/optimize-video — Process and upload optimized videos to Supabase Storage with faststart + compres",
+          "description": "Process and upload optimized videos to Supabase Storage with faststart + compression.",
+          "steps": [
+            {
+              "node": "command.optimize-video",
+              "caption": "User invokes /optimize-video"
+            },
+            {
+              "node": "command.optimize-video",
+              "caption": "Standalone skill/utility — no subagent dispatch in the core path"
+            }
+          ],
+          "canonical": false
+        },
+        "command.transcribe": {
+          "label": "/transcribe — Transcribe audio/video files using OpenAI Whisper. Supports 99 languages with au",
+          "description": "Transcribe audio/video files using OpenAI Whisper. Supports 99 languages with automatic detection.",
+          "steps": [
+            {
+              "node": "command.transcribe",
+              "caption": "User invokes /transcribe"
+            },
+            {
+              "node": "command.transcribe",
+              "caption": "Standalone skill/utility — no subagent dispatch in the core path"
+            }
+          ],
+          "canonical": false
+        },
+        "command.view-video": {
+          "label": "/view-video — Extract frames from a video using ffmpeg so Claude can visually analyze the cont",
+          "description": "Extract frames from a video using ffmpeg so Claude can visually analyze the content.",
+          "steps": [
+            {
+              "node": "command.view-video",
+              "caption": "User invokes /view-video"
+            },
+            {
+              "node": "command.view-video",
+              "caption": "Standalone skill/utility — no subagent dispatch in the core path"
+            }
+          ],
+          "canonical": false
+        }
+      }
+    </script>
 
     <style>
       /* ============================================================
@@ -1776,303 +3129,294 @@
       }
 
       /* ============================================================
-         Tutorial overlay (wu-B) — onboarding tour
+         How view (vertical scroll, outcome-based onboarding)
          ============================================================ */
-      .ccs-tour-overlay {
-        position: fixed;
-        inset: 0;
-        background: rgba(0, 0, 0, 0.45);
-        pointer-events: none;
-        z-index: 9000;
-        animation: ccs-tour-fade-in 180ms ease forwards;
+      .how-view {
+        max-width: 720px;
+        margin: 0 auto;
+        padding: 0 24px 96px;
+        display: none;
+        opacity: 0;
+        transition: opacity var(--transition-med);
       }
-      [data-theme="light"] .ccs-tour-overlay {
-        background: rgba(0, 0, 0, 0.25);
+      body[data-view="how"] .how-view {
+        display: block;
+        opacity: 1;
+      }
+      body[data-view="how"] .graph-wrap,
+      body[data-view="how"] .list-view {
+        display: none;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .how-view {
+          transition: none;
+        }
       }
 
-      .ccs-tour-card {
-        position: fixed;
-        left: 50%;
-        top: 50%;
-        transform: translate(-50%, -50%);
-        max-width: 560px;
-        width: calc(100% - 48px);
-        padding: 24px 24px 20px;
-        background: var(--bg-elev-1);
-        color: var(--text-primary);
-        border: 1px solid var(--border-strong);
-        border-radius: var(--radius-lg);
-        box-shadow: var(--shadow-1);
-        pointer-events: auto;
-        z-index: 9002;
+      .how-container {
         font-family: var(--font-ui);
-        animation: ccs-tour-rise 220ms cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+        color: var(--text-primary);
       }
-      .ccs-tour-card[hidden] {
-        display: none !important;
+
+      .how-hero {
+        padding: 56px 0 28px;
+        border-bottom: 1px solid var(--border);
+        margin-bottom: 56px;
       }
-      .ccs-tour-card h2 {
-        margin: 0 0 10px;
-        font-size: 18px;
+      .how-hero h1 {
+        margin: 0 0 14px;
+        font-size: 44px;
+        line-height: 1.08;
+        letter-spacing: -0.025em;
         font-weight: 700;
-        letter-spacing: -0.01em;
+        color: var(--text-primary);
       }
-      .ccs-tour-card p {
-        margin: 0 0 12px;
+      .how-tagline {
+        margin: 0;
+        font-size: 18px;
+        line-height: 1.55;
         color: var(--text-secondary);
-        font-size: 14px;
-        line-height: 1.5;
+        max-width: 560px;
       }
-      .ccs-tour-card__actions {
-        display: flex;
-        gap: 8px;
-        justify-content: flex-end;
-        margin-top: 16px;
+
+      .how-install,
+      .how-outcome {
+        margin-bottom: 64px;
       }
-      .ccs-tour-btn {
-        appearance: none;
-        border: 1px solid var(--border-strong);
+      .how-install h2,
+      .how-outcome h2 {
+        margin: 0 0 12px;
+        font-size: 26px;
+        line-height: 1.2;
+        letter-spacing: -0.015em;
+        font-weight: 650;
+        color: var(--text-primary);
+      }
+      .how-install > p,
+      .how-outcome-tagline {
+        margin: 0 0 24px;
+        font-size: 17px;
+        line-height: 1.6;
+        color: var(--text-secondary);
+      }
+      .how-install code,
+      .how-outcome p code,
+      .how-step-note code {
+        font-family: var(--font-mono);
+        font-size: 0.9em;
         background: var(--bg-elev-2);
         color: var(--text-primary);
-        font: inherit;
-        font-size: 13px;
-        font-weight: 500;
-        padding: 8px 14px;
-        border-radius: var(--radius-md);
-        cursor: pointer;
-        transition:
-          background var(--transition-fast),
-          border-color var(--transition-fast),
-          color var(--transition-fast);
-      }
-      .ccs-tour-btn:hover {
-        border-color: var(--accent);
-        color: var(--text-primary);
-      }
-      .ccs-tour-btn:focus-visible {
-        outline: 2px solid var(--accent);
-        outline-offset: 2px;
-      }
-      .ccs-tour-btn--primary {
-        background: var(--accent);
-        border-color: var(--accent);
-        color: #fff;
-      }
-      .ccs-tour-btn--primary:hover {
-        background: var(--accent-soft);
-        border-color: var(--accent-soft);
-      }
-      .ccs-tour-btn--ghost {
-        background: transparent;
-      }
-
-      .ccs-tour-coachmark {
-        position: fixed;
-        max-width: 280px;
-        padding: 14px 14px 12px;
-        background: var(--bg-elev-1);
-        color: var(--text-primary);
-        border: 1px solid var(--border-strong);
-        border-radius: var(--radius-md);
-        box-shadow: var(--shadow-1);
-        pointer-events: auto;
-        z-index: 9001;
-        font-family: var(--font-ui);
-        font-size: 13px;
-        line-height: 1.45;
-        animation: ccs-tour-rise 180ms ease forwards;
-      }
-      .ccs-tour-coachmark[hidden] {
-        display: none !important;
-      }
-      .ccs-tour-coachmark p {
-        margin: 0 0 10px;
-        color: var(--text-secondary);
-      }
-      .ccs-tour-coachmark code {
-        font-family: var(--font-mono);
-        font-size: 12px;
-        background: var(--bg-elev-3);
-        color: var(--text-primary);
-        padding: 1px 5px;
+        padding: 1px 6px;
         border-radius: var(--radius-sm);
+        border: 1px solid var(--border);
       }
-      .ccs-tour-coachmark__actions {
-        display: flex;
-        gap: 6px;
-        justify-content: flex-end;
+      .how-note {
+        margin: 14px 0 0;
+        font-size: 14px;
+        color: var(--text-muted);
       }
-      .ccs-tour-coachmark::before {
-        content: "";
-        position: absolute;
-        top: -7px;
-        left: 18px;
-        width: 12px;
-        height: 12px;
+      .how-note a {
+        color: var(--accent);
+        text-decoration: none;
+        font-weight: 500;
+      }
+      .how-note a:hover {
+        text-decoration: underline;
+      }
+
+      .how-codeblock {
+        position: relative;
+        margin: 16px 0;
         background: var(--bg-elev-1);
-        border-top: 1px solid var(--border-strong);
-        border-left: 1px solid var(--border-strong);
-        transform: rotate(45deg);
-      }
-
-      .ccs-tour-resume-btn[hidden] {
-        display: none !important;
-      }
-
-      .ccs-tour-install pre {
-        background: var(--bg-elev-3);
         border: 1px solid var(--border);
         border-radius: var(--radius-md);
-        padding: 12px 14px;
-        margin: 0 0 12px;
+        overflow: hidden;
+      }
+      .how-codeblock pre {
+        margin: 0;
+        padding: 16px 56px 16px 18px;
         font-family: var(--font-mono);
-        font-size: 12.5px;
-        line-height: 1.55;
+        font-size: 13.5px;
+        line-height: 1.6;
         color: var(--text-primary);
         overflow-x: auto;
         white-space: pre;
       }
-      .ccs-tour-install__block {
-        position: relative;
-        margin: 0 0 14px;
+      .how-codeblock code {
+        font-family: inherit;
+        font-size: inherit;
+        background: transparent;
+        border: 0;
+        padding: 0;
+        color: inherit;
       }
-      .ccs-tour-install__copy {
+      .how-copy {
         position: absolute;
-        top: 8px;
-        right: 8px;
+        top: 10px;
+        right: 10px;
         appearance: none;
         border: 1px solid var(--border-strong);
         background: var(--bg-elev-2);
         color: var(--text-secondary);
-        font: inherit;
+        font-family: var(--font-ui);
         font-size: 11px;
         font-weight: 500;
-        padding: 4px 10px;
+        letter-spacing: 0.02em;
+        padding: 5px 10px;
         border-radius: var(--radius-sm);
         cursor: pointer;
+        transition:
+          color var(--transition-fast),
+          border-color var(--transition-fast),
+          background var(--transition-fast);
       }
-      .ccs-tour-install__copy:hover {
+      .how-copy:hover {
         color: var(--text-primary);
         border-color: var(--accent);
       }
-      .ccs-tour-install__copy:focus-visible {
+      .how-copy:focus-visible {
         outline: 2px solid var(--accent);
         outline-offset: 2px;
       }
-      .ccs-tour-install__copy[data-copied="true"] {
-        color: var(--success);
-        border-color: var(--success);
+      .how-copy[data-copied="true"] {
+        color: #16a34a;
+        border-color: #16a34a;
       }
-      .ccs-tour-install__link {
-        display: inline-block;
-        margin: 0 0 4px;
-        color: var(--accent);
-        text-decoration: none;
-        font-size: 13px;
-        font-weight: 500;
-      }
-      .ccs-tour-install__link:hover {
-        text-decoration: underline;
-      }
-      .ccs-tour-install::backdrop {
-        background: rgba(0, 0, 0, 0.5);
-      }
-      [data-theme="light"] .ccs-tour-install::backdrop {
-        background: rgba(0, 0, 0, 0.3);
-      }
-      .ccs-tour-install[open] {
-        display: block;
+      [data-theme="light"] .how-copy[data-copied="true"] {
+        color: #15803d;
+        border-color: #15803d;
       }
 
-      .ccs-tour-terminal-badge {
-        display: inline-block;
-        padding: 1px 8px;
-        margin-right: 6px;
+      .how-steps {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        counter-reset: how-step;
+      }
+      .how-steps > li {
+        display: grid;
+        grid-template-columns: 108px 1fr;
+        gap: 20px;
+        align-items: start;
+        padding: 24px 0;
+        border-top: 1px solid var(--border);
+      }
+      .how-steps > li:first-child {
+        border-top: 0;
+        padding-top: 8px;
+      }
+
+      .how-terminal-tag {
+        display: inline-flex;
+        align-items: center;
+        height: 22px;
+        padding: 0 10px;
         border-radius: 999px;
-        background: var(--accent);
-        color: #fff;
         font-family: var(--font-ui);
         font-size: 11px;
         font-weight: 700;
-        letter-spacing: 0.01em;
-        vertical-align: 1px;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: #fff;
+        white-space: nowrap;
       }
-      .ccs-tour-terminal-badge--worker {
+      .how-terminal-tag--1 {
+        background: var(--accent);
+      }
+      .how-terminal-tag--2 {
         background: var(--agent);
       }
 
-      .ccs-tour-replay-btn {
-        margin-left: 4px;
-        z-index: 100;
+      .how-step-body p {
+        margin: 0 0 8px;
+        font-size: 16px;
+        line-height: 1.6;
+        color: var(--text-primary);
+      }
+      .how-step-body p:last-child {
+        margin-bottom: 0;
+      }
+      .how-step-note {
+        margin-top: 12px !important;
+        color: var(--text-secondary) !important;
+        font-size: 14.5px !important;
+        line-height: 1.55 !important;
       }
 
-      .ccs-tour-highlight {
+      .how-footer {
+        margin-top: 24px;
+        padding-top: 32px;
+        border-top: 1px solid var(--border);
+        text-align: center;
+      }
+      .how-footer p {
+        margin: 0;
+        font-size: 15px;
+        color: var(--text-secondary);
+      }
+      .how-arch-link {
+        appearance: none;
+        border: 0;
+        background: transparent;
+        color: var(--accent);
+        font: inherit;
+        font-weight: 500;
+        cursor: pointer;
+        padding: 2px 0;
+      }
+      .how-arch-link:hover {
+        text-decoration: underline;
+      }
+      .how-arch-link:focus-visible {
         outline: 2px solid var(--accent);
-        outline-offset: 4px;
-        border-radius: var(--radius-md);
-        transition: outline-color 200ms ease;
-      }
-
-      @keyframes ccs-tour-fade-in {
-        from {
-          opacity: 0;
-        }
-        to {
-          opacity: 1;
-        }
-      }
-      @keyframes ccs-tour-rise {
-        from {
-          opacity: 0;
-          transform: translate(-50%, calc(-50% + 8px));
-        }
-        to {
-          opacity: 1;
-          transform: translate(-50%, -50%);
-        }
-      }
-      .ccs-tour-coachmark {
-        animation-name: ccs-tour-coachmark-rise;
-      }
-      @keyframes ccs-tour-coachmark-rise {
-        from {
-          opacity: 0;
-          transform: translateY(6px);
-        }
-        to {
-          opacity: 1;
-          transform: translateY(0);
-        }
+        outline-offset: 3px;
+        border-radius: 2px;
       }
 
       @media (max-width: 640px) {
-        .ccs-tour-coachmark {
-          display: none !important;
+        .how-view {
+          padding: 0 18px 64px;
         }
-        .ccs-tour-card {
-          width: calc(100vw - 16px);
-          max-width: none;
-          max-height: 90vh;
-          overflow-y: auto;
-          padding: 18px 16px;
+        .how-hero {
+          padding: 32px 0 20px;
+          margin-bottom: 40px;
         }
-        .ccs-tour-install pre {
-          font-size: 12px;
-          line-height: 1.5;
+        .how-hero h1 {
+          font-size: 30px;
         }
-        .ccs-tour-replay-btn {
-          margin-left: 2px;
+        .how-tagline {
+          font-size: 16px;
         }
-      }
-
-      @media (prefers-reduced-motion: reduce) {
-        .ccs-tour-overlay,
-        .ccs-tour-card,
-        .ccs-tour-coachmark {
-          animation: none !important;
+        .how-install,
+        .how-outcome {
+          margin-bottom: 48px;
         }
-        .ccs-tour-card {
-          transform: translate(-50%, -50%);
+        .how-install h2,
+        .how-outcome h2 {
+          font-size: 22px;
+        }
+        .how-install > p,
+        .how-outcome-tagline {
+          font-size: 16px;
+        }
+        .how-codeblock pre {
+          padding: 14px 16px;
+          font-size: 12.5px;
+        }
+        .how-copy {
+          position: static;
+          display: inline-block;
+          margin: 0 12px 0 12px;
+          margin-top: -8px;
+          margin-bottom: 12px;
+        }
+        .how-steps > li {
+          grid-template-columns: 1fr;
+          gap: 12px;
+          padding: 20px 0;
+        }
+        .how-step-body p {
+          font-size: 15px;
         }
       }
     </style>
@@ -2136,13 +3480,36 @@
           >
             <button
               class="view-toggle__tab"
+              id="view-tab-how"
+              role="tab"
+              aria-selected="false"
+              aria-controls="view-how"
+              data-view="how"
+              tabindex="-1"
+              title="How view"
+            >
+              <svg
+                viewBox="0 0 16 16"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+                aria-hidden="true"
+              >
+                <path d="M3 3h7a2 2 0 0 1 2 2v8" />
+                <path d="M3 3v9a1 1 0 0 0 1 1h8" />
+                <path d="M5 6h5M5 9h3" />
+              </svg>
+              How
+            </button>
+            <button
+              class="view-toggle__tab"
               id="view-tab-map"
               role="tab"
               aria-selected="true"
               aria-controls="view-map"
               data-view="map"
               tabindex="0"
-              title="Map view (V to toggle)"
+              title="Map view (V to cycle)"
             >
               <svg
                 viewBox="0 0 16 16"
@@ -2164,7 +3531,7 @@
               aria-controls="view-list"
               data-view="list"
               tabindex="-1"
-              title="List view (V to toggle)"
+              title="List view (V to cycle)"
             >
               <svg
                 viewBox="0 0 16 16"
@@ -2196,24 +3563,6 @@
                 fill="currentColor"
                 stroke="none"
               />
-            </svg>
-          </button>
-          <button
-            class="icon-btn ccs-tour-replay-btn"
-            id="ccs-tour-replay"
-            type="button"
-            aria-label="Replay tutorial"
-            title="Replay tutorial"
-          >
-            <svg
-              viewBox="0 0 16 16"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="1.5"
-              aria-hidden="true"
-            >
-              <path d="M3 8a5 5 0 1 0 1.5-3.5" />
-              <path d="M3 3v3h3" />
             </svg>
           </button>
         </div>
@@ -2469,6 +3818,246 @@
       </div>
     </main>
 
+    <!-- HOW VIEW (vertical scroll, outcome-based onboarding) =============== -->
+    <section
+      class="how-view"
+      id="view-how"
+      role="region"
+      aria-label="How to use this setup"
+      aria-hidden="true"
+    >
+      <div class="how-container">
+        <header class="how-hero">
+          <h1>How to use this setup</h1>
+          <p class="how-tagline">
+            Three outcomes you'll hit weekly — and the exact commands for each.
+          </p>
+        </header>
+
+        <section class="how-install">
+          <h2>1. Install once</h2>
+          <p>
+            One command. Two minutes. Adds custom agents, skills, commands, and
+            hooks to your local <code>~/.claude/</code>.
+          </p>
+          <div class="how-codeblock">
+            <button
+              class="how-copy"
+              type="button"
+              data-copy-target="install-cmd"
+            >
+              Copy
+            </button>
+            <pre><code id="install-cmd">git clone https://github.com/zalogarcia/zalo-claude-code-setup ~/.claude-setup
+cd ~/.claude-setup &amp;&amp; ./install.sh</code></pre>
+          </div>
+          <p class="how-note">
+            <a
+              href="https://github.com/zalogarcia/zalo-claude-code-setup#readme"
+              target="_blank"
+              rel="noopener noreferrer"
+              >Full instructions in the README →</a
+            >
+          </p>
+        </section>
+
+        <section class="how-outcome" id="outcome-ship">
+          <h2>2. Ship a feature</h2>
+          <p class="how-outcome-tagline">
+            Two terminals: one plans, one builds. You verify.
+          </p>
+          <ol class="how-steps">
+            <li>
+              <span class="how-terminal-tag how-terminal-tag--1"
+                >Terminal 1</span
+              >
+              <div class="how-step-body">
+                <p>Describe what you want in plain English:</p>
+                <div class="how-codeblock">
+                  <button
+                    class="how-copy"
+                    type="button"
+                    data-copy-target="ship-plan"
+                  >
+                    Copy
+                  </button>
+                  <pre><code id="ship-plan">/plan add a dark mode toggle to my app</code></pre>
+                </div>
+                <p class="how-step-note">
+                  Claude breaks the task down, writes a rollback-ready plan to
+                  <code>.plan/plan.md</code>, and pressure-tests it through
+                  verification gates.
+                </p>
+              </div>
+            </li>
+            <li>
+              <span class="how-terminal-tag how-terminal-tag--1"
+                >Terminal 1</span
+              >
+              <div class="how-step-body">
+                <p>
+                  When <code>/plan</code> finishes, it prints a ready-to-paste
+                  <code>/autopilot</code> command. Copy it.
+                </p>
+              </div>
+            </li>
+            <li>
+              <span class="how-terminal-tag how-terminal-tag--2"
+                >Terminal 2</span
+              >
+              <div class="how-step-body">
+                <p>
+                  Open a second terminal. Paste the <code>/autopilot</code>
+                  command. It runs the plan on its own — implements, tests,
+                  audits, loops until clean.
+                </p>
+              </div>
+            </li>
+            <li>
+              <span class="how-terminal-tag how-terminal-tag--1"
+                >Terminal 1</span
+              >
+              <div class="how-step-body">
+                <p>
+                  When <code>/autopilot</code> finishes in Terminal 2, return to
+                  your main terminal and tell Claude:
+                </p>
+                <div class="how-codeblock">
+                  <button
+                    class="how-copy"
+                    type="button"
+                    data-copy-target="ship-verify"
+                  >
+                    Copy
+                  </button>
+                  <pre><code id="ship-verify">autopilot finished — verify and push when it looks good</code></pre>
+                </div>
+                <p class="how-step-note">
+                  Claude checks the work, runs tests, and waits for your push
+                  approval. Nothing leaves your machine without your okay.
+                </p>
+              </div>
+            </li>
+            <li>
+              <span class="how-terminal-tag how-terminal-tag--1"
+                >Terminal 1</span
+              >
+              <div class="how-step-body">
+                <p>Before the next task, keep your conversation lean:</p>
+                <div class="how-codeblock">
+                  <button
+                    class="how-copy"
+                    type="button"
+                    data-copy-target="ship-compact"
+                  >
+                    Copy
+                  </button>
+                  <pre><code id="ship-compact">/compact</code></pre>
+                </div>
+              </div>
+            </li>
+          </ol>
+        </section>
+
+        <section class="how-outcome" id="outcome-bug">
+          <h2>3. Fix a bug</h2>
+          <p class="how-outcome-tagline">
+            One command. Claude traces, diagnoses, fixes, validates.
+          </p>
+          <ol class="how-steps">
+            <li>
+              <span class="how-terminal-tag how-terminal-tag--1"
+                >Terminal 1</span
+              >
+              <div class="how-step-body">
+                <p>Describe what's broken:</p>
+                <div class="how-codeblock">
+                  <button
+                    class="how-copy"
+                    type="button"
+                    data-copy-target="bug-cmd"
+                  >
+                    Copy
+                  </button>
+                  <pre><code id="bug-cmd">/bug users get logged out randomly after checkout</code></pre>
+                </div>
+                <p class="how-step-note">
+                  Claude traces the full flow, identifies the root cause (not
+                  just a symptom), and stops if 3 fix attempts fail — that's a
+                  signal the architecture is wrong, not the fix.
+                </p>
+              </div>
+            </li>
+            <li>
+              <span class="how-terminal-tag how-terminal-tag--1"
+                >Terminal 1</span
+              >
+              <div class="how-step-body">
+                <p>
+                  Claude applies a narrow fix at the root cause, then a QA pass
+                  confirms the bug is gone and nothing else broke.
+                </p>
+              </div>
+            </li>
+          </ol>
+        </section>
+
+        <section class="how-outcome" id="outcome-think">
+          <h2>4. Think something through</h2>
+          <p class="how-outcome-tagline">
+            Pressure-test an idea before you commit code to it.
+          </p>
+          <ol class="how-steps">
+            <li>
+              <span class="how-terminal-tag how-terminal-tag--1"
+                >Terminal 1</span
+              >
+              <div class="how-step-body">
+                <p>Describe what you're wrestling with:</p>
+                <div class="how-codeblock">
+                  <button
+                    class="how-copy"
+                    type="button"
+                    data-copy-target="think-cmd"
+                  >
+                    Copy
+                  </button>
+                  <pre><code id="think-cmd">/brainstorm should we move from REST to GraphQL for our public API?</code></pre>
+                </div>
+                <p class="how-step-note">
+                  Claude applies inversion ("what if the opposite were true?"),
+                  simplification ("what would eliminate 5 steps with one
+                  insight?"), and stress-tests at 0.1× and 10× scale. You get a
+                  sharper view of the tradeoffs.
+                </p>
+              </div>
+            </li>
+            <li>
+              <span class="how-terminal-tag how-terminal-tag--1"
+                >Terminal 1</span
+              >
+              <div class="how-step-body">
+                <p>
+                  Use the output to inform the next <code>/plan</code>. If you
+                  skip this step on hard decisions, you usually pay for it
+                  later.
+                </p>
+              </div>
+            </li>
+          </ol>
+        </section>
+
+        <footer class="how-footer">
+          <p>
+            Curious about the architecture under the hood?
+            <button class="how-arch-link" id="how-see-arch" type="button">
+              See the architecture →
+            </button>
+          </p>
+        </footer>
+      </div>
+    </section>
+
     <!-- LIST VIEW (linear scroll) ========================================= -->
     <section
       class="list-view"
@@ -2546,160 +4135,6 @@
         </svg>
       </button>
       <div id="story-steps"></div>
-    </div>
-
-    <!-- TUTORIAL OVERLAY (wu-B) ============================================ -->
-    <div id="ccs-tour-root" hidden>
-      <div class="ccs-tour-overlay" id="ccs-tour-overlay"></div>
-
-      <div
-        id="ccs-tour-intro"
-        class="ccs-tour-card"
-        role="dialog"
-        aria-modal="false"
-        aria-labelledby="ccs-tour-intro-title"
-        hidden
-      >
-        <h2 id="ccs-tour-intro-title">This is your daily workflow.</h2>
-        <p>
-          One terminal orchestrates with <code>/plan</code>. A second terminal
-          does the work with <code>/autopilot</code>. Then back to the first to
-          verify and merge.
-        </p>
-        <p>Watch how the handoff actually runs — 8 steps, about 30 seconds.</p>
-        <div class="ccs-tour-card__actions">
-          <button
-            type="button"
-            class="ccs-tour-btn ccs-tour-btn--ghost"
-            id="ccs-tour-skip"
-          >
-            Skip
-          </button>
-          <button
-            type="button"
-            class="ccs-tour-btn ccs-tour-btn--primary"
-            id="ccs-tour-start"
-          >
-            Start tour
-          </button>
-        </div>
-      </div>
-
-      <div
-        id="ccs-tour-coachmark"
-        class="ccs-tour-coachmark"
-        role="status"
-        aria-live="polite"
-        hidden
-      >
-        <p id="ccs-tour-coachmark-text"></p>
-        <div class="ccs-tour-coachmark__actions">
-          <button
-            type="button"
-            class="ccs-tour-btn ccs-tour-btn--ghost ccs-tour-resume-btn"
-            id="ccs-tour-resume"
-            hidden
-          >
-            Resume tour
-          </button>
-          <button
-            type="button"
-            class="ccs-tour-btn ccs-tour-btn--primary"
-            id="ccs-tour-next"
-          >
-            Next
-          </button>
-        </div>
-      </div>
-
-      <dialog
-        id="ccs-tour-install"
-        class="ccs-tour-card ccs-tour-install"
-        aria-labelledby="ccs-tour-install-title"
-      >
-        <h2 id="ccs-tour-install-title">Two terminals, two commands.</h2>
-        <p>Install once:</p>
-        <div class="ccs-tour-install__block">
-          <button
-            type="button"
-            class="ccs-tour-install__copy"
-            id="ccs-tour-copy-install"
-            data-copy-target="ccs-tour-install-cmd"
-            aria-label="Copy install command"
-          >
-            Copy
-          </button>
-          <pre
-            id="ccs-tour-install-cmd"
-          ><code>git clone https://github.com/zalogarcia/zalo-claude-code-setup ~/.claude-setup
-cd ~/.claude-setup &amp;&amp; ./install.sh</code></pre>
-        </div>
-
-        <p>Then in your daily flow:</p>
-        <div class="ccs-tour-install__block">
-          <button
-            type="button"
-            class="ccs-tour-install__copy"
-            id="ccs-tour-copy-flow"
-            data-copy-target="ccs-tour-flow-cmd-plain"
-            aria-label="Copy workflow snippet"
-          >
-            Copy
-          </button>
-          <pre><code><span class="ccs-tour-terminal-badge">Terminal 1 — orchestrator</span>
-/plan add a dark mode toggle to my app
-
-# /plan finishes and hands you an /autopilot command. Copy it.
-
-<span class="ccs-tour-terminal-badge ccs-tour-terminal-badge--worker">Terminal 2 — worker</span>
-/autopilot ...
-
-# When /autopilot finishes, return to Terminal 1 to verify and merge.</code></pre>
-          <textarea
-            id="ccs-tour-flow-cmd-plain"
-            aria-hidden="true"
-            tabindex="-1"
-            style="
-              position: absolute;
-              left: -9999px;
-              width: 1px;
-              height: 1px;
-              opacity: 0;
-            "
-            readonly
-          >
-[Terminal 1 — orchestrator]
-/plan add a dark mode toggle to my app
-
-# /plan finishes and hands you an /autopilot command. Copy it.
-
-[Terminal 2 — worker]
-/autopilot ...
-
-# When /autopilot finishes, return to Terminal 1 to verify and merge.</textarea
-          >
-        </div>
-
-        <p>
-          <a
-            class="ccs-tour-install__link"
-            href="https://github.com/zalogarcia/zalo-claude-code-setup#readme"
-            target="_blank"
-            rel="noopener noreferrer"
-            >Read the full README →</a
-          >
-        </p>
-
-        <div class="ccs-tour-card__actions">
-          <button
-            type="button"
-            class="ccs-tour-btn ccs-tour-btn--primary"
-            id="ccs-tour-install-close"
-          >
-            Close
-          </button>
-        </div>
-      </dialog>
     </div>
 
     <!-- D3 -->
@@ -2810,582 +4245,7 @@ cd ~/.claude-setup &amp;&amp; ./install.sh</code></pre>
           flowSpeed: 1,
           flowTimer: null,
           particleTimer: null,
-          tourActive: false,
-          tourPaused: false,
-          tourInterval: null,
-          tourPauseTimer: null,
-          tourPinnedNodes: [],
-          tourStepIdx: 0,
         };
-
-        // -----------------------------------------------------------
-        // Tutorial tour (wu-B) — constants
-        // -----------------------------------------------------------
-        const TOUR_FLOW_ID = "workflow.daily-use";
-        const TOUR_LS_KEY = "ccs:tour:seen";
-        const TOUR_STEP_MS = 2500;
-        const TOUR_PAUSE_GRACE_MS = 5000;
-        const TOUR_SIM_SETTLE_ALPHA = 0.05;
-        const TOUR_SIM_SETTLE_FALLBACK_MS = 600;
-        const TOUR_COACHMARKS = {
-          "agent.safe-planner": "Click any node to see its contract.",
-          "agent.qa-agent":
-            "Agents return markers like `## VERIFICATION PASSED`. The orchestrator routes on those.",
-        };
-
-        // -----------------------------------------------------------
-        // Tutorial tour (wu-B) — controller
-        // -----------------------------------------------------------
-        const Tour = {
-          // Watcher interval for desktop tour (polls STATE.flowIndex / STATE.flowPlaying).
-          _watcher: null,
-          _lastSeenIdx: -1,
-          _mobilePoll: null,
-
-          tourSeen() {
-            try {
-              return localStorage.getItem(TOUR_LS_KEY) === "1";
-            } catch (_) {
-              return false;
-            }
-          },
-          markSeen() {
-            try {
-              localStorage.setItem(TOUR_LS_KEY, "1");
-            } catch (_) {}
-          },
-          clearSeen() {
-            try {
-              localStorage.removeItem(TOUR_LS_KEY);
-            } catch (_) {}
-          },
-
-          maybeAutoStart() {
-            if (!STATE.flows || !STATE.flows[TOUR_FLOW_ID]) return;
-            if (Tour.tourSeen()) return;
-            if (STATE.tourActive) return;
-            Tour.showIntro();
-          },
-
-          showIntro() {
-            const root = document.getElementById("ccs-tour-root");
-            const intro = document.getElementById("ccs-tour-intro");
-            if (!root || !intro) return;
-            root.hidden = false;
-            intro.hidden = false;
-          },
-
-          hideIntro() {
-            const intro = document.getElementById("ccs-tour-intro");
-            if (intro) intro.hidden = true;
-          },
-
-          start() {
-            Tour.hideIntro();
-            STATE.tourActive = true;
-            STATE.tourPaused = false;
-            STATE.tourStepIdx = 0;
-            Tour._lastSeenIdx = -1;
-            const flow = STATE.flows[TOUR_FLOW_ID];
-            if (!flow) return;
-
-            if (isMobile()) {
-              // Mobile: storyboard renders captions; no coachmarks. Poll for storyboard close.
-              openFlow(TOUR_FLOW_ID);
-              if (Tour._mobilePoll) clearInterval(Tour._mobilePoll);
-              Tour._mobilePoll = setInterval(() => {
-                if (!STATE.tourActive) {
-                  clearInterval(Tour._mobilePoll);
-                  Tour._mobilePoll = null;
-                  return;
-                }
-                if (!STATE.flowPlaying) {
-                  clearInterval(Tour._mobilePoll);
-                  Tour._mobilePoll = null;
-                  Tour.showEnd();
-                }
-              }, 400);
-              return;
-            }
-
-            // Desktop: pin tour nodes so coachmarks don't drift.
-            const uniqueNodeIds = [...new Set(flow.steps.map((s) => s.node))];
-            STATE.tourPinnedNodes = [];
-            for (const id of uniqueNodeIds) {
-              const node = STATE.data.nodes.find((n) => n.id === id);
-              if (
-                node &&
-                typeof node.x === "number" &&
-                typeof node.y === "number"
-              ) {
-                node.fx = node.x;
-                node.fy = node.y;
-                STATE.tourPinnedNodes.push(node);
-              }
-            }
-            if (STATE.sim && typeof STATE.sim.alpha === "function") {
-              STATE.sim.alpha(0.1).restart();
-            }
-
-            openFlow(TOUR_FLOW_ID);
-            Tour._scheduleAdvance();
-          },
-
-          // Watcher-based "advance" — observes the existing flow engine
-          // (scheduleAutoAdvance handles actual step transitions) and fires
-          // coachmarks + end card based on STATE.flowIndex / STATE.flowPlaying.
-          _scheduleAdvance() {
-            if (STATE.tourInterval) clearInterval(STATE.tourInterval);
-            Tour._lastSeenIdx = STATE.flowIndex;
-            STATE.tourInterval = setInterval(Tour._tickAdvance, 250);
-          },
-
-          _clearAdvance() {
-            if (STATE.tourInterval) {
-              clearInterval(STATE.tourInterval);
-              STATE.tourInterval = null;
-            }
-          },
-
-          _tickAdvance() {
-            if (!STATE.tourActive || STATE.tourPaused) return;
-            const flow = STATE.flows[TOUR_FLOW_ID];
-            if (!flow) {
-              Tour._clearAdvance();
-              return;
-            }
-
-            // End-of-flow detection: engine stops playing & we're at last step.
-            const isLastStep = STATE.flowIndex >= flow.steps.length - 1;
-            if (isLastStep && !STATE.flowPlaying) {
-              Tour._clearAdvance();
-              Tour.showEnd();
-              return;
-            }
-
-            // Step-change detection: fire coachmark when we land on a new step
-            // that has one defined.
-            if (STATE.flowIndex !== Tour._lastSeenIdx) {
-              Tour._lastSeenIdx = STATE.flowIndex;
-              const curStep = flow.steps[STATE.flowIndex];
-              if (curStep && TOUR_COACHMARKS[curStep.node]) {
-                // Pause the underlying flow engine; user must click Next.
-                STATE.flowPlaying = false;
-                if (STATE.flowTimer) {
-                  clearInterval(STATE.flowTimer);
-                  STATE.flowTimer = null;
-                }
-                Tour._showCoachmark(
-                  curStep.node,
-                  TOUR_COACHMARKS[curStep.node],
-                );
-              }
-            }
-          },
-
-          _showCoachmark(nodeId, text) {
-            const cm = document.getElementById("ccs-tour-coachmark");
-            if (!cm) return;
-            const caption =
-              document.getElementById("ccs-tour-coachmark-text") ||
-              cm.querySelector("p");
-            if (caption) caption.textContent = text;
-
-            // Position near the node's SVG element on desktop.
-            let gNode = null;
-            if (STATE.gNodes) {
-              const sel = STATE.gNodes.select(
-                `.node-group[data-node-id="${CSS.escape(nodeId)}"]`,
-              );
-              if (!sel.empty()) gNode = sel.node();
-            }
-            // Reset previous bottom/transform overrides so positioning is clean.
-            cm.style.bottom = "";
-            cm.style.transform = "";
-            cm.style.maxWidth = "";
-
-            if (gNode) {
-              const rect = gNode.getBoundingClientRect();
-              const cmW = 280;
-              let left = rect.right + 12;
-              let top = rect.top + rect.height / 2 - 30;
-              const vw = window.innerWidth,
-                vh = window.innerHeight;
-              if (left + cmW > vw - 16) left = rect.left - cmW - 12;
-              if (left < 16) left = 16;
-              if (top < 16) top = 16;
-              if (top > vh - 100) top = vh - 100;
-              cm.style.left = left + "px";
-              cm.style.top = top + "px";
-            } else {
-              cm.style.left = "50%";
-              cm.style.top = "40%";
-              cm.style.transform = "translate(-50%, -50%)";
-            }
-
-            // Hide Resume, show Next; hide any end-card buttons.
-            const resumeBtn = document.getElementById("ccs-tour-resume");
-            if (resumeBtn) resumeBtn.hidden = true;
-            const nextBtn = document.getElementById("ccs-tour-next");
-            if (nextBtn) {
-              nextBtn.hidden = false;
-              nextBtn.textContent = "Next";
-            }
-            Tour._removeEndButtons();
-            cm.hidden = false;
-          },
-
-          _hideCoachmark() {
-            const cm = document.getElementById("ccs-tour-coachmark");
-            if (cm) cm.hidden = true;
-          },
-
-          advanceFromCoachmark() {
-            // User clicked Next on coachmark — resume engine advance.
-            Tour._hideCoachmark();
-            const flow = STATE.flows[TOUR_FLOW_ID];
-            if (!flow) return;
-            // If already at last step, show end card immediately.
-            if (STATE.flowIndex >= flow.steps.length - 1) {
-              Tour.showEnd();
-              return;
-            }
-            // Resume flow engine.
-            STATE.flowPlaying = true;
-            // Advance one step manually, then let scheduleAutoAdvance take over.
-            const nextIdx = STATE.flowIndex + 1;
-            playFlowStep(nextIdx);
-            // _tickAdvance keeps watching.
-          },
-
-          pauseForInteraction() {
-            if (!STATE.tourActive || STATE.tourPaused) return;
-            STATE.tourPaused = true;
-            // Pause underlying flow engine too.
-            STATE.flowPlaying = false;
-            if (STATE.flowTimer) {
-              clearInterval(STATE.flowTimer);
-              STATE.flowTimer = null;
-            }
-            const cm = document.getElementById("ccs-tour-coachmark");
-            const resumeBtn = document.getElementById("ccs-tour-resume");
-            if (cm && resumeBtn) {
-              if (cm.hidden) {
-                cm.style.left = "50%";
-                cm.style.top = "auto";
-                cm.style.bottom = "16px";
-                cm.style.transform = "translateX(-50%)";
-                const caption =
-                  document.getElementById("ccs-tour-coachmark-text") ||
-                  cm.querySelector("p");
-                if (caption)
-                  caption.textContent = "Tour paused. Resume when ready.";
-                cm.hidden = false;
-              }
-              const nextBtn = document.getElementById("ccs-tour-next");
-              if (nextBtn) nextBtn.hidden = true;
-              resumeBtn.hidden = false;
-            }
-            if (STATE.tourPauseTimer) clearTimeout(STATE.tourPauseTimer);
-            STATE.tourPauseTimer = setTimeout(
-              () => Tour.resume(),
-              TOUR_PAUSE_GRACE_MS,
-            );
-          },
-
-          resume() {
-            if (!STATE.tourActive || !STATE.tourPaused) return;
-            STATE.tourPaused = false;
-            if (STATE.tourPauseTimer) {
-              clearTimeout(STATE.tourPauseTimer);
-              STATE.tourPauseTimer = null;
-            }
-            const resumeBtn = document.getElementById("ccs-tour-resume");
-            if (resumeBtn) resumeBtn.hidden = true;
-            Tour._hideCoachmark();
-            const flow = STATE.flows[TOUR_FLOW_ID];
-            if (flow && STATE.flowIndex < flow.steps.length - 1) {
-              STATE.flowPlaying = true;
-              scheduleAutoAdvance();
-            }
-          },
-
-          _removeEndButtons() {
-            const tryBtn = document.getElementById("ccs-tour-try-another");
-            if (tryBtn) tryBtn.remove();
-            const installBtn = document.getElementById("ccs-tour-install-open");
-            if (installBtn) installBtn.remove();
-          },
-
-          _injectEndButtons() {
-            const cm = document.getElementById("ccs-tour-coachmark");
-            if (!cm) return;
-            const actions = cm.querySelector(".ccs-tour-coachmark__actions");
-            if (!actions) return;
-            Tour._removeEndButtons();
-
-            const tryBtn = document.createElement("button");
-            tryBtn.type = "button";
-            tryBtn.className = "ccs-tour-btn ccs-tour-btn--ghost";
-            tryBtn.id = "ccs-tour-try-another";
-            tryBtn.textContent = "Try another flow";
-            tryBtn.addEventListener("click", () => {
-              Tour.dismiss({ markSeen: true });
-              const sel = document.getElementById("flow-select");
-              if (sel) {
-                sel.focus();
-                sel.classList.add("ccs-tour-highlight");
-                setTimeout(
-                  () => sel.classList.remove("ccs-tour-highlight"),
-                  2000,
-                );
-              }
-            });
-
-            const installBtn = document.createElement("button");
-            installBtn.type = "button";
-            installBtn.className = "ccs-tour-btn ccs-tour-btn--primary";
-            installBtn.id = "ccs-tour-install-open";
-            installBtn.textContent = "Install →";
-            installBtn.addEventListener("click", () => Tour.openInstall());
-
-            actions.appendChild(tryBtn);
-            actions.appendChild(installBtn);
-          },
-
-          showEnd() {
-            Tour._clearAdvance();
-            if (Tour._mobilePoll) {
-              clearInterval(Tour._mobilePoll);
-              Tour._mobilePoll = null;
-            }
-            const cm = document.getElementById("ccs-tour-coachmark");
-            if (!cm) return;
-            const caption =
-              document.getElementById("ccs-tour-coachmark-text") ||
-              cm.querySelector("p");
-            const flowCount = STATE.flows ? Object.keys(STATE.flows).length : 0;
-            if (caption) {
-              caption.innerHTML =
-                "Your real workflow: 2 terminals, <code>/plan</code> → <code>/autopilot</code> → verify → <code>/compact</code>. There are " +
-                flowCount +
-                " flows total — pick another, or install ↓";
-            }
-            // Hide Next + Resume.
-            const nextBtn = document.getElementById("ccs-tour-next");
-            if (nextBtn) nextBtn.hidden = true;
-            const resumeBtn = document.getElementById("ccs-tour-resume");
-            if (resumeBtn) resumeBtn.hidden = true;
-            // Inject end-card buttons (Try-another, Install).
-            Tour._injectEndButtons();
-            // Position centered/bottom.
-            cm.style.left = "50%";
-            cm.style.top = "auto";
-            cm.style.bottom = "24px";
-            cm.style.transform = "translateX(-50%)";
-            cm.style.maxWidth = "min(420px, 92vw)";
-            cm.hidden = false;
-            // Ensure root is visible (was set hidden by intro pathway).
-            const root = document.getElementById("ccs-tour-root");
-            if (root) root.hidden = false;
-          },
-
-          dismiss({ markSeen = true } = {}) {
-            Tour._clearAdvance();
-            if (STATE.tourPauseTimer) {
-              clearTimeout(STATE.tourPauseTimer);
-              STATE.tourPauseTimer = null;
-            }
-            if (Tour._mobilePoll) {
-              clearInterval(Tour._mobilePoll);
-              Tour._mobilePoll = null;
-            }
-            // Release pinned nodes.
-            for (const n of STATE.tourPinnedNodes) {
-              n.fx = null;
-              n.fy = null;
-            }
-            STATE.tourPinnedNodes = [];
-            STATE.tourActive = false;
-            STATE.tourPaused = false;
-            // Stop the underlying flow engine if it was driving the tour.
-            STATE.flowPlaying = false;
-            if (STATE.flowTimer) {
-              clearInterval(STATE.flowTimer);
-              STATE.flowTimer = null;
-            }
-            // Hide all tour DOM.
-            const root = document.getElementById("ccs-tour-root");
-            if (root) root.hidden = true;
-            const intro = document.getElementById("ccs-tour-intro");
-            if (intro) intro.hidden = true;
-            Tour._hideCoachmark();
-            Tour._removeEndButtons();
-            // Reset coachmark inline styles so future shows start clean.
-            const cm = document.getElementById("ccs-tour-coachmark");
-            if (cm) {
-              cm.style.left = "";
-              cm.style.top = "";
-              cm.style.bottom = "";
-              cm.style.transform = "";
-              cm.style.maxWidth = "";
-            }
-            const dlg = document.getElementById("ccs-tour-install");
-            if (dlg && typeof dlg.close === "function" && dlg.open) dlg.close();
-            // Close the flow playback too.
-            if (typeof closeFlow === "function") {
-              try {
-                closeFlow();
-              } catch (_) {}
-            }
-            if (markSeen) Tour.markSeen();
-          },
-
-          replay() {
-            Tour.dismiss({ markSeen: false });
-            Tour.clearSeen();
-            Tour.showIntro();
-          },
-
-          openInstall() {
-            const dlg = document.getElementById("ccs-tour-install");
-            if (dlg && typeof dlg.showModal === "function") {
-              try {
-                dlg.showModal();
-              } catch (_) {
-                dlg.hidden = false;
-              }
-            } else if (dlg) {
-              dlg.hidden = false;
-            }
-          },
-
-          closeInstall() {
-            const dlg = document.getElementById("ccs-tour-install");
-            if (dlg && typeof dlg.close === "function" && dlg.open) dlg.close();
-            Tour.dismiss({ markSeen: true });
-          },
-        };
-
-        // Expose for the Replay button.
-        window.ccsReplayTour = () => Tour.replay();
-
-        // -----------------------------------------------------------
-        // Tutorial tour (wu-B) — wiring
-        // -----------------------------------------------------------
-        function initTour() {
-          // Intro card buttons
-          const startBtn = document.getElementById("ccs-tour-start");
-          if (startBtn) startBtn.addEventListener("click", () => Tour.start());
-          const skipBtn = document.getElementById("ccs-tour-skip");
-          if (skipBtn)
-            skipBtn.addEventListener("click", () =>
-              Tour.dismiss({ markSeen: true }),
-            );
-
-          // Coachmark buttons
-          const nextBtn = document.getElementById("ccs-tour-next");
-          if (nextBtn)
-            nextBtn.addEventListener("click", () =>
-              Tour.advanceFromCoachmark(),
-            );
-          const resumeBtn = document.getElementById("ccs-tour-resume");
-          if (resumeBtn)
-            resumeBtn.addEventListener("click", () => Tour.resume());
-
-          // Install modal close
-          const installClose = document.getElementById(
-            "ccs-tour-install-close",
-          );
-          if (installClose)
-            installClose.addEventListener("click", () => Tour.closeInstall());
-          // Native dialog close (Esc) → also dismiss tour
-          const dlg = document.getElementById("ccs-tour-install");
-          if (dlg)
-            dlg.addEventListener("close", () =>
-              Tour.dismiss({ markSeen: true }),
-            );
-
-          // Replay button (in topbar)
-          const replay = document.getElementById("ccs-tour-replay");
-          if (replay) replay.addEventListener("click", () => Tour.replay());
-
-          // Copy buttons inside install modal — match the existing class.
-          document
-            .querySelectorAll(".ccs-tour-install__copy")
-            .forEach((btn) => {
-              btn.addEventListener("click", () => {
-                const targetId = btn.dataset.copyTarget;
-                let text = "";
-                if (targetId) {
-                  const el = document.getElementById(targetId);
-                  if (el) {
-                    text =
-                      el.value !== undefined
-                        ? el.value
-                        : el.textContent || el.innerText || "";
-                  }
-                }
-                if (!text) return;
-                const restore = () => {
-                  setTimeout(() => {
-                    btn.textContent = "Copy";
-                  }, 1500);
-                };
-                if (navigator.clipboard && navigator.clipboard.writeText) {
-                  navigator.clipboard
-                    .writeText(text)
-                    .then(() => {
-                      btn.textContent = "Copied!";
-                      restore();
-                    })
-                    .catch(() => {
-                      btn.textContent = "Copy failed";
-                      restore();
-                    });
-                } else {
-                  // Fallback: select textarea + execCommand.
-                  const el = document.getElementById(targetId);
-                  if (el && typeof el.select === "function") {
-                    el.select();
-                    try {
-                      document.execCommand("copy");
-                      btn.textContent = "Copied!";
-                    } catch (_) {
-                      btn.textContent = "Copy failed";
-                    }
-                    restore();
-                  }
-                }
-              });
-            });
-
-          // User-interaction pause: listen on the SVG root.
-          const svg = document.getElementById("graph");
-          if (svg) {
-            const onInteraction = (e) => {
-              if (!STATE.tourActive || STATE.tourPaused) return;
-              // Ignore interactions that originate inside the tour overlay itself.
-              if (e.target && e.target.closest("#ccs-tour-root")) return;
-              Tour.pauseForInteraction();
-            };
-            svg.addEventListener("click", onInteraction, true);
-            svg.addEventListener("pointerdown", onInteraction, true);
-            svg.addEventListener("wheel", onInteraction, {
-              capture: true,
-              passive: true,
-            });
-          }
-
-          // Esc closes tour (dialog handles its own Esc).
-          document.addEventListener("keydown", (e) => {
-            if (e.key !== "Escape") return;
-            if (!STATE.tourActive) return;
-            const dlg2 = document.getElementById("ccs-tour-install");
-            if (dlg2 && dlg2.open) return; // let dialog handle
-            Tour.dismiss({ markSeen: true });
-          });
-        }
 
         // -----------------------------------------------------------
         // Responsive helpers
@@ -5505,23 +6365,36 @@ cd ~/.claude-setup &amp;&amp; ./install.sh</code></pre>
         // View toggle (Map / List) -----------------------------------
         // -----------------------------------------------------------
         const VIEW_STORAGE_KEY = "viz-view";
+        const VALID_VIEWS = ["how", "map", "list"];
 
         function setView(view, opts = {}) {
-          const next = view === "list" ? "list" : "map";
+          const next = VALID_VIEWS.includes(view) ? view : "how";
           document.body.setAttribute("data-view", next);
 
+          const howTab = document.getElementById("view-tab-how");
           const mapTab = document.getElementById("view-tab-map");
           const listTab = document.getElementById("view-tab-list");
+          const howRegion = document.getElementById("view-how");
           const listRegion = document.getElementById("view-list");
           const mapRegion = document.querySelector("main.graph-wrap");
 
-          if (mapTab && listTab) {
-            const isList = next === "list";
-            mapTab.setAttribute("aria-selected", String(!isList));
-            listTab.setAttribute("aria-selected", String(isList));
-            mapTab.setAttribute("tabindex", isList ? "-1" : "0");
-            listTab.setAttribute("tabindex", isList ? "0" : "-1");
+          const tabsByView = {
+            how: howTab,
+            map: mapTab,
+            list: listTab,
+          };
+          for (const v of VALID_VIEWS) {
+            const tab = tabsByView[v];
+            if (!tab) continue;
+            const selected = v === next;
+            tab.setAttribute("aria-selected", String(selected));
+            tab.setAttribute("tabindex", selected ? "0" : "-1");
           }
+          if (howRegion)
+            howRegion.setAttribute(
+              "aria-hidden",
+              next === "how" ? "false" : "true",
+            );
           if (listRegion)
             listRegion.setAttribute(
               "aria-hidden",
@@ -5542,13 +6415,9 @@ cd ~/.claude-setup &amp;&amp; ./install.sh</code></pre>
             }
           }
 
-          // Switching away from the graph: close any open flow overlay-free
-          // behavior is preserved (map stays interactive on return).
-          // When we return to map, the radial layout is already in place; no
-          // re-render is required. If the window was resized while hidden,
-          // onResize will still pick up the new rect next time it fires.
+          // Switching back to the map: nudge layout in case the frame was
+          // 0-sized while hidden. The radial layout is already in place.
           if (next === "map") {
-            // Nudge layout in case the frame was 0-sized while hidden.
             requestAnimationFrame(() => {
               try {
                 onResize();
@@ -5558,6 +6427,7 @@ cd ~/.claude-setup &amp;&amp; ./install.sh</code></pre>
         }
 
         function initViewToggle() {
+          const howTab = document.getElementById("view-tab-how");
           const mapTab = document.getElementById("view-tab-map");
           const listTab = document.getElementById("view-tab-list");
           if (!mapTab || !listTab) return;
@@ -5565,11 +6435,20 @@ cd ~/.claude-setup &amp;&amp; ./install.sh</code></pre>
           // Build the list content once on init.
           buildListView();
 
+          if (howTab) howTab.addEventListener("click", () => setView("how"));
           mapTab.addEventListener("click", () => setView("map"));
           listTab.addEventListener("click", () => setView("list"));
 
+          // Wire the "See the architecture →" link inside the How view.
+          const archLink = document.getElementById("how-see-arch");
+          if (archLink)
+            archLink.addEventListener("click", () => setView("map"));
+
+          // Wire the Copy buttons inside the How view.
+          initHowCopyButtons();
+
           // Arrow key navigation inside the tablist (ARIA pattern).
-          const tabs = [mapTab, listTab];
+          const tabs = [howTab, mapTab, listTab].filter(Boolean);
           for (const t of tabs) {
             t.addEventListener("keydown", (e) => {
               if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
@@ -5584,7 +6463,8 @@ cd ~/.claude-setup &amp;&amp; ./install.sh</code></pre>
             });
           }
 
-          // Global `V` hotkey — ignore when user is typing in an input.
+          // Global `V` hotkey — cycle through the three views.
+          // Ignore when user is typing in an input.
           document.addEventListener("keydown", (e) => {
             if (e.key !== "v" && e.key !== "V") return;
             if (e.metaKey || e.ctrlKey || e.altKey) return;
@@ -5598,18 +6478,49 @@ cd ~/.claude-setup &amp;&amp; ./install.sh</code></pre>
             )
               return;
             e.preventDefault();
-            const cur = document.body.getAttribute("data-view") || "map";
-            setView(cur === "list" ? "map" : "list");
+            const cur = document.body.getAttribute("data-view") || "how";
+            const curIdx = VALID_VIEWS.indexOf(cur);
+            const nextView =
+              VALID_VIEWS[(curIdx + 1) % VALID_VIEWS.length] || "how";
+            setView(nextView);
           });
 
-          // Restore persisted view.
-          let saved = "map";
+          // Restore persisted view. First-time visitors default to "how"
+          // (the outcome-based onboarding page). Existing users keep their
+          // last-used view ("map" or "list" or "how").
+          let stored = null;
           try {
-            saved = localStorage.getItem(VIEW_STORAGE_KEY) || "map";
+            stored = localStorage.getItem(VIEW_STORAGE_KEY);
           } catch (_) {
             /* ignore */
           }
-          setView(saved === "list" ? "list" : "map", { silent: true });
+          const initialView = VALID_VIEWS.includes(stored) ? stored : "how";
+          setView(initialView, { silent: true });
+        }
+
+        function initHowCopyButtons() {
+          const buttons = document.querySelectorAll(".how-copy");
+          buttons.forEach((btn) => {
+            btn.addEventListener("click", async () => {
+              const targetId = btn.getAttribute("data-copy-target");
+              if (!targetId) return;
+              const el = document.getElementById(targetId);
+              if (!el) return;
+              const text = el.textContent || "";
+              try {
+                await navigator.clipboard.writeText(text);
+                const original = btn.textContent;
+                btn.textContent = "Copied!";
+                btn.setAttribute("data-copied", "true");
+                setTimeout(() => {
+                  btn.textContent = original;
+                  btn.removeAttribute("data-copied");
+                }, 1500);
+              } catch (_) {
+                /* clipboard denied — silent fallback */
+              }
+            });
+          });
         }
 
         // -----------------------------------------------------------
@@ -5653,30 +6564,6 @@ cd ~/.claude-setup &amp;&amp; ./install.sh</code></pre>
           initStoryboardClose();
           initBottomSheetDrag();
           initViewToggle();
-          initTour();
-
-          // Tour startup — wait for STATE.flows AND for the force sim to settle.
-          (function scheduleTourStart() {
-            const startedAt = Date.now();
-            const tick = () => {
-              if (!STATE.flows || !STATE.flows[TOUR_FLOW_ID]) {
-                console.warn("[tour] Flow data missing for " + TOUR_FLOW_ID);
-                return;
-              }
-              const settled =
-                STATE.sim &&
-                typeof STATE.sim.alpha === "function" &&
-                STATE.sim.alpha() < TOUR_SIM_SETTLE_ALPHA;
-              const fallback =
-                Date.now() - startedAt >= TOUR_SIM_SETTLE_FALLBACK_MS;
-              if (settled || fallback) {
-                Tour.maybeAutoStart();
-                return;
-              }
-              requestAnimationFrame(tick);
-            };
-            requestAnimationFrame(tick);
-          })();
 
           window.addEventListener("resize", debounce(onResize, 200));
         }
