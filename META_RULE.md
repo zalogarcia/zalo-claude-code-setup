@@ -7,20 +7,18 @@ Edit this file freely — the `session-start.sh` hook reads it fresh each time.
 
 **Subagents** — fresh-context delegates. Read `~/.claude/rules/agent-contracts.md` for return contract.
 
-- `frontend-specialist`, `qa-agent`, `safe-planner`, `brainstorm`, `live-test`, `bug-fix`, `image-craft-expert`
+- `frontend-specialist`, `qa-agent`, `safe-planner`, `brainstorm`, `live-test`, `bug-fix`, `outcomes-grader`
 
 **Slash commands** — workflow orchestrators (thin; they `@`-include rules + dispatch agents).
 
-- Core delivery: `/autopilot`, `/bug`, `/qa-loop`
+- Core delivery: `/autopilot`, `/autopilot-merge`, `/bug`, `/qa-loop`
 - Thinking: `/brainstorm`, `/plan`
-- Frontend (opt-in): `/redesign`
-- Media + integrations: `/nano-banana`, `/transcribe`, `/view-video`, `/optimize-video`, `/enhance-audio`, `/ghl-upload`, `/graph`
 
 **Skills** — compound tools.
 
-- Workflow helpers: `typecheck-and-build`, `commit-with-heredoc`, `dev-server-restart`
+- Workflow helpers: `typecheck-and-build`, `commit-with-heredoc`, `dev-server-restart`, `autopilot-collect`
 - Frontend (opt-in): `frontend-design`, `ui-ux-pro-max`
-- Integrations: `cf-crawl`, `telegram`
+- Meta + integrations: `create-skill`, `cf-crawl`
 
 **Shared rules** at `~/.claude/rules/` (treat as authoritative reference; `@`-included by commands/agents):
 

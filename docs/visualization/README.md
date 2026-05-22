@@ -1,6 +1,6 @@
 # Interactive Architecture Visualization
 
-Single-file interactive visualization of the whole Claude Code Pro Setup. Shows the orchestrator, agents, rules, commands, hooks, MCP servers, and how a request flows through the system.
+Single-file interactive visualization of the whole Zalo's Claude Code Setup. Shows the orchestrator, agents, rules, commands, hooks, MCP servers, and how a request flows through the system.
 
 **Live:** https://zalogarcia.github.io/zalo-claude-code-setup/visualization/
 

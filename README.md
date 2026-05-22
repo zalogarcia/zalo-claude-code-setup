@@ -1,24 +1,24 @@
 <p align="center">
-  <img src="assets/banner.png" alt="Claude Code Pro Setup" width="100%">
+  <img src="assets/banner.png" alt="Zalo's Claude Code Setup" width="100%">
 </p>
 
-# Claude Code Pro Setup
+# Zalo's Claude Code Setup
 
 > One command to turn Claude Code into a production-grade AI engineering environment.
 
-Custom agents, skills, commands, MCP servers, auto-formatting hooks, agentic RAG, and workflow automation — all preconfigured and ready to go.
+Custom agents, skills, commands, MCP servers, auto-formatting hooks, and workflow automation — all preconfigured and ready to go.
 
 ---
 
 ## Interactive Architecture
 
-See how the pieces fit together: 7 agents, 11 shared rules, 6 commands, 8 skills, hooks, MCP servers — plus animated request flows (`/autopilot`, `/bug`, `/qa-loop`, `/brainstorm`, `/plan`).
+See how the pieces fit together: 7 agents, 16 shared rules, 6 commands, 8 skills, hooks, MCP servers — plus animated request flows (`/autopilot`, `/bug`, `/qa-loop`, `/brainstorm`, `/plan`).
 
 **→ [Open the interactive visualization](https://zalogarcia.github.io/zalo-claude-code-setup/visualization/)**
 
 <p align="center">
   <a href="https://zalogarcia.github.io/zalo-claude-code-setup/visualization/">
-    <img src="docs/visualization/preview/dark.png" alt="Claude Code Pro Setup — interactive architecture diagram" width="100%">
+    <img src="docs/visualization/preview/dark.png" alt="Zalo's Claude Code Setup — interactive architecture diagram" width="100%">
   </a>
 </p>
 
@@ -143,6 +143,7 @@ Close and reopen Claude Code to pick up all changes.
 | **live-test**           | Opens the app in a real browser via Playwright. Screenshots happy path, edge cases, and 3 responsive breakpoints.                                                                           |
 | **frontend-specialist** | Builds production-quality UI with Aceternity UI and shadcn/ui MCP access. Reads Apple HIG principles before coding.                                                                         |
 | **bug-fix**             | Traces the full user flow to find root cause. Reads all related code and crafts a comprehensive fix plan before changes.                                                                    |
+| **outcomes-grader**     | Grades plans and artifacts against the engineering-principles rubric. Returns PASS/FAIL with quoted evidence per outcome.                                                                   |
 | **brainstorm**          | Deep-thinking agent that challenges assumptions, eliminates complexity, and stress-tests plans using first principles, Elon Musk's 5-step philosophy, inversion, and second-order thinking. |
 
 ### Commands (6)
@@ -171,23 +172,28 @@ Slash commands for workflow automation. Invoke with `/<command-name>`.
 | **create-skill**        | Author a new Claude Code skill following the established pattern — decision tree, form factor, template, registration.                     |
 | **cf-crawl**            | Scrape websites via Cloudflare Browser Rendering API. Single page (sync) or multi-page crawl (async).                                      |
 
-### Shared Rules (11)
+### Shared Rules (16)
 
 Authoritative reference docs at `~/.claude/rules/`. Commands and agents `@`-include them; the main thread reads them when the situation applies. Built from the best of `gsd-build/get-shit-done` + `obra/superpowers`.
 
-| Rule                         | What It Governs                                                                                 |
-| ---------------------------- | ----------------------------------------------------------------------------------------------- |
-| **agent-contracts.md**       | H2 completion markers + DONE / DONE_WITH_CONCERNS / NEEDS_CONTEXT / BLOCKED status protocol     |
-| **gates.md**                 | 4 workflow gate types (pre-flight / revision / escalation / abort) + 5-step Verification Gate   |
-| **checkpoints.md**           | Human-in-loop XML schema (`checkpoint:human-verify` / `:decision` / `:human-action`)            |
-| **verification-patterns.md** | "Existence ≠ Implementation" — stub-detection greps + wiring checks                             |
-| **anti-patterns.md**         | Universal failure modes (placeholders, silent partial completion, drift) + No-Placeholders list |
-| **questioning.md**           | Dream-extraction philosophy for requirements gathering                                          |
-| **context-budget.md**        | PEAK / GOOD / DEGRADING / POOR tier behaviors + degradation warning signs                       |
-| **persuasion-principles.md** | Cialdini-derived patterns for writing rules that actually get followed                          |
-| **when-to-parallelize.md**   | 4-criteria decision rule for parallel agent dispatch                                            |
-| **problem-solving.md**       | When-stuck dispatch table (inversion / simplification / meta-pattern) + 3+ Fixes Rule           |
-| **git-safety.md**            | Staging discipline, pre-op checks, destructive-op approval                                      |
+| Rule                          | What It Governs                                                                                                  |
+| ----------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| **agent-contracts.md**        | H2 completion markers + DONE / DONE_WITH_CONCERNS / NEEDS_CONTEXT / BLOCKED status protocol                      |
+| **gates.md**                  | 4 workflow gate types (pre-flight / revision / escalation / abort) + 5-step Verification Gate                    |
+| **checkpoints.md**            | Human-in-loop XML schema (`checkpoint:human-verify` / `:decision` / `:human-action`)                             |
+| **verification-patterns.md**  | "Existence ≠ Implementation" — stub-detection greps + wiring checks                                              |
+| **anti-patterns.md**          | Universal failure modes (placeholders, silent partial completion, drift) + No-Placeholders list                  |
+| **questioning.md**            | Dream-extraction philosophy for requirements gathering                                                           |
+| **context-budget.md**         | PEAK / GOOD / DEGRADING / POOR tier behaviors + degradation warning signs                                        |
+| **persuasion-principles.md**  | Cialdini-derived patterns for writing rules that actually get followed                                           |
+| **when-to-parallelize.md**    | 4-criteria decision rule for parallel agent dispatch                                                             |
+| **problem-solving.md**        | When-stuck dispatch table (inversion / simplification / meta-pattern) + 3+ Fixes Rule                            |
+| **git-safety.md**             | Staging discipline, pre-op checks, destructive-op approval                                                       |
+| **api-retry.md**              | Exponential-backoff + circuit-breaker protocol for transient Anthropic API errors during agent dispatch          |
+| **database-safety.md**        | Additive-only migrations + expand-contract pattern for breaking schema changes                                   |
+| **engineering-principles.md** | Rubric `outcomes-grader` uses to score plans (architectural coherence, scope integrity, failure resilience, ...) |
+| **plan-verification.md**      | Two-gate verification loop (brainstorm + outcomes-grader) applied after every `safe-planner` plan                |
+| **testing-safety.md**         | Admin-account-only rule for live-system tests; no fake users against production                                  |
 
 ### Meta-Rule (Session-Start Re-injection)
 
@@ -201,6 +207,15 @@ Authoritative reference docs at `~/.claude/rules/`. Commands and agents `@`-incl
 | **playwright** | Browser automation — navigate, click, fill forms, screenshot. Powers the `live-test` agent.                     |
 | **github**     | Full GitHub API — create PRs, manage issues, search code, push files. Requires `GITHUB_PAT`.                    |
 | **supabase**   | Manage Supabase projects — run SQL, deploy edge functions, manage migrations. Requires `SUPABASE_ACCESS_TOKEN`. |
+
+### Optional add-ons for large codebases
+
+This setup deliberately ships a lean MCP server list. If you work in large codebases (5,000+ files, deep call chains, hard-to-grep architecture), two community MCPs add real leverage on top:
+
+- **[repo-graphrag](https://github.com/yumeiriowl/repo-graphrag-mcp)** — code-aware knowledge graph using Tree-sitter + LightRAG. Lets Claude answer architecture questions ("where does the auth token flow?") and produce structurally-aware plans without grepping the whole tree. A global git post-commit hook keeps the graph fresh.
+- **[mcp-server-qdrant](https://github.com/qdrant/mcp-server-qdrant)** — local semantic memory. Stores patterns, decisions, and solutions across conversations so Claude doesn't relearn your house style every session.
+
+Both run locally (no external API). Add them to `~/.claude.json` under `mcpServers` after install. Skip if your codebase is small enough that grep is faster than indexing.
 
 ### xbar Menu Bar Plugins
 

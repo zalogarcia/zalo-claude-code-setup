@@ -17,8 +17,8 @@ const AGENT_NAMES = new Set([
   'brainstorm',
   'bug-fix',
   'frontend-specialist',
-  'image-craft-expert',
   'live-test',
+  'outcomes-grader',
   'qa-agent',
   'safe-planner',
 ]);
@@ -326,13 +326,13 @@ function scanMeta() {
       summary: firstParagraph(metaText),
     });
   }
-  const claudeMd = readIfExists(path.join(REPO_ROOT, 'claude-md', 'CLAUDE.md'));
+  const claudeMd = readIfExists(path.join(REPO_ROOT, 'CLAUDE.md'));
   if (claudeMd) {
     out.push({
       id: 'meta.CLAUDE',
       kind: 'meta',
       label: 'CLAUDE.md',
-      path: 'claude-md/CLAUDE.md',
+      path: 'CLAUDE.md',
       summary: firstParagraph(claudeMd),
     });
   }

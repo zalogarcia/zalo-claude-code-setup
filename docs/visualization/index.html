@@ -8,7 +8,7 @@
     />
     <meta name="color-scheme" content="dark light" />
     <title>
-      Claude Code Pro Setup — An Orchestrator, Seven Agents, Eleven Rules
+      Zalo's Claude Code Setup — An Orchestrator, Seven Agents, Sixteen Rules
     </title>
     <meta
       name="description"
@@ -39,7 +39,7 @@
     <script type="application/json" id="graph-data">
       {
         "meta": {
-          "generatedAt": "2026-05-22T22:22:19.211Z",
+          "generatedAt": "2026-05-22T22:36:11.881Z",
           "repo": "zalo-claude-code-setup"
         },
         "nodes": [
@@ -49,6 +49,13 @@
             "label": "META_RULE.md",
             "path": "META_RULE.md",
             "summary": "Re-injected on every `startup`, `/clear`, and `/compact`. Edit this file freely — the `session-start.sh` hook reads it fresh each time."
+          },
+          {
+            "id": "meta.CLAUDE",
+            "kind": "meta",
+            "label": "CLAUDE.md",
+            "path": "CLAUDE.md",
+            "summary": "When the user corrects you, says \"no\", \"wrong\", \"don't do that\", \"stop\", or otherwise indicates you made a mistake:"
           },
           {
             "id": "meta.orchestrator",
@@ -190,6 +197,7 @@
               "rule.context-budget"
             ],
             "dispatches": [
+              "agent.outcomes-grader",
               "agent.safe-planner",
               "agent.brainstorm",
               "agent.qa-agent",
@@ -255,7 +263,8 @@
             "dispatches": [
               "agent.brainstorm",
               "agent.safe-planner",
-              "agent.frontend-specialist"
+              "agent.frontend-specialist",
+              "agent.outcomes-grader"
             ]
           },
           {
@@ -318,7 +327,11 @@
             "label": "outcomes-grader",
             "path": "agents/outcomes-grader.md",
             "summary": "Grades a delivered artifact against a task-specific rubric. Use to verify task-level success criteria are met, not to hunt for generic bugs. <example>user: 'Did the implementation actually satisfy the rubric in .claude/rubric.md?' assistant: 'I'll use the outcomes-grader to evaluate each rubric item against the delivered code.'</example>",
-            "markers": [],
+            "markers": [
+              "## OUTCOMES PASSED",
+              "## OUTCOMES UNMET",
+              "## BLOCKED"
+            ],
             "includes": []
           },
           {
@@ -369,7 +382,7 @@
             "kind": "skill",
             "label": "create-skill",
             "path": "skills/create-skill",
-            "summary": "Author a new Claude Code skill following the established pattern. Use when the user says \"create a skill\", \"add a skill\", \"let's skill-ify X\", \"promote this to a skill\", or asks \"should this be a skill?\" Guides the decision (is it worth a skill?), picks the form factor (markdown-only vs shell script), generates the SKILL.md from the canonical template, optionally generates an accompanying shell script, and proposes the CLAUDE.md callout for deterministic firing. Replaces ad-hoc skill creation with a consistent shape that matches typecheck-and-build, commit-with-heredoc, dev-server-restart, cf-crawl, and telegram."
+            "summary": "Author a new Claude Code skill following the established pattern. Use when the user says \"create a skill\", \"add a skill\", \"let's skill-ify X\", \"promote this to a skill\", or asks \"should this be a skill?\" Guides the decision (is it worth a skill?), picks the form factor (markdown-only vs shell script), generates the SKILL.md from the canonical template, optionally generates an accompanying shell script, and proposes the CLAUDE.md callout for deterministic firing. Replaces ad-hoc skill creation with a consistent shape that matches typecheck-and-build, commit-with-heredoc, dev-server-restart, autopilot-collect, and cf-crawl."
           },
           {
             "id": "skill.dev-server-restart",
@@ -489,6 +502,11 @@
         "edges": [
           {
             "source": "meta.orchestrator",
+            "target": "meta.CLAUDE",
+            "type": "include"
+          },
+          {
+            "source": "meta.orchestrator",
             "target": "meta.META_RULE",
             "type": "include"
           },
@@ -556,6 +574,11 @@
             "source": "command.autopilot",
             "target": "rule.context-budget",
             "type": "include"
+          },
+          {
+            "source": "command.autopilot",
+            "target": "agent.outcomes-grader",
+            "type": "dispatch"
           },
           {
             "source": "command.autopilot",
@@ -715,6 +738,11 @@
           {
             "source": "command.plan",
             "target": "agent.frontend-specialist",
+            "type": "dispatch"
+          },
+          {
+            "source": "command.plan",
+            "target": "agent.outcomes-grader",
             "type": "dispatch"
           },
           {
@@ -3349,7 +3377,7 @@
         <a
           class="header__brand"
           href="#top"
-          aria-label="Claude Code Pro Setup — home"
+          aria-label="Zalo's Claude Code Setup — home"
         >
           <span class="header__brand-mark" aria-hidden="true"></span>
           <span>claude-code-pro-setup</span>
@@ -3520,9 +3548,9 @@
 
     <!-- HERO =============================================================== -->
     <section class="hero" id="top">
-      <h1 class="hero__title">Claude Code Pro Setup</h1>
+      <h1 class="hero__title">Zalo's Claude Code Setup</h1>
       <p class="hero__tagline">
-        An orchestrator, seven agents, eleven rules — wired by
+        An orchestrator, seven agents, sixteen rules — wired by
         <code>@</code>-includes and H2 contracts. Click any node to inspect.
         Pick a flow to watch a real request thread through the graph.
       </p>

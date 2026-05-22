@@ -12,7 +12,6 @@ Completion markers and return contract for `~/.claude/agents/`. Skills/orchestra
 | `brainstorm`          | `## EXPLORATION COMPLETE`                                                                                              |
 | `live-test`           | `## UI VERIFIED` / `## UI ISSUES FOUND` / `## BLOCKED`                                                                 |
 | `bug-fix`             | `## ROOT CAUSE FOUND — CONFIDENCE 10/10` / `## INVESTIGATION INCOMPLETE — CONFIDENCE <N>/10` (N ∈ 1..9) / `## BLOCKED` |
-| `image-craft-expert`  | `## IMAGE GENERATED` / `## GENERATION FAILED`                                                                          |
 | `outcomes-grader`     | `## OUTCOMES PASSED` / `## OUTCOMES UNMET` / `## BLOCKED`                                                              |
 
 ## Marker Rules

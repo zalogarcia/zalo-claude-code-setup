@@ -57,9 +57,10 @@ You have two component library MCP servers available. **Always query the relevan
 
 Before writing any code, read:
 
-1. `~/.claude/projects/-Users-zalo/memory/apple_hig_design_principles.md` — Apple HIG standards to apply throughout
-2. `~/.claude/rules/verification-patterns.md` — "Existence ≠ Implementation"; avoid stubs that compile but render nothing
-3. `~/.claude/rules/anti-patterns.md` — universal failure modes (placeholders, silent partial completion)
+1. `~/.claude/rules/verification-patterns.md` — "Existence ≠ Implementation"; avoid stubs that compile but render nothing
+2. `~/.claude/rules/anti-patterns.md` — universal failure modes (placeholders, silent partial completion)
+
+Apply Apple HIG-quality design principles throughout: bold direction, anti-slop aesthetics, generous whitespace, clear hierarchy, no decoration without function. Match the surrounding codebase's existing visual language (CSS custom properties, naming conventions, spacing scale).
 
 ## Return Contract
 

@@ -1,6 +1,6 @@
 ---
 name: create-skill
-description: Author a new Claude Code skill following the established pattern. Use when the user says "create a skill", "add a skill", "let's skill-ify X", "promote this to a skill", or asks "should this be a skill?" Guides the decision (is it worth a skill?), picks the form factor (markdown-only vs shell script), generates the SKILL.md from the canonical template, optionally generates an accompanying shell script, and proposes the CLAUDE.md callout for deterministic firing. Replaces ad-hoc skill creation with a consistent shape that matches typecheck-and-build, commit-with-heredoc, dev-server-restart, cf-crawl, and telegram.
+description: Author a new Claude Code skill following the established pattern. Use when the user says "create a skill", "add a skill", "let's skill-ify X", "promote this to a skill", or asks "should this be a skill?" Guides the decision (is it worth a skill?), picks the form factor (markdown-only vs shell script), generates the SKILL.md from the canonical template, optionally generates an accompanying shell script, and proposes the CLAUDE.md callout for deterministic firing. Replaces ad-hoc skill creation with a consistent shape that matches typecheck-and-build, commit-with-heredoc, dev-server-restart, autopilot-collect, and cf-crawl.
 ---
 
 Create a new skill that fits the established pattern in `~/.claude/skills/`. Don't free-form a SKILL.md — work the decision tree, pick the form factor, fill the template, register.
@@ -40,7 +40,7 @@ If any answer is "no", explain why and don't create the skill. Examples of legit
 | ---------------------------------------------------------------- | -------------------------------------------- | -------------------------------------------- |
 | **Mechanical / deterministic** (kill+restart, file ops, polling) | Shell script + slim SKILL.md pointing to it  | `dev-server-restart/restart.sh`              |
 | **Process / discipline / quoting / decision tree**               | Pure markdown SKILL.md                       | `commit-with-heredoc`, `typecheck-and-build` |
-| **API wrapper with secrets**                                     | Markdown with env-var config + curl examples | `cf-crawl`, `telegram`                       |
+| **API wrapper with secrets**                                     | Markdown with env-var config + curl examples | `cf-crawl`                                   |
 | **Library of options** (palettes, templates, presets)            | Markdown with structured tables              | `ui-ux-pro-max`, `frontend-design`           |
 
 **Decision rule:** if the LLM's judgment adds value (when to invoke, what to check, how to interpret output), markdown. If the operation is purely mechanical (kill process X, format string Y), shell script.
