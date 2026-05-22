@@ -1,4 +1,50 @@
 {
+  "workflow.daily-use": {
+    "label": "Daily Workflow — /plan → /autopilot → verify → /compact",
+    "description": "How you actually work: one terminal orchestrates with /plan, a second terminal runs /autopilot, then back to the first to verify and merge",
+    "steps": [
+      {
+        "node": "meta.orchestrator",
+        "caption": "Open your first terminal. Tell Claude what you want to build, in plain English."
+      },
+      {
+        "node": "command.plan",
+        "caption": "Run /plan. Claude breaks your task down before writing any code.",
+        "via": "dispatch"
+      },
+      {
+        "node": "agent.safe-planner",
+        "caption": "A specialist sub-task figures out every file to change, in what order, and how to undo it if something goes wrong.",
+        "via": "dispatch",
+        "marker": "## PLAN READY"
+      },
+      {
+        "node": "rule.plan-verification",
+        "caption": "Two more sub-tasks pressure-test the plan — one challenges the assumptions, one grades it against engineering rules. The plan is revised until both pass.",
+        "via": "include"
+      },
+      {
+        "node": "command.autopilot",
+        "caption": "Open a second terminal. Paste the /autopilot command /plan handed you. It runs the plan on its own while you do other things."
+      },
+      {
+        "node": "agent.qa-agent",
+        "caption": "A QA sub-task audits every change and re-checks until the work is clean. No \"should work\" — only verified.",
+        "via": "dispatch",
+        "marker": "## VERIFICATION PASSED"
+      },
+      {
+        "node": "rule.checkpoints",
+        "caption": "Switch back to your first terminal. Claude waits for you to confirm before pushing anything.",
+        "via": "include"
+      },
+      {
+        "node": "meta.orchestrator",
+        "caption": "When you're done, run /compact. It throws away the noise and keeps your next conversation lean."
+      }
+    ],
+    "canonical": true
+  },
   "command.autopilot": {
     "label": "/autopilot — Autonomous Multi-Phase Orchestrator",
     "description": "Plan → Implement → QA → Commit, end-to-end with API retry + circuit breaker",

@@ -25,7 +25,24 @@ const AGENT_NAMES = new Set([
 
 // Hand-authored canonical flows for the primary orchestrator commands.
 // Steps reference node IDs that must exist in data.json (validated below).
+// Flow IDs starting with `workflow.` are narrative/meta flows that do not
+// correspond to a single command node; the validator skips the top-level
+// node check for them but still validates each step's node ID.
 const CANONICAL_FLOWS = {
+  'workflow.daily-use': {
+    label: 'Daily Workflow — /plan → /autopilot → verify → /compact',
+    description: 'How you actually work: one terminal orchestrates with /plan, a second terminal runs /autopilot, then back to the first to verify and merge',
+    steps: [
+      { node: 'meta.orchestrator', caption: 'Open your first terminal. Tell Claude what you want to build, in plain English.' },
+      { node: 'command.plan', caption: 'Run /plan. Claude breaks your task down before writing any code.', via: 'dispatch' },
+      { node: 'agent.safe-planner', caption: 'A specialist sub-task figures out every file to change, in what order, and how to undo it if something goes wrong.', via: 'dispatch', marker: '## PLAN READY' },
+      { node: 'rule.plan-verification', caption: 'Two more sub-tasks pressure-test the plan — one challenges the assumptions, one grades it against engineering rules. The plan is revised until both pass.', via: 'include' },
+      { node: 'command.autopilot', caption: 'Open a second terminal. Paste the /autopilot command /plan handed you. It runs the plan on its own while you do other things.' },
+      { node: 'agent.qa-agent', caption: 'A QA sub-task audits every change and re-checks until the work is clean. No "should work" — only verified.', via: 'dispatch', marker: '## VERIFICATION PASSED' },
+      { node: 'rule.checkpoints', caption: 'Switch back to your first terminal. Claude waits for you to confirm before pushing anything.', via: 'include' },
+      { node: 'meta.orchestrator', caption: "When you're done, run /compact. It throws away the noise and keeps your next conversation lean." },
+    ],
+  },
   'command.autopilot': {
     label: '/autopilot — Autonomous Multi-Phase Orchestrator',
     description: 'Plan → Implement → QA → Commit, end-to-end with API retry + circuit breaker',
@@ -398,9 +415,12 @@ function buildFlows(graph) {
   const flows = {};
   const nodeIds = new Set(graph.nodes.map((n) => n.id));
 
-  // Canonical flows first (validated against node IDs)
+  // Canonical flows first (validated against node IDs).
+  // `workflow.*` flow IDs are narrative/meta flows that don't correspond to
+  // a single command node — skip the top-level node check for them. Steps
+  // are still validated below.
   for (const [id, flow] of Object.entries(CANONICAL_FLOWS)) {
-    if (!nodeIds.has(id)) {
+    if (!id.startsWith('workflow.') && !nodeIds.has(id)) {
       throw new Error(`Canonical flow refers to missing command node: ${id}`);
     }
     for (const step of flow.steps) {
