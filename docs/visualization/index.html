@@ -3144,11 +3144,219 @@
         opacity: 1;
       }
       body[data-view="how"] .graph-wrap,
-      body[data-view="how"] .list-view {
+      body[data-view="how"] .list-view,
+      body[data-view="how"] .commands-view {
         display: none;
       }
       @media (prefers-reduced-motion: reduce) {
         .how-view {
+          transition: none;
+        }
+      }
+
+      /* -------------------------------------------------------------
+         Commands view ("how each command works")
+         ------------------------------------------------------------- */
+      .commands-view {
+        display: none;
+        opacity: 0;
+        transition: opacity var(--transition-med);
+      }
+      body[data-view="commands"] .commands-view {
+        display: block;
+        opacity: 1;
+      }
+      body[data-view="commands"] .graph-wrap,
+      body[data-view="commands"] .list-view,
+      body[data-view="commands"] .how-view {
+        display: none;
+      }
+      body[data-view="list"] .commands-view,
+      body[data-view="map"] .commands-view {
+        display: none;
+      }
+
+      .cmd-container {
+        font-family: var(--font-ui);
+        color: var(--text-primary);
+        max-width: 760px;
+        margin: 0 auto;
+        padding: 0 24px 96px;
+      }
+
+      .cmd-hero {
+        padding: 56px 0 32px;
+        border-bottom: 1px solid var(--border-strong);
+        margin-bottom: 40px;
+      }
+      .cmd-hero h1 {
+        margin: 0 0 14px;
+        font-size: 42px;
+        line-height: 1.08;
+        letter-spacing: -0.02em;
+        font-weight: 700;
+        color: var(--text-primary);
+      }
+      .cmd-tagline {
+        margin: 0;
+        font-size: 17px;
+        line-height: 1.55;
+        color: var(--text-secondary, var(--text-primary));
+        opacity: 0.78;
+        max-width: 560px;
+      }
+
+      .cmd-card {
+        background: var(--bg-elev-1);
+        border: 1px solid var(--border-strong);
+        border-radius: 16px;
+        padding: 32px;
+        margin-bottom: 24px;
+        transition:
+          transform var(--transition-fast, 120ms ease),
+          box-shadow var(--transition-fast, 120ms ease),
+          border-color var(--transition-fast, 120ms ease);
+      }
+      @media (hover: hover) {
+        .cmd-card:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25);
+          border-color: var(--accent);
+        }
+      }
+      [data-theme="light"] .cmd-card:hover {
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+      }
+
+      .cmd-card__head {
+        margin-bottom: 20px;
+        padding-bottom: 18px;
+        border-bottom: 1px solid var(--border-strong);
+      }
+      .cmd-card__head h2 {
+        margin: 0 0 8px;
+        font-size: 22px;
+        line-height: 1.2;
+        font-weight: 600;
+        color: var(--text-primary);
+      }
+      .cmd-card__head h2 code {
+        font-family: var(--font-mono);
+        font-size: 22px;
+        color: var(--accent);
+        background: transparent;
+        padding: 0;
+        font-weight: 600;
+      }
+      .cmd-card__one-liner {
+        margin: 0;
+        font-size: 15px;
+        line-height: 1.5;
+        color: var(--text-secondary, var(--text-primary));
+        opacity: 0.72;
+      }
+
+      .cmd-card__body h3 {
+        margin: 22px 0 10px;
+        font-size: 11px;
+        line-height: 1;
+        font-weight: 600;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--accent);
+      }
+      .cmd-card__body h3:first-child {
+        margin-top: 0;
+      }
+      .cmd-card__body p {
+        margin: 0 0 14px;
+        font-size: 16px;
+        line-height: 1.65;
+        color: var(--text-primary);
+      }
+      .cmd-card__body p:last-child {
+        margin-bottom: 0;
+      }
+      .cmd-card__body code {
+        font-family: var(--font-mono);
+        font-size: 0.88em;
+        background: rgba(255, 255, 255, 0.06);
+        padding: 1px 6px;
+        border-radius: 4px;
+        color: var(--text-primary);
+      }
+      [data-theme="light"] .cmd-card__body code {
+        background: rgba(0, 0, 0, 0.06);
+      }
+      .cmd-card__body strong {
+        font-weight: 600;
+        color: var(--accent);
+      }
+
+      .cmd-footer {
+        margin-top: 48px;
+        padding-top: 28px;
+        border-top: 1px solid var(--border-strong);
+        text-align: center;
+      }
+      .cmd-footer p {
+        margin: 0;
+        font-size: 15px;
+        color: var(--text-secondary, var(--text-primary));
+        opacity: 0.78;
+      }
+      .cmd-howto-link {
+        background: none;
+        border: none;
+        padding: 0;
+        margin: 0;
+        font: inherit;
+        color: var(--accent);
+        cursor: pointer;
+        text-decoration: none;
+        font-weight: 500;
+      }
+      .cmd-howto-link:hover {
+        text-decoration: underline;
+      }
+      .cmd-howto-link:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 3px;
+        border-radius: 2px;
+      }
+
+      @media (max-width: 640px) {
+        .cmd-container {
+          padding: 0 16px 64px;
+        }
+        .cmd-hero {
+          padding: 36px 0 24px;
+          margin-bottom: 28px;
+        }
+        .cmd-hero h1 {
+          font-size: 30px;
+        }
+        .cmd-tagline {
+          font-size: 15px;
+        }
+        .cmd-card {
+          padding: 22px;
+          border-radius: 14px;
+        }
+        .cmd-card__head h2,
+        .cmd-card__head h2 code {
+          font-size: 19px;
+        }
+        .cmd-card__body p {
+          font-size: 15px;
+        }
+        .cmd-footer p {
+          line-height: 1.6;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .commands-view,
+        .cmd-card {
           transition: none;
         }
       }
@@ -3500,6 +3708,34 @@
                 <path d="M5 6h5M5 9h3" />
               </svg>
               How
+            </button>
+            <button
+              class="view-toggle__tab"
+              id="view-tab-commands"
+              role="tab"
+              aria-selected="false"
+              aria-controls="view-commands"
+              data-view="commands"
+              tabindex="-1"
+              title="Commands view (V to cycle)"
+            >
+              <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+                <path
+                  d="M4 4h12a1 1 0 011 1v10a1 1 0 01-1 1H4a1 1 0 01-1-1V5a1 1 0 011-1z"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.5"
+                />
+                <path
+                  d="M6 8l2 2-2 2M10 12h4"
+                  stroke="currentColor"
+                  stroke-width="1.5"
+                  fill="none"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
+              Commands
             </button>
             <button
               class="view-toggle__tab"
@@ -4047,11 +4283,237 @@ cd ~/.claude-setup &amp;&amp; ./install.sh</code></pre>
           </ol>
         </section>
 
+        <section class="how-outcome" id="outcome-qa">
+          <h2>5. Run QA on anything</h2>
+          <p class="how-outcome-tagline">
+            Audit code, plans, configs — iteratively until clean. Not just
+            inside /autopilot — standalone too.
+          </p>
+          <ol class="how-steps">
+            <li>
+              <span class="how-terminal-tag how-terminal-tag--1"
+                >Terminal 1</span
+              >
+              <div class="how-step-body">
+                <p>Point Claude at the thing you want audited:</p>
+                <div class="how-codeblock">
+                  <button
+                    class="how-copy"
+                    type="button"
+                    data-copy-target="qa-cmd"
+                  >
+                    Copy
+                  </button>
+                  <pre><code id="qa-cmd">/qa-loop check the auth flow I just refactored</code></pre>
+                </div>
+                <p class="how-step-note">
+                  Claude dispatches <code>qa-agent</code> to find
+                  <em>real</em> bugs (not theoretical ones), applies fixes for
+                  the CRITICAL/HIGH findings, then re-dispatches the audit.
+                  Loops until <code>## VERIFICATION PASSED</code> or the
+                  iteration cap hits.
+                </p>
+              </div>
+            </li>
+            <li>
+              <span class="how-terminal-tag how-terminal-tag--1"
+                >Terminal 1</span
+              >
+              <div class="how-step-body">
+                <p>
+                  Works on anything code-shaped — components, edge functions,
+                  migrations, config files, plans. Run it whenever "did I test
+                  it?" matters.
+                </p>
+              </div>
+            </li>
+          </ol>
+        </section>
+
         <footer class="how-footer">
           <p>
             Curious about the architecture under the hood?
             <button class="how-arch-link" id="how-see-arch" type="button">
               See the architecture →
+            </button>
+          </p>
+        </footer>
+      </div>
+    </section>
+
+    <!-- COMMANDS VIEW (deep-dive on each /command) ========================= -->
+    <section
+      class="commands-view"
+      id="view-commands"
+      role="tabpanel"
+      aria-labelledby="view-tab-commands"
+      aria-hidden="true"
+      hidden
+    >
+      <div class="cmd-container">
+        <header class="cmd-hero">
+          <h1>How each command works</h1>
+          <p class="cmd-tagline">
+            Under the hood: the harnesses that make this setup powerful — and
+            why most agent loops break without them.
+          </p>
+        </header>
+
+        <article class="cmd-card" id="cmd-plan">
+          <header class="cmd-card__head">
+            <h2><code>/plan</code></h2>
+            <p class="cmd-card__one-liner">
+              Plan with verification before any code runs.
+            </p>
+          </header>
+          <div class="cmd-card__body">
+            <h3>How it works</h3>
+            <p>
+              <code>/plan</code> dispatches <strong>safe-planner</strong> to
+              produce a rollback-ready plan: work units, dependencies, blast
+              radius, and a stated verification path. The plan then goes through
+              two parallel verification gates —
+              <strong>brainstorm</strong> pressure-tests it (inversion, scale
+              game, meta-pattern recognition) and
+              <strong>outcomes-grader</strong> scores it against engineering
+              principles. If either flags concerns, the plan gets one revision
+              pass. The final output is a ready-to-paste
+              <code>/autopilot</code> command.
+            </p>
+            <h3>Why it's powerful</h3>
+            <p>
+              Most coding agents start writing code immediately. Bugs from
+              premature implementation are 10× more expensive than the planning
+              step that would've prevented them. <code>/plan</code> forces the
+              "think first, code second" discipline — without making you do the
+              thinking. You get a reviewable plan you can actually push back on
+              before any file changes.
+            </p>
+          </div>
+        </article>
+
+        <article class="cmd-card" id="cmd-autopilot">
+          <header class="cmd-card__head">
+            <h2><code>/autopilot</code></h2>
+            <p class="cmd-card__one-liner">
+              Runs a plan to completion, autonomously.
+            </p>
+          </header>
+          <div class="cmd-card__body">
+            <h3>How it works</h3>
+            <p>
+              Five phases:
+              <strong>Plan → Implement → QA loop → Commit → Push gate</strong>.
+              Each phase emits a completion marker (e.g.
+              <code>## VERIFICATION PASSED</code>) that the orchestrator routes
+              on. Implementation work units run in parallel where safe. API
+              failures retry with exponential backoff; a circuit breaker halts
+              after 3 exhaustions in the same phase to avoid burning context on
+              a flaky upstream.
+            </p>
+            <h3>Why it's powerful</h3>
+            <p>
+              Lets you context-switch to other work while it runs. You return to
+              a finished implementation, tested and ready to push. The push gate
+              is non-negotiable — nothing leaves your machine without your
+              explicit approval. No babysitting required.
+            </p>
+          </div>
+        </article>
+
+        <article class="cmd-card" id="cmd-bug">
+          <header class="cmd-card__head">
+            <h2><code>/bug</code></h2>
+            <p class="cmd-card__one-liner">
+              Trace, diagnose, fix, validate — with a hard stop.
+            </p>
+          </header>
+          <div class="cmd-card__body">
+            <h3>How it works</h3>
+            <p>
+              Four-phase systematic debugging. <strong>Phase 1</strong>
+              understands the symptom (reproducible, observable, scoped).
+              <strong>Phase 2</strong> traces backward from the symptom through
+              the call stack. <strong>Phase 3</strong> finds the root cause —
+              not a contributing factor — and distinguishes the two.
+              <strong>Phase 4</strong> stops at 3 failed fix attempts. That stop
+              is a signal: the architecture allows the bug to exist, your fix
+              isn't wrong.
+            </p>
+            <h3>Why it's powerful</h3>
+            <p>
+              Prevents the "tried five things, none worked" spiral that wastes
+              hours and burns context. The 3-fix stop is a forcing function for
+              stepping back instead of digging deeper. You either get a
+              root-cause fix or a clear signal that the problem is structural.
+            </p>
+          </div>
+        </article>
+
+        <article class="cmd-card" id="cmd-brainstorm">
+          <header class="cmd-card__head">
+            <h2><code>/brainstorm</code></h2>
+            <p class="cmd-card__one-liner">
+              Pressure-test an idea before you commit code to it.
+            </p>
+          </header>
+          <div class="cmd-card__body">
+            <h3>How it works</h3>
+            <p>
+              Applies four critical-thinking techniques:
+              <strong>Inversion</strong> ("what if the opposite were true?"),
+              <strong>Simplification cascade</strong> ("what would eliminate 5
+              steps with one insight?"), <strong>Scale game</strong> (designs
+              for 0.1× and 10× scale and names the failure mode at each), and
+              <strong>Meta-pattern recognition</strong> (if a problem appears in
+              3+ unrelated domains, it's a universal principle worth naming).
+              Returns sharp tradeoffs, not vague recommendations.
+            </p>
+            <h3>Why it's powerful</h3>
+            <p>
+              Hard decisions made fast almost always cost more than soft
+              decisions made slowly. <code>/brainstorm</code> gives you a
+              structured second opinion without a human in the loop, surfacing
+              the hidden assumptions you missed. Use it before any architectural
+              change you can't easily undo.
+            </p>
+          </div>
+        </article>
+
+        <article class="cmd-card" id="cmd-qa-loop">
+          <header class="cmd-card__head">
+            <h2><code>/qa-loop</code></h2>
+            <p class="cmd-card__one-liner">
+              Audit, fix, re-audit — iteratively until clean.
+            </p>
+          </header>
+          <div class="cmd-card__body">
+            <h3>How it works</h3>
+            <p>
+              A revision gate with an iteration cap. Dispatches
+              <strong>qa-agent</strong> to find real bugs (not theoretical
+              concerns). Fixes the CRITICAL/HIGH findings. Re-dispatches the
+              audit. Loops until <code>## VERIFICATION PASSED</code> or the
+              iteration cap (typically 3) hits. If issue counts stop decreasing
+              between iterations, escalates early — stalling is its own signal.
+            </p>
+            <h3>Why it's powerful</h3>
+            <p>
+              "Did I test it?" is unreliable. <code>/qa-loop</code> turns
+              testing into a closed loop — fixes don't stop until the audit
+              comes back clean. Catches integration bugs, wiring issues, and
+              logic errors that static checks (build, lint, typecheck) miss by
+              design. Built into <code>/autopilot</code>, but also runnable
+              standalone whenever you want focused QA on a specific change.
+            </p>
+          </div>
+        </article>
+
+        <footer class="cmd-footer">
+          <p>
+            Ready to put these to work?
+            <button class="cmd-howto-link" type="button">
+              Back to how-to →
             </button>
           </p>
         </footer>
@@ -6365,21 +6827,24 @@ cd ~/.claude-setup &amp;&amp; ./install.sh</code></pre>
         // View toggle (Map / List) -----------------------------------
         // -----------------------------------------------------------
         const VIEW_STORAGE_KEY = "viz-view";
-        const VALID_VIEWS = ["how", "map", "list"];
+        const VALID_VIEWS = ["how", "commands", "map", "list"];
 
         function setView(view, opts = {}) {
           const next = VALID_VIEWS.includes(view) ? view : "how";
           document.body.setAttribute("data-view", next);
 
           const howTab = document.getElementById("view-tab-how");
+          const commandsTab = document.getElementById("view-tab-commands");
           const mapTab = document.getElementById("view-tab-map");
           const listTab = document.getElementById("view-tab-list");
           const howRegion = document.getElementById("view-how");
+          const commandsRegion = document.getElementById("view-commands");
           const listRegion = document.getElementById("view-list");
           const mapRegion = document.querySelector("main.graph-wrap");
 
           const tabsByView = {
             how: howTab,
+            commands: commandsTab,
             map: mapTab,
             list: listTab,
           };
@@ -6395,6 +6860,19 @@ cd ~/.claude-setup &amp;&amp; ./install.sh</code></pre>
               "aria-hidden",
               next === "how" ? "false" : "true",
             );
+          if (commandsRegion) {
+            commandsRegion.setAttribute(
+              "aria-hidden",
+              next === "commands" ? "false" : "true",
+            );
+            // The commands section ships with the `hidden` attribute so it
+            // doesn't flash on first paint; toggle it alongside the data-view.
+            if (next === "commands") {
+              commandsRegion.removeAttribute("hidden");
+            } else {
+              commandsRegion.setAttribute("hidden", "");
+            }
+          }
           if (listRegion)
             listRegion.setAttribute(
               "aria-hidden",
@@ -6428,6 +6906,7 @@ cd ~/.claude-setup &amp;&amp; ./install.sh</code></pre>
 
         function initViewToggle() {
           const howTab = document.getElementById("view-tab-how");
+          const commandsTab = document.getElementById("view-tab-commands");
           const mapTab = document.getElementById("view-tab-map");
           const listTab = document.getElementById("view-tab-list");
           if (!mapTab || !listTab) return;
@@ -6436,6 +6915,8 @@ cd ~/.claude-setup &amp;&amp; ./install.sh</code></pre>
           buildListView();
 
           if (howTab) howTab.addEventListener("click", () => setView("how"));
+          if (commandsTab)
+            commandsTab.addEventListener("click", () => setView("commands"));
           mapTab.addEventListener("click", () => setView("map"));
           listTab.addEventListener("click", () => setView("list"));
 
@@ -6444,11 +6925,17 @@ cd ~/.claude-setup &amp;&amp; ./install.sh</code></pre>
           if (archLink)
             archLink.addEventListener("click", () => setView("map"));
 
+          // Wire the "Back to how-to →" link inside the Commands view.
+          const cmdHowtoLinks = document.querySelectorAll(".cmd-howto-link");
+          cmdHowtoLinks.forEach((btn) =>
+            btn.addEventListener("click", () => setView("how")),
+          );
+
           // Wire the Copy buttons inside the How view.
           initHowCopyButtons();
 
           // Arrow key navigation inside the tablist (ARIA pattern).
-          const tabs = [howTab, mapTab, listTab].filter(Boolean);
+          const tabs = [howTab, commandsTab, mapTab, listTab].filter(Boolean);
           for (const t of tabs) {
             t.addEventListener("keydown", (e) => {
               if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
