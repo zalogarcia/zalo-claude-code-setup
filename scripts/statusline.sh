@@ -2,6 +2,7 @@
 input=$(cat)
 now=$(date +%s)
 
+model=$(echo "$input" | jq -r '.model.display_name // empty' 2>/dev/null)
 five_h=$(echo "$input" | jq -r '.rate_limits.five_hour.used_percentage // empty' 2>/dev/null)
 five_r=$(echo "$input" | jq -r '.rate_limits.five_hour.resets_at // empty' 2>/dev/null)
 seven_d=$(echo "$input" | jq -r '.rate_limits.seven_day.used_percentage // empty' 2>/dev/null)
@@ -22,7 +23,8 @@ fmt_long() {
 }
 
 parts=""
-[ -n "$ctx" ] && parts="${ctx}% ctx"
+[ -n "$model" ] && parts="$model"
+[ -n "$ctx" ] && parts="${parts:+$parts · }${ctx}% ctx"
 if [ -n "$five_h" ]; then
   ttl=""; [ -n "$five_r" ] && ttl=" $(fmt_short "$five_r")"
   parts="${parts:+$parts · }5h ${five_h%.*}%${ttl}"
