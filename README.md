@@ -12,7 +12,7 @@ Custom agents, skills, commands, MCP servers, auto-formatting hooks, and workflo
 
 ## Interactive Architecture
 
-See how the pieces fit together: 7 agents, 16 shared rules, 6 commands, 7 skills, hooks, MCP servers — plus animated request flows (`/autopilot`, `/bug`, `/qa-loop`, `/brainstorm`, `/plan`).
+See how the pieces fit together: 7 agents, 16 shared rules, 6 commands, 8 skills, hooks, MCP servers — plus animated request flows (`/autopilot`, `/bug`, `/qa-loop`, `/brainstorm`, `/plan`).
 
 **→ [Open the interactive visualization](https://zalogarcia.github.io/zalo-claude-code-setup/visualization/)**
 
@@ -51,15 +51,15 @@ This loop ensures nothing slips through. Plan first, execute small, verify alway
 
 Make sure these are installed first:
 
-| Tool              | Install Command                                          | Purpose                                           |
-| ----------------- | -------------------------------------------------------- | ------------------------------------------------- |
-| **Node.js + npm** | [nodejs.org](https://nodejs.org/) or `brew install node` | Required for MCP servers and npx                  |
-| **Python 3**      | `brew install python3`                                   | Required for UI/UX Pro Max skill search engine    |
-| **jq**            | `brew install jq`                                        | Required for hook JSON parsing                    |
-| **Prettier**      | `npm install -g prettier`                                | Auto-formats TS/JS/CSS/JSON/MD/HTML on every edit |
-| **Ruff**          | `pip install ruff`                                       | Auto-formats and lints Python on every edit       |
-| **uv**            | `pip install uv`                                         | Optional — used by some skills' Python scripts    |
-| **Git**           | `brew install git`                                       | Required for cloning UI/UX Pro Max data           |
+| Tool              | Install Command                                          | Purpose                                               |
+| ----------------- | -------------------------------------------------------- | ----------------------------------------------------- |
+| **Node.js + npm** | [nodejs.org](https://nodejs.org/) or `brew install node` | Required for MCP servers and npx                      |
+| **Python 3**      | `brew install python3`                                   | Required for hook scripts (gitleaks guard, stop-hook) |
+| **jq**            | `brew install jq`                                        | Required for hook JSON parsing                        |
+| **Prettier**      | `npm install -g prettier`                                | Auto-formats TS/JS/CSS/JSON/MD/HTML on every edit     |
+| **Ruff**          | `pip install ruff`                                       | Auto-formats and lints Python on every edit           |
+| **uv**            | `pip install uv`                                         | Optional — used by some skills' Python scripts        |
+| **Git**           | `brew install git`                                       | Required for cloning this repo                        |
 
 ### Run the Installer
 
@@ -74,7 +74,7 @@ The installer will:
 1. **Back up** all your existing Claude Code configs to `~/.claude/backups/`
 2. **Copy** agents to `~/.claude/agents/`
 3. **Copy** commands to `~/.claude/commands/`
-4. **Copy** skills to `~/.claude/skills/` (clones UI/UX Pro Max data from GitHub)
+4. **Copy** skills to `~/.claude/skills/` and workflows to `~/.claude/workflows/`
 5. **Install** global `CLAUDE.md` to `~/.claude/`
 6. **Merge** hooks into `~/.claude/settings.json` (preserves your existing hooks)
 7. **Merge** MCP servers into `~/.claude.json` (skips servers you already have)
@@ -159,17 +159,27 @@ Slash commands for workflow automation. Invoke with `/<command-name>`.
 | **plan**            | Plan something with brainstorm + principles verification                                               |
 | **brainstorm**      | Deep-analyze a problem, plan, or decision with first principles, inversion, and structured elimination |
 
-### Skills (7)
+### Skills (8)
 
-| Skill                   | What It Does                                                                                                                    |
-| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| **typecheck-and-build** | Standardizes `tsc --noEmit` + production build with smart failure-region extraction and consistent exit codes.                  |
-| **commit-with-heredoc** | Encodes correct `$(cat <<'EOF' … EOF)` quoting for multi-line conventional commits with Co-Authored-By trailer.                 |
-| **dev-server-restart**  | Shell script that kills any stale dev server on a port, restarts via `nohup`, polls for readiness, smoke-tests a route.         |
-| **autopilot-collect**   | Used by `/autopilot` worktrees to bundle their diff + decisions log into a single review-ready artifact.                        |
-| **frontend-design**     | Anti-slop aesthetic guidelines. Bold design direction, distinctive typography, no generic AI look. (Opt-in via frontend chain.) |
-| **create-skill**        | Author a new Claude Code skill following the established pattern — decision tree, form factor, template, registration.          |
-| **cf-crawl**            | Scrape websites via Cloudflare Browser Rendering API. Single page (sync) or multi-page crawl (async).                           |
+| Skill                   | What It Does                                                                                                                                                                                                                                   |
+| ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **typecheck-and-build** | Standardizes `tsc --noEmit` + production build with smart failure-region extraction and consistent exit codes.                                                                                                                                 |
+| **commit-with-heredoc** | Encodes correct `$(cat <<'EOF' … EOF)` quoting for multi-line conventional commits with Co-Authored-By trailer.                                                                                                                                |
+| **dev-server-restart**  | Shell script that kills any stale dev server on a port, restarts via `nohup`, polls for readiness, smoke-tests a route.                                                                                                                        |
+| **autopilot-collect**   | Used by `/autopilot` worktrees to bundle their diff + decisions log into a single review-ready artifact.                                                                                                                                       |
+| **frontend-design**     | Anti-slop aesthetic guidelines. Bold design direction, distinctive typography, no generic AI look. (Opt-in via frontend chain.)                                                                                                                |
+| **create-skill**        | Author a new Claude Code skill following the established pattern — decision tree, form factor, template, registration.                                                                                                                         |
+| **cf-crawl**            | Scrape websites via Cloudflare Browser Rendering API. Single page (sync) or multi-page crawl (async).                                                                                                                                          |
+| **live-test-campaign**  | Master live-test campaign against a deployed app: design-review the code first, enumerate edge cases by lifecycle stage, split live-vs-lab, then run a cheapest-first phase ladder with positive-evidence discipline and state neutralization. |
+
+### Workflows (2)
+
+Deterministic multi-agent scripts at `~/.claude/workflows/`, run via Claude Code's Workflow tool. Commands delegate to them and fall back to inline agent dispatch when workflows are unavailable.
+
+| Workflow        | What It Does                                                                                                                                                                                         |
+| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **qa-audit**    | Read-only audit backing `/qa-loop`: 6 parallel finder agents (correctness, wiring, error-handling, security, stubs, types-edges) + 2-skeptic adversarial verification — returns only confirmed bugs. |
+| **plan-verify** | Plan Verification Loop backing `/plan`: brainstorm critique + principles grading in parallel, then at most one `safe-planner` revision pass.                                                         |
 
 ### Shared Rules (16)
 
@@ -303,9 +313,9 @@ pip install ruff uv
 | Dependency    | Required By                                | Required?   |
 | ------------- | ------------------------------------------ | ----------- |
 | Node.js + npm | MCP servers (github, supabase, playwright) | Yes         |
-| Python 3      | UI/UX Pro Max search, installer scripts    | Yes         |
+| Python 3      | Hook scripts (gitleaks guard, stop-hook)   | Yes         |
 | jq            | Hook JSON parsing                          | Yes         |
-| Git           | Installer (clones UI/UX Pro Max data)      | Yes         |
+| Git           | Installer (clones this repo)               | Yes         |
 | Prettier      | Auto-format hook (TS/JS/CSS/JSON/MD/HTML)  | Recommended |
 | Ruff          | Auto-format hook (Python)                  | Recommended |
 | uv/uvx        | Optional — Python tooling for some skills  | Optional    |
@@ -353,8 +363,13 @@ If a recommended tool is missing, the relevant hook or MCP will silently skip �
 │   │   └── SKILL.md                  # Anti-slop aesthetics
 │   ├── create-skill/
 │   │   └── SKILL.md                  # Meta-skill: author new skills with the established pattern
-│   └── cf-crawl/
-│       └── SKILL.md                  # Web scraper
+│   ├── cf-crawl/
+│   │   └── SKILL.md                  # Web scraper
+│   └── live-test-campaign/
+│       └── SKILL.md                  # Master live-test campaign methodology
+├── workflows/
+│   ├── qa-audit.js                   # Parallel bug hunt + adversarial verify (backs /qa-loop)
+│   └── plan-verify.js                # Two-gate plan verification (backs /plan)
 ├── hooks/
 │   ├── settings.json                 # Hook configuration (formatters, gitleaks, session-start)
 │   ├── continue-if-incomplete.py     # Stop hook: nudge Claude if it halts mid-task

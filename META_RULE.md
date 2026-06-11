@@ -17,8 +17,14 @@ Edit this file freely — the `session-start.sh` hook reads it fresh each time.
 **Skills** — compound tools.
 
 - Workflow helpers: `typecheck-and-build`, `commit-with-heredoc`, `dev-server-restart`, `autopilot-collect`
+- Testing: `live-test-campaign` (post-ship live verification campaign — design-review first, cheapest-first phase ladder, positive-evidence discipline)
 - Frontend (opt-in): `frontend-design`
 - Meta + integrations: `create-skill`, `cf-crawl`
+
+**Workflows** — deterministic multi-agent scripts at `~/.claude/workflows/`, run via the Workflow tool. Commands fall back to inline agent dispatch when workflows are unavailable.
+
+- `qa-audit` — read-only parallel bug hunt + adversarial verify (backs `/qa-loop`)
+- `plan-verify` — brainstorm + principles gates with one revision pass (backs `/plan`)
 
 **Shared rules** at `~/.claude/rules/` (treat as authoritative reference; `@`-included by commands/agents):
 

@@ -97,7 +97,19 @@ if [ -d "$BACKUP_DIR/skills.bak" ]; then
 else
     rm -rf "$CLAUDE_DIR/skills/frontend-design"
     rm -rf "$CLAUDE_DIR/skills/cf-crawl"
+    rm -rf "$CLAUDE_DIR/skills/live-test-campaign"
     ok "Removed installed skills"
+fi
+
+# Restore workflows
+if [ -d "$BACKUP_DIR/workflows.bak" ]; then
+    rm -rf "$CLAUDE_DIR/workflows"
+    cp -r "$BACKUP_DIR/workflows.bak" "$CLAUDE_DIR/workflows"
+    ok "Restored workflows"
+else
+    rm -f "$CLAUDE_DIR/workflows/qa-audit.js"
+    rm -f "$CLAUDE_DIR/workflows/plan-verify.js"
+    ok "Removed installed workflows"
 fi
 
 # Clean up qdrant storage if empty

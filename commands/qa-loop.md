@@ -1,6 +1,6 @@
 # /qa-loop — Iterative Audit-and-Fix Loop
 
-Revision Gate that converges on a clean state. Iterates `qa-agent` audits + minimal fixes until no real bugs remain.
+Revision Gate that converges on a clean state. Each iteration runs a parallel, adversarially-verified audit (the `qa-audit` workflow) + minimal fixes, until no real bugs remain.
 
 ## Authoritative Rules
 
@@ -23,12 +23,19 @@ iteration = 0
 LOOP:
   iteration += 1
 
-  # 1. Dispatch qa-agent
-  Pass: list of changed files + standard QA prompt
-  Wait for one of:
-    - ## VERIFICATION PASSED → BREAK, success
-    - ## ISSUES FOUND → continue to Fix step
-    - ## BLOCKED → investigate (env, scope, missing access), provide context, re-dispatch
+  # 1. Audit — parallel fan-out + adversarial verify
+  Invoke the read-only `qa-audit` workflow:
+      Workflow(name="qa-audit", args={ files: <changed files>, base: <HEAD or HEAD~1> })
+  It runs 6 finder agents (correctness, wiring, error-handling, security, stubs,
+  types-edges) in parallel, then has two skeptics adversarially verify each finding,
+  returning ONLY confirmed bugs, pre-sorted critical-first:
+      { confirmed: [ {file, line, severity, title, description, evidence, suggestedFix} ], stats, scope }
+  Map the structured result:
+    - confirmed.length == 0  → BREAK, success (clean)
+    - confirmed.length  > 0  → continue to Fix step
+    - workflow disabled / errors → FALLBACK to a single qa-agent dispatch:
+        Pass changed files + standard QA prompt; wait for
+        ## VERIFICATION PASSED / ## ISSUES FOUND / ## BLOCKED (prior behavior).
 
   IF iteration >= MAX_ITERATIONS:
     BREAK — report unfixed bugs to user
@@ -48,6 +55,13 @@ LOOP:
   # 5. Loop
   GOTO LOOP
 ```
+
+### Detection backend (`qa-audit` workflow)
+
+The audit step delegates to `~/.claude/workflows/qa-audit.js` — fan-out across 6 bug dimensions + 2-skeptic adversarial verification. A finding is confirmed only if **neither** skeptic refutes it (uncertain → refuted), so the loop only ever fixes high-confidence bugs. The workflow is **read-only**: it never edits files. The Fix step below owns all mutations, kept sequential and minimal per `~/.claude/rules/when-to-parallelize.md` (no parallel implementation agents on shared files).
+
+- Dynamic workflows are a research preview and may be disabled — the loop falls back to a single `qa-agent` automatically (no behavior change when off).
+- In default permission mode the first run prompts for approval; choose "don't ask again for qa-audit in this project" so it doesn't prompt every iteration.
 
 ### Step 3: Report
 

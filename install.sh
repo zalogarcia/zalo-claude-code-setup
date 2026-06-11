@@ -79,6 +79,7 @@ backup_configs() {
     [ -d "$CLAUDE_DIR/skills" ] && cp -r "$CLAUDE_DIR/skills" "$BACKUP_DIR/skills.bak" 2>/dev/null || true
     [ -d "$CLAUDE_DIR/commands" ] && cp -r "$CLAUDE_DIR/commands" "$BACKUP_DIR/commands.bak" 2>/dev/null || true
     [ -d "$CLAUDE_DIR/rules" ] && cp -r "$CLAUDE_DIR/rules" "$BACKUP_DIR/rules.bak" 2>/dev/null || true
+    [ -d "$CLAUDE_DIR/workflows" ] && cp -r "$CLAUDE_DIR/workflows" "$BACKUP_DIR/workflows.bak" 2>/dev/null || true
     [ -f "$CLAUDE_DIR/META_RULE.md" ] && cp "$CLAUDE_DIR/META_RULE.md" "$BACKUP_DIR/META_RULE.md.bak" 2>/dev/null || true
 
     # Mark what existed before install (for clean uninstall on fresh machines)
@@ -180,6 +181,21 @@ install_skills() {
         mkdir -p "$CLAUDE_DIR/skills/$name"
         cp -r "$skill_dir"* "$CLAUDE_DIR/skills/$name/" 2>/dev/null || true
         ok "  Skill: $name"
+    done
+}
+
+# ============================================================================
+# Install workflows
+# ============================================================================
+
+install_workflows() {
+    info "Installing workflows..."
+    mkdir -p "$CLAUDE_DIR/workflows"
+
+    for wf in "$SCRIPT_DIR/workflows"/*.js; do
+        [ -f "$wf" ] || continue
+        cp "$wf" "$CLAUDE_DIR/workflows/"
+        ok "  Workflow: $(basename "$wf")"
     done
 }
 
@@ -576,6 +592,7 @@ backup_configs
 install_commands
 install_agents
 install_skills
+install_workflows
 install_rules
 install_meta_rule
 install_claude_md
@@ -595,7 +612,8 @@ echo ""
 echo "What was installed:"
 echo "  - 6 slash commands (autopilot, autopilot-merge, bug, qa-loop, plan, brainstorm)"
 echo "  - 7 custom agents (qa-agent, safe-planner, live-test, frontend-specialist, bug-fix, outcomes-grader, brainstorm)"
-echo "  - 7 skills (typecheck-and-build, commit-with-heredoc, dev-server-restart, autopilot-collect, frontend-design, create-skill, cf-crawl)"
+echo "  - 8 skills (typecheck-and-build, commit-with-heredoc, dev-server-restart, autopilot-collect, frontend-design, create-skill, cf-crawl, live-test-campaign)"
+echo "  - 2 workflows (qa-audit, plan-verify)"
 echo "  - Global CLAUDE.md with workflow automation"
 echo "  - Hooks: PostToolUse formatting (Prettier + Ruff) + Vibe Island bridge (all events)"
 echo "  - 4 MCP servers (context7, playwright, github, supabase)"

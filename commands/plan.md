@@ -1,6 +1,6 @@
 # /plan — Plan Something (with Brainstorm + Principles Verification)
 
-Standalone planning command. Dispatches `safe-planner`, then runs the Plan Verification Loop (brainstorm critique + principles grader) before returning the final plan.
+Standalone planning command. Dispatches `safe-planner`, then runs the Plan Verification Loop — the `plan-verify` workflow (brainstorm critique + principles grader in parallel, plus one revision pass) — before returning the final plan.
 
 Use this when you want a high-quality plan but **don't** want the full `/autopilot` execution pipeline — e.g., scoping a feature for a future session, getting a second opinion on an approach, or producing a plan to hand off.
 
@@ -85,72 +85,39 @@ Wait for `## PLAN READY`. Verify file exists and is non-empty before proceeding.
 
 Parse `${RUN_DIR}/plan.md` and count work units.
 
-If `work_units ≤ 2` → **skip verification**. Log decision to `${RUN_DIR}/decisions.log` and jump to Step 6. (See `~/.claude/rules/plan-verification.md` for rationale on the simple count-based heuristic.)
+If `work_units ≤ 2` → **skip verification**. Log decision to `${RUN_DIR}/decisions.log` and jump to Step 5. (See `~/.claude/rules/plan-verification.md` for rationale on the simple count-based heuristic.)
 
-### Step 4: Plan Verification Loop (per `~/.claude/rules/plan-verification.md`)
+### Step 4: Plan Verification Loop (via the `plan-verify` workflow)
 
-Run **Gate 1 (brainstorm-vet)** and **Gate 2 (principles-vet via outcomes-grader)** in **parallel** — they're independent reads of the same plan, no shared state, no data dependency. Single message with two Agent calls.
-
-**Gate 1 — Brainstorm:**
+The two gates + the single revision pass are autonomous (no user input), so they run as a deterministic workflow instead of hand-dispatched agents:
 
 ```
-Dispatch brainstorm (model: "opus"):
-
-  Apply your critical-thinking pass to this plan.
-
-  Original task: (read ${RUN_DIR}/task.md)
-  Plan: (read ${RUN_DIR}/plan.md)
-
-  - Apply inversion, simplification cascade, scale game, meta-pattern recognition
-  - Identify hidden assumptions, missing considerations, scope creep
-  - Identify single points of failure, unhandled edge cases, missing rollback
-  - If the plan is sound, say so concisely. If concerns exist, list with severity.
-
-  Emit ## EXPLORATION COMPLETE.
+Workflow(name="plan-verify", args={ runDir: "${RUN_DIR}" })
 ```
 
-**Gate 2 — Principles grader:**
+The workflow (`~/.claude/workflows/plan-verify.js`) faithfully encodes `~/.claude/rules/plan-verification.md`:
 
-```
-Dispatch outcomes-grader (model: "opus"):
+- Runs **Gate 1 (brainstorm)** and **Gate 2 (outcomes-grader)** in parallel, both reading `${RUN_DIR}/task.md` + `${RUN_DIR}/plan.md`, returning schema-validated findings (model: opus, same as the prior inline dispatch).
+- If brainstorm reports `hasSignificantConcerns` OR the grader reports any applicable item not passing, it dispatches `safe-planner` **once** to revise `${RUN_DIR}/plan.md` **in place** (cap: one revision — never loops).
+- Returns:
+  ```
+  { passed, revised, revisionSummary, unresolvedConcerns[], brainstorm, principles, verificationMarkdown }
+  ```
 
-  Grade this PLAN (not code) against the engineering-principles rubric.
+Handle the result:
 
-  Artifact: (read ${RUN_DIR}/plan.md)
-  Rubric: (read ~/.claude/rules/engineering-principles.md)
+1. **Write findings** — if the workflow ran the gates (no `error` field), write `result.verificationMarkdown` to `${RUN_DIR}/plan_verification.md`.
+2. **Map the verification status** for Step 5:
+   - `passed && !revised` → `PASSED in 0 revisions`
+   - `revised && unresolvedConcerns.length == 0` → `PASSED after revision`
+   - `revised && unresolvedConcerns.length > 0` → `CONCERNS REMAIN — see plan_verification.md`
+3. **Log** the outcome (and any `unresolvedConcerns`) to `${RUN_DIR}/decisions.log`.
 
-  Per-item PASS / FAIL / AMBIGUOUS with quoted evidence from the plan.
-  Mark items not applicable to this plan as PASS.
+`safe-planner` overwrites `${RUN_DIR}/plan.md` in place, so Step 5 reads the final plan from the same path whether or not a revision happened. **Do NOT loop the revision** — one pass max, per `~/.claude/rules/plan-verification.md`.
 
-  Emit ## OUTCOMES PASSED if every applicable item passes.
-  Emit ## OUTCOMES UNMET with FAIL details if any fail.
-```
+**Fallback (workflows disabled / errored):** if the `plan-verify` workflow is unavailable, or returns an `error` field, fall back to the inline loop — dispatch `brainstorm` and `outcomes-grader` in parallel (single message, two Agent calls), then re-dispatch `safe-planner` once if either flags concerns, exactly as specified in the @-included `~/.claude/rules/plan-verification.md` (which has the verbatim gate prompts). Same opus model pins, same one-revision cap, then write `${RUN_DIR}/plan_verification.md` yourself from the combined findings.
 
-### Step 5: Combined revision pass (if needed)
-
-Wait for both markers. Combine findings:
-
-- If brainstorm has no significant concerns AND grader emits `## OUTCOMES PASSED` → both gates passed, no revision needed. Skip to Step 6.
-- If either flagged concerns → write `${RUN_DIR}/plan_verification.md` with combined findings, then re-dispatch `safe-planner` ONCE with:
-
-```
-The plan you produced was reviewed. Issues to address:
-
-## Brainstorm critique
-{brainstorm findings, verbatim}
-
-## Principles violations
-{grader's failed rubric items}
-
-Revise plan.md to address each issue. Keep what works. Don't expand scope.
-Emit ## PLAN READY when revised.
-```
-
-Wait for revised `## PLAN READY`. **Do NOT loop again** — cap at one revision per plan.
-
-If the revision still has unresolved concerns from the original review, log `plan_verification_max_iterations_hit` to `${RUN_DIR}/decisions.log` and proceed with the best version. Note unresolved concerns in the final output.
-
-### Step 6: Output the plan
+### Step 5: Output the plan
 
 Substitute the resolved `${RUN_DIR}` (e.g. `.claude/.plan/20260518-093015`) into every path below — print real paths, not placeholders. The `.claude/.plan/latest` symlink updated in Step 1 always points at the most-recent run, so users get a stable shortcut even though each invocation lives in its own dir.
 
@@ -185,13 +152,13 @@ still run normally.
 /autopilot ${TASK_ONE_LINE} --plan=${RUN_DIR}/plan.md
 ```
 
-**This last block is mandatory.** Every /plan invocation that reaches Step 6 (whether verification passed, was skipped as trivial, or finished with concerns remaining) MUST end with the literal `/autopilot ${TASK_ONE_LINE} --plan=${RUN_DIR}/plan.md` line as the final printed line. No exceptions — the user grabs this command without re-reading the task. Use the **resolved RUN_DIR**, not the `.claude/.plan/latest` symlink — a later `/plan` run would shift the symlink and silently re-target the user's autopilot invocation at a different plan. If `${RUN_DIR}/task.md` is somehow empty (Step 1 ABORT should have caught this), print `/autopilot <TASK MISSING — re-invoke /plan with a task description>` as a visible failure rather than skipping the line.
+**This last block is mandatory.** Every /plan invocation that reaches Step 5 (whether verification passed, was skipped as trivial, or finished with concerns remaining) MUST end with the literal `/autopilot ${TASK_ONE_LINE} --plan=${RUN_DIR}/plan.md` line as the final printed line. No exceptions — the user grabs this command without re-reading the task. Use the **resolved RUN_DIR**, not the `.claude/.plan/latest` symlink — a later `/plan` run would shift the symlink and silently re-target the user's autopilot invocation at a different plan. If `${RUN_DIR}/task.md` is somehow empty (Step 1 ABORT should have caught this), print `/autopilot <TASK MISSING — re-invoke /plan with a task description>` as a visible failure rather than skipping the line.
 
 ## Anti-Patterns (will not do)
 
 - Skip the verification loop when work_units > 2 (the only skip criterion is the count — see `~/.claude/rules/plan-verification.md`)
 - Loop the revision pass more than once (one retry max — avoid infinite refinement)
-- Run gates 1 and 2 sequentially when they can run in parallel
+- Run gates 1 and 2 sequentially when they can run in parallel (the workflow runs them in parallel; the fallback must too)
 - Use AskUserQuestion or any checkpoint type — /plan is autonomous within a single conversation
 - Write to autopilot's `.autopilot/` directory — /plan uses its own `.claude/.plan/` workspace
 - Auto-execute the plan after producing it — /plan stops at the plan, leaves execution to the user / `/autopilot`

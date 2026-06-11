@@ -526,7 +526,7 @@ function main() {
     mcp: graph.nodes.filter((n) => n.kind === 'mcp').length,
     skill: graph.nodes.filter((n) => n.kind === 'skill').length,
   };
-  const minimums = { agent: 6, rule: 11, command: 5, hook: 2, mcp: 4, skill: 7 };
+  const minimums = { agent: 6, rule: 11, command: 5, hook: 2, mcp: 4, skill: 8 };
   const failures = [];
   for (const [k, min] of Object.entries(minimums)) {
     if (counts[k] < min) failures.push(`${k}: ${counts[k]} < ${min}`);
