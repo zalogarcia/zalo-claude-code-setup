@@ -1,6 +1,6 @@
 {
   "meta": {
-    "generatedAt": "2026-05-22T22:36:11.881Z",
+    "generatedAt": "2026-06-11T14:33:54.143Z",
     "repo": "zalo-claude-code-setup"
   },
   "nodes": [
@@ -9,7 +9,7 @@
       "kind": "meta",
       "label": "META_RULE.md",
       "path": "META_RULE.md",
-      "summary": "Re-injected on every `startup`, `/clear`, and `/compact`. Edit this file freely \u2014 the `session-start.sh` hook reads it fresh each time."
+      "summary": "Re-injected on every `startup`, `/clear`, and `/compact`. Edit this file freely — the `session-start.sh` hook reads it fresh each time."
     },
     {
       "id": "meta.CLAUDE",
@@ -51,7 +51,7 @@
       "kind": "rule",
       "label": "checkpoints",
       "path": "rules/checkpoints.md",
-      "summary": "Adapted from gsd-build/get-shit-done. When an orchestrator needs human input, emit a **readable markdown checkpoint block** and **stop** \u2014 do not continue past the gate."
+      "summary": "Adapted from gsd-build/get-shit-done. When an orchestrator needs human input, emit a **readable markdown checkpoint block** and **stop** — do not continue past the gate."
     },
     {
       "id": "rule.context-budget",
@@ -72,7 +72,7 @@
       "kind": "rule",
       "label": "engineering-principles",
       "path": "rules/engineering-principles.md",
-      "summary": "Used by `outcomes-grader` to evaluate plans (and optionally implementations) against the standards stated in `~/.claude/CLAUDE.md`. Each item describes an **outcome** the plan must exhibit \u2014 a measurable property \u2014 not a rule to follow. This makes the rubric harder to game and mo"
+      "summary": "Used by `outcomes-grader` to evaluate plans (and optionally implementations) against the standards stated in `~/.claude/CLAUDE.md`. Each item describes an **outcome** the plan must exhibit — a measurable property — not a rule to follow. This makes the rubric harder to game and mo"
     },
     {
       "id": "rule.gates",
@@ -100,7 +100,7 @@
       "kind": "rule",
       "label": "plan-verification",
       "path": "rules/plan-verification.md",
-      "summary": "After `safe-planner` emits `## PLAN READY`, run two verification gates **before** acting on the plan. Both gates use fresh-context subagents (the value of brainstorm/grader pass is the second-opinion dynamic \u2014 same-model self-critique is weaker)."
+      "summary": "After `safe-planner` emits `## PLAN READY`, run two verification gates **before** acting on the plan. Both gates use fresh-context subagents (the value of brainstorm/grader pass is the second-opinion dynamic — same-model self-critique is weaker)."
     },
     {
       "id": "rule.problem-solving",
@@ -135,14 +135,14 @@
       "kind": "rule",
       "label": "when-to-parallelize",
       "path": "rules/when-to-parallelize.md",
-      "summary": "Adapted from obra/superpowers `dispatching-parallel-agents`. Claude Code's `Agent` tool runs multiple invocations concurrently when called in a single message \u2014 use this rule to decide when that's appropriate."
+      "summary": "Adapted from obra/superpowers `dispatching-parallel-agents`. Claude Code's `Agent` tool runs multiple invocations concurrently when called in a single message — use this rule to decide when that's appropriate."
     },
     {
       "id": "command.autopilot",
       "kind": "command",
       "label": "/autopilot",
       "path": "commands/autopilot.md",
-      "summary": "Pure orchestrator that dispatches sub-agents for all work. The main thread never reads code, never writes code, never fixes bugs. It routes, tracks, verifies, and compacts. Sub-agents do the work \u2014 in parallel where possible, each with self-planning before coding. The orchestrato",
+      "summary": "Pure orchestrator that dispatches sub-agents for all work. The main thread never reads code, never writes code, never fixes bugs. It routes, tracks, verifies, and compacts. Sub-agents do the work — in parallel where possible, each with self-planning before coding. The orchestrato",
       "includes": [
         "rule.agent-contracts",
         "rule.gates",
@@ -201,7 +201,7 @@
       "kind": "command",
       "label": "/bug",
       "path": "commands/bug.md",
-      "summary": "Trace the full flow \u2192 identify root cause \u2192 fix narrowly \u2192 QA. Built around the `bug-fix` agent's 4-phase systematic debugging.",
+      "summary": "Trace the full flow → identify root cause → fix narrowly → QA. Built around the `bug-fix` agent's 4-phase systematic debugging.",
       "includes": [
         "rule.agent-contracts",
         "rule.problem-solving",
@@ -276,7 +276,7 @@
       "kind": "agent",
       "label": "frontend-specialist",
       "path": "agents/frontend-specialist.md",
-      "summary": "Builds and optimizes frontend UI \u2014 components, styling, responsiveness, accessibility, and performance. Use for any client-side development task. <example>user: 'I need to build a mobile-friendly navigation bar that collapses on smaller screens' assistant: 'I'll use the frontend-specialist agent to create a responsive navigation component.'</example>",
+      "summary": "Builds and optimizes frontend UI — components, styling, responsiveness, accessibility, and performance. Use for any client-side development task. <example>user: 'I need to build a mobile-friendly navigation bar that collapses on smaller screens' assistant: 'I'll use the frontend-specialist agent to create a responsive navigation component.'</example>",
       "markers": [
         "## IMPLEMENTATION COMPLETE",
         "## IMPLEMENTATION DONE_WITH_CONCERNS",
@@ -341,7 +341,7 @@
       "kind": "skill",
       "label": "autopilot-collect",
       "path": "skills/autopilot-collect",
-      "summary": "List all /autopilot worktrees + branches in the current repo with their terminal_state, commits ahead of a base, files touched, and task summary. Use when the user asks \"which autopilots finished\", \"show pending autopilot runs\", \"what's left to merge\", or as the discovery step inside /autopilot-merge. Returns a TSV table \u2014 parse it; don't paste it raw into the conversation."
+      "summary": "List all /autopilot worktrees + branches in the current repo with their terminal_state, commits ahead of a base, files touched, and task summary. Use when the user asks \"which autopilots finished\", \"show pending autopilot runs\", \"what's left to merge\", or as the discovery step inside /autopilot-merge. Returns a TSV table — parse it; don't paste it raw into the conversation."
     },
     {
       "id": "skill.cf-crawl",
@@ -369,7 +369,7 @@
       "kind": "skill",
       "label": "dev-server-restart",
       "path": "skills/dev-server-restart",
-      "summary": "Kill any stale dev server on a given port, restart it cleanly in the project, poll until it accepts connections, and smoke-test a route \u2014 returning HTTP status + log tail. Use before testing UI in the browser, after env changes, or whenever Claude wrote \"pkill -f 'next dev'\" in a previous turn and needs the server back up. Replaces the 100+ hand-written kill+sleep+curl variants."
+      "summary": "Kill any stale dev server on a given port, restart it cleanly in the project, poll until it accepts connections, and smoke-test a route — returning HTTP status + log tail. Use before testing UI in the browser, after env changes, or whenever Claude wrote \"pkill -f 'next dev'\" in a previous turn and needs the server back up. Replaces the 100+ hand-written kill+sleep+curl variants."
     },
     {
       "id": "skill.frontend-design",
