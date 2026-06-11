@@ -1,6 +1,6 @@
 {
   "meta": {
-    "generatedAt": "2026-06-11T14:33:54.143Z",
+    "generatedAt": "2026-06-11T21:15:47.904Z",
     "repo": "zalo-claude-code-setup"
   },
   "nodes": [
@@ -218,7 +218,7 @@
       "kind": "command",
       "label": "/plan",
       "path": "commands/plan.md",
-      "summary": "Standalone planning command. Dispatches `safe-planner`, then runs the Plan Verification Loop (brainstorm critique + principles grader) before returning the final plan.",
+      "summary": "Standalone planning command. Dispatches `safe-planner`, then runs the Plan Verification Loop — the `plan-verify` workflow (brainstorm critique + principles grader in parallel, plus one revision pass) — before returning the final plan.",
       "includes": [
         "rule.agent-contracts",
         "rule.plan-verification",
@@ -238,7 +238,7 @@
       "kind": "command",
       "label": "/qa-loop",
       "path": "commands/qa-loop.md",
-      "summary": "Revision Gate that converges on a clean state. Iterates `qa-agent` audits + minimal fixes until no real bugs remain.",
+      "summary": "Revision Gate that converges on a clean state. Each iteration runs a parallel, adversarially-verified audit (the `qa-audit` workflow) + minimal fixes, until no real bugs remain.",
       "includes": [
         "rule.agent-contracts",
         "rule.gates",
@@ -377,6 +377,13 @@
       "label": "frontend-design",
       "path": "skills/frontend-design",
       "summary": "Create distinctive, production-grade frontend interfaces with high design quality. Use this skill when the user asks to build web components, pages, or applications. Generates creative, polished code that avoids generic AI aesthetics."
+    },
+    {
+      "id": "skill.live-test-campaign",
+      "kind": "skill",
+      "label": "live-test-campaign",
+      "path": "skills/live-test-campaign",
+      "summary": "Run a master live-test campaign against a deployed app or feature — design-review the code first, enumerate edge cases by lifecycle stage, split live-vs-lab, then execute a cheapest-first phase ladder (preflight → read-only API → side-effect-free calls → UI → state writes → guard/abort paths → real external sends → cleanup) with positive-evidence discipline and a state-neutralization protocol. Use after shipping a feature, before launch, or whenever the user asks to \"live test everything\" / \"make sure it's perfect\" / \"catch all edge cases\". Battle-tested on a multi-day production campaign that found bugs static QA and 100+ unit tests missed."
     },
     {
       "id": "skill.typecheck-and-build",
