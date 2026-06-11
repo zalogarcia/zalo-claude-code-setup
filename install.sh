@@ -181,30 +181,6 @@ install_skills() {
         cp -r "$skill_dir"* "$CLAUDE_DIR/skills/$name/" 2>/dev/null || true
         ok "  Skill: $name"
     done
-
-    # Install ui-ux-pro-max full skill from source repo (includes scripts + data)
-    info "  Fetching UI/UX Pro Max scripts and data from GitHub..."
-    local UIUX_TMP=$(mktemp -d)
-    if git clone --depth 1 https://github.com/nextlevelbuilder/ui-ux-pro-max-skill.git "$UIUX_TMP" 2>/dev/null; then
-        # Copy scripts and data from src/ into the skill directory
-        if [ -d "$UIUX_TMP/src/ui-ux-pro-max/scripts" ]; then
-            cp -r "$UIUX_TMP/src/ui-ux-pro-max/scripts" "$CLAUDE_DIR/skills/ui-ux-pro-max/"
-            ok "  UI/UX Pro Max scripts installed"
-        fi
-        if [ -d "$UIUX_TMP/src/ui-ux-pro-max/data" ]; then
-            cp -r "$UIUX_TMP/src/ui-ux-pro-max/data" "$CLAUDE_DIR/skills/ui-ux-pro-max/"
-            ok "  UI/UX Pro Max data files installed"
-        fi
-        if [ -d "$UIUX_TMP/src/ui-ux-pro-max/templates" ]; then
-            cp -r "$UIUX_TMP/src/ui-ux-pro-max/templates" "$CLAUDE_DIR/skills/ui-ux-pro-max/"
-            ok "  UI/UX Pro Max templates installed"
-        fi
-        rm -rf "$UIUX_TMP"
-    else
-        warn "  Failed to clone UI/UX Pro Max repo. Install manually:"
-        warn "  Run in Claude Code: /install-skill https://github.com/nextlevelbuilder/ui-ux-pro-max-skill"
-        rm -rf "$UIUX_TMP"
-    fi
 }
 
 # ============================================================================
@@ -619,7 +595,7 @@ echo ""
 echo "What was installed:"
 echo "  - 6 slash commands (autopilot, autopilot-merge, bug, qa-loop, plan, brainstorm)"
 echo "  - 7 custom agents (qa-agent, safe-planner, live-test, frontend-specialist, bug-fix, outcomes-grader, brainstorm)"
-echo "  - 8 skills (typecheck-and-build, commit-with-heredoc, dev-server-restart, autopilot-collect, ui-ux-pro-max, frontend-design, create-skill, cf-crawl)"
+echo "  - 7 skills (typecheck-and-build, commit-with-heredoc, dev-server-restart, autopilot-collect, frontend-design, create-skill, cf-crawl)"
 echo "  - Global CLAUDE.md with workflow automation"
 echo "  - Hooks: PostToolUse formatting (Prettier + Ruff) + Vibe Island bridge (all events)"
 echo "  - 4 MCP servers (context7, playwright, github, supabase)"

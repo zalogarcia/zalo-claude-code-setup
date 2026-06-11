@@ -95,7 +95,6 @@ if [ -d "$BACKUP_DIR/skills.bak" ]; then
     cp -r "$BACKUP_DIR/skills.bak" "$CLAUDE_DIR/skills"
     ok "Restored skills"
 else
-    rm -rf "$CLAUDE_DIR/skills/ui-ux-pro-max"
     rm -rf "$CLAUDE_DIR/skills/frontend-design"
     rm -rf "$CLAUDE_DIR/skills/cf-crawl"
     ok "Removed installed skills"

@@ -12,7 +12,7 @@ Custom agents, skills, commands, MCP servers, auto-formatting hooks, and workflo
 
 ## Interactive Architecture
 
-See how the pieces fit together: 7 agents, 16 shared rules, 6 commands, 8 skills, hooks, MCP servers — plus animated request flows (`/autopilot`, `/bug`, `/qa-loop`, `/brainstorm`, `/plan`).
+See how the pieces fit together: 7 agents, 16 shared rules, 6 commands, 7 skills, hooks, MCP servers — plus animated request flows (`/autopilot`, `/bug`, `/qa-loop`, `/brainstorm`, `/plan`).
 
 **→ [Open the interactive visualization](https://zalogarcia.github.io/zalo-claude-code-setup/visualization/)**
 
@@ -159,18 +159,17 @@ Slash commands for workflow automation. Invoke with `/<command-name>`.
 | **plan**            | Plan something with brainstorm + principles verification                                               |
 | **brainstorm**      | Deep-analyze a problem, plan, or decision with first principles, inversion, and structured elimination |
 
-### Skills (8)
+### Skills (7)
 
-| Skill                   | What It Does                                                                                                                               |
-| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| **typecheck-and-build** | Standardizes `tsc --noEmit` + production build with smart failure-region extraction and consistent exit codes.                             |
-| **commit-with-heredoc** | Encodes correct `$(cat <<'EOF' … EOF)` quoting for multi-line conventional commits with Co-Authored-By trailer.                            |
-| **dev-server-restart**  | Shell script that kills any stale dev server on a port, restarts via `nohup`, polls for readiness, smoke-tests a route.                    |
-| **autopilot-collect**   | Used by `/autopilot` worktrees to bundle their diff + decisions log into a single review-ready artifact.                                   |
-| **ui-ux-pro-max**       | Searchable design database: 50 UI styles, 21 color palettes, 50 font pairings, 20 chart types, 8 tech stacks. (Opt-in via frontend chain.) |
-| **frontend-design**     | Anti-slop aesthetic guidelines. Bold design direction, distinctive typography, no generic AI look. (Opt-in via frontend chain.)            |
-| **create-skill**        | Author a new Claude Code skill following the established pattern — decision tree, form factor, template, registration.                     |
-| **cf-crawl**            | Scrape websites via Cloudflare Browser Rendering API. Single page (sync) or multi-page crawl (async).                                      |
+| Skill                   | What It Does                                                                                                                    |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| **typecheck-and-build** | Standardizes `tsc --noEmit` + production build with smart failure-region extraction and consistent exit codes.                  |
+| **commit-with-heredoc** | Encodes correct `$(cat <<'EOF' … EOF)` quoting for multi-line conventional commits with Co-Authored-By trailer.                 |
+| **dev-server-restart**  | Shell script that kills any stale dev server on a port, restarts via `nohup`, polls for readiness, smoke-tests a route.         |
+| **autopilot-collect**   | Used by `/autopilot` worktrees to bundle their diff + decisions log into a single review-ready artifact.                        |
+| **frontend-design**     | Anti-slop aesthetic guidelines. Bold design direction, distinctive typography, no generic AI look. (Opt-in via frontend chain.) |
+| **create-skill**        | Author a new Claude Code skill following the established pattern — decision tree, form factor, template, registration.          |
+| **cf-crawl**            | Scrape websites via Cloudflare Browser Rendering API. Single page (sync) or multi-page crawl (async).                           |
 
 ### Shared Rules (16)
 
@@ -265,10 +264,9 @@ Behavioral rules that make Claude Code significantly more effective:
 
 When you ask Claude to build non-trivial UI (a new page, a component-library piece, a visual redesign), consider invoking this chain. It's opt-in — skip for trivial copy/style tweaks:
 
-1. **`ui-ux-pro-max` skill** — Searches the design database for the right palette, fonts, and style
-2. **`frontend-design` skill** — Applies anti-slop aesthetic principles (no generic Inter + purple gradient)
-3. **`frontend-specialist` agent** — Builds production-quality code with Aceternity UI + shadcn/ui component libraries, reads Apple HIG design principles before writing any code
-4. **`live-test` agent** — Opens a browser and screenshots the result for visual verification
+1. **`frontend-design` skill** — Applies anti-slop aesthetic principles (no generic Inter + purple gradient)
+2. **`frontend-specialist` agent** — Builds production-quality code with Aceternity UI + shadcn/ui component libraries, applies Apple HIG-quality design principles throughout
+3. **`live-test` agent** — Opens a browser and screenshots the result for visual verification
 
 ---
 
@@ -351,8 +349,6 @@ If a recommended tool is missing, the relevant hook or MCP will silently skip �
 │   ├── autopilot-collect/
 │   │   ├── SKILL.md                  # Bundle worktree diff + decisions log
 │   │   └── collect.sh                # Collection runner
-│   ├── ui-ux-pro-max/
-│   │   └── SKILL.md                  # Design database
 │   ├── frontend-design/
 │   │   └── SKILL.md                  # Anti-slop aesthetics
 │   ├── create-skill/

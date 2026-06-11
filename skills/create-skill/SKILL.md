@@ -41,7 +41,7 @@ If any answer is "no", explain why and don't create the skill. Examples of legit
 | **Mechanical / deterministic** (kill+restart, file ops, polling) | Shell script + slim SKILL.md pointing to it  | `dev-server-restart/restart.sh`              |
 | **Process / discipline / quoting / decision tree**               | Pure markdown SKILL.md                       | `commit-with-heredoc`, `typecheck-and-build` |
 | **API wrapper with secrets**                                     | Markdown with env-var config + curl examples | `cf-crawl`                                   |
-| **Library of options** (palettes, templates, presets)            | Markdown with structured tables              | `ui-ux-pro-max`, `frontend-design`           |
+| **Library of options** (palettes, templates, presets)            | Markdown with structured tables              | `frontend-design`                            |
 
 **Decision rule:** if the LLM's judgment adds value (when to invoke, what to check, how to interpret output), markdown. If the operation is purely mechanical (kill process X, format string Y), shell script.
 

@@ -17,7 +17,7 @@ Edit this file freely — the `session-start.sh` hook reads it fresh each time.
 **Skills** — compound tools.
 
 - Workflow helpers: `typecheck-and-build`, `commit-with-heredoc`, `dev-server-restart`, `autopilot-collect`
-- Frontend (opt-in): `frontend-design`, `ui-ux-pro-max`
+- Frontend (opt-in): `frontend-design`
 - Meta + integrations: `create-skill`, `cf-crawl`
 
 **Shared rules** at `~/.claude/rules/` (treat as authoritative reference; `@`-included by commands/agents):
