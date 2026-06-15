@@ -15,6 +15,7 @@ Before any git operation:
 1. **Check for stale lock files** — `[ -f .git/index.lock ]` blocks all git ops; investigate before deleting (may indicate another process running).
 2. **Check working tree state** — `git status` first. Don't `git pull` / `git checkout` over uncommitted work.
 3. **Verify branch** — `git branch --show-current` matches what you expect. Don't push to `main` thinking you're on `dev`.
+4. **Verify the branch is the right HOME for this change** — knowing the branch name isn't enough; confirm the change _belongs_ there before committing. A general or cross-cutting change (docs, rules, config, repo-wide cleanup) committed onto whatever feature branch happens to be checked out lands it in the wrong place — and if that branch is stale or already-merged, the commit silently resurrects it. General changes go on the integration/default branch (`dev` unless specified); only feature-scoped work goes on the feature branch. If the checked-out branch is unrelated to the change, switch (or branch off the integration branch) first.
 
 ## Auto-Generated Directory Safety
 
