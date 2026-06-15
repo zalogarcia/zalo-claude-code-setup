@@ -1,5 +1,5 @@
 ---
-model: claude-opus-4-7
+model: claude-opus-4-8
 name: live-test
 description: Visually verifies code changes work in the browser using Playwright. Use after implementing features, fixing bugs, or making UI changes to confirm they work as intended before shipping. <example>user: 'I just added the new pricing page, can you verify it looks right?' assistant: 'I'll use the live-test agent to open the app in the browser and verify the pricing page.'</example>
 tools: Read, Grep, Glob, Bash
