@@ -51,6 +51,7 @@ These require **explicit user permission** every time (per `~/.claude/CLAUDE.md`
 - Prefer creating a new commit over `--amend` (amending mid-hook-failure can destroy work).
 - Use HEREDOC for multi-line commit messages to preserve formatting.
 - Match the project's existing commit message style (check `git log --oneline -20`).
+- **Never background `git commit` / `git push`** (no `run_in_background`, no trailing `&`, no detached subshell). The credential/SSH helper needs the foreground TTY — backgrounding it hangs silently and the commit/push never lands. Run them foreground and read the result in the same turn. (Backgrounding a long _read_ like `gh run watch` is fine; the mutating git ops are not.)
 
 ## Pull Request Hygiene
 

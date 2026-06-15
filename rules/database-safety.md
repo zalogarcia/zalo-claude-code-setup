@@ -46,6 +46,7 @@ Never combine these into a single migration. Each step must be independently dep
 - Test migrations on a Supabase branch first (`mcp__supabase__create_branch`) before applying to prod
 - Check RLS impact: if adding/modifying RLS, verify existing users can still access their own data
 - Edge Functions that depend on new columns must be deployed AFTER the migration succeeds
+- **Migrate before you ship code that reads the new schema.** Apply the additive migration FIRST, then push/deploy any code (edge function, worker, app, gateway) that selects/writes the new column. Never push code ahead of its migration — the new code will hit a column that doesn't exist yet and error in prod. If you realize code was pushed first, cancel the in-flight deploy, apply the migration, then let the deploy proceed.
 - Storage policies follow the same additive-only rule
 
 ## Pre-Migration Checklist

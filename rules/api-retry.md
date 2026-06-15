@@ -78,6 +78,7 @@ transport-layer, not prompt-layer.
 - `MAX_API_RETRIES = 3` (attempts 2, 3, 4)
 - `RETRY_BACKOFF_SCHEDULE = [30, 60, 120]` seconds
 - `MAX_PHASE_API_EXHAUSTIONS = 3` (circuit breaker threshold per phase)
+- `FALLBACK_MODEL = "sonnet"` (model-inaccessibility fallback — see "Model Inaccessibility & Fallback")
 
 Total wait per dispatch with full retry budget: 30 + 60 + 120 = 210 seconds
 (~3.5 minutes).
@@ -187,6 +188,55 @@ Circuit breaker trip:
   "decision": "circuit_breaker_tripped",
   "reasoning": "phase exhaustion count reached <N>",
   "phase": "<name>"
+}
+```
+
+## Model Inaccessibility & Fallback
+
+Distinct from the transient API errors above: sometimes the **pinned model
+itself is unavailable** for a dispatch — the model id is deprecated, gated,
+swapped out, or temporarily inaccessible (observed live as `claude-fable-5`
+going inaccessible mid-run during a model swap). A backoff retry of the SAME
+model is pointless — it isn't coming back in 30s. The fix is an immediate
+**model swap**, not a wait.
+
+**Detection signals** (phrase-anchored — must reference a MODEL, not a tool/resource):
+
+- `model` paired with `inaccessible`, `not available`, `unavailable`, or
+  `cannot be used` on the same line
+- a model id (`claude-*`, `us.anthropic.*`) paired with `inaccessible` /
+  `unavailable`
+- `model_not_found` / `model_not_available` error types
+- "selected model … (is) … unavailable/inaccessible"
+
+Do NOT confuse with `not_found_error` for a TOOL or RESOURCE (a missing file,
+an unknown tool name) — those stay non-retryable per the lists above. This
+signal is specifically the _model_ being unusable.
+
+**Recovery — swap, don't sleep:**
+
+1. Re-dispatch the SAME prompt immediately with `FALLBACK_MODEL` (no backoff —
+   the swap is instantaneous). Pass `model: FALLBACK_MODEL` explicitly.
+2. If the fallback dispatch succeeds → log `model_fallback_recovered` and
+   continue. The work unit is NOT failed.
+3. If `FALLBACK_MODEL` is ALSO inaccessible → treat as a real outage: route to
+   normal failure handling and increment the phase exhaustion counter (same
+   circuit breaker). Do NOT loop swapping models.
+
+This is the ONE sanctioned exception to a "model: X, no exceptions" pin: a pin
+that can't be honored because the model is gone must degrade to the fallback
+rather than deadlock. Principle: fall back to the most capable _available_
+model, never to a default that's "insufficient for autonomous work."
+
+**Logging:**
+
+```json
+{
+  "ts": "<iso8601>",
+  "tier": "model_fallback",
+  "decision": "swapped to FALLBACK_MODEL",
+  "reasoning": "<detected signal>",
+  "work_unit": "<id>"
 }
 ```
 

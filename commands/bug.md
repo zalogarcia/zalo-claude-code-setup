@@ -11,6 +11,16 @@ Trace the full flow → identify root cause → fix narrowly → QA. Built aroun
 
 ## Workflow
 
+### Step 0: Triage — is this actually a code bug?
+
+Before dispatching the heavyweight `bug-fix` agent, classify the report. The 4-phase agent is for **code defects** (wrong logic, crash, regression). It is wasteful overkill for:
+
+- **Config / data issues** — "user is on the wrong account/tenant", "the record has bad data", "the env var is unset", "this customer's settings are off". → Run a **read-only query/check first** (`mcp__supabase__execute_sql`, a log read, a config grep). Often the "bug" is a data state, fixable without touching code.
+- **Support / how-does-this-work questions** — answer directly or trace the relevant code yourself; no agent needed.
+- **"It's slow" / infra** — check logs/metrics before assuming a code defect.
+
+Only proceed to Step 1 when the evidence points to a genuine code defect. If a quick read-only check would confirm or refute the code-bug hypothesis, do that check first and report what you found — don't spin up the agent on a hunch.
+
 ### Step 1: Gather Context
 
 Ask the user:

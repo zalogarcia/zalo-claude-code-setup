@@ -85,8 +85,9 @@ After autopilot reports COMPLETE / COMPLETE_WITH_ISSUES:
 - MAX_QA_AUDIT_PARTITIONS = 5
 - QA_FANOUT_THRESHOLD = 8
 - SUBAGENT_MODEL = "opus"
+- FALLBACK_MODEL = "sonnet"
 
-Every `Agent` tool call MUST include `model: "opus"`. No exceptions. Default models are insufficient for autonomous code work.
+Every `Agent` tool call MUST include `model: "opus"`. Default models are insufficient for autonomous code work. **The one exception:** if a dispatch returns a model-inaccessibility signal (the pinned model itself is unavailable — see `~/.claude/rules/api-retry.md` "Model Inaccessibility & Fallback"), re-dispatch the same prompt with `model: FALLBACK_MODEL`, log it, and continue. A pin that can't be honored because the model is gone degrades to the fallback rather than deadlocking — it never silently drops to a default model.
 
 ## Orchestrator Identity
 
@@ -124,7 +125,7 @@ Dispatch a sub-agent. "Just this once" = autopilot violation.
 - Push to any remote branch (write `PUSH_PENDING: <branch> <N commits>` to report.md instead)
 - Auto-claim uncommitted changes as the task
 - Read or write source code directly
-- Dispatch a sub-agent without `model: "opus"`
+- Dispatch a sub-agent without `model: "opus"` (the sole exception: `model: FALLBACK_MODEL` on a model-inaccessibility re-dispatch, per the API Dispatch Wrapper Protocol)
 
 **YOU MUST ALWAYS:**
 
@@ -308,6 +309,8 @@ IF loop exhausted without success:
 ```
 
 **Non-retryable signals** (`invalid_api_key`, `authentication_error`, `permission_denied`, `not_found_error`, `invalid_request_error`) are treated as real failures — mark the work unit `failed` with `block_reason = "api_auth_or_perm"` and continue. Do NOT consume retry budget on these.
+
+**Model-inaccessibility signal** (the pinned model itself is unavailable — phrases referencing a _model_ as `inaccessible` / `unavailable` / `model_not_found`, per `~/.claude/rules/api-retry.md` "Model Inaccessibility & Fallback"): do NOT backoff and do NOT mark failed. Re-dispatch the SAME prompt immediately with `model: FALLBACK_MODEL` (the swap is instant; the model isn't returning in 30s). On success, log `model_fallback_recovered` and continue. If `FALLBACK_MODEL` is ALSO inaccessible, increment `api_retry_exhaustions_in_phase` (feeds the same circuit breaker) and mark the work unit `failed`. Do NOT loop swapping models.
 
 ### Per-phase circuit breaker
 

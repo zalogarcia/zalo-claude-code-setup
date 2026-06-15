@@ -6,6 +6,10 @@ export const meta = {
     "The detection step of /qa-loop, or any time you want a high-confidence bug report on a changed scope without auto-fixing.",
   phases: [
     {
+      title: "Scope",
+      detail: "resolve the changed-file list when no explicit scope is passed",
+    },
+    {
       title: "Find",
       detail: "one finder agent per bug dimension, in parallel",
     },
@@ -28,12 +32,58 @@ const files = Array.isArray(args?.files)
 const base = (args && typeof args.base === "string" && args.base) || "HEAD";
 const note = (args && typeof args.note === "string" && args.note) || "";
 
-const scopeText = files.length
-  ? `Scope — focus ONLY on these changed files:\n${files.map((f) => `  - ${f}`).join("\n")}`
-  : `Scope — the current change set. Run \`git diff ${base}\` to discover what changed and focus only on changed lines.`;
+// ---- scope guard ------------------------------------------------------------
+// Failure mode (observed repeatedly in real runs): when this workflow is called
+// with prose instead of {files:[...]}, `files` is [] and finders silently fall
+// back to `git diff HEAD` — which, inside an autopilot worktree or against a
+// wrong base, audits an unrelated tree. The `scope:[]` in the return is the tell.
+// Guard: resolve empty scope to a concrete file list up front (single source of
+// truth) and loudly warn if it can't, so the caller never trusts a verdict from
+// an unverified scope.
+let resolvedFiles = files;
+let scopeWarning = null;
+if (!files.length) {
+  phase("Scope");
+  const SCOPE_SCHEMA = {
+    type: "object",
+    properties: {
+      changedFiles: {
+        type: "array",
+        items: { type: "string" },
+        description: "relative paths of changed source files",
+      },
+      empty: {
+        type: "boolean",
+        description: "true if the diff produced no changed source files",
+      },
+    },
+    required: ["changedFiles", "empty"],
+  };
+  const scope = await agent(
+    `Resolve the QA audit scope (read-only — do not edit anything).
+Run \`git diff --name-only ${base}\`. If that is empty, also try \`git diff --name-only --staged\` and \`git status --porcelain\`.
+Return the relative paths of changed SOURCE files only — skip lockfiles, build output (dist/.next/out), node_modules, and generated artifacts.
+Set empty=true only if there are genuinely no changed source files.`,
+    { label: "scope:resolve", phase: "Scope", schema: SCOPE_SCHEMA },
+  );
+  resolvedFiles =
+    scope && Array.isArray(scope.changedFiles) ? scope.changedFiles : [];
+  if (!resolvedFiles.length || (scope && scope.empty)) {
+    scopeWarning = `qa-audit was called with no explicit file scope and \`git diff ${base}\` resolved to ${resolvedFiles.length} changed source file(s). The audit may be running against the wrong tree (the known scope:[] failure mode). Do not trust a clean verdict — confirm the caller passed {files:[...]} or the correct base.`;
+    log(`⚠️  ${scopeWarning}`);
+  } else {
+    log(
+      `Resolved empty scope → ${resolvedFiles.length} changed file(s) via git diff ${base}`,
+    );
+  }
+}
 
-const diffHint = files.length
-  ? `Run \`git diff ${base} -- ${files.join(" ")}\` to see exactly what changed, then read the surrounding context with the Read tool before judging.`
+const scopeText = resolvedFiles.length
+  ? `Scope — focus ONLY on these changed files:\n${resolvedFiles.map((f) => `  - ${f}`).join("\n")}`
+  : `Scope — the current change set. Run \`git diff ${base}\` to discover what changed and focus only on changed lines. NOTE: the scope could not be resolved to specific files; if \`git diff ${base}\` is empty or unrelated to the task, return an empty findings array and say so.`;
+
+const diffHint = resolvedFiles.length
+  ? `Run \`git diff ${base} -- ${resolvedFiles.join(" ")}\` to see exactly what changed, then read the surrounding context with the Read tool before judging. FIRST confirm these files actually exist and changed; if the diff is empty, return an empty findings array.`
   : `Run \`git diff ${base}\` first to see what changed.`;
 
 // ---- schemas -----------------------------------------------------------------
@@ -239,7 +289,8 @@ if (unique.length === 0) {
       confirmed: 0,
       refuted: 0,
     },
-    scope: files,
+    scope: resolvedFiles,
+    scopeWarning,
   };
 }
 
@@ -293,5 +344,6 @@ return {
     confirmed: confirmed.length,
     refuted: unique.length - confirmed.length,
   },
-  scope: files,
+  scope: resolvedFiles,
+  scopeWarning,
 };

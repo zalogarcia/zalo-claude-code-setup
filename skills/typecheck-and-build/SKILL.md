@@ -29,8 +29,10 @@ PM="npm"
 ### Step 1 — typecheck
 
 ```bash
-npx tsc --noEmit 2>&1 | tee /tmp/tsc.out; echo "EXIT=${PIPESTATUS[0]}"
+npx tsc --noEmit > /tmp/tsc.out 2>&1; echo "EXIT=$?"
 ```
+
+> **Why no pipe?** Capturing the exit code through a pipe (`… | tee …; echo "${PIPESTATUS[0]}"`) is shell-dependent: in **zsh** (the default shell here) `PIPESTATUS` is unset — the array is lowercase `pipestatus` and 1-indexed — so `EXIT=` comes out empty and you can't tell pass from fail. Redirecting to a file and reading `$?` is the command's own exit code and works identically in bash and zsh. Read the captured output from the file in the next step.
 
 - If `EXIT=0` → typecheck passed; proceed to step 2.
 - If `EXIT≠0` → DO NOT run the build. Show the user the failure region (see "Output shaping" below) and STOP.
@@ -38,7 +40,7 @@ npx tsc --noEmit 2>&1 | tee /tmp/tsc.out; echo "EXIT=${PIPESTATUS[0]}"
 ### Step 2 — production build (only if typecheck passed)
 
 ```bash
-$PM run build 2>&1 | tee /tmp/build.out; echo "EXIT=${PIPESTATUS[0]}"
+$PM run build > /tmp/build.out 2>&1; echo "EXIT=$?"
 ```
 
 - If `EXIT=0` → done. Report "typecheck + build clean".
@@ -67,6 +69,7 @@ typecheck: 0 errors | build: success (Xs)
 ## Anti-patterns
 
 - ❌ `npm run build 2>&1 | tail -10` — guessed tail length; misses early errors
+- ❌ `… | tee out; echo "${PIPESTATUS[0]}"` — `PIPESTATUS` is empty in zsh; the exit check silently fails. Redirect to a file and read `$?` instead (see Step 1).
 - ❌ Running build before typecheck — wastes time when types are broken
 - ❌ Running these in the wrong cwd — always confirm `pwd` shows the project root
 - ❌ Reporting "build looks good" without showing the EXIT code
