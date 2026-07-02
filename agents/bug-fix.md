@@ -1,5 +1,5 @@
 ---
-model: claude-opus-4-8
+model: fable
 name: bug-fix
 description: Trace the full user flow to find the root cause of a bug. Reads all related code and crafts a comprehensive fix plan before making changes. Use when something is broken and you need a thorough diagnosis. <example>user: 'Users are getting logged out randomly after checkout' assistant: 'I'll use the bug-fix agent to trace the full flow and find the root cause.'</example>
 tools: Read, Grep, Glob, Bash

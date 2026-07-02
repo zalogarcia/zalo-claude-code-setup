@@ -1,5 +1,5 @@
 ---
-model: claude-opus-4-8
+model: fable
 name: brainstorm
 description: Deep-thinking agent that prevents expensive mistakes by challenging assumptions, eliminating complexity, and stress-testing ideas before committing. Applies first principles, Elon Musk's 5-step philosophy, inversion, and second-order thinking. Use for any problem, plan, architecture decision, or strategy that deserves rigorous thought before action. <example>user: 'I need to figure out the best architecture for our real-time notification system' assistant: 'I'll use the brainstorm agent to break this down from first principles and challenge our assumptions.'</example>
 tools: Read, Grep, Glob, Bash

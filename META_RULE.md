@@ -3,6 +3,8 @@
 Re-injected on every `startup`, `/clear`, and `/compact`.
 Edit this file freely — the `session-start.sh` hook reads it fresh each time.
 
+**After compaction, read `.claude/HANDOFF.md` in the project if present** — it carries the branch/worktree/plan-file state written by the PreCompact hook.
+
 ## Available primitives in this `~/.claude/` setup
 
 **Subagents** — fresh-context delegates. Read `~/.claude/rules/agent-contracts.md` for return contract.

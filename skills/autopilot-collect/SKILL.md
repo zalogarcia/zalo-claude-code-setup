@@ -1,6 +1,6 @@
 ---
 name: autopilot-collect
-description: List all /autopilot worktrees + branches in the current repo with their terminal_state, commits ahead of a base, files touched, and task summary. Use when the user asks "which autopilots finished", "show pending autopilot runs", "what's left to merge", or as the discovery step inside /autopilot-merge. Returns a TSV table — parse it; don't paste it raw into the conversation.
+description: List all /autopilot worktrees + branches in the current repo with their terminal_state, commits ahead of a base, files touched, and task summary. Use when the user asks "which autopilots finished", "check autopilots", "all autopilots finished", "autopilots completed", "show pending autopilot runs", "what's left to merge", or as the discovery step inside /autopilot-merge. Returns a TSV table — parse it; don't paste it raw into the conversation.
 ---
 
 Discover all `autopilot/*` worktrees in the current repo with state, by reading `git worktree list --porcelain` + each worktree's `.autopilot/state.json`. Deterministic shell — no agent dispatch, no decision-making.

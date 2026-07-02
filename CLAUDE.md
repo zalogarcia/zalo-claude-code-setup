@@ -40,6 +40,7 @@ When starting work on a new project, or when the user asks to initialize/set up 
 - `/autopilot` — Autonomous multi-phase orchestrator: plan → implement → QA → commit
 - `/bug` — Trace, diagnose, fix, validate
 - `/qa-loop` — Iterative audit-and-fix loop
+- `/goal` — Goal-driven convergence loop: pin goal + acceptance criteria to .claude/GOAL.md, implement → live-verify → repeat until all criteria pass (lighter /autopilot sibling)
 - `/plan` — Plan with brainstorm + principles verification
 - `/brainstorm` — Deep thinking, challenge assumptions
 
@@ -186,3 +187,6 @@ Most MCP tools are **deferred** (schemas not loaded until invoked via `ToolSearc
 ## Learned Mistakes
 
 <!-- Add entries here when corrected. Format: "- **Context**: What to do instead (date)" -->
+
+- **Sleep-polling**: foreground `sleep`/poll loops are blocked by the harness — use `run_in_background: true` for long commands, or the Monitor tool with an until-condition, to wait (2026-07-02)
+- **Background agents**: after dispatching background agents, don't strand their completion notifications — stay resumable (end the turn cleanly with pending work noted) or schedule a wakeup to collect results (2026-07-02)

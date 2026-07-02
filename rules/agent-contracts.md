@@ -60,6 +60,20 @@ After the H2 marker, the agent's body must signal one of four states (adapted fr
 **Concerns / Blockers:** [if any]
 ```
 
+## Mandatory Dispatch Boilerplate
+
+Orchestrators MUST include this block verbatim in every implementation-agent prompt (any dispatch that will Edit/Write files). No paraphrasing — each line prevents a failure mode observed in real runs.
+
+```text
+## File-handling rules (non-negotiable)
+- Read every file BEFORE Edit/Write — the harness rejects edits to unread files.
+- Glob before Read; never construct paths from memory.
+- After any compaction or "file modified" notice, re-Read the file before editing.
+- For plan/status files, Write the whole file — do not string-Edit them.
+- ToolSearch/deferred tools are unavailable in subagent contexts — use only the tools you were granted.
+- Consult docs/CODEMAP.md (if present) before grepping; prefer code-pathfinder find_symbol/get_callers over repeated grep.
+```
+
 ## Why This Matters
 
 Without contracts, subagent returns are prose blobs the orchestrator must re-read entirely. Contracts let:

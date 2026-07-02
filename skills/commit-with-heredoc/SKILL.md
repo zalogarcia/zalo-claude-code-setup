@@ -80,6 +80,15 @@ git status                       # confirm clean working tree
 git log -1 --format="%H %s"      # verify the commit landed
 ```
 
+**A commit may time out but LAND.** Pre-commit scans/hooks (e.g. the
+gitleaks-guard PreToolUse hook) can eat the Bash tool-call budget, so the
+tool call reports a timeout while git completed the commit underneath. Before
+retrying a "timed out" commit, ALWAYS run `git log -1 --format="%H %s"` and
+check whether the commit already landed — a blind retry creates a duplicate
+commit (or commits a half-restaged index). If it landed: done, do not retry.
+If it didn't: `git status` to confirm the index is still staged as intended,
+then retry.
+
 **Do NOT push** without explicit user permission (per `~/.claude/CLAUDE.md` "Git & Deployment"). The user must say "push" before any `git push`.
 
 ## Pre-commit hook failures

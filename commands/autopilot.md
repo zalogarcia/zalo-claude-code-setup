@@ -84,10 +84,10 @@ After autopilot reports COMPLETE / COMPLETE_WITH_ISSUES:
 - API_RETRY_BACKOFF = [30, 60, 120]
 - MAX_QA_AUDIT_PARTITIONS = 5
 - QA_FANOUT_THRESHOLD = 8
-- SUBAGENT_MODEL = "opus"
+- SUBAGENT_MODEL = "fable"
 - FALLBACK_MODEL = "sonnet"
 
-Every `Agent` tool call MUST include `model: "opus"`. Default models are insufficient for autonomous code work. **The one exception:** if a dispatch returns a model-inaccessibility signal (the pinned model itself is unavailable — see `~/.claude/rules/api-retry.md` "Model Inaccessibility & Fallback"), re-dispatch the same prompt with `model: FALLBACK_MODEL`, log it, and continue. A pin that can't be honored because the model is gone degrades to the fallback rather than deadlocking — it never silently drops to a default model.
+Every `Agent` tool call MUST include `model: "fable"`. Default models are insufficient for autonomous code work. **The one exception:** if a dispatch returns a model-inaccessibility signal (the pinned model itself is unavailable — see `~/.claude/rules/api-retry.md` "Model Inaccessibility & Fallback"), re-dispatch the same prompt with `model: FALLBACK_MODEL`, log it, and continue. A pin that can't be honored because the model is gone degrades to the fallback rather than deadlocking — it never silently drops to a default model.
 
 ## Orchestrator Identity
 
@@ -100,7 +100,7 @@ Dispatch a sub-agent. "Just this once" = autopilot violation.
 
 **You are a router, not a worker.** Your job is to:
 
-1. Dispatch sub-agents with clear, self-contained prompts (always `model: "opus"`)
+1. Dispatch sub-agents with clear, self-contained prompts (always `model: "fable"`)
 2. Run bash verification commands (build, typecheck, git)
 3. Read `.autopilot/` state files and agent returns
 4. Track progress in `.autopilot/state.json`
@@ -125,7 +125,7 @@ Dispatch a sub-agent. "Just this once" = autopilot violation.
 - Push to any remote branch (write `PUSH_PENDING: <branch> <N commits>` to report.md instead)
 - Auto-claim uncommitted changes as the task
 - Read or write source code directly
-- Dispatch a sub-agent without `model: "opus"` (the sole exception: `model: FALLBACK_MODEL` on a model-inaccessibility re-dispatch, per the API Dispatch Wrapper Protocol)
+- Dispatch a sub-agent without `model: "fable"` (the sole exception: `model: FALLBACK_MODEL` on a model-inaccessibility re-dispatch, per the API Dispatch Wrapper Protocol)
 
 **YOU MUST ALWAYS:**
 
@@ -158,13 +158,13 @@ Decision arrives:
 │    YES → deterministic heuristic. No agent needed.
 │
 ├─ Is it a known-pattern lookup? (dep conflict, type cascade, missing import)
-│    YES → dispatch specialist: general-purpose agent (model: "opus")
+│    YES → dispatch specialist: general-purpose agent (model: "fable")
 │
 ├─ Is it a debate over evidence? (QA flagged something — real bug or not?)
-│    YES → re-dispatch qa-agent (model: "opus") with stricter prompt
+│    YES → re-dispatch qa-agent (model: "fable") with stricter prompt
 │
 └─ Is it a genuine architectural fork? (A vs B, both viable, irreversible)
-      YES → dispatch brainstorm (model: "opus"). Should be <10% of decisions.
+      YES → dispatch brainstorm (model: "fable"). Should be <10% of decisions.
       Track brainstorm_count. If >= MAX_BRAINSTORM_ESCALATIONS → pick simplest option.
 ```
 
@@ -368,7 +368,7 @@ If a return body contains BOTH api-retry signals AND external-blocker signals, E
 
 Every sub-agent prompt MUST be self-contained. Include:
 
-1. **Model**: `model: "opus"` on every Agent call — non-negotiable
+1. **Model**: `model: "fable"` on every Agent call — non-negotiable
 2. **Task**: exactly what to build/fix/investigate
 3. **Scope**: exact file paths from repo root (no globs). Which are OFF-LIMITS (all files from ALL other work units, not just current batch)
 4. **Context**: relevant decisions, constraints, what other agents are doing
@@ -376,6 +376,7 @@ Every sub-agent prompt MUST be self-contained. Include:
 6. **Git safety**: "Read `~/.claude/rules/git-safety.md`. Stage specific files ONLY with `git add <file>`. Never `git add -A` or `git add .`. Never push. Never amend."
 7. **Stage-only rule**: "Stage your changes with `git add <specific files>`. Do NOT commit — the orchestrator commits after verifying the batch."
 8. **Contract**: which completion marker to emit
+9. **File-handling boilerplate**: paste the "Mandatory Dispatch Boilerplate" block from `~/.claude/rules/agent-contracts.md` verbatim into every implementation-agent prompt (already embedded in the Phase 2 template below)
 
 ### Parallelization Criteria
 
@@ -401,7 +402,7 @@ If ANY criterion fails → sequential dispatch.
 | Browser verification             | `live-test`                                | `## UI VERIFIED` / `UI ISSUES FOUND` / `BLOCKED`                |
 | Complex planning                 | `safe-planner`                             | `## PLAN READY` / `NEEDS DECISION` / `BLOCKED`                  |
 
-Note: For bug fixing, dispatch `general-purpose` (model: "opus") with explicit instructions to diagnose AND fix. The `bug-fix` agent type only diagnoses (emits `ROOT CAUSE FOUND`), it does not ship code.
+Note: For bug fixing, dispatch `general-purpose` (model: "fable") with explicit instructions to diagnose AND fix. The `bug-fix` agent type only diagnoses (emits `ROOT CAUSE FOUND`), it does not ship code.
 
 ### Return Contract
 
@@ -485,6 +486,7 @@ Updated after EVERY micro-step (phase transition, batch completion, QA iteration
   "rubric_source": "user",
   "outcomes_iteration": 0,
   "pre_autopilot_sha": "aaa0000",
+  "active_integration_branch": "dev",
   "build_command": "npm run build",
   "test_command": "npx vitest run",
   "typecheck_command": "npx tsc --noEmit",
@@ -549,7 +551,7 @@ Cleared back to `null` when the dispatch returns successfully or hits a non-retr
 2. **Compact** — `/compact` with:
    ```
    Keep: I am /autopilot — a pure orchestrator. I NEVER read/write source code.
-   I dispatch sub-agents (always model: "opus") and run bash verification commands.
+   I dispatch sub-agents (always model: "fable") and run bash verification commands.
    Current phase: {next_phase}. Task: {task_summary}.
    All state is on disk in .autopilot/. After compaction:
    1. Re-read ~/.claude/commands/autopilot.md (re-establish orchestrator identity)
@@ -654,6 +656,17 @@ echo "{\"ts\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\",\"tier\":\"system\",\"decision\
 
 The four state.json fields (`worktree_spawned`, `worktree_path`, `worktree_branch`, `terminal_state`) are now durable on disk from this point forward — every subsequent state write must use `jq` (or equivalent) to MERGE additional fields rather than overwriting state.json wholesale, or these four will be lost.
 
+**Worktree bootstrap gate (runs immediately after the spawn block — BEFORE dispatching any implementer):** a fresh worktree has NO `node_modules`; dispatching implementers before install yields dozens of phantom TS2307/module-not-found errors. Hard ABORT on failure (per pre-flight doctrine — no recovery menu).
+
+```bash
+if [ -f package-lock.json ]; then
+  npm ci || { echo "ERROR: npm ci failed in fresh worktree — cannot dispatch implementers" >&2; exit 1; }
+  if grep -q '"typescript"' package.json && [ ! -x node_modules/.bin/tsc ]; then
+    echo "ERROR: node_modules/.bin/tsc missing after npm ci — bootstrap incomplete" >&2; exit 1
+  fi
+fi
+```
+
 **Worktree cleanup**: After a clean Phase 5 terminal_state (`complete` or `complete_with_issues`), the worktree remains on disk for the user to inspect/push. The user prunes via `git worktree remove <path>` once they've reviewed the run. Autopilot does NOT auto-remove the worktree (the user may want to inspect commits or resume).
 
 **Pre-flight checks (deterministic auto-resolution — NEVER render a recovery menu):**
@@ -686,7 +699,7 @@ Record task to `.autopilot/task.md`.
 
 **Inventory (Explore agent):**
 
-Dispatch `Explore` agent (model: "opus"):
+Dispatch `Explore` agent (model: "fable"):
 
 ```
 Inventory this project. Report:
@@ -765,7 +778,7 @@ If a rubric is found at any of paths 1-4:
 
 **Auto-generate rubric** (when no path 1-4 hit):
 
-Dispatch `safe-planner` (model: "opus") with:
+Dispatch `safe-planner` (model: "fable") with:
 
 ```
 Task: (read .autopilot/task.md)
@@ -842,7 +855,7 @@ If no `--plan` flag was passed:
 
 **Pre-supplied plan branch:** If `state.json.plan_source == "supplied"`, skip the safe-planner dispatch below — the plan is already at `.autopilot/plan.md`. Parse it into `work_units` (same parsing logic as the auto-decompose branch), then **skip Phase 1.5 entirely** (the supplied plan was already verified by `/plan`'s verification loop — re-running brainstorm + grader would be redundant work the user explicitly opted out of). Log `plan_verification_skipped: supplied` to `decisions.log` and proceed directly to Phase 2.
 
-**Auto-decompose branch (default):** Dispatch `safe-planner` (model: "opus") with:
+**Auto-decompose branch (default):** Dispatch `safe-planner` (model: "fable") with:
 
 ```
 Task: {task_description}
@@ -880,6 +893,7 @@ Wait for `## PLAN READY`:
 
 - Save to `.autopilot/plan.md`
 - Parse into `work_units` array in state.json
+- Merge `active_integration_branch` into state.json (`jq` merge, never overwrite): `dev` if a local `dev` branch exists, else `main`. `/autopilot-merge` and follow-up sessions read it to know which branch this run integrates onto.
 - If 0 work units and planner says "skip to verification" → set `current_phase: "verification"`, skip to Phase 4
 
 If `## NEEDS DECISION` → Tiered Decision Protocol
@@ -897,7 +911,7 @@ Otherwise, run both gates **in parallel** (single message, two Agent calls):
 
 ```
 # Gate 1 — Brainstorm-vet (correctness/completeness)
-Dispatch brainstorm (model: "opus"):
+Dispatch brainstorm (model: "fable"):
   Apply your critical-thinking pass to this plan.
   Original task: (read .autopilot/task.md)
   Plan: (read .autopilot/plan.md)
@@ -911,7 +925,7 @@ Dispatch brainstorm (model: "opus"):
   Emit ## EXPLORATION COMPLETE.
 
 # Gate 2 — Principles-vet (alignment with stated standards)
-Dispatch outcomes-grader (model: "opus"):
+Dispatch outcomes-grader (model: "fable"):
   Grade this PLAN (not code) against the engineering-principles rubric.
   Artifact: (read .autopilot/plan.md)
   Rubric: (read ~/.claude/rules/engineering-principles.md)
@@ -958,10 +972,10 @@ FOR each batch (ordered by dependency):
   units = work_units where all dependencies have status "done"
 
   # ── Dispatch ALL units in this batch simultaneously ──
-  # (one message, multiple Agent calls, each with model: "opus")
+  # (one message, multiple Agent calls, each with model: "fable")
   FOR each unit in batch (PARALLEL):
 
-    Dispatch agent (type = unit.agent_type, model: "opus") with prompt:
+    Dispatch agent (type = unit.agent_type, model: "fable") with prompt:
     """
     You are an autonomous implementation agent for /autopilot.
 
@@ -1003,6 +1017,13 @@ FOR each batch (ordered by dependency):
     - Read ~/.claude/rules/testing-safety.md — admin email only for live testing
     - Read ~/.claude/rules/git-safety.md — stage specific files only
     - Make minimal, focused changes — no refactoring beyond scope
+    - File-handling rules (~/.claude/rules/agent-contracts.md "Mandatory Dispatch Boilerplate" — binding):
+      - Read every file BEFORE Edit/Write — the harness rejects edits to unread files.
+      - Glob before Read; never construct paths from memory.
+      - After any compaction or "file modified" notice, re-Read the file before editing.
+      - For plan/status files, Write the whole file — do not string-Edit them.
+      - ToolSearch/deferred tools are unavailable in your context — use only the tools you were granted.
+      - Consult docs/CODEMAP.md (if present) before grepping; prefer code-pathfinder find_symbol/get_callers over repeated grep.
     - After implementation, STAGE ONLY (do NOT commit):
       git add {unit.files joined by space}
     - Never use git add -A or git add .
@@ -1058,7 +1079,7 @@ FOR each batch (ordered by dependency):
 
   # Handle pre-commit hook failure:
   IF commit fails:
-    Dispatch general-purpose agent (model: "opus"):
+    Dispatch general-purpose agent (model: "fable"):
       "Pre-commit hook rejected the commit. Hook output: {output}.
        Fix the issues, re-stage the files. Do NOT commit."
     Retry commit. If fails again after 2 attempts → log, unstage, continue.
@@ -1069,7 +1090,7 @@ FOR each batch (ordered by dependency):
     IF type errors:
       attempts = 0
       WHILE type errors AND attempts < MAX_BUILD_FIX_ATTEMPTS:
-        Dispatch general-purpose agent (model: "opus"):
+        Dispatch general-purpose agent (model: "fable"):
           "Type errors after integrating batch {N}: {errors}.
            Fix the integration issues. Stage fixes only, do not commit.
            Return contract: ≤50 lines, structured (Status/Summary/Files staged/Verification/Concerns).
@@ -1124,7 +1145,7 @@ LOOP:
 
       IF exit 0: BREAK (build OK)
 
-      Dispatch general-purpose agent (model: "opus"):
+      Dispatch general-purpose agent (model: "fable"):
         "Build/typecheck errors (attempt {build_attempts}/{MAX_BUILD_FIX_ATTEMPTS}):
          {error output}
          Diagnose the root cause. Fix the code. Stage fixes only, do not commit.
@@ -1145,7 +1166,7 @@ LOOP:
   IF test_command is not null:
     Run: {test_command} 2>&1
     IF failures:
-      Dispatch general-purpose agent (model: "opus"):
+      Dispatch general-purpose agent (model: "fable"):
         "Test failures: {output}. Fix the CODE, not the tests.
          Stage fixes. Do not commit.
          Return contract: ≤50 lines, structured (Status/Summary/Files staged/Verification/Concerns).
@@ -1192,9 +1213,9 @@ LOOP:
     partitions = [(pid, files) for (pid, files) in partitions if files]
 
   # ── Dispatch all partitions in PARALLEL ──
-  # Single message, one Agent call per partition, all model: "opus"
+  # Single message, one Agent call per partition, all model: "fable"
   FOR each (partition_id, files) in partitions (PARALLEL):
-    Dispatch qa-agent (model: "opus"):
+    Dispatch qa-agent (model: "fable"):
       "Audit these files: {files}.
        You are auditing a SUBSET of the changed files; other qa-agents are
        auditing other subsets in parallel. You MAY read files outside your
@@ -1248,7 +1269,7 @@ LOOP:
   IF prev_issues is not null AND overlap(current_issues, prev_issues) >= 80%:
     IF brainstorm_count >= MAX_BRAINSTORM_ESCALATIONS: BREAK with issues noted
     brainstorm_count += 1
-    Dispatch brainstorm (model: "opus"):
+    Dispatch brainstorm (model: "fable"):
       "QA found near-identical issues after fixes: {list}. What's structurally wrong?"
     Wait for ## EXPLORATION COMPLETE. Extract recommendation paragraph.
     IF recommendation contains "needs human" / "escalate" / "unclear" → BREAK.
@@ -1274,10 +1295,10 @@ LOOP:
 
   # Dispatch fix agents — parallel if disjoint files
   IF all bug_groups touch disjoint files:
-    FOR each group (PARALLEL, single message, model: "opus"):
+    FOR each group (PARALLEL, single message, model: "fable"):
       recurring = any bug where bug_tracker[sig] >= MAX_SAME_BUG_APPEARANCES
       IF recurring:
-        Dispatch general-purpose (model: "opus"):
+        Dispatch general-purpose (model: "fable"):
           "Recurring bug ({count}x): {desc} in {file}.
            This has been 'fixed' {count} times and keeps coming back.
            Trace the actual root cause — don't patch symptoms.
@@ -1287,7 +1308,7 @@ LOOP:
            No code blocks >10 lines. Overflow → .autopilot/agent_returns/qa-fix-iter{iteration}-{file_slug}.md.
            Emit ## IMPLEMENTATION COMPLETE."
       ELSE:
-        Dispatch general-purpose (model: "opus"):
+        Dispatch general-purpose (model: "fable"):
           "Fix these bugs in {file}: {bug_list}.
            Self-plan: read the file, understand full context, then fix.
            Minimal changes only. Stage fixes. Do not commit.
@@ -1303,7 +1324,7 @@ LOOP:
   IF staged changes:
     git commit -m "[autopilot] QA iteration {iteration} — fixed {count} bugs"
     IF commit fails (hook rejection):
-      Dispatch general-purpose (model: "opus"):
+      Dispatch general-purpose (model: "fable"):
         "Pre-commit hook blocked: {output}. Fix and re-stage."
       Retry. If fails 2x → log, `git reset HEAD`, continue loop.
 
@@ -1333,7 +1354,7 @@ Orchestrator runs all verification commands directly:
    ```
    If matches → CRITICAL finding, log to report.
 6. **Frontend** (if applicable AND `live_test_enabled`):
-   Dispatch `live-test` (model: "opus") → wait for:
+   Dispatch `live-test` (model: "fable") → wait for:
    - `## UI VERIFIED` → pass
    - `## UI ISSUES FOUND` → if QA budget remains, dispatch fix agent, loop back to Phase 3
    - `## BLOCKED` → log as DEGRADED, continue
@@ -1355,7 +1376,7 @@ Orchestrator runs all verification commands directly:
      IF iteration > MAX_OUTCOMES_RETRIES: BREAK
 
      # ── Step 7a: Grade ──
-     Dispatch outcomes-grader (model: "opus") with:
+     Dispatch outcomes-grader (model: "fable") with:
        """
        Grade the delivered artifact against the rubric.
        Rubric: (read .autopilot/rubric.md)
@@ -1409,7 +1430,7 @@ Orchestrator runs all verification commands directly:
 
        # ── Step 7c: Dispatch creation/completion agents ──
        Group items by whether they touch disjoint files (parallelize) vs same files (sequential).
-       FOR each unmet item (PARALLEL when disjoint, single message, model: "opus"):
+       FOR each unmet item (PARALLEL when disjoint, single message, model: "fable"):
          Dispatch general-purpose with prompt:
            """
            You are an autonomous completion agent for /autopilot.
@@ -1467,7 +1488,7 @@ Orchestrator runs all verification commands directly:
        IF staged changes:
          git commit -m "[autopilot] Outcomes iter {iteration}: {N} rubric items addressed"
          IF commit fails (hook rejection):
-           Dispatch general-purpose (model: "opus") to fix hook output, re-stage.
+           Dispatch general-purpose (model: "fable") to fix hook output, re-stage.
            Retry commit. If fails 2x → log, `git reset HEAD`, continue loop.
 
        # ── Step 7e: Re-run prerequisite gates (typecheck/build/tests) ──
@@ -1483,7 +1504,7 @@ Orchestrator runs all verification commands directly:
            attempts += 1
            Run: {gate} 2>&1
            IF exit 0: BREAK (gate passes)
-           Dispatch general-purpose (model: "opus"):
+           Dispatch general-purpose (model: "fable"):
              "Outcomes-iter {iteration} introduced gate failures (attempt {attempts}/{MAX_BUILD_FIX_ATTEMPTS}):
               {error output}
               Fix the CODE (not the test, not the gate command). Stage fixes only.
@@ -1696,7 +1717,7 @@ Task: {summary}
 - Read or write source code in the orchestrator thread
 - Fix bugs inline — always dispatch sub-agent
 - Plan inline — always dispatch safe-planner or let sub-agent self-plan
-- Dispatch a sub-agent without `model: "opus"`
+- Dispatch a sub-agent without `model: "fable"`
 - Let sub-agents commit — orchestrator commits sequentially
 - Use `git add -A` or `git add .` (sub-agents or orchestrator)
 - Skip QA because "changes are small"

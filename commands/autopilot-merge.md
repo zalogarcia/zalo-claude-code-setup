@@ -29,6 +29,19 @@ for arg in "$@"; do
 done
 
 if [ -z "$TARGET" ] || [ "$TARGET" = "--push" ]; then
+  # Prefer the integration branch recorded by autopilot runs — check the cwd's
+  # .autopilot/state.json first, then each worktree's. Ignore branches that
+  # don't exist locally.
+  for SJ in .autopilot/state.json $(git worktree list --porcelain | awk '/^worktree /{print substr($0,10)"/.autopilot/state.json"}'); do
+    [ -f "$SJ" ] || continue
+    CAND=$(jq -r '.active_integration_branch // empty' "$SJ" 2>/dev/null)
+    if [ -n "$CAND" ] && git show-ref --verify --quiet "refs/heads/$CAND"; then
+      TARGET="$CAND"; break
+    fi
+  done
+fi
+
+if [ -z "$TARGET" ] || [ "$TARGET" = "--push" ]; then
   if git show-ref --verify --quiet refs/heads/dev; then
     TARGET="dev"
   elif git show-ref --verify --quiet refs/heads/main; then
