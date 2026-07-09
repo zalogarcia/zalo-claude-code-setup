@@ -130,6 +130,11 @@ When the user asks to build, design, or create frontend UI (page, component, lan
 
 This chain has been historically underused — don't force it for small changes. For full-page or component-library work, the full chain is high-value.
 
+## Video B-Roll Production
+
+- For branded motion-graphics "slides b-roll" (VSL-style slides, YouTube segment graphics, teleprompter-script b-roll), invoke the `machine-editorial-broll` skill — it maps script beats to the Machine Editorial comp archetypes in the Remotion studio at `~/dev/operator-broll`. Do not hand-roll Remotion comps outside the studio's token/move system.
+- Disambiguation: `machine-editorial-broll` = branded typographic slide graphics (Remotion). `seedance` = AI-generated _footage_ (people, scenes, camera moves). A "b-roll" request for graphics/slides goes to the former; filmed-looking clips go to the latter.
+
 ## When to Use Subagents
 
 Subagents protect the main context window and enable parallelism. Use them deliberately:
