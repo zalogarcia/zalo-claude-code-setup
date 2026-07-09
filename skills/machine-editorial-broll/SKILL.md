@@ -66,10 +66,9 @@ npx remotion render <CompId> out/<CompId>.mp4                      # final 1080p
 npx remotion render <CompId> out/<CompId>-4k.mp4 --scale=2
 # Transparent overlay (play graphics OVER the talking head):
 # pass transparent:true (Stage drops void/grid/orb/grain/vignette) and force PNG frames.
-# ProRes profile 4444 is set in remotion.config.ts — do NOT pass --prores-profile on the CLI
-# (the CLI coerces 4444 to a number and rejects it).
-npx remotion render <CompId> out/<CompId>.mov --codec=prores --image-format=png --pixel-format=yuva444p10le --props='{"transparent":true}'
-# Verify alpha landed: ffprobe shows pix_fmt=yuva444p… (the "a" = alpha)
+npx remotion render <CompId> out/<CompId>.mov --codec=prores --prores-profile=4444 --image-format=png --pixel-format=yuva444p10le --props='{"transparent":true}'
+# Verify alpha landed: ffprobe shows pix_fmt=yuva444p… (the "a" = alpha).
+# Never set Config.setProResProfile in remotion.config.ts — it is global and breaks all h264 renders.
 ```
 
 5. **Theme variants** — pass a theme via `defaultProps` in Root.tsx (`VIOLET`, `TEAL`, or a new one in `tokens.ts`). Change only: accent hue, grid density/size, bg tint, orb on/off. Gold, red, green are brand constants — never re-map them.
