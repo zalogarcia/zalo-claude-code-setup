@@ -90,7 +90,18 @@ Rules:
 - InstancedMesh for particle counts (matrix updates in a `useLayoutEffect` keyed on frame); additive-blended `useGlowTexture` sprites for atmosphere; no post-processing dependency needed — emissive colors + 2D grain/vignette carry the look.
 - Overlay text over busy 3D gets `textShadow: '0 2px 30px rgba(2,6,13,0.95), 0 0 60px rgba(2,6,13,0.8)'`.
 - Render/still with `--gl=angle`. `@remotion/three` version must EXACTLY match the remotion version.
-- 3D archetype boilerplates to grow here: PARTICLE-DATA (built: TokenField3D), ORB-SCENE (cold open with a real 3D orb), TUNNEL-JOURNEY (canvas mode in true z), OBJECT-SHOWCASE (GLB turntable).
+- 3D archetype boilerplates: PARTICLE-DATA (built: TokenField3D), GLOSS (built: GlossClump3D), ORB-SCENE (cold open with a real 3D orb), TUNNEL-JOURNEY (canvas mode in true z), OBJECT-SHOWCASE (GLB turntable).
+
+### GLOSS — the Apple-clean look (default 3D for hero/brand beats)
+
+`GlossClump3D` is the reference. Few LARGE objects, never confetti; premium comes from physically-based light, not motion complexity:
+
+- `Scene3D environment="room"` — offline PMREM RoomEnvironment gives the studio window-reflections that make surfaces read expensive. `fog={null}` (fog kills gloss).
+- Material recipe: `meshPhysicalMaterial` `roughness≈0.22 metalness=0 clearcoat=1 clearcoatRoughness≈0.12 envMapIntensity≈1.15`; sphereGeometry 64 segments.
+- Palette by count for ~16 objects: ~6 deep navy, ~5 accent blue, ~4 white, exactly ONE gold (the payoff accent, same law as Ignite).
+- Long lens (fov 30–35) + NEGATIVE SPACE: object cluster ≤ ~55% of frame height, floats in void, camera dollies slowly. Filling the frame is the failure mode.
+- Clump layout: seeded scatter + fixed-iteration overlap-relaxation in `useMemo` (deterministic physics-look without a physics engine); staggered fly-ins (i\*4 frames, 40f expoOut); group rotates ~0.004 rad/frame; per-object breathe ≤0.006.
+- Type stays 2D, enters soft (no stomp over serene 3D), with the standard text-shadow.
 
 ## Documentary mode (EXHIBIT)
 
