@@ -38,6 +38,7 @@ The b-roll behaves like an intelligent system composing a document in real time 
 | `Stage.tsx`   | `Stage`                                                                                                           | void → grid → orb → content → chrome → live grain → vignette; `transparent` for alpha overlays |
 | `world.tsx`   | `World`, `WorldCam`, `Station`, `WorldPath`                                                                       | infinite-canvas mode: keyframed camera over a huge canvas; path = The Line at map scale        |
 | `plates.tsx`  | `ImagePlate`, `ExhibitFrame`                                                                                      | AI-image plates (masked RGBA) + documentary exhibit framing                                    |
+| `three3d.tsx` | `Scene3D`, `CameraPose`, `mulberry32`, `useGlowTexture`                                                           | Three.js layer (@remotion/three): real 3D depth/particles UNDER the 2D type system             |
 
 ### Canonical comps (`src/comps/`)
 
@@ -76,6 +77,20 @@ When a beat benefits from an object/scene (product core, mockup, metaphor), gene
 2. Key + trim: `ffmpeg -i in.png -vf "colorkey=0x00FF00:0.32:0.08,despill=type=green" -frames:v 1 out.png`, then PIL `getchannel('A').getbbox()` crop. Save to `public/assets/`.
 3. Composite with `<ImagePlate src="assets/x.png" width at over kenBurns sweepAt/>` — entrance settle, continuous Ken Burns, ambient accent glow, optional documentary highlight sweep. Wrap in `<ExhibitFrame label="fig. 01 — ...">` for the documentary look.
 4. Style guardrail: ask for dark-navy + electric-blue palette, premium 3D render, rim light — plates must sit in the Stage's world, not on top of it.
+
+## 3D layer (Three.js under the type)
+
+For beats that earn real depth — cold opens, data visualizations, payoff atmospheres — put a Three.js world UNDER the 2D system, never instead of it. Typography, The Line, chrome, grain stay 2D on top (3D text is always a downgrade); the scene provides parallax, particles, volume. Pilot: `TokenField3D` (4,000 instanced tokens; camera flies through; they assemble into the context-window slab as the term stamps in 2D).
+
+Rules:
+
+- `Scene3D` inside a normal `Stage` (`orb={false}`); scene background/fog use theme void colors so grain/vignette blend.
+- DETERMINISM IS LAW: all motion pure functions of `useCurrentFrame`; `mulberry32(seed)` for any randomness — `Math.random`/`useFrame` deltas break renders.
+- Camera pose = pure `(frame) => {pos, look, fov}`; impacts = the same decaying SHAKE pattern applied to the pose.
+- InstancedMesh for particle counts (matrix updates in a `useLayoutEffect` keyed on frame); additive-blended `useGlowTexture` sprites for atmosphere; no post-processing dependency needed — emissive colors + 2D grain/vignette carry the look.
+- Overlay text over busy 3D gets `textShadow: '0 2px 30px rgba(2,6,13,0.95), 0 0 60px rgba(2,6,13,0.8)'`.
+- Render/still with `--gl=angle`. `@remotion/three` version must EXACTLY match the remotion version.
+- 3D archetype boilerplates to grow here: PARTICLE-DATA (built: TokenField3D), ORB-SCENE (cold open with a real 3D orb), TUNNEL-JOURNEY (canvas mode in true z), OBJECT-SHOWCASE (GLB turntable).
 
 ## Documentary mode (EXHIBIT)
 
