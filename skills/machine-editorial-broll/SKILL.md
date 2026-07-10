@@ -90,7 +90,9 @@ Rules:
 - InstancedMesh for particle counts (matrix updates in a `useLayoutEffect` keyed on frame); additive-blended `useGlowTexture` sprites for atmosphere; no post-processing dependency needed — emissive colors + 2D grain/vignette carry the look.
 - Overlay text over busy 3D gets `textShadow: '0 2px 30px rgba(2,6,13,0.95), 0 0 60px rgba(2,6,13,0.8)'`.
 - Render/still with `--gl=angle`. `@remotion/three` version must EXACTLY match the remotion version.
-- 3D archetype boilerplates: PARTICLE-DATA (built: TokenField3D), GLOSS (built: GlossClump3D), ORB-SCENE (cold open with a real 3D orb), TUNNEL-JOURNEY (canvas mode in true z), OBJECT-SHOWCASE (GLB turntable).
+- 3D archetype boilerplates: PARTICLE-DATA (built: TokenField3D), GLOSS (built: GlossClump3D — look-dev), ORB-SCENE (built: OrbScene3D — the production template for hero beats), TUNNEL-JOURNEY (canvas mode in true z), OBJECT-SHOWCASE (GLB turntable).
+- GLOSS is a QUALITY TIER, not a subject: apply the material/lighting/negative-space recipe to BRAND-MEANINGFUL objects (the orb, the machine core, panels, steps) — never generic balls/confetti for production. OrbScene3D is the reference application: one opaque dark-clearcoat mass (`#0E2242`, roughness 0.26, clearcoat 1) + additive `useGlowTexture` halo sprite behind it + one blue rim pointLight.
+- GOTCHA: `meshPhysicalMaterial transmission` (glass interiors) renders black/hollow under headless `--gl=angle` — do NOT use transmission; fake glass depth with opaque clearcoat + halo + rim light.
 
 ### GLOSS — the Apple-clean look (default 3D for hero/brand beats)
 
