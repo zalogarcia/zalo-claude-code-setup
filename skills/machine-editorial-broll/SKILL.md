@@ -17,6 +17,7 @@ Skip for: AI-generated _footage_ (people, scenes, camera moves → `seedance`), 
 
 The b-roll behaves like an intelligent system composing a document in real time — the opposite of bouncy influencer kinetic-type. Implementation lives in `/Users/zalo/dev/operator-broll/src/system/`. Non-negotiable laws:
 
+0. **DEPICTION LAW (governs everything below).** Every animation depicts the idea being spoken at that moment — never "random stuff that looks cool." The mute test: watching the beat with no audio, a viewer should still get what this beat is ABOUT (a cost colliding, three steps assembling, a false fix being killed, a machine waking up). Motion is meaning: things that die get slashed, things that grow roll up, things that assemble fly in, the turn in a story is a literal turn in the path. Craft (gloss, camera, grain) sets the QUALITY; the script line sets the SUBJECT. If you can't name which script phrase a visual depicts, it doesn't go on screen.
 1. **Mobile-first beats.** A segment is a chain of ~2s full-screen beats (`Beat`), max ~5 words on screen at once, key type 150–210px, center-weighted. Never compose a dense slide.
 2. **Two speeds only.** Machine-time (linear: line draws, typing, counters) and settle-time (expoOut entrances). Nothing bounces, ever. Camera shake is a decaying mechanical kick, not a spring.
 3. **Motion never stops.** One continuous `SegmentCamera` move (push + drift) across the whole segment — no per-beat resets (`Beat push={false}`); beats overlap on enter/exit; grain is live (per-frame).
@@ -90,13 +91,14 @@ Rules:
 - InstancedMesh for particle counts (matrix updates in a `useLayoutEffect` keyed on frame); additive-blended `useGlowTexture` sprites for atmosphere; no post-processing dependency needed — emissive colors + 2D grain/vignette carry the look.
 - Overlay text over busy 3D gets `textShadow: '0 2px 30px rgba(2,6,13,0.95), 0 0 60px rgba(2,6,13,0.8)'`.
 - Render/still with `--gl=angle`. `@remotion/three` version must EXACTLY match the remotion version.
+- The 3D subject must BE what the script line talks about (Depiction Law): tokens for "tokens", the orb for the machine's presence, panels for "install". 3D that's merely atmospheric while the VO makes a specific claim = decoration; cut it or make it literal.
 - 3D archetype boilerplates: PARTICLE-DATA (built: TokenField3D), GLOSS (built: GlossClump3D — look-dev), ORB-SCENE (built: OrbScene3D — the production template for hero beats), TUNNEL-JOURNEY (canvas mode in true z), OBJECT-SHOWCASE (GLB turntable).
 - GLOSS is a QUALITY TIER, not a subject: apply the material/lighting/negative-space recipe to BRAND-MEANINGFUL objects (the orb, the machine core, panels, steps) — never generic balls/confetti for production. OrbScene3D is the reference application: one opaque dark-clearcoat mass (`#0E2242`, roughness 0.26, clearcoat 1) + additive `useGlowTexture` halo sprite behind it + one blue rim pointLight.
 - GOTCHA: `meshPhysicalMaterial transmission` (glass interiors) renders black/hollow under headless `--gl=angle` — do NOT use transmission; fake glass depth with opaque clearcoat + halo + rim light.
 
-### GLOSS — the Apple-clean look (default 3D for hero/brand beats)
+### GLOSS — the Apple-clean look (default 3D quality tier for hero/brand beats)
 
-`GlossClump3D` is the reference. Few LARGE objects, never confetti; premium comes from physically-based light, not motion complexity:
+`GlossClump3D` is material/lighting look-dev ONLY (abstract spheres fail the Depiction Law — never ship its subject). Copy its recipe onto objects the script is actually about (`OrbScene3D` is the shipped example). Few LARGE objects, never confetti; premium comes from physically-based light, not motion complexity:
 
 - `Scene3D environment="room"` — offline PMREM RoomEnvironment gives the studio window-reflections that make surfaces read expensive. `fog={null}` (fog kills gloss).
 - Material recipe: `meshPhysicalMaterial` `roughness≈0.22 metalness=0 clearcoat=1 clearcoatRoughness≈0.12 envMapIntensity≈1.15`; sphereGeometry 64 segments.
@@ -132,11 +134,12 @@ When a script needs one of these, build it from the named ingredients — do NOT
 - Every segment: ONE hero moment (an ignite, a slash, a reveal, a number). If a segment has two, split it.
 - **The stomp is hero-only.** `LetterStamp aberrate` (chromatic split) + ImpactFlash + thock together = the stomp; reserve it for the segment's verdict/payoff moment — one, maybe two per segment. Supporting lines enter soft: `WordCascade`, `Rise`, or plain `LetterStamp` (aberrate defaults to false). If every line stomps, nothing does.
 - Pain gets no color. Money always rolls. Red never emphasizes — it kills.
+- **Run the mute test on every beat** before rendering: with the audio off, does the motion still say what the VO says? If the answer is "it looks premium but says nothing," the beat fails the Depiction Law — replace the visual with one that acts out the script phrase.
 - When in doubt, remove words and enlarge what remains.
 
 ## How to use
 
-1. **Read the script**, split into segments (one idea cluster each, 7–9s), then each segment into beats (~2s, one idea). Per segment decide: which archetype comp to copy, the ONE gold payoff (if any), what dies in red, what number rolls.
+1. **Read the script**, split into segments (one idea cluster each, 7–9s), then each segment into beats (~2s, one idea). Per beat, write the script phrase it covers and name what the visual DEPICTS from that phrase (Depiction Law — the mute test) before picking any move. Per segment decide: which archetype comp to copy, the ONE gold payoff (if any), what dies in red, what number rolls.
 2. **Choreograph The Line first** — it's the spine. Write the `LineKeyframe[]` in ABSOLUTE comp frames: born → slash/underline (draw ~8–12f) → hold → release (collapse w→0 toward travel direction, `o:0`) → next station → final settle. Route travels AROUND text blocks (dive below), never through them. Beat-internal `at` values (LetterStamp/DimAt/SFX) are SEQUENCE-RELATIVE — keep a beat map comment reconciling both.
 3. **Beats on a 6-frame overlap grid**: `from` = previous from + duration − 6; final beat gets `exit={0}` and ends exactly at `durationInFrames`.
 4. **Impacts + SFX on landing frames**: `SegmentCamera impacts={[...]}` = `ImpactFlash at` frames = SFX hit frames. SFX placeholders live in `public/sfx/` (thock=stamp, slash=kill, riser=into payoff, shimmer=ignite) — place via `<Sequence from><Audio src={staticFile(...)} volume={0.4-0.9}/></Sequence>`.
@@ -169,6 +172,7 @@ Report per segment: `✓ <CompId> — <duration>s → out/<CompId>.mp4` plus one
 
 ## Anti-patterns
 
+- ❌ Decoration without depiction — a visual chosen because it "looks cool" rather than because it acts out the script phrase (the GlossClump lesson: 16 beautiful spheres that depicted nothing). Fails the mute test → doesn't ship
 - ❌ Bouncy/elastic easing, overshoot, springs — the look this system exists against
 - ❌ Slide-density in a beat: >5 words simultaneously, lists, side-by-side columns on mobile cuts
 - ❌ The Line crossing through a text block while traveling — route below/around
