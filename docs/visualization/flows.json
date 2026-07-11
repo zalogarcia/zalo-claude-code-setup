@@ -255,5 +255,99 @@
       }
     ],
     "canonical": false
+  },
+  "command.goal": {
+    "label": "/goal — Goal-driven autonomous loop: write .claude/GOAL.md (goal + acceptance criteria),",
+    "description": "Goal-driven autonomous loop: write .claude/GOAL.md (goal + acceptance criteria), then implement → verify each criterion with fresh evidence (live-test when UI/live behavior is in scope) → update status → repeat until all criteria pass or blocked. Use when the user states a goal with autonomy + completion phrasing: \"until perfect\", \"do it all yourself\", \"fix without me\", \"live test until all is perfect\", \"brainstorm and fix without me\".",
+    "steps": [
+      {
+        "node": "command.goal",
+        "caption": "User invokes /goal"
+      },
+      {
+        "node": "agent.live-test",
+        "via": "dispatch",
+        "caption": "Dispatch live-test",
+        "marker": "## UI VERIFIED"
+      },
+      {
+        "node": "agent.brainstorm",
+        "via": "dispatch",
+        "caption": "Dispatch brainstorm",
+        "marker": "## EXPLORATION COMPLETE"
+      },
+      {
+        "node": "agent.bug-fix",
+        "via": "dispatch",
+        "caption": "Dispatch bug-fix",
+        "marker": "## BLOCKED"
+      },
+      {
+        "node": "agent.frontend-specialist",
+        "via": "dispatch",
+        "caption": "Dispatch frontend-specialist",
+        "marker": "## IMPLEMENTATION COMPLETE"
+      },
+      {
+        "node": "rule.agent-contracts",
+        "via": "include",
+        "caption": "@-includes agent-contracts"
+      },
+      {
+        "node": "rule.gates",
+        "via": "include",
+        "caption": "@-includes gates"
+      },
+      {
+        "node": "rule.verification-patterns",
+        "via": "include",
+        "caption": "@-includes verification-patterns"
+      },
+      {
+        "node": "rule.testing-safety",
+        "via": "include",
+        "caption": "@-includes testing-safety"
+      },
+      {
+        "node": "rule.problem-solving",
+        "via": "include",
+        "caption": "@-includes problem-solving"
+      },
+      {
+        "node": "rule.checkpoints",
+        "via": "include",
+        "caption": "@-includes checkpoints"
+      }
+    ],
+    "canonical": false
+  },
+  "command.redesign": {
+    "label": "/redesign — Redesign an existing UI through collaborative brainstorming, mockup generation, ",
+    "description": "Redesign an existing UI through collaborative brainstorming, mockup generation, implementation, and visual verification. Use when the user says \"redesign this page/component\", \"same UI redesign exercise\", \"3 options on an html page\", or \"brainstorm options and let me pick\".",
+    "steps": [
+      {
+        "node": "command.redesign",
+        "caption": "User invokes /redesign"
+      },
+      {
+        "node": "agent.brainstorm",
+        "via": "dispatch",
+        "caption": "Dispatch brainstorm",
+        "marker": "## EXPLORATION COMPLETE"
+      },
+      {
+        "node": "agent.live-test",
+        "via": "dispatch",
+        "caption": "Dispatch live-test",
+        "marker": "## UI VERIFIED"
+      },
+      {
+        "node": "agent.frontend-specialist",
+        "via": "dispatch",
+        "caption": "Dispatch frontend-specialist",
+        "marker": "## IMPLEMENTATION COMPLETE"
+      }
+    ],
+    "canonical": false
   }
 }
