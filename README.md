@@ -51,15 +51,15 @@ This loop ensures nothing slips through. Plan first, execute small, verify alway
 
 Make sure these are installed first:
 
-| Tool              | Install Command                                          | Purpose                                               |
-| ----------------- | -------------------------------------------------------- | ----------------------------------------------------- |
-| **Node.js + npm** | [nodejs.org](https://nodejs.org/) or `brew install node` | Required for MCP servers and npx                      |
-| **Python 3**      | `brew install python3`                                   | Required for hook scripts (gitleaks guard, stop-hook) |
-| **jq**            | `brew install jq`                                        | Required for hook JSON parsing                        |
-| **Prettier**      | `npm install -g prettier`                                | Auto-formats TS/JS/CSS/JSON/MD/HTML on every edit     |
-| **Ruff**          | `pip install ruff`                                       | Auto-formats and lints Python on every edit           |
-| **uv**            | `pip install uv`                                         | Optional — used by some skills' Python scripts        |
-| **Git**           | `brew install git`                                       | Required for cloning this repo                        |
+| Tool              | Install Command                                          | Purpose                                                          |
+| ----------------- | -------------------------------------------------------- | ---------------------------------------------------------------- |
+| **Node.js + npm** | [nodejs.org](https://nodejs.org/) or `brew install node` | Required for MCP servers and npx                                 |
+| **Python 3**      | `brew install python3`                                   | Required for hook scripts (gitleaks guard, SQL guard, stop-hook) |
+| **jq**            | `brew install jq`                                        | Required for hook JSON parsing                                   |
+| **Prettier**      | `npm install -g prettier`                                | Auto-formats TS/JS/CSS/JSON/MD/HTML on every edit                |
+| **Ruff**          | `pip install ruff`                                       | Auto-formats and lints Python on every edit                      |
+| **uv**            | `pip install uv`                                         | Optional — used by some skills' Python scripts                   |
+| **Git**           | `brew install git`                                       | Required for cloning this repo                                   |
 
 ### Run the Installer
 
@@ -249,7 +249,7 @@ Curated design principles and learned patterns that persist across all conversat
 | **apple_hig_menu_bar_principles.md** | Menu bar anatomy, ordering, labeling, shortcuts from Apple HIG                                            |
 | **feedback_finetuning_style.md**     | Learned response style preferences for training data generation                                           |
 
-### Auto-Formatting Hooks
+### Hooks (Auto-Formatting + Guards)
 
 Every time Claude edits a file, it's automatically formatted before you see it:
 
@@ -258,14 +258,21 @@ Every time Claude edits a file, it's automatically formatted before you see it:
 | `.ts` `.tsx` `.js` `.jsx` `.css` `.json` `.md` `.html` | **Prettier**                 | `npm install -g prettier` |
 | `.py`                                                  | **Ruff** (format + lint fix) | `pip install ruff`        |
 
+Two guard hooks enforce rules at the tool layer — prose rules get skipped under momentum; hooks don't:
+
+| Hook               | Fires On                   | What It Enforces                                                                                                                                                                                     |
+| ------------------ | -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **gitleaks-guard** | Every Bash command         | Blocks `git commit`/`push` if gitleaks finds secrets in the staged changes.                                                                                                                          |
+| **sql-guard**      | Supabase MCP `execute_sql` | Blocks multi-statement SQL (only the last statement's result returns — silent data loss), and holds the session's first data query until the schema has been consulted (kills column-name guessing). |
+
 ### Global CLAUDE.md
 
 Behavioral rules that make Claude Code significantly more effective:
 
 - **Self-learning** — When you correct Claude, it saves the lesson to prevent repeating mistakes
-- **Project init** — Auto-scaffolds `.claude/CLAUDE.md` and `.claude/rules/` for new projects
+- **Project init** — The `repo-init` skill scaffolds `.claude/CLAUDE.md`, path-scoped `.claude/rules/`, and `.claude/VERIFY.md` — a per-repo verification manifest listing every deploy surface and THE proof signal that a change is actually live on it (prevents "deploy verified" claims that cite the wrong pipeline's green run). Commands in the manifest are verified by actually running them, never guessed.
 - **Frontend chain (opt-in)** — For UI work, optionally invoke the chain: design search → aesthetic guidelines → specialist agent (with Aceternity UI + shadcn/ui MCP access + Apple HIG principles) → visual verification
-- **Verification-first** — Claude proves changes work (build, test, screenshot) instead of saying "this should work"
+- **Verification-first** — Claude proves changes work (build, test, screenshot) instead of saying "this should work". Coverage claims ("all X handled") additionally require a measured denominator — N of N plus the method — because audits show coverage claims, not correctness claims, are where overclaiming happens
 - **Context survival** — Plans are written to files so they survive compaction and session transfers
 - **Subagent orchestration** — Complex work is delegated to specialized agents, keeping the main context clean
 - **Compact + plan files** — long workflows write to `docs/PLAN.md` so they survive `/compact` and context limits
@@ -315,7 +322,7 @@ pip install ruff uv
 | Dependency    | Required By                                | Required?   |
 | ------------- | ------------------------------------------ | ----------- |
 | Node.js + npm | MCP servers (github, supabase, playwright) | Yes         |
-| Python 3      | Hook scripts (gitleaks guard, stop-hook)   | Yes         |
+| Python 3      | Hook scripts (gitleaks, SQL guard, stop)   | Yes         |
 | jq            | Hook JSON parsing                          | Yes         |
 | Git           | Installer (clones this repo)               | Yes         |
 | Prettier      | Auto-format hook (TS/JS/CSS/JSON/MD/HTML)  | Recommended |
@@ -367,17 +374,24 @@ If a recommended tool is missing, the relevant hook or MCP will silently skip �
 │   │   └── SKILL.md                  # Meta-skill: author new skills with the established pattern
 │   ├── cf-crawl/
 │   │   └── SKILL.md                  # Web scraper
-│   └── live-test-campaign/
-│       └── SKILL.md                  # Master live-test campaign methodology
+│   ├── live-test-campaign/
+│   │   └── SKILL.md                  # Master live-test campaign methodology
+│   └── repo-init/
+│       └── SKILL.md                  # Per-repo scaffold: CLAUDE.md + rules + VERIFY.md manifest
 ├── workflows/
 │   ├── qa-audit.js                   # Parallel bug hunt + adversarial verify (backs /qa-loop)
-│   └── plan-verify.js                # Two-gate plan verification (backs /plan)
+│   ├── plan-verify.js                # Two-gate plan verification (backs /plan)
+│   └── fable-insights.js             # Session self-audit: friction report + proposed config diffs
 ├── hooks/
-│   ├── settings.json                 # Hook configuration (formatters, gitleaks, session-start)
+│   ├── settings.json                 # Hook configuration (formatters, guards, session-start)
 │   ├── continue-if-incomplete.py     # Stop hook: nudge Claude if it halts mid-task
 │   ├── reset-stop-counter.sh         # UserPromptSubmit hook: reset nudge counter
 │   ├── session-start.sh              # SessionStart hook: inject META_RULE.md
-│   └── gitleaks-guard.py             # PreToolUse hook: block git commit/push if gitleaks finds secrets
+│   ├── gitleaks-guard.py             # PreToolUse hook: block git commit/push if gitleaks finds secrets
+│   └── sql-guard.py                  # PreToolUse hook: block multi-statement SQL + schema-first hold
+├── scripts/
+│   ├── statusline.sh                 # Status line for the Claude Code TUI
+│   └── repo-drift-check.sh           # List repos missing the .claude scaffold (pairs with repo-init)
 ├── mcp/
 │   ├── mcp-servers.json              # MCP server configs
 │   └── env-template.json             # API key placeholders
