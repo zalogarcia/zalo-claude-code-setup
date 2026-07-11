@@ -241,7 +241,7 @@ head -20 "$f" | jq -r '.timestamp // empty' | head -1 | cut -c1-10
 (if empty, fall back to the file mtime date: stat -f '%Sm' -t '%Y-%m-%d' "$f")
 - project: basename of the parent directory. Strip the leading "-Users-zalo-" prefix (e.g. "-Users-zalo-dev-delta-agents" -> "dev-delta-agents"). If the directory basename is exactly "-Users-zalo", use "home".
 
-Run Step 3 as SEPARATE simple Bash calls per file (one jq/wc/head/stat invocation at a time). Do NOT use while-read loops, process substitution, command substitution, xargs -I, or any compound shell construct: this workflow also runs headless under a scoped permission allowlist that only matches simple commands (and pipelines of them) — a compound loop gets DENIED there and the whole manifest fails. Many small calls are fine; a typical week is under ~100 files.
+Run Step 3 as SEPARATE simple Bash calls per file (one jq/wc/head/stat invocation at a time). Do NOT use while-read loops, process substitution, command substitution, xargs -I, or any compound shell construct — keep each call auditable and permission-friendly. Many small calls are fine; a typical week is under ~100 files.
 
 STEP 4 — classify:
 substantive = user_msgs >= 3 OR lines >= 100. Everything else is trivial.

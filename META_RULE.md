@@ -28,7 +28,7 @@ Edit this file freely — the `session-start.sh` hook reads it fresh each time.
 
 - `qa-audit` — read-only parallel bug hunt + adversarial verify (backs `/qa-loop`). Its return carries `verdict`/`untrusted`: dead finder or skeptic agents mark the run UNTRUSTED — never treat an untrusted result as a clean pass; resume the run instead.
 - `plan-verify` — brainstorm + principles gates with one revision pass (backs `/plan`)
-- `fable-insights` — weekly self-audit: one deep-analysis agent per session transcript, args `{days}`; scheduled Mondays 09:12 via launchd (`com.zalo.claude-weekly-insights`), writes report + PROPOSED_CHANGES to `~/.claude/usage-data/`
+- `fable-insights` — self-audit: one deep-analysis agent per session transcript, args `{days}` (default 7). Run it interactively when you want a usage audit; it writes a friction report + PROPOSED_CHANGES to `~/.claude/usage-data/`. (Interactive only — the Workflow tool's background-callback model can't complete under a one-shot headless `claude -p`, so it is not cron-scheduled.)
 
 **Hooks (mechanized rules)** — prose rules that were historically skipped are now enforced at the tool layer:
 

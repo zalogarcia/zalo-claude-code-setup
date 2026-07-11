@@ -181,7 +181,7 @@ Deterministic multi-agent scripts at `~/.claude/workflows/`, run via Claude Code
 | ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **qa-audit**       | Read-only audit backing `/qa-loop`: 6 parallel finder agents (correctness, wiring, error-handling, security, stubs, types-edges) + 2-skeptic adversarial verification — returns only confirmed bugs. Dead finder/skeptic agents mark the verdict UNTRUSTED instead of counting as a clean pass. |
 | **plan-verify**    | Plan Verification Loop backing `/plan`: brainstorm critique + principles grading in parallel, then at most one `safe-planner` revision pass.                                                                                                                                                    |
-| **fable-insights** | Weekly self-audit: one deep-analysis agent per Claude Code session transcript (args `{days}`), producing a friction report + proposed config diffs. Pairs with `scripts/fable-weekly-insights.sh` for scheduled headless runs.                                                                  |
+| **fable-insights** | Self-audit: one deep-analysis agent per Claude Code session transcript (args `{days}`), producing a friction report + proposed config diffs. Run interactively when you want a usage audit.                                                                                                     |
 
 ### Shared Rules (16)
 
