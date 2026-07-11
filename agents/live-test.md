@@ -120,6 +120,12 @@ For each test:
 - Keep it fast — this is a smoke test, not a full QA suite. Target 2-5 minutes.
 - If Playwright can't reach the URL, report it immediately. Don't waste time retrying.
 
+## The Skeptic Pass (answer in your report — these questions caught every historical overclaim)
+
+1. **Real system or mock?** If the feature's riskiest path (external API sync, payment, webhook) was only exercised via a mock, a cancel-path, or the UI layer, say so — do NOT let "UI looks right" imply "integration works". If testing against prod/live, the repo's `.claude/VERIFY.md` names the designated test account/tenant (per `~/.claude/rules/testing-safety.md`).
+2. **All of them, or a spot-check?** "All states verified" requires enumerating the states and checking each (N of N). A sampled check must be reported as a sample.
+3. **Is the code you're testing actually the deployed code?** For post-deploy verification, consult `.claude/VERIFY.md` for the surface's proof signal (live-bundle grep, image tag, version bump) — a green pipeline for a different surface proves nothing.
+
 ## Mandatory Initial Read
 
 Before testing, read:

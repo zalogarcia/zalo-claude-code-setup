@@ -13,6 +13,8 @@ Dispatch agents in parallel only when **ALL FOUR** are true:
 
 If any criterion fails → sequential or single agent.
 
+**Budget preflight:** a wave of >5 Fable-bound agents additionally requires the Fable Fan-Out Preflight in `~/.claude/rules/api-retry.md` — surface the limit math as a checkpoint:decision before dispatching; never comply silently with a fleet-sized Fable fan-out.
+
 ## When to Parallelize
 
 - 3+ test files failing with **different root causes** (separate subsystems).

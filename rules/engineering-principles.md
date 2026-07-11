@@ -129,6 +129,12 @@ Add or refine outcomes as patterns emerge from real runs. Each outcome must be:
 - **Measure:** Plan's testing approach for live systems uses the project's designated admin email (per `~/.claude/rules/testing-safety.md`) OR explicitly states an alternative with reason.
 - **Applicable when:** plan includes integration tests against live services.
 
+### Outcome 4.4: Coverage claims carry measured denominators
+
+- **Why:** The 2026-07 60-session audit found every verification overclaim (4 of 4) was a coverage claim ("all X handled") backed by a spot-check. Correctness claims were never inflated; coverage claims were.
+- **Measure:** Every "all / every / complete / everything" claim in the plan (or artifact) pairs with a countable population and how it will be (or was) measured — "all N verticals" with N stated and enumerated, "every caption checked" with the checking method named. Bare universal claims with no denominator or method = FAIL.
+- **Applicable when:** plan or artifact makes a universal ("all/every") completeness claim.
+
 ---
 
 ## 5. Stack Alignment

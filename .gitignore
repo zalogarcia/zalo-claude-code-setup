@@ -52,3 +52,13 @@ jobs/
 
 # Archived deprecated subprojects (kept locally, not in repo)
 .archive/
+
+# runtime/junk (added 2026-07-11)
+.credentials.json
+.last-update-result.json
+*.dead-cloud-cluster-bak
+computer-use.lock
+daemon-auth*
+__pycache__/
+hooks/*.bak
+.claude/

@@ -238,7 +238,7 @@ install_hooks() {
 
     # Copy hook scripts (referenced by settings.json) into ~/.claude/hooks/
     mkdir -p "$CLAUDE_DIR/hooks"
-    for script in continue-if-incomplete.py reset-stop-counter.sh gitleaks-guard.py session-start.sh; do
+    for script in continue-if-incomplete.py reset-stop-counter.sh gitleaks-guard.py sql-guard.py session-start.sh; do
         if [ -f "$SCRIPT_DIR/hooks/$script" ]; then
             cp "$SCRIPT_DIR/hooks/$script" "$CLAUDE_DIR/hooks/$script"
             chmod +x "$CLAUDE_DIR/hooks/$script"
@@ -612,10 +612,10 @@ echo ""
 echo "What was installed:"
 echo "  - 6 slash commands (autopilot, autopilot-merge, bug, qa-loop, plan, brainstorm)"
 echo "  - 7 custom agents (qa-agent, safe-planner, live-test, frontend-specialist, bug-fix, outcomes-grader, brainstorm)"
-echo "  - 8 skills (typecheck-and-build, commit-with-heredoc, dev-server-restart, autopilot-collect, frontend-design, create-skill, cf-crawl, live-test-campaign)"
-echo "  - 2 workflows (qa-audit, plan-verify)"
+echo "  - 9 skills (typecheck-and-build, commit-with-heredoc, dev-server-restart, autopilot-collect, frontend-design, create-skill, cf-crawl, live-test-campaign, repo-init)"
+echo "  - 3 workflows (qa-audit, plan-verify, fable-insights)"
 echo "  - Global CLAUDE.md with workflow automation"
-echo "  - Hooks: PostToolUse formatting (Prettier + Ruff) + Vibe Island bridge (all events)"
+echo "  - Hooks: PostToolUse formatting (Prettier + Ruff) + SQL guard (multi-statement block + schema-first) + Vibe Island bridge (all events)"
 echo "  - 4 MCP servers (context7, playwright, github, supabase)"
 echo "  - xbar plugins (menu bar status for autoloop + quick launchers)"
 echo ""

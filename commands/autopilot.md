@@ -84,10 +84,11 @@ After autopilot reports COMPLETE / COMPLETE_WITH_ISSUES:
 - API_RETRY_BACKOFF = [30, 60, 120]
 - MAX_QA_AUDIT_PARTITIONS = 5
 - QA_FANOUT_THRESHOLD = 8
-- SUBAGENT_MODEL = "fable"
-- FALLBACK_MODEL = "sonnet"
+- THINKING_MODEL = "fable" (brainstorm / safe-planner / bug-fix-class dispatches)
+- WORKER_MODEL = "opus" (implementation waves, QA partitions, fix agents, Explore/general-purpose, live-test, outcomes-grader)
+- FALLBACK_MODEL = "opus" (model-inaccessibility re-dispatch — per api-retry.md; never sonnet)
 
-Every `Agent` tool call MUST include `model: "fable"`. Default models are insufficient for autonomous code work. **The one exception:** if a dispatch returns a model-inaccessibility signal (the pinned model itself is unavailable — see `~/.claude/rules/api-retry.md` "Model Inaccessibility & Fallback"), re-dispatch the same prompt with `model: FALLBACK_MODEL`, log it, and continue. A pin that can't be honored because the model is gone degrades to the fallback rather than deadlocking — it never silently drops to a default model.
+Every `Agent` tool call MUST include an explicit `model:` param, assigned by the CLAUDE.md "Subagent model policy — split by leverage": `model: "fable"` for thinking dispatches whose single output cascades (brainstorm, safe-planner, bug-fix-class diagnosis); `model: "opus"` for everything else — implementation waves, QA partitions, fix agents, Explore/general-purpose, live-test, outcomes-grader. Never omit the model: built-in agents without definition files inherit the session model, which silently re-creates the 2026-07-02 Fable fan-out limit exhaustion. **The one exception:** if a dispatch returns a model-inaccessibility signal (the pinned model itself is unavailable — see `~/.claude/rules/api-retry.md` "Model Inaccessibility & Fallback"), re-dispatch the same prompt with `model: FALLBACK_MODEL`, log it, and continue. A pin that can't be honored because the model is gone degrades to the fallback rather than deadlocking — it never silently drops to a default model.
 
 ## Orchestrator Identity
 
@@ -100,7 +101,7 @@ Dispatch a sub-agent. "Just this once" = autopilot violation.
 
 **You are a router, not a worker.** Your job is to:
 
-1. Dispatch sub-agents with clear, self-contained prompts (always `model: "fable"`)
+1. Dispatch sub-agents with clear, self-contained prompts (explicit `model:` per the split policy — fable for thinking, opus for the rest)
 2. Run bash verification commands (build, typecheck, git)
 3. Read `.autopilot/` state files and agent returns
 4. Track progress in `.autopilot/state.json`
@@ -125,7 +126,7 @@ Dispatch a sub-agent. "Just this once" = autopilot violation.
 - Push to any remote branch (write `PUSH_PENDING: <branch> <N commits>` to report.md instead)
 - Auto-claim uncommitted changes as the task
 - Read or write source code directly
-- Dispatch a sub-agent without `model: "fable"` (the sole exception: `model: FALLBACK_MODEL` on a model-inaccessibility re-dispatch, per the API Dispatch Wrapper Protocol)
+- Dispatch a sub-agent without an explicit `model:` param, or pin `model: "fable"` on fan-out/implementation/QA dispatches the split policy assigns to opus (the sole exception: `model: FALLBACK_MODEL` on a model-inaccessibility re-dispatch, per the API Dispatch Wrapper Protocol)
 
 **YOU MUST ALWAYS:**
 
@@ -158,10 +159,10 @@ Decision arrives:
 │    YES → deterministic heuristic. No agent needed.
 │
 ├─ Is it a known-pattern lookup? (dep conflict, type cascade, missing import)
-│    YES → dispatch specialist: general-purpose agent (model: "fable")
+│    YES → dispatch specialist: general-purpose agent (model: "opus")
 │
 ├─ Is it a debate over evidence? (QA flagged something — real bug or not?)
-│    YES → re-dispatch qa-agent (model: "fable") with stricter prompt
+│    YES → re-dispatch qa-agent (model: "opus") with stricter prompt
 │
 └─ Is it a genuine architectural fork? (A vs B, both viable, irreversible)
       YES → dispatch brainstorm (model: "fable"). Should be <10% of decisions.
@@ -368,7 +369,7 @@ If a return body contains BOTH api-retry signals AND external-blocker signals, E
 
 Every sub-agent prompt MUST be self-contained. Include:
 
-1. **Model**: `model: "fable"` on every Agent call — non-negotiable
+1. **Model**: explicit `model:` on every Agent call per the split policy (fable = brainstorm/safe-planner/bug-fix-class; opus = implementation/QA/exploration/fix waves) — non-negotiable
 2. **Task**: exactly what to build/fix/investigate
 3. **Scope**: exact file paths from repo root (no globs). Which are OFF-LIMITS (all files from ALL other work units, not just current batch)
 4. **Context**: relevant decisions, constraints, what other agents are doing
@@ -402,7 +403,7 @@ If ANY criterion fails → sequential dispatch.
 | Browser verification             | `live-test`                                | `## UI VERIFIED` / `UI ISSUES FOUND` / `BLOCKED`                |
 | Complex planning                 | `safe-planner`                             | `## PLAN READY` / `NEEDS DECISION` / `BLOCKED`                  |
 
-Note: For bug fixing, dispatch `general-purpose` (model: "fable") with explicit instructions to diagnose AND fix. The `bug-fix` agent type only diagnoses (emits `ROOT CAUSE FOUND`), it does not ship code.
+Note: For bug fixing, dispatch `general-purpose` (model: "opus") with explicit instructions to diagnose AND fix. The `bug-fix` agent type only diagnoses (emits `ROOT CAUSE FOUND`), it does not ship code.
 
 ### Return Contract
 
@@ -551,7 +552,7 @@ Cleared back to `null` when the dispatch returns successfully or hits a non-retr
 2. **Compact** — `/compact` with:
    ```
    Keep: I am /autopilot — a pure orchestrator. I NEVER read/write source code.
-   I dispatch sub-agents (always model: "fable") and run bash verification commands.
+   I dispatch sub-agents (explicit model per the split policy) and run bash verification commands.
    Current phase: {next_phase}. Task: {task_summary}.
    All state is on disk in .autopilot/. After compaction:
    1. Re-read ~/.claude/commands/autopilot.md (re-establish orchestrator identity)
@@ -699,10 +700,16 @@ Record task to `.autopilot/task.md`.
 
 **Inventory (Explore agent):**
 
-Dispatch `Explore` agent (model: "fable"):
+Dispatch `Explore` agent (model: "opus"):
 
 ```
 Inventory this project. Report:
+0. FIRST: read .claude/VERIFY.md if it exists — it is the verified source of
+   truth for build/test/typecheck commands, formatter hooks, deploy surfaces
+   with their proof signals, admin/test account, and schema snapshot location.
+   Report its contents as the primary answer for items 2-4 and 7 below and only
+   discover from scratch what VERIFY.md does not cover. If it does NOT exist,
+   state "VERIFY.md: missing" prominently.
 1. Tech stack (framework, language, key dependencies)
 2. Build command (check package.json scripts.build, Makefile, pyproject.toml, etc.)
 3. Test command (scripts.test, pytest, vitest, jest, etc.)
@@ -719,6 +726,8 @@ Write findings to .autopilot/project_context.md as structured markdown. The "Ava
 ```
 
 Parse the agent's findings into state.json fields: `build_command`, `test_command`, `typecheck_command`, `package_manager`, `admin_email`, `live_test_enabled` (false if no admin email found).
+
+If the inventory reported `VERIFY.md: missing`, log `verify_manifest_missing: run /repo-init` to `decisions.log` and surface it in the Phase 5 report's Remaining Issues — deploy-proof signals will have to be derived ad hoc this run, which is exactly the condition that produced the ECS-green-cited-for-a-Vercel-surface overclaim (2026-07 audit).
 
 **MERGE these fields into `.autopilot/state.json` — do NOT overwrite.** The Workspace Isolation block already seeded `worktree_spawned`, `worktree_path`, `worktree_branch`, and `terminal_state`; a wholesale `cat > state.json` here would wipe them and break the worktree banner + the resume contract. Use `jq` to merge:
 
@@ -925,7 +934,7 @@ Dispatch brainstorm (model: "fable"):
   Emit ## EXPLORATION COMPLETE.
 
 # Gate 2 — Principles-vet (alignment with stated standards)
-Dispatch outcomes-grader (model: "fable"):
+Dispatch outcomes-grader (model: "opus"):
   Grade this PLAN (not code) against the engineering-principles rubric.
   Artifact: (read .autopilot/plan.md)
   Rubric: (read ~/.claude/rules/engineering-principles.md)
@@ -972,10 +981,10 @@ FOR each batch (ordered by dependency):
   units = work_units where all dependencies have status "done"
 
   # ── Dispatch ALL units in this batch simultaneously ──
-  # (one message, multiple Agent calls, each with model: "fable")
+  # (one message, multiple Agent calls, each with model: "opus" — implementation wave per the split policy)
   FOR each unit in batch (PARALLEL):
 
-    Dispatch agent (type = unit.agent_type, model: "fable") with prompt:
+    Dispatch agent (type = unit.agent_type, model: "opus") with prompt:
     """
     You are an autonomous implementation agent for /autopilot.
 
@@ -1079,7 +1088,7 @@ FOR each batch (ordered by dependency):
 
   # Handle pre-commit hook failure:
   IF commit fails:
-    Dispatch general-purpose agent (model: "fable"):
+    Dispatch general-purpose agent (model: "opus"):
       "Pre-commit hook rejected the commit. Hook output: {output}.
        Fix the issues, re-stage the files. Do NOT commit."
     Retry commit. If fails again after 2 attempts → log, unstage, continue.
@@ -1090,7 +1099,7 @@ FOR each batch (ordered by dependency):
     IF type errors:
       attempts = 0
       WHILE type errors AND attempts < MAX_BUILD_FIX_ATTEMPTS:
-        Dispatch general-purpose agent (model: "fable"):
+        Dispatch general-purpose agent (model: "opus"):
           "Type errors after integrating batch {N}: {errors}.
            Fix the integration issues. Stage fixes only, do not commit.
            Return contract: ≤50 lines, structured (Status/Summary/Files staged/Verification/Concerns).
@@ -1145,7 +1154,7 @@ LOOP:
 
       IF exit 0: BREAK (build OK)
 
-      Dispatch general-purpose agent (model: "fable"):
+      Dispatch general-purpose agent (model: "opus"):
         "Build/typecheck errors (attempt {build_attempts}/{MAX_BUILD_FIX_ATTEMPTS}):
          {error output}
          Diagnose the root cause. Fix the code. Stage fixes only, do not commit.
@@ -1166,7 +1175,7 @@ LOOP:
   IF test_command is not null:
     Run: {test_command} 2>&1
     IF failures:
-      Dispatch general-purpose agent (model: "fable"):
+      Dispatch general-purpose agent (model: "opus"):
         "Test failures: {output}. Fix the CODE, not the tests.
          Stage fixes. Do not commit.
          Return contract: ≤50 lines, structured (Status/Summary/Files staged/Verification/Concerns).
@@ -1213,9 +1222,9 @@ LOOP:
     partitions = [(pid, files) for (pid, files) in partitions if files]
 
   # ── Dispatch all partitions in PARALLEL ──
-  # Single message, one Agent call per partition, all model: "fable"
+  # Single message, one Agent call per partition, all model: "opus"
   FOR each (partition_id, files) in partitions (PARALLEL):
-    Dispatch qa-agent (model: "fable"):
+    Dispatch qa-agent (model: "opus"):
       "Audit these files: {files}.
        You are auditing a SUBSET of the changed files; other qa-agents are
        auditing other subsets in parallel. You MAY read files outside your
@@ -1295,10 +1304,10 @@ LOOP:
 
   # Dispatch fix agents — parallel if disjoint files
   IF all bug_groups touch disjoint files:
-    FOR each group (PARALLEL, single message, model: "fable"):
+    FOR each group (PARALLEL, single message, model: "opus"):
       recurring = any bug where bug_tracker[sig] >= MAX_SAME_BUG_APPEARANCES
       IF recurring:
-        Dispatch general-purpose (model: "fable"):
+        Dispatch general-purpose (model: "opus"):
           "Recurring bug ({count}x): {desc} in {file}.
            This has been 'fixed' {count} times and keeps coming back.
            Trace the actual root cause — don't patch symptoms.
@@ -1308,7 +1317,7 @@ LOOP:
            No code blocks >10 lines. Overflow → .autopilot/agent_returns/qa-fix-iter{iteration}-{file_slug}.md.
            Emit ## IMPLEMENTATION COMPLETE."
       ELSE:
-        Dispatch general-purpose (model: "fable"):
+        Dispatch general-purpose (model: "opus"):
           "Fix these bugs in {file}: {bug_list}.
            Self-plan: read the file, understand full context, then fix.
            Minimal changes only. Stage fixes. Do not commit.
@@ -1324,7 +1333,7 @@ LOOP:
   IF staged changes:
     git commit -m "[autopilot] QA iteration {iteration} — fixed {count} bugs"
     IF commit fails (hook rejection):
-      Dispatch general-purpose (model: "fable"):
+      Dispatch general-purpose (model: "opus"):
         "Pre-commit hook blocked: {output}. Fix and re-stage."
       Retry. If fails 2x → log, `git reset HEAD`, continue loop.
 
@@ -1354,10 +1363,19 @@ Orchestrator runs all verification commands directly:
    ```
    If matches → CRITICAL finding, log to report.
 6. **Frontend** (if applicable AND `live_test_enabled`):
-   Dispatch `live-test` (model: "fable") → wait for:
+   Dispatch `live-test` (model: "opus") → wait for:
    - `## UI VERIFIED` → pass
    - `## UI ISSUES FOUND` → if QA budget remains, dispatch fix agent, loop back to Phase 3
    - `## BLOCKED` → log as DEGRADED, continue
+
+6b. **Deploy-proof signal check** (only if this run deploys or the user will push after):
+For EACH deploy surface touched by the change set, look up its proof signal in
+`.claude/VERIFY.md` ("Deploy surfaces & THE proof signal for each") and use THAT
+signal — never a different pipeline's green status. Dashboard-only commits that
+skip ECS jobs are the canonical trap: ECS green proves nothing for a
+Vercel-deployed surface. If VERIFY.md is missing, derive the signal from the CI
+config for the changed paths, state the derivation explicitly in the report, and
+keep the `verify_manifest_missing` note in Remaining Issues.
 
 7. **Outcomes grading gate** (only if `state.json.rubric_path` is set, and gates 1-6 passed):
 
@@ -1376,7 +1394,7 @@ Orchestrator runs all verification commands directly:
      IF iteration > MAX_OUTCOMES_RETRIES: BREAK
 
      # ── Step 7a: Grade ──
-     Dispatch outcomes-grader (model: "fable") with:
+     Dispatch outcomes-grader (model: "opus") with:
        """
        Grade the delivered artifact against the rubric.
        Rubric: (read .autopilot/rubric.md)
@@ -1430,7 +1448,7 @@ Orchestrator runs all verification commands directly:
 
        # ── Step 7c: Dispatch creation/completion agents ──
        Group items by whether they touch disjoint files (parallelize) vs same files (sequential).
-       FOR each unmet item (PARALLEL when disjoint, single message, model: "fable"):
+       FOR each unmet item (PARALLEL when disjoint, single message, model: "opus"):
          Dispatch general-purpose with prompt:
            """
            You are an autonomous completion agent for /autopilot.
@@ -1488,7 +1506,7 @@ Orchestrator runs all verification commands directly:
        IF staged changes:
          git commit -m "[autopilot] Outcomes iter {iteration}: {N} rubric items addressed"
          IF commit fails (hook rejection):
-           Dispatch general-purpose (model: "fable") to fix hook output, re-stage.
+           Dispatch general-purpose (model: "opus") to fix hook output, re-stage.
            Retry commit. If fails 2x → log, `git reset HEAD`, continue loop.
 
        # ── Step 7e: Re-run prerequisite gates (typecheck/build/tests) ──
@@ -1504,7 +1522,7 @@ Orchestrator runs all verification commands directly:
            attempts += 1
            Run: {gate} 2>&1
            IF exit 0: BREAK (gate passes)
-           Dispatch general-purpose (model: "fable"):
+           Dispatch general-purpose (model: "opus"):
              "Outcomes-iter {iteration} introduced gate failures (attempt {attempts}/{MAX_BUILD_FIX_ATTEMPTS}):
               {error output}
               Fix the CODE (not the test, not the gate command). Stage fixes only.
@@ -1717,7 +1735,7 @@ Task: {summary}
 - Read or write source code in the orchestrator thread
 - Fix bugs inline — always dispatch sub-agent
 - Plan inline — always dispatch safe-planner or let sub-agent self-plan
-- Dispatch a sub-agent without `model: "fable"`
+- Dispatch a sub-agent without an explicit `model:` param (split policy: fable for thinking dispatches, opus for everything else)
 - Let sub-agents commit — orchestrator commits sequentially
 - Use `git add -A` or `git add .` (sub-agents or orchestrator)
 - Skip QA because "changes are small"

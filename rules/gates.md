@@ -79,21 +79,40 @@ Skip any step = lying, not verifying
 
 ### Common Failures Table
 
-| Claim                          | Requires                                                | Not Sufficient                     |
-| ------------------------------ | ------------------------------------------------------- | ---------------------------------- |
-| Tests pass                     | Test command output: 0 failures                         | Previous run, "should pass"        |
-| Linter clean                   | Linter output: 0 errors                                 | Partial check, extrapolation       |
-| Build succeeds                 | Build command: exit 0                                   | Linter passing, logs look good     |
-| Bug fixed                      | Test original symptom: passes                           | Code changed, assumed fixed        |
-| Regression test works          | Red-green cycle verified                                | Test passes once                   |
-| Agent completed                | VCS diff shows changes                                  | Agent reports "success"            |
-| Requirements met               | Line-by-line checklist                                  | Tests passing                      |
-| Supabase edge deploy succeeded | `mcp__supabase__get_logs` shows no errors in last 5 min | `supabase functions deploy` exit 0 |
-| Frontend renders correctly     | `live-test` agent screenshot + console clean            | Component compiles                 |
+| Claim                          | Requires                                                     | Not Sufficient                          |
+| ------------------------------ | ------------------------------------------------------------ | --------------------------------------- |
+| Tests pass                     | Test command output: 0 failures                              | Previous run, "should pass"             |
+| Linter clean                   | Linter output: 0 errors                                      | Partial check, extrapolation            |
+| Build succeeds                 | Build command: exit 0                                        | Linter passing, logs look good          |
+| Bug fixed                      | Test original symptom: passes                                | Code changed, assumed fixed             |
+| Regression test works          | Red-green cycle verified                                     | Test passes once                        |
+| Agent completed                | VCS diff shows changes                                       | Agent reports "success"                 |
+| Requirements met               | Line-by-line checklist                                       | Tests passing                           |
+| Supabase edge deploy succeeded | `mcp__supabase__get_logs` shows no errors in last 5 min      | `supabase functions deploy` exit 0      |
+| Frontend renders correctly     | `live-test` agent screenshot + console clean                 | Component compiles                      |
+| Coverage ("all X handled")     | Measured denominator: N of N + the measurement method        | Spot-check, sampling, "looks complete"  |
+| Deploy is live                 | The repo's `.claude/VERIFY.md` proof signal for THAT surface | Green CI, a different pipeline's signal |
+
+### Coverage Claims Need Denominators
+
+Every verification overclaim in the 2026-07 60-session audit (all 4 of them) had the same shape: a **coverage** claim ("all captions verified", "everything mined", "shipped everywhere") backed by a spot-check. Correctness claims were never inflated — coverage claims were.
+
+```
+NO "ALL / EVERY / EVERYTHING" CLAIMS WITHOUT A MEASURED DENOMINATOR
+```
+
+Before claiming any form of "all X are done/valid/covered":
+
+1. COUNT the population: how many X exist? (command output, not estimate)
+2. MEASURE every member (or state the exact subset checked and say "spot-check", never "all")
+3. CLAIM with both numbers and the method: "612 of 612 caption PNGs within bounds, measured by pixel bbox" — not "all captions verified"
+
+If measuring every member is impractical, the honest claim is "N of M checked (sampling)" — which is a partial claim, and must be labeled as one.
 
 ### Red Flags — STOP
 
 - Using "should", "probably", "seems to"
+- Claiming "all/every/everything" without a counted denominator (see Coverage Claims above)
 - Expressing satisfaction before verification ("Great!", "Perfect!", "Done!")
 - About to commit/push/PR without running tests in this turn
 - Trusting agent success reports without checking the diff

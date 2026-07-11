@@ -271,23 +271,44 @@ const finderResults = await parallel(
       }),
   ),
 );
+// FALSE-GREEN GUARD (added 2026-07-11): a finder killed by a usage limit or API
+// error returns null, and filter(Boolean) used to erase it — an all-dead run
+// returned confirmed:[] indistinguishable from a genuinely clean audit. Caught
+// manually 4+ times in the 60-session audit (twice the rerun found real bugs).
+// Dead finders now poison the verdict instead of counting as clean.
+const deadFinders = DIMENSIONS.filter((d, i) => !finderResults[i]).map(
+  (d) => d.key,
+);
+if (deadFinders.length) {
+  log(
+    `⚠️  ${deadFinders.length}/${DIMENSIONS.length} finder agents died (${deadFinders.join(", ")}) — verdict is UNTRUSTED. Resume/rerun this workflow; do NOT treat the result as a clean pass.`,
+  );
+}
 const raw = finderResults
   .filter(Boolean)
   .flatMap((r) => (r && r.findings) || []);
 const unique = dedupe(raw);
 log(
-  `${raw.length} raw findings across ${DIMENSIONS.length} dimensions → ${unique.length} after dedupe`,
+  `${raw.length} raw findings across ${DIMENSIONS.length - deadFinders.length}/${DIMENSIONS.length} surviving dimensions → ${unique.length} after dedupe`,
 );
 
 if (unique.length === 0) {
   return {
+    verdict: deadFinders.length
+      ? "UNTRUSTED — finder agents died; rerun required before trusting this result"
+      : "clean",
+    untrusted: deadFinders.length > 0,
+    deadFinders,
     confirmed: [],
+    unverified: [],
     stats: {
       dimensions: DIMENSIONS.length,
+      deadFinders: deadFinders.length,
       raw: 0,
       deduped: 0,
       confirmed: 0,
       refuted: 0,
+      unverified: 0,
     },
     scope: resolvedFiles,
     scopeWarning,
@@ -314,10 +335,14 @@ const judged = await parallel(
       ]).then((votes) => {
         const v = votes.filter(Boolean);
         // Strict: confirm only if BOTH skeptics fail to refute. Keeps the fix loop conservative.
+        // FALSE-GREEN GUARD: a dead skeptic (null vote) used to silently count as
+        // a refutation. A finding with fewer than 2 live votes is UNVERIFIED, not refuted.
         const confirmed = v.length === 2 && v.every((x) => !x.refuted);
+        const unverified = v.length < 2;
         return {
           ...f,
           confirmed,
+          unverified,
           refutedBy: v.filter((x) => x.refuted).map((x) => x.reason),
         };
       }),
@@ -325,24 +350,42 @@ const judged = await parallel(
 );
 
 const order = { critical: 0, high: 1, medium: 2, low: 3 };
+const bySeverity = (a, b) =>
+  (order[a.severity] ?? 9) - (order[b.severity] ?? 9);
 const confirmed = judged
   .filter(Boolean)
   .filter((f) => f.confirmed)
-  .sort((a, b) => (order[a.severity] ?? 9) - (order[b.severity] ?? 9))
-  .map(({ confirmed: _c, refutedBy: _r, ...rest }) => rest);
+  .sort(bySeverity)
+  .map(({ confirmed: _c, unverified: _u, refutedBy: _r, ...rest }) => rest);
+const unverified = judged
+  .filter(Boolean)
+  .filter((f) => f.unverified)
+  .sort(bySeverity)
+  .map(({ confirmed: _c, unverified: _u, refutedBy: _r, ...rest }) => rest);
 
+const untrusted = deadFinders.length > 0 || unverified.length > 0;
 log(
-  `${unique.length} findings → ${confirmed.length} confirmed after adversarial verify`,
+  `${unique.length} findings → ${confirmed.length} confirmed, ${unverified.length} unverified (dead skeptics) after adversarial verify${untrusted ? " — verdict UNTRUSTED, rerun the dead portions" : ""}`,
 );
 
 return {
+  verdict: untrusted
+    ? "UNTRUSTED — dead finder/verifier agents; rerun required before trusting this result"
+    : confirmed.length
+      ? "findings"
+      : "clean",
+  untrusted,
+  deadFinders,
   confirmed,
+  unverified,
   stats: {
     dimensions: DIMENSIONS.length,
+    deadFinders: deadFinders.length,
     raw: raw.length,
     deduped: unique.length,
     confirmed: confirmed.length,
-    refuted: unique.length - confirmed.length,
+    refuted: unique.length - confirmed.length - unverified.length,
+    unverified: unverified.length,
   },
   scope: resolvedFiles,
   scopeWarning,

@@ -109,6 +109,11 @@ Invoke `/qa-loop` to validate the fix and catch any regressions introduced by th
 - **QA result:** clean or remaining issues
 - **How to verify manually:** steps the user can take to confirm
 
+If the fix ships (user says push/deploy): prove it went live using the changed
+surface's proof signal from `.claude/VERIFY.md` — never a different pipeline's
+green status. If VERIFY.md is missing, derive the signal from the CI config for
+the changed paths, say so explicitly, and recommend `/repo-init`.
+
 ## Anti-Patterns (will not do)
 
 - Patch the symptom without finding the root cause.

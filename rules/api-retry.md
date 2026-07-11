@@ -78,7 +78,7 @@ transport-layer, not prompt-layer.
 - `MAX_API_RETRIES = 3` (attempts 2, 3, 4)
 - `RETRY_BACKOFF_SCHEDULE = [30, 60, 120]` seconds
 - `MAX_PHASE_API_EXHAUSTIONS = 3` (circuit breaker threshold per phase)
-- `FALLBACK_MODEL = "sonnet"` (model-inaccessibility fallback — see "Model Inaccessibility & Fallback")
+- `FALLBACK_MODEL = "opus"` (model-inaccessibility fallback — see "Model Inaccessibility & Fallback"; aligned 2026-07-11 with the CLAUDE.md model policy: fall back to the most capable available model, "never sonnet". If the failed pin IS already opus, fall back to `"fable"` instead — re-pinning the same inaccessible model is a no-op self-retry.)
 
 Total wait per dispatch with full retry budget: 30 + 60 + 120 = 210 seconds
 (~3.5 minutes).
@@ -254,9 +254,76 @@ to a few minutes. External Blocker Protocol handles vendor-side waits
 minutes, hours, or days — those are not retryable in a backoff loop; the
 work unit gets deferred and the orchestrator continues with other work.
 
+## Fable Fan-Out Preflight (MANDATORY before large Fable dispatch waves)
+
+Distinct from transient errors: Fable session limits are a BUDGET, and large
+Fable fan-outs exhaust it predictably. The 2026-07-11 60-session audit counted
+32 usage-limit incidents; the worst day (2026-07-02, ~20 hits) killed a
+16-agent fix wave at zero output and 81 of 125 verifiers mid-audit — driven by
+"only use fable agents" instructions that were complied with silently.
+
+**The rule:** before dispatching a wave of **more than 5 Fable-bound agents**
+(explicitly pinned `model: fable`, OR inheriting a Fable session model), the
+orchestrator MUST surface the math and get a decision — do not comply
+silently, do not refuse:
+
+```markdown
+## Checkpoint — Decision Needed
+
+**Decision:** This step fans out N Fable agents (~<estimate> tokens). Waves
+this size have previously hit Fable session limits mid-run (2026-07-02: entire
+16-agent wave killed at zero output).
+
+**Options:**
+**A) Proceed on Fable** — max analysis quality; risk of mid-wave limit stalls.
+**B) Fan-out on Opus, Fable for synthesis** — per the CLAUDE.md split policy;
+no measurable quality loss observed for finder/implementer work.
+
+**Resume:** reply A / B.
+```
+
+Exceptions — skip the checkpoint when:
+
+- The user already chose in THIS session ("use fable agents for all" after
+  being shown the math, or an explicit A/B answer) — one decision covers the
+  session, don't re-ask per wave.
+- The wave is ≤ 5 agents.
+- The dispatch already follows the CLAUDE.md split policy (fan-out pinned to
+  Opus) — nothing to decide.
+
+**Autonomous contexts (checkpoints suspended):** inside `/autopilot` (whose
+Autonomy Doctrine suspends all checkpoint types) or any unattended run, do NOT
+emit the checkpoint — auto-resolve to option B: dispatch the wave per the
+CLAUDE.md split policy (fan-out on Opus), and log
+`fable_fanout_preflight_autoresolved: opus` to `decisions.log`. Only a
+user instruction given in-session before autonomy started ("all agents on
+fable") overrides — that instruction WAS the informed choice; honor it and log
+it. The preflight's job is preventing SILENT all-Fable fleets, not stalling
+autonomous runs.
+
+If a Fable-pinned dispatch dies on a usage limit anyway: re-dispatch that ONE
+agent on `opus` (never `sonnet`), per the CLAUDE.md model policy.
+
+## Resume, Never Restart
+
+Limit walls and API outages kill agents, not completed work. The 2026-07
+audit's proven pattern: a 125-agent workflow resumed from cache across three
+session-limit crashes so only the ~81 dead agents re-ran.
+
+- **Workflows:** always relaunch with `resumeFromRunId` — completed agent()
+  calls replay from cache. Never re-run a workflow from scratch after a limit
+  kill. Inspect `journal.jsonl` first if the cached result might be empty.
+- **Autopilot / multi-phase runs:** re-read state.json + the plan file, verify
+  the worktree/disk state for each "completed" unit (don't trust memory), then
+  continue from the first incomplete unit.
+- **Any run expected to exceed 30 minutes** MUST persist resumable state to
+  disk (plan file with per-step status, or workflow journal) BEFORE starting
+  heavy dispatch — per `~/.claude/CLAUDE.md` "Plans & Context Survival".
+
 ## Use From Orchestrators
 
 Orchestrators that adopt this protocol wrap their Agent dispatches with the
 retry loop AND maintain the per-phase exhaustion counter AND persist the
 retry state. Reference: `~/.claude/commands/autopilot.md` "API Dispatch
-Wrapper Protocol" section.
+Wrapper Protocol" section. The Fable Fan-Out Preflight above applies to EVERY
+orchestrator wave, including inline parallel Agent calls outside autopilot.

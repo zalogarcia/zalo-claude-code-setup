@@ -14,26 +14,11 @@ When the user corrects you, says "no", "wrong", "don't do that", "stop", or othe
 
 ## Project Init Protocol
 
-When starting work on a new project, or when the user asks to initialize/set up the project for Claude, set up the project's Claude config:
+When starting work on a new project, or when the user asks to initialize/set up the project for Claude, **invoke the `repo-init` skill — do not hand-roll the scaffold.** It scans the codebase, verifies (actually runs) the build/test/typecheck commands, and generates `.claude/CLAUDE.md`, path-scoped `.claude/rules/*.md`, and `.claude/VERIFY.md` — the machine-readable verification manifest (deploy surfaces + THE proof signal each deploy claim requires). Idempotent: fills gaps, never clobbers.
 
-1. **Read the codebase** — scan `package.json`, `tsconfig.json`, directory structure, existing README
-2. **Create `.claude/CLAUDE.md`** if it doesn't exist, with:
-   - Project overview (tech stack, purpose)
-   - Build/dev/test commands
-   - Architecture summary (key directories and their purpose)
-   - Any non-obvious patterns found in the code
-3. **Create `.claude/rules/`** directory with path-scoped rules based on what you find:
-   - `frontend.md` — if there's a frontend (React/Next.js/Vue conventions, component patterns)
-   - `api.md` — if there's an API layer (validation, error handling, auth patterns)
-   - `database.md` — if there's a DB layer (migration conventions, RLS, query patterns)
-   - Only create rules files for layers that actually exist in the project
-4. **Each rules file** must have a YAML header scoping it:
-   ```yaml
-   ---
-   paths: src/components/**/*.tsx
-   ---
-   ```
-5. **Update these files** as you learn about the project during the session — don't wait for mistakes, add patterns proactively when you discover them
+- `.claude/VERIFY.md` is the per-repo source of truth for verification. Orchestrators (`/autopilot`, `/bug`, `qa-agent`, `live-test`) read it before claiming anything is tested or live. If it's missing in a repo you're working in, run `/repo-init` (or flag it).
+- `~/.claude/scripts/repo-drift-check.sh` lists repos under `~/dev` missing the scaffold.
+- **Update these files** as you learn about the project during the session — don't wait for mistakes, add patterns proactively when you discover them. Pipeline changes (new deploy surface, changed CI) must update VERIFY.md in the same commit.
 
 ## Workflow Commands
 
@@ -97,7 +82,11 @@ Always verify your work. This is the single highest-leverage practice. Apply the
 - For commits, invoke the `commit-with-heredoc` skill — it encodes the correct `$(cat <<'EOF' … EOF)` quoting and the Co-Authored-By trailer.
 - For dev-server restarts (after env changes, before live-test, or when the server is stuck), invoke the `dev-server-restart` skill — it kills by port, restarts with nohup, polls for readiness, and smoke-tests a route. Do not hand-write the `pkill && sleep && curl` chain.
 - For post-ship live verification of a feature against the deployed app ("live test everything", "make sure it's perfect", pre-launch checks), invoke the `live-test-campaign` skill — it runs the full campaign methodology: brainstorm design-review first (finds bugs from code before testing), Explore inventory, live-vs-lab split, the 9-phase cheapest-first ladder, positive-evidence discipline, and the state-neutralization protocol. Do not improvise an ad-hoc smoke test for these requests.
-- **3+ file edits → mandatory `/qa-loop`.** Any turn that touches 3 or more files MUST run `/qa-loop` before claiming done. This is the iterative loop: `qa-agent` audits → fix bugs → re-audit → repeat until clean or cap hit. A single build/typecheck is NOT sufficient — `/qa-loop` catches integration bugs, wiring issues, and logic errors that static checks miss. "Small changes across many files" is not an exception — scope is measured in files touched, not lines changed. If already inside `/autopilot` or `/bug` (which have their own QA phases), that satisfies this rule.
+- **3+ file edits → mandatory QA, tiered by blast radius.** Any turn that touches 3 or more files MUST run a QA audit before claiming done. A single build/typecheck is NOT sufficient for either tier — audits catch integration bugs, wiring issues, and logic errors that static checks miss. Pick the tier by risk:
+  - **Full `/qa-loop`** (the default): new features or endpoints, logic changes, anything touching auth/payment/data-deletion/migration paths, new dependencies, or >150 changed lines. The iterative loop: `qa-agent` audits → fix bugs → re-audit → repeat until clean or cap hit.
+  - **Light tier — one `qa-agent` dispatch, no loop** (allowed ONLY when ALL hold): ≤150 changed lines total, behavior-preserving or narrowly additive (config values, copy, docs/rules edits, mechanical renames), no auth/payment/data-deletion/migration paths, no new dependencies. Findings still get fixed; a second dispatch confirms the fixes.
+  - State which tier you chose and why. When in doubt → full loop. (Basis: the 2026-07 audit showed full loops catching real prod-bound bugs on feature work AND spending ~1.4M tokens confirming 0 findings on 100-line fixes — the tier split keeps the catches without the tax.)
+  - If already inside `/autopilot` or `/bug` (which have their own QA phases), that satisfies this rule.
 - **Kill stale background processes** before starting new dev servers or builds (`pkill -f 'next dev' || true`)
 - For "did I really build it?" doubt, apply `~/.claude/rules/verification-patterns.md` — Existence ≠ Implementation; use the stub-detect greps.
 
@@ -150,6 +139,7 @@ Subagents protect the main context window and enable parallelism. Use them delib
 
 **Rules:**
 
+- **Subagent model policy — split by leverage.** Thinking agents whose single, low-volume dispatch cascades downstream pin `model: fable` in frontmatter: `brainstorm`, `safe-planner`, `bug-fix` (plan/diagnosis quality is worth 2× on one dispatch). Everything else runs Opus 4.8 (`claude-opus-4-8`): `qa-agent`, `outcomes-grader`, `live-test`, `frontend-specialist`, `image-craft-expert` pin it in frontmatter; built-in agents with no definition file (`Explore`, `general-purpose`, `Plan`, `claude`, `claude-code-guide`) inherit the session model, so pass `model: "opus"` explicitly on every Agent dispatch and on Workflow `agent()` calls. Rationale: fan-out and high-token work (QA loops, exploration, implementation) gets half-price tokens ($5/$25 vs $10/$50 per MTok) with no measurable quality loss, protects Fable's session limit from multi-agent exhaustion (2026-07-07 incident), and Opus verifying Fable's work adds a second-opinion dynamic. If a fable-pinned dispatch fails on a Fable usage limit, re-dispatch that one agent on `opus` — never `sonnet`. (Updated 2026-07-09.)
 - **Prefer planning and QA in subagents, not the main thread.** Use `safe-planner` for complex plans (3+ steps, multi-file) and `qa-agent` for audits. Quick inline planning for trivial tasks (via `/plan`) is fine. The main thread is for decisions and implementation.
 - Delegate exploration/research to subagents — keep the main context clean and focused
 - Launch independent subagents in parallel (single message, multiple Agent calls)

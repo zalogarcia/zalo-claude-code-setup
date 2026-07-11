@@ -15,6 +15,8 @@ Revision Gate that converges on a clean state. Each iteration runs a parallel, a
 
 Identify what changed: `git diff` (or `git diff HEAD~1` if already committed). Note affected files and modules.
 
+Tier note: /qa-loop IS the full tier of the multi-file QA mandate. If the change set qualifies for the light tier (≤150 changed lines, behavior-preserving, no auth/payment/data-deletion/migration paths, no new deps — see `~/.claude/CLAUDE.md` "3+ file edits"), the orchestrator may run a single `qa-agent` dispatch instead of invoking this loop. Once /qa-loop is invoked, run the full loop — don't downgrade mid-flight.
+
 ### Step 2: QA Loop (MAX_ITERATIONS = 10)
 
 ```
@@ -29,10 +31,19 @@ LOOP:
   It runs 6 finder agents (correctness, wiring, error-handling, security, stubs,
   types-edges) in parallel, then has two skeptics adversarially verify each finding,
   returning ONLY confirmed bugs, pre-sorted critical-first:
-      { confirmed: [ {file, line, severity, title, description, evidence, suggestedFix} ], stats, scope }
-  Map the structured result:
-    - confirmed.length == 0  → BREAK, success (clean)
-    - confirmed.length  > 0  → continue to Fix step
+      { verdict, untrusted, deadFinders, confirmed: [ {file, line, severity, title,
+        description, evidence, suggestedFix} ], unverified: [...], stats, scope }
+  Map the structured result — CHECK `untrusted` BEFORE `confirmed` (false-green guard):
+    - untrusted == true → NOT a pass, regardless of confirmed.length. Finder or
+      skeptic agents died mid-run (usage limit / API error) and their portions never
+      ran. Resume the SAME run: Workflow(scriptPath, resumeFromRunId=<run id>) —
+      cached agents replay free, only dead ones re-run. Does not consume an
+      iteration. Never report "clean" from an untrusted verdict (2026-07 audit:
+      this exact false green nearly shipped real bugs twice).
+    - untrusted == false AND confirmed.length == 0 → BREAK, success (clean)
+    - confirmed.length  > 0  → continue to Fix step (fix confirmed; `unverified`
+      findings re-verify on the resumed/next audit — they are neither confirmed
+      nor refuted)
     - workflow disabled / errors → FALLBACK to a single qa-agent dispatch:
         Pass changed files + standard QA prompt; wait for
         ## VERIFICATION PASSED / ## ISSUES FOUND / ## BLOCKED (prior behavior).

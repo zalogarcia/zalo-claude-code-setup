@@ -17,11 +17,12 @@ Skip for: trivial single-word commit messages where `git commit -m "fix typo"` i
 
 Before crafting the message:
 
-1. `git status` — confirm staged files match intent
-2. `git diff --cached` — review the actual changes
-3. `git log --oneline -5` — match the repo's existing commit style (conventional commits? imperative mood? capitalization?)
-4. Confirm no secrets staged (`.env`, `credentials.json`, API tokens)
-5. Stage only specific files — **never** `git add .` or `git add -A` (per `~/.claude/rules/git-safety.md`)
+1. **Format BEFORE staging.** If the repo has a formatter hook (deno fmt, prettier via husky, ruff — check `.claude/VERIFY.md` "Formatter / hooks" or the hook configs), run the formatter on your changed files NOW, then stage. Staging unformatted files lets the hook rewrite the whole file at commit time, turning a surgical diff into a 700-line reformat that must be restored and reapplied (recurring incident class in the 2026-07 audit — 4 sessions, 3 repos).
+2. `git status` — confirm staged files match intent
+3. `git diff --cached` — review the actual changes
+4. `git log --oneline -5` — match the repo's existing commit style (conventional commits? imperative mood? capitalization?)
+5. Confirm no secrets staged (`.env`, `credentials.json`, API tokens)
+6. Stage only specific files — **never** `git add .` or `git add -A` (per `~/.claude/rules/git-safety.md`)
 
 ## The invocation
 

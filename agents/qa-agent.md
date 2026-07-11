@@ -1,5 +1,5 @@
 ---
-model: fable
+model: claude-opus-4-8
 name: qa-agent
 description: Audits recent code changes for real, reproducible bugs. Use after implementing features, before deployments, or when asked to stress test, verify, or audit code. <example>user: 'I just finished the checkout flow, can you stress test it?' assistant: 'I'll use the qa-agent to find any real bugs in the checkout implementation.'</example>
 tools: Read, Grep, Glob, Bash
@@ -48,6 +48,15 @@ Spend depth where risk is highest for THIS codebase. Don't spread thin just to b
 ## Playwright (for frontend changes)
 
 Use Playwright MCP tools to visually verify frontend findings. Do not theorize about UI — reproduce and screenshot. If the dev server isn't running, ask the user to start it.
+
+## The Skeptic Pass (mandatory before your verdict)
+
+These are the exact challenge questions that historically exposed false "done" claims (every overclaim in the 2026-07 60-session audit fell to one of them). Ask each one against the work under audit and record the answer in your report:
+
+1. **"Did it hit the real system or a mock?"** — If the riskiest integration path (external API, payment, sync) only ran against a mock/stub/cancel-path, say so explicitly. UI-layer proof is not integration proof.
+2. **"All of them, or a spot-check?"** — Any "all/every X" claim needs a measured denominator (N of N + method). Spot-checks must be labeled spot-checks. (Per `~/.claude/rules/gates.md` "Coverage Claims Need Denominators".)
+3. **"Which deploy signal proves it's live?"** — Check the repo's `.claude/VERIFY.md` for the correct proof signal for the changed surface. A green pipeline for a DIFFERENT surface proves nothing (documented incident: ECS green cited for a Vercel-deployed dashboard change).
+4. **"Would this verdict survive the auditor dying mid-run?"** — If any sub-check errored or was skipped, the verdict is PASS WITH CONCERNS at best, never a clean PASS.
 
 ## Output format
 

@@ -12,7 +12,7 @@ Custom agents, skills, commands, MCP servers, auto-formatting hooks, and workflo
 
 ## Interactive Architecture
 
-See how the pieces fit together: 7 agents, 16 shared rules, 6 commands, 8 skills, hooks, MCP servers — plus animated request flows (`/autopilot`, `/bug`, `/qa-loop`, `/brainstorm`, `/plan`).
+See how the pieces fit together: 7 agents, 16 shared rules, 6 commands, 9 skills, 3 workflows, hooks, MCP servers — plus animated request flows (`/autopilot`, `/bug`, `/qa-loop`, `/brainstorm`, `/plan`).
 
 **→ [Open the interactive visualization](https://zalogarcia.github.io/zalo-claude-code-setup/visualization/)**
 
@@ -159,27 +159,29 @@ Slash commands for workflow automation. Invoke with `/<command-name>`.
 | **plan**            | Plan something with brainstorm + principles verification                                               |
 | **brainstorm**      | Deep-analyze a problem, plan, or decision with first principles, inversion, and structured elimination |
 
-### Skills (8)
+### Skills (9)
 
-| Skill                   | What It Does                                                                                                                                                                                                                                   |
-| ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **typecheck-and-build** | Standardizes `tsc --noEmit` + production build with smart failure-region extraction and consistent exit codes.                                                                                                                                 |
-| **commit-with-heredoc** | Encodes correct `$(cat <<'EOF' … EOF)` quoting for multi-line conventional commits with Co-Authored-By trailer.                                                                                                                                |
-| **dev-server-restart**  | Shell script that kills any stale dev server on a port, restarts via `nohup`, polls for readiness, smoke-tests a route.                                                                                                                        |
-| **autopilot-collect**   | Used by `/autopilot` worktrees to bundle their diff + decisions log into a single review-ready artifact.                                                                                                                                       |
-| **frontend-design**     | Anti-slop aesthetic guidelines. Bold design direction, distinctive typography, no generic AI look. (Opt-in via frontend chain.)                                                                                                                |
-| **create-skill**        | Author a new Claude Code skill following the established pattern — decision tree, form factor, template, registration.                                                                                                                         |
-| **cf-crawl**            | Scrape websites via Cloudflare Browser Rendering API. Single page (sync) or multi-page crawl (async).                                                                                                                                          |
-| **live-test-campaign**  | Master live-test campaign against a deployed app: design-review the code first, enumerate edge cases by lifecycle stage, split live-vs-lab, then run a cheapest-first phase ladder with positive-evidence discipline and state neutralization. |
+| Skill                   | What It Does                                                                                                                                                                                                                                                        |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **typecheck-and-build** | Standardizes `tsc --noEmit` + production build with smart failure-region extraction and consistent exit codes.                                                                                                                                                      |
+| **commit-with-heredoc** | Encodes correct `$(cat <<'EOF' … EOF)` quoting for multi-line conventional commits with Co-Authored-By trailer.                                                                                                                                                     |
+| **dev-server-restart**  | Shell script that kills any stale dev server on a port, restarts via `nohup`, polls for readiness, smoke-tests a route.                                                                                                                                             |
+| **autopilot-collect**   | Used by `/autopilot` worktrees to bundle their diff + decisions log into a single review-ready artifact.                                                                                                                                                            |
+| **frontend-design**     | Anti-slop aesthetic guidelines. Bold design direction, distinctive typography, no generic AI look. (Opt-in via frontend chain.)                                                                                                                                     |
+| **create-skill**        | Author a new Claude Code skill following the established pattern — decision tree, form factor, template, registration.                                                                                                                                              |
+| **cf-crawl**            | Scrape websites via Cloudflare Browser Rendering API. Single page (sync) or multi-page crawl (async).                                                                                                                                                               |
+| **live-test-campaign**  | Master live-test campaign against a deployed app: design-review the code first, enumerate edge cases by lifecycle stage, split live-vs-lab, then run a cheapest-first phase ladder with positive-evidence discipline and state neutralization.                      |
+| **repo-init**           | Scaffold per-repo excellence: scan the codebase, verify (actually run) build/test/typecheck commands, and generate `.claude/CLAUDE.md`, path-scoped rules, and `.claude/VERIFY.md` — the manifest of deploy surfaces + the proof signal each deploy claim requires. |
 
-### Workflows (2)
+### Workflows (3)
 
 Deterministic multi-agent scripts at `~/.claude/workflows/`, run via Claude Code's Workflow tool. Commands delegate to them and fall back to inline agent dispatch when workflows are unavailable.
 
-| Workflow        | What It Does                                                                                                                                                                                         |
-| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **qa-audit**    | Read-only audit backing `/qa-loop`: 6 parallel finder agents (correctness, wiring, error-handling, security, stubs, types-edges) + 2-skeptic adversarial verification — returns only confirmed bugs. |
-| **plan-verify** | Plan Verification Loop backing `/plan`: brainstorm critique + principles grading in parallel, then at most one `safe-planner` revision pass.                                                         |
+| Workflow           | What It Does                                                                                                                                                                                                                                                                                    |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **qa-audit**       | Read-only audit backing `/qa-loop`: 6 parallel finder agents (correctness, wiring, error-handling, security, stubs, types-edges) + 2-skeptic adversarial verification — returns only confirmed bugs. Dead finder/skeptic agents mark the verdict UNTRUSTED instead of counting as a clean pass. |
+| **plan-verify**    | Plan Verification Loop backing `/plan`: brainstorm critique + principles grading in parallel, then at most one `safe-planner` revision pass.                                                                                                                                                    |
+| **fable-insights** | Weekly self-audit: one deep-analysis agent per Claude Code session transcript (args `{days}`), producing a friction report + proposed config diffs. Pairs with `scripts/fable-weekly-insights.sh` for scheduled headless runs.                                                                  |
 
 ### Shared Rules (16)
 
