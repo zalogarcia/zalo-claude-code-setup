@@ -7,6 +7,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { execFileSync } from 'node:child_process';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -184,6 +185,68 @@ function parseAgentMarkers() {
     if (markerList.length) markers[agent] = markerList;
   }
   return markers;
+}
+
+// ---------- changelog ----------
+
+// Cap the shipped log; the panel is a highlight reel, not the full history.
+const CHANGELOG_MAX_ENTRIES = 60;
+// Drop bookkeeping/noise subjects — regenerated-data commits, merges, releases.
+const CHANGELOG_NOISE_RE = /^(Sync|Regenerate|Merge|chore\(release\)|docs: regenerate)/i;
+
+// Extract a self-maintaining "Setup Log" from the repo's own git history.
+// Reads first-parent main, filters noise, dedupes identical subjects, and
+// groups by date (reverse-chronological). Degrades to [] if git is unavailable.
+function buildChangelog() {
+  let raw;
+  try {
+    raw = execFileSync(
+      'git',
+      ['log', '--first-parent', '--date=short', '--pretty=format:%ad%x09%s', '-n', '400'],
+      { cwd: REPO_ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] },
+    );
+  } catch (err) {
+    console.warn('changelog: `git log` failed — emitting empty changelog:', err.message);
+    return [];
+  }
+
+  const seen = new Set();
+  const flat = []; // { date, subject } in reverse-chronological order
+  for (const line of raw.split('\n')) {
+    if (!line) continue;
+    const tab = line.indexOf('\t');
+    if (tab === -1) continue;
+    const date = line.slice(0, tab).trim();
+    const subject = line.slice(tab + 1).trim();
+    if (!date || !subject) continue;
+    if (CHANGELOG_NOISE_RE.test(subject)) continue;
+    const key = subject.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    flat.push({ date, subject });
+  }
+
+  const truncated = flat.length > CHANGELOG_MAX_ENTRIES;
+  const capped = flat.slice(0, CHANGELOG_MAX_ENTRIES);
+  if (truncated) {
+    console.log(
+      `changelog: truncated to ${CHANGELOG_MAX_ENTRIES} of ${flat.length} meaningful entries`,
+    );
+  }
+
+  // Group by date, preserving reverse-chronological order of first appearance.
+  const groups = [];
+  const byDate = new Map();
+  for (const { date, subject } of capped) {
+    let group = byDate.get(date);
+    if (!group) {
+      group = { date, entries: [] };
+      byDate.set(date, group);
+      groups.push(group);
+    }
+    group.entries.push(subject);
+  }
+  return groups;
 }
 
 // ---------- scan ----------
@@ -393,6 +456,7 @@ function buildGraph() {
     meta: {
       generatedAt: new Date().toISOString(),
       repo: 'zalo-claude-code-setup',
+      changelog: buildChangelog(),
     },
     nodes,
     edges,

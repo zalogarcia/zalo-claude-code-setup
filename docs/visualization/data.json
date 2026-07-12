@@ -1,7 +1,134 @@
 {
   "meta": {
-    "generatedAt": "2026-07-11T19:44:20.679Z",
-    "repo": "zalo-claude-code-setup"
+    "generatedAt": "2026-07-11T20:44:11.539Z",
+    "repo": "zalo-claude-code-setup",
+    "changelog": [
+      {
+        "date": "2026-07-11",
+        "entries": [
+          "docs: document guard hooks + repo-init/VERIFY.md in README, refresh visualizer",
+          "fix(fable-insights): drop headless scheduling — keep as interactive tool",
+          "feat(setup): mechanize the 10/10 pillars — guards, VERIFY.md, self-audit, QA tiers"
+        ]
+      },
+      {
+        "date": "2026-07-09",
+        "entries": [
+          "machine-editorial-broll: objects for nouns, type for verdicts",
+          "machine-editorial-broll: add the Depiction Law (law 0)",
+          "machine-editorial-broll: GLOSS is a quality tier, not a subject",
+          "Add GLOSS 3D recipe to machine-editorial-broll",
+          "Add 3D layer section to machine-editorial-broll",
+          "Expand machine-editorial-broll: v3 modes, canvas, plates, taxonomy",
+          "Fix machine-editorial-broll ProRes guidance",
+          "Add machine-editorial-broll skill + CLAUDE.md b-roll callout"
+        ]
+      },
+      {
+        "date": "2026-07-02",
+        "entries": [
+          "Friction-audit buildout: 5 new skills, /goal, fixed gitleaks hook, dispatch boilerplate"
+        ]
+      },
+      {
+        "date": "2026-06-15",
+        "entries": [
+          "docs(git-safety): verify branch is the right HOME for a change before committing",
+          "Harden setup from Fable 5 transcript review",
+          "[agents] bump model pin to claude-opus-4-8"
+        ]
+      },
+      {
+        "date": "2026-06-11",
+        "entries": [
+          "[visualization] regenerate data with live-test-campaign skill",
+          "[skills] add live-test-campaign + qa-audit/plan-verify workflows",
+          "[visualization] regenerate data after ui-ux-pro-max removal",
+          "[skills] remove ui-ux-pro-max",
+          "[claude-md] document live-test-campaign skill invocation"
+        ]
+      },
+      {
+        "date": "2026-06-10",
+        "entries": [
+          "[statusline] show effort level next to model name",
+          "[statusline] show current model name before usage metrics"
+        ]
+      },
+      {
+        "date": "2026-05-22",
+        "entries": [
+          "[visualization] add 'Crank reasoning effort up' tip in How",
+          "[visualization] add 'Name your terminals' tip in How",
+          "qa-loop fixes + rename to Zalo's Claude Code Setup",
+          "[visualization] add 'A few things that help' tips section to How",
+          "Trim personal workflows out of the public setup",
+          "[visualization] show what's already encoded in CLAUDE.md",
+          "[visualization] explain CLAUDE.md in How (step 2) + Commands tab",
+          "[visualization] add Commands tab + qa-loop outcome to how-to",
+          "[visualization] replace tour-on-map with outcome-based how-to as default view",
+          "[visualization] add first-run tutorial overlay narrating the multi-terminal workflow",
+          "[skills] add seedance video generation + prompt builder",
+          "[bug-fix] require enumerating ≥2 alternative root cause hypotheses before fix"
+        ]
+      },
+      {
+        "date": "2026-05-19",
+        "entries": [
+          "[plan,autopilot] add --plan=<path> handoff so /autopilot consumes /plan output",
+          "[autopilot] fan out Phase 3 QA audit step"
+        ]
+      },
+      {
+        "date": "2026-05-18",
+        "entries": [
+          "[autopilot-collect] guard git-diff pipeline against pipefail abort",
+          "[autopilot-merge] add skill + command to consolidate completed autopilot worktrees",
+          "[plan] print ready-to-copy /autopilot command as final line of Step 6",
+          "[autopilot] return-contract + always-worktree to stop mid-phase pauses",
+          "[concurrency] autopilot worktree auto-spawn; plan per-run subdirs"
+        ]
+      },
+      {
+        "date": "2026-05-16",
+        "entries": [
+          "[cleanup] strip vibe-island from tracked hooks/settings.json sample"
+        ]
+      },
+      {
+        "date": "2026-05-15",
+        "entries": [
+          "[cleanup] remove agent-templates — never wired into any workflow",
+          "[cleanup] remove ship + split-screen-video commands; remove vibe-island hooks",
+          "[viz] add landing page that redirects site root to /visualization/",
+          "[viz] regenerate after cleanup — 15 commands, 8 skills, autopilot+plan flows",
+          "[skills] add create-skill meta-skill",
+          "[cleanup] remove dead commands, add workflow skills, fix dangling refs"
+        ]
+      },
+      {
+        "date": "2026-05-08",
+        "entries": [
+          "[setup] opt out of repo-graphrag indexing for ~/.claude/"
+        ]
+      },
+      {
+        "date": "2026-05-07",
+        "entries": [
+          "[graphrag-hook] guard against indexer pile-up + 30min watchdog",
+          "[autopilot] Batch 1: wu-1 + wu-2 + wu-3 (4 MEDIUMs from prior run)",
+          "[setup] gitignore: .autopilot.prev* archived prior runs",
+          "[autopilot] QA iteration 1 — fixed 1 HIGH (stale marker reference)",
+          "[autopilot] Batch 2: wu-3 autopilot api-retry integration",
+          "[autopilot] Batch 1: wu-1 (bug-fix confidence gate) + wu-2 (scalability outcome 3.5)",
+          "[autopilot] Batch 0: wu-0 api-retry.md foundation",
+          "[setup] gitignore: .autopilot/ runtime state",
+          "[setup] add Plan Verification Loop with outcome-based principles rubric",
+          "[setup] track launchd jobs in repo via symlink pattern",
+          "[setup] add /dream + outcomes-grader + autopilot autonomy hardening"
+        ]
+      }
+    ]
   },
   "nodes": [
     {
