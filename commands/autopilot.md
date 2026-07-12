@@ -1032,7 +1032,7 @@ FOR each batch (ordered by dependency):
       - After any compaction or "file modified" notice, re-Read the file before editing.
       - For plan/status files, Write the whole file — do not string-Edit them.
       - ToolSearch/deferred tools are unavailable in your context — use only the tools you were granted.
-      - Consult docs/CODEMAP.md (if present) before grepping; prefer code-pathfinder find_symbol/get_callers over repeated grep.
+      - Consult docs/CODEMAP.md (if present) before grepping; prefer one targeted Grep/Glob over repeated broad greps.
     - After implementation, STAGE ONLY (do NOT commit):
       git add {unit.files joined by space}
     - Never use git add -A or git add .

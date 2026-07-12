@@ -71,7 +71,7 @@ Orchestrators MUST include this block verbatim in every implementation-agent pro
 - After any compaction or "file modified" notice, re-Read the file before editing.
 - For plan/status files, Write the whole file — do not string-Edit them.
 - ToolSearch/deferred tools are unavailable in subagent contexts — use only the tools you were granted.
-- Consult docs/CODEMAP.md (if present) before grepping; prefer code-pathfinder find_symbol/get_callers over repeated grep.
+- Consult docs/CODEMAP.md (if present) before grepping; prefer one targeted Grep/Glob over repeated broad greps.
 ```
 
 ## Why This Matters
