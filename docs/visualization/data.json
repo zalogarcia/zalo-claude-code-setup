@@ -1,11 +1,14 @@
 {
   "meta": {
-    "generatedAt": "2026-07-11T20:44:11.539Z",
+    "generatedAt": "2026-07-12T01:34:58.146Z",
     "repo": "zalo-claude-code-setup",
     "changelog": [
       {
         "date": "2026-07-11",
         "entries": [
+          "feat(visualization): principles loop, beginner on-ramp, overnight/repo-init guides, tips overhaul, mobile pass",
+          "Remove dead .no-graphrag marker",
+          "Fix stale code-pathfinder reference in dispatch boilerplate",
           "docs: document guard hooks + repo-init/VERIFY.md in README, refresh visualizer",
           "fix(fable-insights): drop headless scheduling — keep as interactive tool",
           "feat(setup): mechanize the 10/10 pillars — guards, VERIFY.md, self-audit, QA tiers"
@@ -122,10 +125,7 @@
           "[autopilot] Batch 2: wu-3 autopilot api-retry integration",
           "[autopilot] Batch 1: wu-1 (bug-fix confidence gate) + wu-2 (scalability outcome 3.5)",
           "[autopilot] Batch 0: wu-0 api-retry.md foundation",
-          "[setup] gitignore: .autopilot/ runtime state",
-          "[setup] add Plan Verification Loop with outcome-based principles rubric",
-          "[setup] track launchd jobs in repo via symlink pattern",
-          "[setup] add /dream + outcomes-grader + autopilot autonomy hardening"
+          "[setup] gitignore: .autopilot/ runtime state"
         ]
       }
     ]
