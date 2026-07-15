@@ -124,6 +124,16 @@ This chain has been historically underused — don't force it for small changes.
 - For branded motion-graphics "slides b-roll" (VSL-style slides, YouTube segment graphics, teleprompter-script b-roll), invoke the `machine-editorial-broll` skill — it maps script beats to the Machine Editorial comp archetypes in the Remotion studio at `~/dev/operator-broll`. Do not hand-roll Remotion comps outside the studio's token/move system.
 - Disambiguation: `machine-editorial-broll` = branded typographic slide graphics (Remotion). `seedance` = AI-generated _footage_ (people, scenes, camera moves). A "b-roll" request for graphics/slides goes to the former; filmed-looking clips go to the latter.
 
+## Infographic Production
+
+- For static educational/marketing **infographics** (concept explainers, before/after comparisons, process flows, visual cheat sheets), invoke the `infographics` skill — it encodes the layout archetypes, style presets, quoted-string text-budget prompt architecture, and the mandatory read-back text audit, generating via gpt-image-2 through the `image-craft-expert` agent. Do not hand-roll a one-line "make an infographic about X" image prompt.
+- Disambiguation: `infographics` = static AI-generated images. `machine-editorial-broll` = motion-graphics slides for video. `dataviz` = precise charts rendered from real data — never AI-generate a chart whose numbers must be exact.
+
+## YouTube Thumbnail Production
+
+- For **Zalo Kabche YouTube thumbnails** (packaging stage, "make the thumbnail", "thumbnail comps for video N"), invoke the `yt-thumbnail` skill — it encodes the Shop Manual '74 thumbnail template, the reference-photo registry (real photos of Zalo; both nano-banana `--ref` and gpt-image-2 `images.edit` rails), the ≤4-word/one-orange-word text budget, the photo-real vs manual-page precedence rule, and the mandatory text + face-identity audit with the 120px squint test. Do not hand-roll a "make a thumbnail" image prompt.
+- Disambiguation: `yt-thumbnail` = 1280×720 video packaging with Zalo's face. `infographics` = educational one-pagers. Reel cover frames follow the reel template in the brand repo's visual spec, not this skill.
+
 ## When to Use Subagents
 
 Subagents protect the main context window and enable parallelism. Use them deliberately:
