@@ -134,6 +134,11 @@ This chain has been historically underused — don't force it for small changes.
 - For **Zalo Kabche YouTube thumbnails** (packaging stage, "make the thumbnail", "thumbnail comps for video N"), invoke the `yt-thumbnail` skill — it encodes the Shop Manual '74 thumbnail template, the reference-photo registry (real photos of Zalo; both nano-banana `--ref` and gpt-image-2 `images.edit` rails), the ≤4-word/one-orange-word text budget, the photo-real vs manual-page precedence rule, and the mandatory text + face-identity audit with the 120px squint test. Do not hand-roll a "make a thumbnail" image prompt.
 - Disambiguation: `yt-thumbnail` = 1280×720 video packaging with Zalo's face. `infographics` = educational one-pagers. Reel cover frames follow the reel template in the brand repo's visual spec, not this skill.
 
+## Shipping a YouTube Long-Form Video
+
+- When shipping/publishing a Zalo Kabche long-form video to YouTube ("ship the youtube video", "publish/upload the video", Publish stage of a `videos/NN-slug.md`), invoke the `ship-yt-video` skill — it's the gated checklist so no packaging/publish step gets skipped: edit-quality pass, a **3-title split test pulled from `title-structures.md`** (never a plain descriptive title), the 3-thumbnail split test (`yt-thumbnail`), chapters timed to the FINAL cut, the correct upload path (**Studio direct for long-form — Post for Me chokes on 200MB+/15min+ files**; the human drops the file, Claude can't push >10MB via the browser), and the Claude-in-Chrome Studio setup (title/description/made-for-kids/Test & Compare, private until the user OKs public). Do not hand-roll a YouTube upload.
+- Disambiguation: `ship-yt-video` = the full publish pipeline. `yt-thumbnail` = just the 3 thumbnails. Short-form/reels can still publish via the Zalo OS / Post for Me rail.
+
 ## When to Use Subagents
 
 Subagents protect the main context window and enable parallelism. Use them deliberately:
