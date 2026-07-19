@@ -72,6 +72,7 @@ Orchestrators MUST include this block verbatim in every implementation-agent pro
 - For plan/status files, Write the whole file — do not string-Edit them.
 - ToolSearch/deferred tools are unavailable in subagent contexts — use only the tools you were granted.
 - Consult docs/CODEMAP.md (if present) before grepping; prefer one targeted Grep/Glob over repeated broad greps.
+- git is READ-ONLY for you — never commit, stage, stash, reset, checkout, or clean; staging and commits are the orchestrator's job. (Hook-enforced: destructive git ops are blocked; one subagent's mass revert once wiped 11 sibling agents' work.)
 ```
 
 ## Why This Matters

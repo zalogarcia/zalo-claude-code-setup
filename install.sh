@@ -152,6 +152,15 @@ install_rules() {
         cp "$rule_file" "$CLAUDE_DIR/rules/$name"
         ok "  Rule: $name"
     done
+
+    # On-demand references (NOT auto-loaded; read when the situation applies)
+    mkdir -p "$CLAUDE_DIR/rules-ref"
+    for ref_file in "$SCRIPT_DIR/rules-ref"/*.md; do
+        [ -f "$ref_file" ] || continue
+        local ref_name=$(basename "$ref_file")
+        cp "$ref_file" "$CLAUDE_DIR/rules-ref/$ref_name"
+        ok "  Ref: $ref_name"
+    done
 }
 
 # ============================================================================
@@ -164,6 +173,12 @@ install_meta_rule() {
     if [ -f "$SCRIPT_DIR/META_RULE.md" ]; then
         cp "$SCRIPT_DIR/META_RULE.md" "$CLAUDE_DIR/META_RULE.md"
         ok "META_RULE.md installed"
+    fi
+
+    # QUIRKS.md rides the same injection (appended by session-start.sh)
+    if [ -f "$SCRIPT_DIR/QUIRKS.md" ]; then
+        cp "$SCRIPT_DIR/QUIRKS.md" "$CLAUDE_DIR/QUIRKS.md"
+        ok "QUIRKS.md installed"
     fi
 }
 
@@ -192,7 +207,7 @@ install_workflows() {
     info "Installing workflows..."
     mkdir -p "$CLAUDE_DIR/workflows"
 
-    for wf in "$SCRIPT_DIR/workflows"/*.js; do
+    for wf in "$SCRIPT_DIR/workflows"/*.js "$SCRIPT_DIR/workflows"/*.md; do
         [ -f "$wf" ] || continue
         cp "$wf" "$CLAUDE_DIR/workflows/"
         ok "  Workflow: $(basename "$wf")"
@@ -238,7 +253,7 @@ install_hooks() {
 
     # Copy hook scripts (referenced by settings.json) into ~/.claude/hooks/
     mkdir -p "$CLAUDE_DIR/hooks"
-    for script in continue-if-incomplete.py reset-stop-counter.sh gitleaks-guard.py sql-guard.py session-start.sh; do
+    for script in continue-if-incomplete.py reset-stop-counter.sh gitleaks-guard.py sql-guard.py agent-model-guard.py prettier-format.sh session-start.sh; do
         if [ -f "$SCRIPT_DIR/hooks/$script" ]; then
             cp "$SCRIPT_DIR/hooks/$script" "$CLAUDE_DIR/hooks/$script"
             chmod +x "$CLAUDE_DIR/hooks/$script"

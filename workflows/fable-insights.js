@@ -146,9 +146,19 @@ const FACET_SCHEMA = {
         required: ["type", "detail", "root_cause", "avoidable"],
         properties: {
           type: {
-            type: "string",
+            enum: [
+              "claude_bug",
+              "overclaimed_verification",
+              "tooling_breakage",
+              "usage_limit",
+              "wrong_approach",
+              "environment",
+              "user_change_of_mind",
+              "hook_by_design",
+              "other",
+            ],
             description:
-              "short slug e.g. claude_bug, overclaimed_verification, tooling_breakage, usage_limit, wrong_approach, environment",
+              "Pinned taxonomy (2026-07-19: analysts were inventing singleton types, breaking week-over-week deltas). Use 'other' + detail rather than a new slug. 'hook_by_design' = a guard hook (sql-guard / git-guard / agent-model-guard) firing exactly as designed — a designed tax, not real friction.",
           },
           detail: { type: "string" },
           root_cause: { type: "string" },
@@ -332,7 +342,7 @@ ANALYZE DEEPLY — this is a Fable-tier pass, expected to beat a shallow facet e
 - Underlying goal: what did they actually want (read between requests)?
 - Outcome + concrete evidence. Do not credit "done" claims Claude never proved.
 - Satisfaction: judge from verbatim reactions ("perfect", "much better", "no", "wrong", silence then topic change). Quote them.
-- EVERY friction instance: what went wrong, root cause (claude_bug / overclaimed_verification / tooling_breakage / usage_limit / wrong_approach / environment / user_change_of_mind), and whether Claude could have avoided it upfront.
+- EVERY friction instance: what went wrong, root cause, and whether Claude could have avoided it upfront. Use ONLY the pinned type taxonomy (claude_bug / overclaimed_verification / tooling_breakage / usage_limit / wrong_approach / environment / user_change_of_mind / hook_by_design / other) — never invent a new slug; if none fits, use 'other' and explain in detail. A guard hook (sql-guard / git-guard / agent-model-guard) blocking or holding as designed is 'hook_by_design', NOT environment friction.
 - Verification quality: did Claude ground-truth its claims (live checks, fresh test output, probes) or assert "should work"?
 - Wasted cycles: repeated attempts, blind alleys, re-derived environment quirks.
 - Standout: the single most impressive thing, if any.
@@ -437,5 +447,14 @@ const manifest_counts = {
 log(
   `Done: ${facets.filter(Boolean).filter((f) => !f.failed).length}/${toAnalyze.length} facets, ${stubs.length}/${trivial.length} stubs, ${failed.length} failed`,
 );
+log(
+  "Synthesis: follow ~/.claude/workflows/fable-insights-synthesis.md (artifact names, baseline comparison, mechanization + demotion bias)",
+);
 
-return { facets: facets.filter(Boolean), stubs, failed, manifest_counts };
+return {
+  facets: facets.filter(Boolean),
+  stubs,
+  failed,
+  manifest_counts,
+  synthesis_protocol: "~/.claude/workflows/fable-insights-synthesis.md",
+};

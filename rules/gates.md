@@ -119,6 +119,7 @@ If measuring every member is impractical, the honest claim is "N of M checked (s
 - Relying on partial verification
 - Thinking "just this once"
 - Tired and wanting work over
+- Claiming "fixed" for a failure environment you did NOT reproduce in this turn — if the failing device/app context (e.g. iPhone Safari, a specific vendor sandbox) wasn't reproduced, the claim ceiling is "deployed a candidate fix — please confirm on your device", never "fixed"
 - **ANY wording implying success without having run verification in this message**
 
 ### Bottom Line

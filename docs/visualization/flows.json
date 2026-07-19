@@ -256,6 +256,36 @@
     ],
     "canonical": false
   },
+  "command.enhance-audio": {
+    "label": "/enhance-audio — Enhance and clean up audio in video/audio files using FFmpeg filters. Removes no",
+    "description": "Enhance and clean up audio in video/audio files using FFmpeg filters. Removes noise, normalizes volume, and improves speech clarity.",
+    "steps": [
+      {
+        "node": "command.enhance-audio",
+        "caption": "User invokes /enhance-audio"
+      },
+      {
+        "node": "command.enhance-audio",
+        "caption": "Standalone skill/utility — no subagent dispatch in the core path"
+      }
+    ],
+    "canonical": false
+  },
+  "command.ghl-upload": {
+    "label": "/ghl-upload — Upload files to GoHighLevel's media library via API.",
+    "description": "Upload files to GoHighLevel's media library via API.",
+    "steps": [
+      {
+        "node": "command.ghl-upload",
+        "caption": "User invokes /ghl-upload"
+      },
+      {
+        "node": "command.ghl-upload",
+        "caption": "Standalone skill/utility — no subagent dispatch in the core path"
+      }
+    ],
+    "canonical": false
+  },
   "command.goal": {
     "label": "/goal — Goal-driven autonomous loop: write .claude/GOAL.md (goal + acceptance criteria),",
     "description": "Goal-driven autonomous loop: write .claude/GOAL.md (goal + acceptance criteria), then implement → verify each criterion with fresh evidence (live-test when UI/live behavior is in scope) → update status → repeat until all criteria pass or blocked. Use when the user states a goal with autonomy + completion phrasing: \"until perfect\", \"do it all yourself\", \"fix without me\", \"live test until all is perfect\", \"brainstorm and fix without me\".",
@@ -321,6 +351,36 @@
     ],
     "canonical": false
   },
+  "command.nano-banana": {
+    "label": "/nano-banana — Generates AI images using the nano-banana CLI (Gemini 3.1 Flash default, Pro ava",
+    "description": "Generates AI images using the nano-banana CLI (Gemini 3.1 Flash default, Pro available). Handles multi-resolution (512-4K), aspect ratios, reference images for style transfer, green screen workflow for transparent assets, cost tracking, and exact dimension control. Use when asked to \"generate an image\", \"create a sprite\", \"make an asset\", \"generate artwork\", or any image generation task for UI mockups, game assets, videos, or marketing materials.",
+    "steps": [
+      {
+        "node": "command.nano-banana",
+        "caption": "User invokes /nano-banana"
+      },
+      {
+        "node": "command.nano-banana",
+        "caption": "Standalone skill/utility — no subagent dispatch in the core path"
+      }
+    ],
+    "canonical": false
+  },
+  "command.optimize-video": {
+    "label": "/optimize-video — Process and upload optimized videos to Supabase Storage with faststart + compres",
+    "description": "Process and upload optimized videos to Supabase Storage with faststart + compression.",
+    "steps": [
+      {
+        "node": "command.optimize-video",
+        "caption": "User invokes /optimize-video"
+      },
+      {
+        "node": "command.optimize-video",
+        "caption": "Standalone skill/utility — no subagent dispatch in the core path"
+      }
+    ],
+    "canonical": false
+  },
   "command.redesign": {
     "label": "/redesign — Redesign an existing UI through collaborative brainstorming, mockup generation, ",
     "description": "Redesign an existing UI through collaborative brainstorming, mockup generation, implementation, and visual verification. Use when the user says \"redesign this page/component\", \"same UI redesign exercise\", \"3 options on an html page\", or \"brainstorm options and let me pick\".",
@@ -346,6 +406,36 @@
         "via": "dispatch",
         "caption": "Dispatch frontend-specialist",
         "marker": "## IMPLEMENTATION COMPLETE"
+      }
+    ],
+    "canonical": false
+  },
+  "command.transcribe": {
+    "label": "/transcribe — Transcribe audio/video files using OpenAI Whisper. Supports 99 languages with au",
+    "description": "Transcribe audio/video files using OpenAI Whisper. Supports 99 languages with automatic detection.",
+    "steps": [
+      {
+        "node": "command.transcribe",
+        "caption": "User invokes /transcribe"
+      },
+      {
+        "node": "command.transcribe",
+        "caption": "Standalone skill/utility — no subagent dispatch in the core path"
+      }
+    ],
+    "canonical": false
+  },
+  "command.view-video": {
+    "label": "/view-video — Extract frames from a video using ffmpeg so Claude can visually analyze the cont",
+    "description": "Extract frames from a video using ffmpeg so Claude can visually analyze the content.",
+    "steps": [
+      {
+        "node": "command.view-video",
+        "caption": "User invokes /view-video"
+      },
+      {
+        "node": "command.view-video",
+        "caption": "Standalone skill/utility — no subagent dispatch in the core path"
       }
     ],
     "canonical": false

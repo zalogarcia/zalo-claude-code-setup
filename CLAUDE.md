@@ -5,12 +5,13 @@
 When the user corrects you, says "no", "wrong", "don't do that", "stop", or otherwise indicates you made a mistake:
 
 1. **Identify the root cause** — what assumption or pattern led to the error?
-2. **Update the relevant file immediately**:
+2. **Choose the enforcement form — mechanism first.** Can a hook, lint rule, CI step, script, or skill catch this class of mistake deterministically? If yes, build or extend that (see `~/.claude/hooks/` for the pattern) and leave at most a one-line pointer in prose. A prose rule/Learned-Mistakes entry is the fallback ONLY when the fix is judgment-laden — state why. (Evidence: prose compliance decays under momentum — the 2026-07 audits found the prose model-split policy skipped 3× in one week while the sql-guard hook fired 4/4.)
+3. **Update the relevant file immediately**:
    - If the mistake is project-specific → update the project's `.claude/CLAUDE.md` or `.claude/rules/*.md`
    - If the mistake applies globally → update `~/.claude/CLAUDE.md` (this file)
    - If it's about a specific file type → update or create a rule in the project's `.claude/rules/` with the appropriate `paths:` scope
-3. **Add it under the `## Learned Mistakes` section** at the bottom of the relevant file
-4. Never add vague rules like "be more careful". Be specific: what went wrong, what to do instead.
+4. **Add it under the `## Learned Mistakes` section** at the bottom of the relevant file
+5. Never add vague rules like "be more careful". Be specific: what went wrong, what to do instead.
 
 ## Project Init Protocol
 
@@ -50,7 +51,6 @@ The meta-rule injected at every session boundary (`~/.claude/META_RULE.md`) name
 | `~/.claude/rules/anti-patterns.md`         | Universal failure modes (placeholders, silent partial completion, drift)                                 |
 | `~/.claude/rules/questioning.md`           | Surfacing the real problem behind the presented one (dream extraction)                                   |
 | `~/.claude/rules/context-budget.md`        | PEAK / GOOD / DEGRADING / POOR tier behaviors + degradation warning signs                                |
-| `~/.claude/rules/persuasion-principles.md` | Authoring or revising rules in `~/.claude/rules/` or this file                                           |
 | `~/.claude/rules/when-to-parallelize.md`   | Deciding whether to dispatch agents in parallel vs. sequential                                           |
 | `~/.claude/rules/problem-solving.md`       | When stuck — symptom-to-technique dispatch table + 3+ Fixes Rule                                         |
 | `~/.claude/rules/git-safety.md`            | Any git operation — staging, pre-op checks, destructive-op approval                                      |
@@ -111,13 +111,7 @@ When the user doesn't specify, default to:
 
 ## Frontend Workflow (Opt-In)
 
-When the user asks to build, design, or create frontend UI (page, component, landing page, dashboard, etc.), **consider** this pipeline. It's opt-in, not mandatory — invoke when the work is genuinely UI-design-heavy (a new page, a component library piece, a visual redesign). Skip for trivial copy/style tweaks or one-line CSS fixes.
-
-1. **Design** — Apply the `frontend-design` skill's principles (bold direction, anti-slop aesthetics, concrete palette and font pairing) while writing the code.
-2. **Build** — For non-trivial implementation, use the `frontend-specialist` agent. It has scoped MCP servers for Aceternity UI and shadcn/ui. Apply Apple HIG-quality design principles (bold direction, anti-slop aesthetics, generous whitespace, clear hierarchy, no decoration without function).
-3. **Verify** — Launch the `live-test` agent to screenshot and confirm it looks right in the browser.
-
-This chain has been historically underused — don't force it for small changes. For full-page or component-library work, the full chain is high-value.
+For genuinely UI-design-heavy work (a new page, a component-library piece, a visual redesign), read `~/.claude/rules-ref/frontend-workflow.md` — the design (`frontend-design`) → build (`frontend-specialist`) → verify (`live-test`) pipeline. Skip for copy/style tweaks. (Demoted to on-demand 2026-07-19: zero invocations across a 37-session audit week; UI work still shipped fine via /goal + general agents.)
 
 ## Video B-Roll Production
 

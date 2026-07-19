@@ -65,6 +65,12 @@ Add or refine outcomes as patterns emerge from real runs. Each outcome must be:
 - **Measure:** Any work outside the strict task description appears in a clearly-labeled section (e.g., `safe-planner`'s "Blast radius" section, an "Adjacent work" subsection, or per-work-unit annotation) AND each adjacent concern has a 1-sentence justification tied to a task requirement. Adjacent work that's just listed in the file scope without justification = FAIL.
 - **Applicable when:** plan touches code outside the strict task description.
 
+### Outcome 2.4: User-visible placement/direction/scope choices are surfaced, not silently defaulted
+
+- **Why:** The 2026-07-19 weekly audit found 7 rebuilds across 6 sessions caused by plans silently defaulting a user-visible choice (which page content lands on, which side of a relation is filtered, which population is in scope) — including one plan that correctly elevated one such choice to the user and silently defaulted the equally user-visible one that got the work thrown away.
+- **Measure:** For each choice a plan makes about where content appears, which side of a relation is filtered, or which population is in scope, the plan either quotes the user's words locking that choice or lists it as an explicit decision/AskUserQuestion. A user-visible choice defaulted without either = FAIL.
+- **Applicable when:** the plan makes user-visible placement/direction/scope choices.
+
 ---
 
 ## 3. Failure Resilience

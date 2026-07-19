@@ -24,72 +24,57 @@ export const meta = {
 // ---- args: { files?: string[], base?: string, note?: string } ----------------
 // files: changed files to focus on (from `git diff` in the caller). Optional.
 // base:  git ref to diff against (default HEAD). Optional.
-const files = Array.isArray(args?.files)
-  ? args.files
-  : Array.isArray(args)
-    ? args
-    : [];
-const base = (args && typeof args.base === "string" && args.base) || "HEAD";
-const note = (args && typeof args.note === "string" && args.note) || "";
-
-// ---- scope guard ------------------------------------------------------------
-// Failure mode (observed repeatedly in real runs): when this workflow is called
-// with prose instead of {files:[...]}, `files` is [] and finders silently fall
-// back to `git diff HEAD` — which, inside an autopilot worktree or against a
-// wrong base, audits an unrelated tree. The `scope:[]` in the return is the tell.
-// Guard: resolve empty scope to a concrete file list up front (single source of
-// truth) and loudly warn if it can't, so the caller never trusts a verdict from
-// an unverified scope.
-let resolvedFiles = files;
-let scopeWarning = null;
-if (!files.length) {
-  phase("Scope");
-  const SCOPE_SCHEMA = {
-    type: "object",
-    properties: {
-      changedFiles: {
-        type: "array",
-        items: { type: "string" },
-        description: "relative paths of changed source files",
-      },
-      empty: {
-        type: "boolean",
-        description: "true if the diff produced no changed source files",
-      },
-    },
-    required: ["changedFiles", "empty"],
-  };
-  const scope = await agent(
-    `Resolve the QA audit scope (read-only — do not edit anything).
-Run \`git diff --name-only ${base}\`. If that is empty, also try \`git diff --name-only --staged\` and \`git status --porcelain\`.
-Return the relative paths of changed SOURCE files only — skip lockfiles, build output (dist/.next/out), node_modules, and generated artifacts.
-Set empty=true only if there are genuinely no changed source files.`,
-    {
-      label: "scope:resolve",
-      phase: "Scope",
-      schema: SCOPE_SCHEMA,
-      model: "opus",
-    },
-  );
-  resolvedFiles =
-    scope && Array.isArray(scope.changedFiles) ? scope.changedFiles : [];
-  if (!resolvedFiles.length || (scope && scope.empty)) {
-    scopeWarning = `qa-audit was called with no explicit file scope and \`git diff ${base}\` resolved to ${resolvedFiles.length} changed source file(s). The audit may be running against the wrong tree (the known scope:[] failure mode). Do not trust a clean verdict — confirm the caller passed {files:[...]} or the correct base.`;
-    log(`⚠️  ${scopeWarning}`);
-  } else {
-    log(
-      `Resolved empty scope → ${resolvedFiles.length} changed file(s) via git diff ${base}`,
-    );
+//
+// ARGS GUARD — background-launched workflows can hand `args` over as a JSON STRING
+// rather than an object, so never assume an object. Parse a string form FIRST so a
+// stringified `{files:[...]}` can still be recovered into a real array before we
+// judge its shape.
+let parsedArgs = args;
+if (typeof parsedArgs === "string") {
+  try {
+    parsedArgs = JSON.parse(parsedArgs);
+  } catch (e) {
+    parsedArgs = null;
   }
 }
 
-const scopeText = resolvedFiles.length
-  ? `Scope — focus ONLY on these changed files:\n${resolvedFiles.map((f) => `  - ${f}`).join("\n")}`
-  : `Scope — the current change set. Run \`git diff ${base}\` to discover what changed and focus only on changed lines. NOTE: the scope could not be resolved to specific files; if \`git diff ${base}\` is empty or unrelated to the task, return an empty findings array and say so.`;
+// `files` may arrive as the whole args (a bare array) or as parsedArgs.files.
+const rawFiles = Array.isArray(parsedArgs)
+  ? parsedArgs
+  : parsedArgs && typeof parsedArgs === "object"
+    ? parsedArgs.files
+    : undefined;
 
-const diffHint = resolvedFiles.length
-  ? `Run \`git diff ${base} -- ${resolvedFiles.join(" ")}\` to see exactly what changed, then read the surrounding context with the Read tool before judging. FIRST confirm these files actually exist and changed; if the diff is empty, return an empty findings array.`
-  : `Run \`git diff ${base}\` first to see what changed.`;
+// Change 1 — THROW on a malformed `files` (observed false-green #1): a caller once
+// passed `files` as a JSON-encoded STRING; the script treated it as [] → git-diff
+// fallback on a committed tree → 0 files → a clean-looking verdict (replayed twice
+// from cache). Any whole-args JSON string was already parsed above, so if `files`
+// is STILL not an array here it cannot be recovered — fail loudly instead of
+// silently auditing nothing. (undefined / null = "not passed" and is allowed —
+// that path resolves scope from git and then refuses on 0 files; see Change 3.)
+if (rawFiles !== undefined && rawFiles !== null && !Array.isArray(rawFiles)) {
+  throw new Error(
+    `qa-audit: \`files\` must be an array of paths, got ${typeof rawFiles} (${JSON.stringify(rawFiles).slice(0, 80)}). ` +
+      `This is the background-args stringification bug — callers sometimes JSON-encode the args ` +
+      `(or the file list) into a string, which used to be silently treated as empty scope and fall ` +
+      `back to git-diff: a false-green audit. Pass the parsed shape:  args: {files: ["a.ts", "b.ts"]}  ` +
+      `— NOT  args: "{\\"files\\":[\\"a.ts\\"]}".`,
+  );
+}
+
+const files = Array.isArray(rawFiles) ? rawFiles : [];
+const base =
+  (parsedArgs &&
+    typeof parsedArgs === "object" &&
+    typeof parsedArgs.base === "string" &&
+    parsedArgs.base) ||
+  "HEAD";
+const note =
+  (parsedArgs &&
+    typeof parsedArgs === "object" &&
+    typeof parsedArgs.note === "string" &&
+    parsedArgs.note) ||
+  "";
 
 // ---- schemas -----------------------------------------------------------------
 const FINDINGS_SCHEMA = {
@@ -180,9 +165,138 @@ const DIMENSIONS = [
   },
 ];
 
+// ---- scope resolution -------------------------------------------------------
+// Failure mode (observed repeatedly in real runs): when this workflow is called
+// with prose instead of {files:[...]}, `files` is [] and finders silently fall
+// back to `git diff HEAD` — which, inside an autopilot worktree or against a
+// wrong base, audits an unrelated tree. Worse, `git diff` MISSES untracked files,
+// so brand-new edge functions / migrations (the session's riskiest artifacts) were
+// never audited and most finders returned empty. We now (a) union untracked files
+// into the diff-derived scope and (b) REFUSE to dispatch on a 0-file scope, so an
+// unverified scope can never mint a clean-looking verdict.
+let resolvedFiles = files;
+let scopeWarning = null;
+if (!files.length) {
+  phase("Scope");
+  const SCOPE_SCHEMA = {
+    type: "object",
+    properties: {
+      changedFiles: {
+        type: "array",
+        items: { type: "string" },
+        description:
+          "relative paths of TRACKED changed source files (git diff / --staged)",
+      },
+      untrackedFiles: {
+        type: "array",
+        items: { type: "string" },
+        description:
+          "relative paths of UNTRACKED source files from `git status --porcelain` (?? lines), directories expanded to their files, same extension filter as changedFiles",
+      },
+      empty: {
+        type: "boolean",
+        description:
+          "true only if BOTH the tracked and untracked sets are empty after filtering",
+      },
+    },
+    required: ["changedFiles", "empty"],
+  };
+  const scope = await agent(
+    `Resolve the QA audit scope (read-only — do not edit anything).
+
+Gather the changed-file set from these sources and return them:
+1. TRACKED changes: run \`git diff --name-only ${base}\`. If that is empty, also try \`git diff --name-only --staged\`.
+2. UNTRACKED files — \`git diff\` does NOT list these, and brand-new files (a new edge function, a new migration) are often the most security-sensitive artifacts of a session: run \`git status --porcelain\` and take every line whose status is \`??\`. For any \`??\` entry that is a DIRECTORY (the path ends with \`/\`), expand it to its individual files with \`git ls-files --others --exclude-standard -- <dir>\` (or \`find <dir> -type f\`). Never return a bare directory path.
+
+Filtering (apply to BOTH sets):
+- Keep ONLY source-code files with these extensions: ts, tsx, js, jsx, mjs, py, sql, toml, json, sh, go, rs.
+- Skip lockfiles (package-lock.json, yarn.lock, pnpm-lock.yaml, Cargo.lock, poetry.lock), build output (dist/, .next/, out/, build/), node_modules, and any generated artifacts — even when their extension is in the list above.
+
+Return via structured output:
+- changedFiles: the TRACKED source files (step 1, filtered).
+- untrackedFiles: the UNTRACKED source files (step 2, directories expanded, filtered).
+- empty: true only if BOTH sets are genuinely empty after filtering.`,
+    {
+      label: "scope:resolve",
+      phase: "Scope",
+      schema: SCOPE_SCHEMA,
+      model: "opus",
+    },
+  );
+  const trackedFiles =
+    scope && Array.isArray(scope.changedFiles) ? scope.changedFiles : [];
+  const untrackedFiles =
+    scope && Array.isArray(scope.untrackedFiles) ? scope.untrackedFiles : [];
+  // Change 2 — union untracked files into the diff-derived scope (deduped).
+  resolvedFiles = [...new Set([...trackedFiles, ...untrackedFiles])];
+  if (resolvedFiles.length) {
+    log(
+      `Resolved empty scope → ${resolvedFiles.length} changed file(s) (${trackedFiles.length} tracked + ${untrackedFiles.length} untracked) via git diff ${base} ∪ git status --porcelain`,
+    );
+  } else {
+    scopeWarning = `qa-audit was called with no explicit file scope and \`git diff ${base}\` ∪ untracked files (git status --porcelain) resolved to 0 changed source files. Auditing would run against the wrong tree (the known scope:[] false-green). Refusing to dispatch — pass {files:[...]} or the correct base and rerun.`;
+    log(`⚠️  ${scopeWarning}`);
+  }
+}
+
+// Change 3 — REFUSE to dispatch on a 0-file scope. An empty scope used to warn but
+// still run finders on the git-diff fallback and return a verdict that reads as a
+// pass. Instead return the UNTRUSTED shape immediately, BEFORE any finder is
+// dispatched, so a 0-file scope can NEVER be mistaken for a clean audit.
+if (!resolvedFiles.length) {
+  const reason =
+    scopeWarning ||
+    `qa-audit resolved 0 files in scope (explicit empty \`files\` and an empty diff). Refusing to dispatch finders.`;
+  log(`⛔ Empty scope — refusing to dispatch finders; returning UNTRUSTED.`);
+  return {
+    verdict:
+      "UNTRUSTED — 0-file scope; refused to dispatch finders (an empty scope audits nothing and would return a false-green pass)",
+    untrusted: true,
+    error: "empty_scope",
+    deadFinders: [],
+    confirmed: [],
+    unverified: [],
+    stats: {
+      dimensions: DIMENSIONS.length,
+      deadFinders: 0,
+      raw: 0,
+      deduped: 0,
+      confirmed: 0,
+      refuted: 0,
+      unverified: 0,
+    },
+    scope: resolvedFiles,
+    scopeWarning: reason,
+  };
+}
+
+// Change 4 — scope-hash the finder cache identity. Workflow resume caching replays
+// agent() calls whose (prompt, opts) are unchanged; a previous run's EMPTY finder
+// results must never be replayed for a DIFFERENT resolved scope. A djb2 hex of the
+// sorted file list is folded into every finder's label + prompt so the cache key
+// moves whenever the scope moves. (No crypto, no Date.now / Math.random — those are
+// unavailable in the workflow sandbox.)
+function djb2Hex(str) {
+  let h = 5381;
+  for (let i = 0; i < str.length; i++) {
+    h = ((h * 33) ^ str.charCodeAt(i)) >>> 0;
+  }
+  return h.toString(16).padStart(8, "0");
+}
+const scopeHash = djb2Hex([...resolvedFiles].sort().join("\n"));
+
+// Scope is guaranteed non-empty past the Change 3 refusal.
+const scopeText = `Scope — focus ONLY on these changed files:\n${resolvedFiles
+  .map((f) => `  - ${f}`)
+  .join("\n")}`;
+
+const diffHint = `Run \`git diff ${base} -- ${resolvedFiles.join(" ")}\` to see what changed in TRACKED files, then read the surrounding context with the Read tool before judging. Some scoped files are brand-new UNTRACKED files (e.g. a new edge function or migration) that will NOT appear in \`git diff\` — read those in full with the Read tool and audit them as newly-added code. FIRST confirm each file exists; only skip a file if it genuinely does not exist.`;
+
+// ---- finder / skeptic prompts ------------------------------------------------
 const finderPrompt = (
   d,
 ) => `You are a precise QA auditor. Hunt for REAL bugs along ONE dimension only.
+[scope ${scopeHash}]
 
 ## Dimension: ${d.key}
 ${d.lens}
@@ -277,7 +391,7 @@ const finderResults = await parallel(
   DIMENSIONS.map(
     (d) => () =>
       agent(finderPrompt(d), {
-        label: `find:${d.key}`,
+        label: `find:${d.key}:${scopeHash}`,
         phase: "Find",
         schema: FINDINGS_SCHEMA,
         model: "opus",

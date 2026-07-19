@@ -34,12 +34,17 @@ LOOP:
       { verdict, untrusted, deadFinders, confirmed: [ {file, line, severity, title,
         description, evidence, suggestedFix} ], unverified: [...], stats, scope }
   Map the structured result — CHECK `untrusted` BEFORE `confirmed` (false-green guard):
-    - untrusted == true → NOT a pass, regardless of confirmed.length. Finder or
-      skeptic agents died mid-run (usage limit / API error) and their portions never
-      ran. Resume the SAME run: Workflow(scriptPath, resumeFromRunId=<run id>) —
-      cached agents replay free, only dead ones re-run. Does not consume an
-      iteration. Never report "clean" from an untrusted verdict (2026-07 audit:
-      this exact false green nearly shipped real bugs twice).
+    - error == "empty_scope" → caller error, NOT agent death. Do NOT resume (a
+      resume deterministically replays the same refusal). Fix the args (pass a
+      real files array, or the correct base) and re-invoke FRESH. Does not
+      consume an iteration.
+    - untrusted == true (and no error field) → NOT a pass, regardless of
+      confirmed.length. Finder or skeptic agents died mid-run (usage limit /
+      API error) and their portions never ran. Resume the SAME run:
+      Workflow(scriptPath, resumeFromRunId=<run id>) — cached agents replay
+      free, only dead ones re-run. Does not consume an iteration. Never report
+      "clean" from an untrusted verdict (2026-07 audit: this exact false green
+      nearly shipped real bugs twice).
     - untrusted == false AND confirmed.length == 0 → BREAK, success (clean)
     - confirmed.length  > 0  → continue to Fix step (fix confirmed; `unverified`
       findings re-verify on the resumed/next audit — they are neither confirmed

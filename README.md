@@ -12,7 +12,7 @@ Custom agents, skills, commands, MCP servers, auto-formatting hooks, and workflo
 
 ## Interactive Architecture
 
-See how the pieces fit together: 7 agents, 16 shared rules, 6 commands, 9 skills, 3 workflows, hooks, MCP servers — plus animated request flows (`/autopilot`, `/bug`, `/qa-loop`, `/brainstorm`, `/plan`).
+See how the pieces fit together: 7 agents, 15 shared rules (+ on-demand `rules-ref/`), 6 commands, 9 skills, 3 workflows, hooks, MCP servers — plus animated request flows (`/autopilot`, `/bug`, `/qa-loop`, `/brainstorm`, `/plan`).
 
 **→ [Open the interactive visualization](https://zalogarcia.github.io/zalo-claude-code-setup/visualization/)**
 
@@ -183,7 +183,7 @@ Deterministic multi-agent scripts at `~/.claude/workflows/`, run via Claude Code
 | **plan-verify**    | Plan Verification Loop backing `/plan`: brainstorm critique + principles grading in parallel, then at most one `safe-planner` revision pass.                                                                                                                                                    |
 | **fable-insights** | Self-audit: one deep-analysis agent per Claude Code session transcript (args `{days}`), producing a friction report + proposed config diffs. Run interactively when you want a usage audit.                                                                                                     |
 
-### Shared Rules (16)
+### Shared Rules (15 + on-demand `rules-ref/`)
 
 Authoritative reference docs at `~/.claude/rules/`. Commands and agents `@`-include them; the main thread reads them when the situation applies. Built from the best of `gsd-build/get-shit-done` + `obra/superpowers`.
 
@@ -196,7 +196,6 @@ Authoritative reference docs at `~/.claude/rules/`. Commands and agents `@`-incl
 | **anti-patterns.md**          | Universal failure modes (placeholders, silent partial completion, drift) + No-Placeholders list                  |
 | **questioning.md**            | Dream-extraction philosophy for requirements gathering                                                           |
 | **context-budget.md**         | PEAK / GOOD / DEGRADING / POOR tier behaviors + degradation warning signs                                        |
-| **persuasion-principles.md**  | Cialdini-derived patterns for writing rules that actually get followed                                           |
 | **when-to-parallelize.md**    | 4-criteria decision rule for parallel agent dispatch                                                             |
 | **problem-solving.md**        | When-stuck dispatch table (inversion / simplification / meta-pattern) + 3+ Fixes Rule                            |
 | **git-safety.md**             | Staging discipline, pre-op checks, destructive-op approval                                                       |
@@ -251,19 +250,20 @@ Curated design principles and learned patterns that persist across all conversat
 
 ### Hooks (Auto-Formatting + Guards)
 
-Every time Claude edits a file, it's automatically formatted before you see it:
+Every time Claude edits a code file, it's automatically formatted before you see it — no-op-aware, and when a rewrite actually happens the hook tells Claude to re-read before its next edit (markdown/HTML are exempt: prose reflow kept corrupting plan files and deliverables):
 
-| File Types                                             | Formatter                    | Install                   |
-| ------------------------------------------------------ | ---------------------------- | ------------------------- |
-| `.ts` `.tsx` `.js` `.jsx` `.css` `.json` `.md` `.html` | **Prettier**                 | `npm install -g prettier` |
-| `.py`                                                  | **Ruff** (format + lint fix) | `pip install ruff`        |
+| File Types                                 | Formatter                    | Install                   |
+| ------------------------------------------ | ---------------------------- | ------------------------- |
+| `.ts` `.tsx` `.js` `.jsx` `.css` `.json`   | **Prettier** (via `prettier-format.sh`) | `npm install -g prettier` |
+| `.py`                                      | **Ruff** (format + lint fix) | `pip install ruff`        |
 
-Two guard hooks enforce rules at the tool layer — prose rules get skipped under momentum; hooks don't:
+Three guard hooks enforce rules at the tool layer — prose rules get skipped under momentum; hooks don't (`rules-ref/` holds the on-demand references, e.g. `persuasion-principles.md`):
 
-| Hook               | Fires On                   | What It Enforces                                                                                                                                                                                     |
-| ------------------ | -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **gitleaks-guard** | Every Bash command         | Blocks `git commit`/`push` if gitleaks finds secrets in the staged changes.                                                                                                                          |
-| **sql-guard**      | Supabase MCP `execute_sql` | Blocks multi-statement SQL (only the last statement's result returns — silent data loss), and holds the session's first data query until the schema has been consulted (kills column-name guessing). |
+| Hook                  | Fires On                   | What It Enforces                                                                                                                                                                                     |
+| --------------------- | -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **gitleaks-guard**    | Every Bash command         | Blocks `git commit`/`push` if gitleaks finds secrets in the staged changes; also blocks destructive git ops (`reset --hard`, `checkout .`, `restore .`, `clean -f`, `stash`) without explicit user approval — one subagent's mass revert once wiped 11 sibling agents' work. |
+| **sql-guard** (v2)    | Supabase MCP `execute_sql` | Blocks multi-statement SQL; holds the session's first data query until the schema is consulted; validates every query's table names against the repo's `docs/SCHEMA-PROD.md` snapshot and flags >7-day-stale snapshots. |
+| **agent-model-guard** | Every Agent/Task dispatch  | Enforces the subagent model-split policy: blocks model-less dispatches of built-in agent types on Fable sessions (they'd silently inherit Fable and burn the session limit — 12 mid-wave kills in one audit week). |
 
 ### Global CLAUDE.md
 
@@ -322,10 +322,10 @@ pip install ruff uv
 | Dependency    | Required By                                | Required?   |
 | ------------- | ------------------------------------------ | ----------- |
 | Node.js + npm | MCP servers (github, supabase, playwright) | Yes         |
-| Python 3      | Hook scripts (gitleaks, SQL guard, stop)   | Yes         |
+| Python 3      | Hook scripts (gitleaks, SQL guard, agent-model guard, stop) | Yes         |
 | jq            | Hook JSON parsing                          | Yes         |
 | Git           | Installer (clones this repo)               | Yes         |
-| Prettier      | Auto-format hook (TS/JS/CSS/JSON/MD/HTML)  | Recommended |
+| Prettier      | Auto-format hook (TS/JS/CSS/JSON — md/html exempt) | Recommended |
 | Ruff          | Auto-format hook (Python)                  | Recommended |
 | uv/uvx        | Optional — Python tooling for some skills  | Optional    |
 

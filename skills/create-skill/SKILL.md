@@ -206,6 +206,7 @@ After writing:
 
 ## Pair with
 
+- **`~/.claude/rules-ref/persuasion-principles.md`** — read it when writing the skill's rule-like language (Authority/Commitment/Scarcity framing for instructions that must stick); it lives in rules-ref (on-demand), not always-loaded rules
 - **`/brainstorm`** — if unsure whether the pattern is truly recurring, dispatch brainstorm to stress-test the skill idea before writing it
 - **30-day usage analysis** — for retroactive skill discovery (general-purpose agent scanning `~/.claude/projects/`)
 - **`commit-with-heredoc`** — commit the new skill following the convention

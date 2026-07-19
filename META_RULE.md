@@ -28,12 +28,15 @@ Edit this file freely — the `session-start.sh` hook reads it fresh each time.
 
 - `qa-audit` — read-only parallel bug hunt + adversarial verify (backs `/qa-loop`). Its return carries `verdict`/`untrusted`: dead finder or skeptic agents mark the run UNTRUSTED — never treat an untrusted result as a clean pass; resume the run instead.
 - `plan-verify` — brainstorm + principles gates with one revision pass (backs `/plan`)
-- `fable-insights` — self-audit: one deep-analysis agent per session transcript, args `{days}` (default 7). Run it interactively when you want a usage audit; it writes a friction report + PROPOSED_CHANGES to `~/.claude/usage-data/`. (Interactive only — the Workflow tool's background-callback model can't complete under a one-shot headless `claude -p`, so it is not cron-scheduled.)
+- `fable-insights` — self-audit: one deep-analysis agent per session transcript, args `{days}` (default 7). Run it interactively when you want a usage audit. The orchestrator then synthesizes per `~/.claude/workflows/fable-insights-synthesis.md` (artifact names, baseline comparison, MECHANIZATION + DEMOTION bias — every proposed change declares its enforcement form, mechanism by default) into `~/.claude/usage-data/`. (Interactive only — the Workflow tool's background-callback model can't complete under a one-shot headless `claude -p`, so it is not cron-scheduled.)
 
 **Hooks (mechanized rules)** — prose rules that were historically skipped are now enforced at the tool layer:
 
-- `sql-guard.py` (PreToolUse on `mcp__supabase__execute_sql`) — blocks multi-statement SQL; holds the first data query of a session until the schema is consulted
-- `gitleaks-guard.py` (PreToolUse on Bash) — secret scan, 120s timeout
+- `sql-guard.py` v2 (PreToolUse on `mcp__supabase__execute_sql`) — blocks multi-statement SQL; holds the first data query until the schema is consulted; validates every query's tables against the repo's `docs/SCHEMA-PROD.md` and flags >7-day-stale snapshots
+- `gitleaks-guard.py` (PreToolUse on Bash) — secret scan on commit/push (120s timeout) + destructive-git guard: `reset --hard`, `checkout .`, `restore .`, `clean -f`, `stash` are blocked without explicit user approval (`# user-approved` comment on the re-run). git is READ-ONLY for subagents.
+- `agent-model-guard.py` (PreToolUse on Agent/Task) — blocks model-less dispatches of built-in agent types on Fable sessions; pass `model:"opus"` explicitly per the CLAUDE.md split policy (or `model:"fable"` deliberately)
+- `prettier-format.sh` (PostToolUse on Edit/Write) — no-op-aware code formatting (ts/js/css/json only; md/html exempt); when it rewrites a file it TELLS you to re-Read before further edits — do so
+- `QUIRKS.md` is appended to this injection by `session-start.sh` — the recurring environment traps, front-loaded so they are never re-derived mid-task
 
 **Shared rules** at `~/.claude/rules/` (treat as authoritative reference; `@`-included by commands/agents):
 
@@ -44,10 +47,11 @@ Edit this file freely — the `session-start.sh` hook reads it fresh each time.
 - `anti-patterns.md` — universal anti-patterns + No-Placeholders list
 - `questioning.md` — collaborative-extraction philosophy for requirements
 - `context-budget.md` — PEAK / GOOD / DEGRADING / POOR tier behaviors + degradation warning signs
-- `persuasion-principles.md` — Authority/Commitment/Scarcity/Social-Proof/Unity for writing rules that stick
 - `when-to-parallelize.md` — 4-criteria decision rule for parallel agent dispatch
 - `problem-solving.md` — when-stuck dispatch table (inversion / simplification / meta-pattern)
 - `git-safety.md` — gitignore-before-create, no `git add .`, lock-file check
+
+On-demand references live in `~/.claude/rules-ref/` (NOT auto-loaded — read when the situation applies): `persuasion-principles.md` (authoring rules/skills that stick), `frontend-workflow.md` (UI-design-heavy pipeline).
 
 ## The discipline
 

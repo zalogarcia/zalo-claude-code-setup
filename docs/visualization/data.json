@@ -1,12 +1,29 @@
 {
   "meta": {
-    "generatedAt": "2026-07-12T01:34:58.146Z",
+    "generatedAt": "2026-07-19T16:10:34.750Z",
     "repo": "zalo-claude-code-setup",
     "changelog": [
       {
+        "date": "2026-07-19",
+        "entries": [
+          "Split QA model policy by stage: verifier ≠ author"
+        ]
+      },
+      {
+        "date": "2026-07-15",
+        "entries": [
+          "Add ship-yt-video skill + CLAUDE.md callout"
+        ]
+      },
+      {
+        "date": "2026-07-14",
+        "entries": [
+          "docs(CLAUDE.md): register infographics + yt-thumbnail production callouts"
+        ]
+      },
+      {
         "date": "2026-07-11",
         "entries": [
-          "feat(visualization): principles loop, beginner on-ramp, overnight/repo-init guides, tips overhaul, mobile pass",
           "Remove dead .no-graphrag marker",
           "Fix stale code-pathfinder reference in dispatch boilerplate",
           "docs: document guard hooks + repo-init/VERIFY.md in README, refresh visualizer",
@@ -123,9 +140,7 @@
           "[setup] gitignore: .autopilot.prev* archived prior runs",
           "[autopilot] QA iteration 1 — fixed 1 HIGH (stale marker reference)",
           "[autopilot] Batch 2: wu-3 autopilot api-retry integration",
-          "[autopilot] Batch 1: wu-1 (bug-fix confidence gate) + wu-2 (scalability outcome 3.5)",
-          "[autopilot] Batch 0: wu-0 api-retry.md foundation",
-          "[setup] gitignore: .autopilot/ runtime state"
+          "[autopilot] Batch 1: wu-1 (bug-fix confidence gate) + wu-2 (scalability outcome 3.5)"
         ]
       }
     ]
@@ -214,13 +229,6 @@
       "label": "git-safety",
       "path": "rules/git-safety.md",
       "summary": "Combined from obra/superpowers `using-git-worktrees` and gsd-build/get-shit-done universal anti-patterns."
-    },
-    {
-      "id": "rule.persuasion-principles",
-      "kind": "rule",
-      "label": "persuasion-principles",
-      "path": "rules/persuasion-principles.md",
-      "summary": "Adapted from obra/superpowers `writing-skills/persuasion-principles.md`. Reference when authoring or revising files in `~/.claude/rules/`, `~/.claude/CLAUDE.md`, agent definitions, or skill bodies."
     },
     {
       "id": "rule.plan-verification",
@@ -341,6 +349,24 @@
       ]
     },
     {
+      "id": "command.enhance-audio",
+      "kind": "command",
+      "label": "/enhance-audio",
+      "path": "commands/enhance-audio.md",
+      "summary": "Enhance and clean up audio in video/audio files using FFmpeg filters. Removes noise, normalizes volume, and improves speech clarity.",
+      "includes": [],
+      "dispatches": []
+    },
+    {
+      "id": "command.ghl-upload",
+      "kind": "command",
+      "label": "/ghl-upload",
+      "path": "commands/ghl-upload.md",
+      "summary": "Upload files to GoHighLevel's media library via API.",
+      "includes": [],
+      "dispatches": []
+    },
+    {
       "id": "command.goal",
       "kind": "command",
       "label": "/goal",
@@ -360,6 +386,24 @@
         "agent.bug-fix",
         "agent.frontend-specialist"
       ]
+    },
+    {
+      "id": "command.nano-banana",
+      "kind": "command",
+      "label": "/nano-banana",
+      "path": "commands/nano-banana.md",
+      "summary": "Generates AI images using the nano-banana CLI (Gemini 3.1 Flash default, Pro available). Handles multi-resolution (512-4K), aspect ratios, reference images for style transfer, green screen workflow for transparent assets, cost tracking, and exact dimension control. Use when asked to \"generate an image\", \"create a sprite\", \"make an asset\", \"generate artwork\", or any image generation task for UI mockups, game assets, videos, or marketing materials.",
+      "includes": [],
+      "dispatches": []
+    },
+    {
+      "id": "command.optimize-video",
+      "kind": "command",
+      "label": "/optimize-video",
+      "path": "commands/optimize-video.md",
+      "summary": "Process and upload optimized videos to Supabase Storage with faststart + compression.",
+      "includes": [],
+      "dispatches": []
     },
     {
       "id": "command.plan",
@@ -411,6 +455,24 @@
       ]
     },
     {
+      "id": "command.transcribe",
+      "kind": "command",
+      "label": "/transcribe",
+      "path": "commands/transcribe.md",
+      "summary": "Transcribe audio/video files using OpenAI Whisper. Supports 99 languages with automatic detection.",
+      "includes": [],
+      "dispatches": []
+    },
+    {
+      "id": "command.view-video",
+      "kind": "command",
+      "label": "/view-video",
+      "path": "commands/view-video.md",
+      "summary": "Extract frames from a video using ffmpeg so Claude can visually analyze the content.",
+      "includes": [],
+      "dispatches": []
+    },
+    {
       "id": "agent.brainstorm",
       "kind": "agent",
       "label": "brainstorm",
@@ -443,6 +505,15 @@
         "## IMPLEMENTATION DONE_WITH_CONCERNS",
         "## BLOCKED"
       ],
+      "includes": []
+    },
+    {
+      "id": "agent.image-craft-expert",
+      "kind": "agent",
+      "label": "image-craft-expert",
+      "path": "agents/image-craft-expert.md",
+      "summary": "Crafts optimized text-to-image prompts and generates images using Gemini (nano-banana) and/or ChatGPT (gpt-image-2). Use for any image generation task. <example>user: 'Create an image of a fantasy castle at sunset' assistant: 'I'll use the image-craft-expert to craft a detailed generation prompt.'</example>",
+      "markers": [],
       "includes": []
     },
     {
@@ -533,11 +604,25 @@
       "summary": "Kill any stale dev server on a given port, restart it cleanly in the project, poll until it accepts connections, and smoke-test a route — returning HTTP status + log tail. Use before testing UI in the browser, after env changes, or whenever Claude wrote \"pkill -f 'next dev'\" in a previous turn and needs the server back up. Replaces the 100+ hand-written kill+sleep+curl variants."
     },
     {
+      "id": "skill.dub-video",
+      "kind": "skill",
+      "label": "dub-video",
+      "path": "skills/dub-video",
+      "summary": "Dubs the voice in a video or audio file into another language via the ElevenLabs Dubbing v1 API (English→Spanish by default, 90+ languages). Preserves each speaker's tone and pace; multi-speaker aware. Accepts a local file or a URL (YouTube, X, TikTok, Vimeo, direct link). Use when asked to \"dub this video\", \"translate the voice/audio to Spanish\", \"make a Spanish version of this video\", \"localize this clip\", or \"revoice this in <language>\". NOT for lip-sync (ElevenLabs replaces audio only — mouths won't re-sync)."
+    },
+    {
       "id": "skill.frontend-design",
       "kind": "skill",
       "label": "frontend-design",
       "path": "skills/frontend-design",
       "summary": "Create distinctive, production-grade frontend interfaces with high design quality. Use this skill when the user asks to build web components, pages, or applications. Generates creative, polished code that avoids generic AI aesthetics."
+    },
+    {
+      "id": "skill.infographics",
+      "kind": "skill",
+      "label": "infographics",
+      "path": "skills/infographics",
+      "summary": "Generate dense, text-heavy educational infographics via AI text-to-image — gpt-image-2, executed through the image-craft-expert agent. Encodes the 6 layout archetypes, 3 style presets, the quoted-string text-budget prompt architecture, and a mandatory read-back text audit. Use when the user says \"make an infographic\", \"turn this into an infographic\", \"visualize this concept/framework\", \"visual cheat sheet\", \"diagram this idea\", or hands over educational/marketing content to be turned into a shareable image. NOT for precise data charts (use the dataviz skill + real chart code) and NOT for video motion graphics (that's machine-editorial-broll). Replaces one-line \"make an infographic about X\" prompts that produce garbled text and generic layouts."
     },
     {
       "id": "skill.live-test-campaign",
@@ -558,7 +643,7 @@
       "kind": "skill",
       "label": "repo-init",
       "path": "skills/repo-init",
-      "summary": "Scaffold per-repo Claude excellence in the current repo: scan the codebase, actually run (verify) the build/test/typecheck/lint commands, and generate .claude/CLAUDE.md, path-scoped .claude/rules/*.md, and the machine-readable .claude/VERIFY.md verification manifest — deploy surfaces plus THE proof signal each deploy claim requires. Use when the user says \"initialize repo\", \"init this repo\", \"set up project for Claude\", \"new repo\", \"scaffold claude config\", or when starting work in a repo missing .claude/CLAUDE.md. Idempotent — fills gaps in existing scaffolds, never clobbers. Implements the global Project Init Protocol and prevents \"deploy verified\" overclaims that cite the wrong pipeline''s signal (documented incident: ECS green cited as proof for a Vercel-deployed dashboard change). Pair with ~/.claude/scripts/repo-drift-check.sh to find repos under ~/dev missing the scaffold."
+      "summary": "Scaffold per-repo Claude excellence in the current repo: scan the codebase, actually run (verify) the build/test/typecheck/lint commands, and generate .claude/CLAUDE.md, path-scoped .claude/rules/*.md, the machine-readable .claude/VERIFY.md verification manifest — deploy surfaces plus THE proof signal each deploy claim requires — and its runnable projection .claude/verify.sh (proof signals as executable checks with exit codes). Use when the user says \"initialize repo\", \"init this repo\", \"set up project for Claude\", \"new repo\", \"scaffold claude config\", or when starting work in a repo missing .claude/CLAUDE.md. Idempotent — fills gaps in existing scaffolds, never clobbers. Implements the global Project Init Protocol and prevents \"deploy verified\" overclaims that cite the wrong pipeline''s signal (documented incident: ECS green cited as proof for a Vercel-deployed dashboard change). Pair with ~/.claude/scripts/repo-drift-check.sh to find repos under ~/dev missing the scaffold."
     },
     {
       "id": "skill.schema-snapshot",
@@ -568,11 +653,39 @@
       "summary": "Dump the production Supabase public schema (tables, columns, types, nullability, defaults, FKs, RLS flags) via the Supabase MCP and rewrite docs/SCHEMA-PROD.md with a generated-at header and drift notes. Use after applying any migration, whenever the snapshot is >7 days old, when a prod SQL query fails on a column/table name, or when the user asks to \"refresh the schema snapshot\". Kills schema-guessing in ad-hoc SQL — the #2 measured friction cluster (~60 wasted turns)."
     },
     {
+      "id": "skill.seedance",
+      "kind": "skill",
+      "label": "seedance",
+      "path": "skills/seedance",
+      "summary": "Generates videos via Segmind Seedance 2.0 (ByteDance). Text-to-video and image-to-video with native synced audio, multi-shot prompts, 4-15s duration, 480p/720p/1080p, aspect ratios 16:9/9:16/1:1/4:3/3:4/21:9/adaptive, first/last-frame conditioning for clip chaining, up to 9 reference images for character/style consistency. Use when asked to \"generate a video\", \"make a clip\", \"create b-roll\", \"animate this image\", \"make a 5 second video of X\", or any AI video generation task."
+    },
+    {
+      "id": "skill.seedance-video-prompt-builder",
+      "kind": "skill",
+      "label": "seedance-video-prompt-builder",
+      "path": "skills/seedance-video-prompt-builder",
+      "summary": "Generate a detailed, shot-by-shot, copy-and-paste-ready video prompt for Seedance 2.0 from a creative brief. Use this skill whenever the user wants to create a Seedance video prompt, write a shot list, plan a video sequence, or describe a video concept for AI generation, or mentions Seedance. Also trigger when the user describes a scene, ad concept, brand film, product video, or any visual sequence they want turned into a generation-ready prompt — even if they don't explicitly say \"video prompt.\" Trigger on phrases like \"write me a video prompt\", \"Seedance prompt\", \"shot list\", \"plan a video\", \"video concept\", \"create a sequence\", \"brand film prompt\", \"ad prompt\", or any time the user describes what they want to happen in a video and needs it translated into a copy-paste-ready prompt."
+    },
+    {
       "id": "skill.ship-to-prod",
       "kind": "skill",
       "label": "ship-to-prod",
       "path": "skills/ship-to-prod",
       "summary": "Ship delta-agents to production as one procedure — confirm target branch once, pre-flight via scripts/check.sh, heredoc commit, push, background-watch the \"Deploy to ECS\" run, ground-truth-verify per-service ECS image tags against the pushed SHA, smoke-test the gateway /health endpoint, and report. Use when the user says \"ship it\", \"ship to prod\", \"deploy to prod\", \"push and deploy\", or \"commit, push and watch the deploy\". Replaces the hand-rolled 200+-command commit/push/poll ritual with one background watch and a deterministic verification chain."
+    },
+    {
+      "id": "skill.ship-yt-video",
+      "kind": "skill",
+      "label": "ship-yt-video",
+      "path": "skills/ship-yt-video",
+      "summary": "End-to-end checklist for shipping a Zalo Kabche long-form YouTube video so no packaging or publish step gets skipped — edit-quality pass, a 3-TITLE split test pulled from the title-structures database, a 3-thumbnail split test (yt-thumbnail skill), a chapters-timed description, the correct upload path (Studio direct for long-form — Post for Me chokes on it), and the Claude-in-Chrome Studio setup. Use when the user says \"ship the youtube video\", \"publish the video to youtube\", \"upload the long-form video\", \"put the video on youtube\", or is finishing any video in ~/dev/zalo-kabche-brand. Replaces ad-hoc uploads that miss the title database, mistime chapters, or push a 45-min file through a pipeline that can't take it."
+    },
+    {
+      "id": "skill.telegram",
+      "kind": "skill",
+      "label": "telegram",
+      "path": "skills/telegram",
+      "summary": "Send messages, files, images, or documents to the user via their Telegram bot. Use when the user asks to send something to Telegram, notify them, or share content via Telegram."
     },
     {
       "id": "skill.tenant-triage",
@@ -589,6 +702,13 @@
       "summary": "Run TypeScript typecheck and production build for a Node/Next.js/Vite project, capture exit codes, and surface only the failure region (not the full log). Use when verifying changes before commit, in QA loops, after a refactor, or whenever a \"did this build?\" check is needed. Replaces hand-written tsc + build chains with a consistent invocation and consistent output shape."
     },
     {
+      "id": "skill.voice-agent-forge",
+      "kind": "skill",
+      "label": "voice-agent-forge",
+      "path": "skills/voice-agent-forge",
+      "summary": "Generate production-ready Retell-style voice/chat agent system prompts in the Operator Base \"house format\" — the same structure the game-app's Prompt Forge (Prompt Studio) and demo-retell-setup templates produce. Use when the user says \"write a voice agent prompt\", \"build a Retell agent\", \"make an orchestrator bot\", \"create the sub-agents\", \"forge a prompt for [client]\", \"draft the AI receptionist prompt\", or asks for a multi-bot routing setup (orchestrator + specialized agents). Produces the full <identity>/<company_identity>/<goal>/<context>/<important_information>/<conversational_style_guideline>/<conversation_steps>/<objection_handling_database>/<knowledge_database> skeleton with the voice-specific rules baked in, so every client bot comes out consistent instead of re-derived from scratch each time."
+    },
+    {
       "id": "skill.voice-call-triage",
       "kind": "skill",
       "label": "voice-call-triage",
@@ -601,6 +721,13 @@
       "label": "voice-test-stack",
       "path": "skills/voice-test-stack",
       "summary": "Bring the full Delta Agents local voice-test stack into a known-good state — kill stale gateway/dashboard listeners, start both from a named checkout/worktree with nohup + readiness polling, start the tunnel (cloudflared or ngrok, auto-picked from GATEWAY_URL), and print the callable state (tunnel URL, gateway health, dashboard URL, webhook URL shapes). Use before any live voice/webhook test against the local gateway, when the user says \"spin up the voice test stack\", or whenever a Retell/CRM webhook needs to reach localhost. Replaces the hand-assembled kill+build+node+vite+tunnel ritual."
+    },
+    {
+      "id": "skill.yt-thumbnail",
+      "kind": "skill",
+      "label": "yt-thumbnail",
+      "path": "skills/yt-thumbnail",
+      "summary": "Generate Zalo Kabche YouTube thumbnails (1280×720) from the locked Shop Manual '74 spec using real reference photos of Zalo, via the image-craft-expert agent on the gpt-image-2 `images.edit` rail (OpenAI — the standing preference, NOT nano-banana), with a mandatory text + face-identity audit and the 120px squint test. Use when the user says \"make the thumbnail\", \"thumbnail comps for video N\", \"thumbnail options\", or at the packaging stage of any video in ~/dev/zalo-kabche-brand. Encodes the photo-real vs manual-page precedence rule, the ≤4-word / one-orange-word text budget, and the stamp-never-lies guardrail. Replaces one-line \"make a thumbnail\" prompts that garble text, drift the face, and violate the brand spec."
     },
     {
       "id": "mcp.context7",
@@ -627,6 +754,14 @@
       "transport": "stdio"
     },
     {
+      "id": "mcp.n8n-api",
+      "kind": "mcp",
+      "label": "n8n-api",
+      "path": "mcp/mcp-servers.json",
+      "summary": "stdio: node __HOME__/Documents/AI Projects/n8n-zk/n8n-mcp-server/index.js",
+      "transport": "stdio"
+    },
+    {
       "id": "mcp.supabase",
       "kind": "mcp",
       "label": "supabase",
@@ -641,7 +776,7 @@
       "event": "PostToolUse",
       "matcher": "Edit|Write|MultiEdit",
       "path": "hooks/settings.json",
-      "summary": "FILE=$(cat | jq -r '.tool_input.file_path // empty'); if [ -n \"$FILE\" ] && echo \"$FILE\" | grep -qE '\\.(ts|tsx|js|jsx|css|json|md|html)$'; then prettier --write \"$FILE\" 2>/dev/null; fi"
+      "summary": "/Users/zalo/.claude/hooks/prettier-format.sh"
     },
     {
       "id": "hook.PostToolUse.1",
@@ -663,6 +798,15 @@
     },
     {
       "id": "hook.PreToolUse.1",
+      "kind": "hook",
+      "label": "PreToolUse [Agent|Task]",
+      "event": "PreToolUse",
+      "matcher": "Agent|Task",
+      "path": "hooks/settings.json",
+      "summary": "python3 /Users/zalo/.claude/hooks/agent-model-guard.py"
+    },
+    {
+      "id": "hook.PreToolUse.2",
       "kind": "hook",
       "label": "PreToolUse [mcp__supabase__execute_sql]",
       "event": "PreToolUse",
@@ -900,6 +1044,16 @@
       "type": "routes"
     },
     {
+      "source": "meta.orchestrator",
+      "target": "command.enhance-audio",
+      "type": "routes"
+    },
+    {
+      "source": "meta.orchestrator",
+      "target": "command.ghl-upload",
+      "type": "routes"
+    },
+    {
       "source": "command.goal",
       "target": "rule.agent-contracts",
       "type": "include"
@@ -952,6 +1106,16 @@
     {
       "source": "meta.orchestrator",
       "target": "command.goal",
+      "type": "routes"
+    },
+    {
+      "source": "meta.orchestrator",
+      "target": "command.nano-banana",
+      "type": "routes"
+    },
+    {
+      "source": "meta.orchestrator",
+      "target": "command.optimize-video",
       "type": "routes"
     },
     {
@@ -1056,6 +1220,16 @@
     },
     {
       "source": "meta.orchestrator",
+      "target": "command.transcribe",
+      "type": "routes"
+    },
+    {
+      "source": "meta.orchestrator",
+      "target": "command.view-video",
+      "type": "routes"
+    },
+    {
+      "source": "meta.orchestrator",
       "target": "agent.brainstorm",
       "type": "routes"
     },
@@ -1067,6 +1241,11 @@
     {
       "source": "meta.orchestrator",
       "target": "agent.frontend-specialist",
+      "type": "routes"
+    },
+    {
+      "source": "meta.orchestrator",
+      "target": "agent.image-craft-expert",
       "type": "routes"
     },
     {

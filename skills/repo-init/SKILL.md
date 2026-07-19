@@ -1,9 +1,9 @@
 ---
 name: repo-init
-description: 'Scaffold per-repo Claude excellence in the current repo: scan the codebase, actually run (verify) the build/test/typecheck/lint commands, and generate .claude/CLAUDE.md, path-scoped .claude/rules/*.md, and the machine-readable .claude/VERIFY.md verification manifest — deploy surfaces plus THE proof signal each deploy claim requires. Use when the user says "initialize repo", "init this repo", "set up project for Claude", "new repo", "scaffold claude config", or when starting work in a repo missing .claude/CLAUDE.md. Idempotent — fills gaps in existing scaffolds, never clobbers. Implements the global Project Init Protocol and prevents "deploy verified" overclaims that cite the wrong pipeline''s signal (documented incident: ECS green cited as proof for a Vercel-deployed dashboard change). Pair with ~/.claude/scripts/repo-drift-check.sh to find repos under ~/dev missing the scaffold.'
+description: 'Scaffold per-repo Claude excellence in the current repo: scan the codebase, actually run (verify) the build/test/typecheck/lint commands, and generate .claude/CLAUDE.md, path-scoped .claude/rules/*.md, the machine-readable .claude/VERIFY.md verification manifest — deploy surfaces plus THE proof signal each deploy claim requires — and its runnable projection .claude/verify.sh (proof signals as executable checks with exit codes). Use when the user says "initialize repo", "init this repo", "set up project for Claude", "new repo", "scaffold claude config", or when starting work in a repo missing .claude/CLAUDE.md. Idempotent — fills gaps in existing scaffolds, never clobbers. Implements the global Project Init Protocol and prevents "deploy verified" overclaims that cite the wrong pipeline''s signal (documented incident: ECS green cited as proof for a Vercel-deployed dashboard change). Pair with ~/.claude/scripts/repo-drift-check.sh to find repos under ~/dev missing the scaffold.'
 ---
 
-Make this repo's tribal knowledge self-installing: one pass that scans, **verifies with fresh evidence**, and writes the scaffold (`.claude/CLAUDE.md`, `.claude/rules/*.md`, `.claude/VERIFY.md`) so every future session — human-driven or `/autopilot` — starts with proven commands and the correct deploy-proof signals instead of re-learning them expensively.
+Make this repo's tribal knowledge self-installing: one pass that scans, **verifies with fresh evidence**, and writes the scaffold (`.claude/CLAUDE.md`, `.claude/rules/*.md`, `.claude/VERIFY.md`, and its runnable projection `.claude/verify.sh`) so every future session — human-driven or `/autopilot` — starts with proven commands and the correct deploy-proof signals instead of re-learning them expensively. `VERIFY.md` is the human-readable manifest; `verify.sh` makes its proof signals executable, so a claim of "tested" or "live" can be *run*, not just read and voluntarily obeyed.
 
 ## When to invoke
 
@@ -119,6 +119,26 @@ Rules for filling it:
 - Unverifiable-at-init rows carry `UNVERIFIED` inline; whoever performs the first real deploy upgrades them with evidence and a date.
 - Suite size `N tests` comes from actual test output, never estimated.
 
+### 3d. `.claude/verify.sh` — the runnable projection of VERIFY.md
+
+**Whenever this skill creates or updates `.claude/VERIFY.md`, generate a sibling `.claude/verify.sh`.** VERIFY.md is prose an agent must read and voluntarily obey — costing tokens every session and complying only probabilistically. `verify.sh` turns each proof signal into an executable check with an exit code. VERIFY.md stays the human-readable source of truth; `verify.sh` is its executable projection, and the two stay in sync — regenerate `verify.sh` on any VERIFY.md change, under the same idempotent fill-gaps-never-clobber policy as every other artifact here.
+
+Contract (hold it exactly):
+
+- `#!/usr/bin/env bash`, `set -uo pipefail`, `chmod +x` it. `cd` to the repo root off `${BASH_SOURCE[0]}` so it runs from any cwd.
+- **Modes:**
+  - `./verify.sh` (default) runs the **LOCAL gate** — the typecheck / lint / build / test commands this skill actually verified for the repo, each as a named check.
+  - `./verify.sh deploy <surface>` runs **THE proof-signal check** for that deploy surface from VERIFY.md (e.g. active ECS image tag == pushed/HEAD SHA, a health/version endpoint returns expected, a served-bundle grep). One function per surface named in the VERIFY.md deploy table; accept `all`.
+  - `./verify.sh --list` prints the available checks + surfaces.
+- **Output discipline:** exactly one `PASS <check>` / `FAIL <check>` / `SKIP <check> (<reason>)` line per check; a final summary line `VERIFY: <n_pass>/<n_total> passed, <n_skip> skipped`; exit 0 only when nothing FAILed.
+- **SKIP — never FAIL, never silent-pass — for any check whose creds/network aren't available where it runs** (AWS creds, Vercel CLI, a management-plane MCP). The SKIP reason carries the exact command a human/agent should run. Distinguish a connection-level failure (network down → SKIP) from a reachable-but-wrong response (→ FAIL): e.g. curl exit 6/7/28 → SKIP, HTTP non-200 → FAIL.
+- **Slow local checks stay optional-fast:** include the real test suite, but honor `VERIFY_QUICK=1` to emit `SKIP test (...)` instead of running it.
+- **Derivation rule (non-negotiable):** every check is derived from VERIFY.md content OR a command this skill actually ran and verified — never invented. A signal that can't run in a shell (Supabase MCP `list_migrations`, a change-unique bundle grep that needs the diff + a gitignored project link) is a SKIP that names the real command, not a fake automated PASS.
+
+Idempotency: if `verify.sh` already exists, reconcile it against the current VERIFY.md (add missing surface functions, correct drifted commands/URLs) rather than clobbering local edits.
+
+Reference implementation: `~/dev/delta-agents/.claude/verify.sh` (the flagship — Turborepo local gate + six path-gated ECS image-tag surfaces + gateway `/health` + Vercel dashboard reachability + a Supabase-MCP migrations SKIP).
+
 ## Step 4 — Register (commit policy)
 
 Default: **the scaffold gets committed.** The gold-standard repo (delta-agents) tracks `.claude/` in git (`git ls-files .claude/` is non-empty; `git check-ignore .claude` says not ignored) — that's what makes the knowledge survive clones, worktrees, and teammates.
@@ -138,6 +158,7 @@ End with a summary table + the UNVERIFIED list — never paste generated file bo
 | .claude/rules/frontend.md   | created | paths: apps/dashboard/**               |
 | .claude/rules/database.md   | skipped | no DB layer in repo                    |
 | .claude/VERIFY.md           | updated | added edge-functions surface row       |
+| .claude/verify.sh           | created | 4 local checks + N deploy surfaces; +x |
 
 UNVERIFIED (needs you): test command (suite requires live Redis); Vercel proof signal (no deploy observed yet)
 ```
@@ -151,12 +172,14 @@ UNVERIFIED (needs you): test command (suite requires live Redis); Vercel proof s
 - ❌ **Generic rules files** ("write clean components", "handle errors properly"). If the scan didn't reveal a repo-specific convention, don't write the file.
 - ❌ **Creating rules for layers that don't exist** — a `database.md` in a static site repo is noise that misfires forever.
 - ❌ **`git add .` to stage the scaffold** — stage the generated files by name.
+- ❌ **Inventing a `verify.sh` check.** A `deploy` function that echoes `PASS` without querying the live artifact, or a local check for a command that doesn't exist, is the runnable version of a guessed manifest command — it poisons every future run that trusts the exit code. Every check maps to a VERIFY.md signal or a verified command; an unrunnable signal is `SKIP` with the real command, never a fake pass.
+- ❌ **Letting `verify.sh` drift from VERIFY.md.** They are one source of truth and its projection. Change VERIFY.md → regenerate `verify.sh` in the same pass; never update one and leave the other stale.
 
 ## Edge cases
 
 - **Monorepo with per-app pipelines** — each app that deploys independently is its own surface row; commands section notes root-level vs `--filter <pkg>` variants.
 - **No deploy surface at all** (library, CLI tool) — the Deploy surfaces table says `none — published via <npm publish / not deployed>`; the proof signal for a release is the registry version bump.
-- **Repo already excellent** (delta-agents-class scaffold, only VERIFY.md missing) — generate only VERIFY.md, harvesting existing knowledge (CLAUDE.md gotchas, `docs/RUNBOOK.md`, `.claude/test-identities.md`, `scripts/check.sh`) instead of re-deriving it.
+- **Repo already excellent** (delta-agents-class scaffold, only VERIFY.md missing) — generate only VERIFY.md and its `verify.sh` projection, harvesting existing knowledge (CLAUDE.md gotchas, `docs/RUNBOOK.md`, `.claude/test-identities.md`, `scripts/check.sh`) instead of re-deriving it.
 - **`.claude/` full of PLAN-\*.md but no CLAUDE.md** (the operatorbase-website state) — the dir existing is not the scaffold existing; proceed normally.
 - **Pre-commit hooks time out or need a TTY** — record the known timeout in "Formatter / hooks" so future commits budget for it.
 
