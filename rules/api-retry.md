@@ -289,7 +289,9 @@ Exceptions — skip the checkpoint when:
   session, don't re-ask per wave.
 - The wave is ≤ 5 agents.
 - The dispatch already follows the CLAUDE.md split policy (fan-out pinned to
-  Opus) — nothing to decide.
+  Opus; the `qa-audit` workflow's cross-model verify stage — one fable skeptic
+  per confirmed-candidate finding, bounded by the deduped findings count — is
+  part of that policy, not a fleet to preflight) — nothing to decide.
 
 **Autonomous contexts (checkpoints suspended):** inside `/autopilot` (whose
 Autonomy Doctrine suspends all checkpoint types) or any unattended run, do NOT

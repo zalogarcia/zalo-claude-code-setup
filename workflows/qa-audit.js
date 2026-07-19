@@ -16,7 +16,7 @@ export const meta = {
     {
       title: "Verify",
       detail:
-        "two adversarial skeptics per finding; confirm only if neither refutes",
+        "two adversarial skeptics per finding (cross-model: one fable, one opus); confirm only if neither refutes",
     },
   ],
 };
@@ -64,7 +64,12 @@ if (!files.length) {
 Run \`git diff --name-only ${base}\`. If that is empty, also try \`git diff --name-only --staged\` and \`git status --porcelain\`.
 Return the relative paths of changed SOURCE files only — skip lockfiles, build output (dist/.next/out), node_modules, and generated artifacts.
 Set empty=true only if there are genuinely no changed source files.`,
-    { label: "scope:resolve", phase: "Scope", schema: SCOPE_SCHEMA },
+    {
+      label: "scope:resolve",
+      phase: "Scope",
+      schema: SCOPE_SCHEMA,
+      model: "opus",
+    },
   );
   resolvedFiles =
     scope && Array.isArray(scope.changedFiles) ? scope.changedFiles : [];
@@ -260,6 +265,13 @@ function dedupe(findings) {
 }
 
 // ---- run ---------------------------------------------------------------------
+// MODEL PINS (2026-07-19, per CLAUDE.md "split by leverage, verifier ≠ author"):
+// every agent() call pins a model explicitly — an unpinned call inherits the
+// session model, which on a Fable session silently runs the whole fleet on
+// Fable (the drift this fixes). Finders are breadth/recall work → opus. The
+// skeptic pair is the precision gate that decides "confirmed" → cross-model
+// (repro on fable, false-positive on opus): implementers run opus, so the
+// fable skeptic restores the second-opinion dynamic at 1× findings exposure.
 phase("Find");
 const finderResults = await parallel(
   DIMENSIONS.map(
@@ -268,6 +280,7 @@ const finderResults = await parallel(
         label: `find:${d.key}`,
         phase: "Find",
         schema: FINDINGS_SCHEMA,
+        model: "opus",
       }),
   ),
 );
@@ -325,12 +338,14 @@ const judged = await parallel(
             label: `verify-repro:${f.file}`,
             phase: "Verify",
             schema: VERDICT_SCHEMA,
+            model: "fable",
           }),
         () =>
           agent(realPrompt(f), {
             label: `verify-real:${f.file}`,
             phase: "Verify",
             schema: VERDICT_SCHEMA,
+            model: "opus",
           }),
       ]).then((votes) => {
         const v = votes.filter(Boolean);

@@ -15,7 +15,7 @@ Revision Gate that converges on a clean state. Each iteration runs a parallel, a
 
 Identify what changed: `git diff` (or `git diff HEAD~1` if already committed). Note affected files and modules.
 
-Tier note: /qa-loop IS the full tier of the multi-file QA mandate. If the change set qualifies for the light tier (≤150 changed lines, behavior-preserving, no auth/payment/data-deletion/migration paths, no new deps — see `~/.claude/CLAUDE.md` "3+ file edits"), the orchestrator may run a single `qa-agent` dispatch instead of invoking this loop. Once /qa-loop is invoked, run the full loop — don't downgrade mid-flight.
+Tier note: /qa-loop IS the full tier of the multi-file QA mandate. If the change set qualifies for the light tier (≤150 changed lines, behavior-preserving, no auth/payment/data-deletion/migration paths, no new deps — see `~/.claude/CLAUDE.md` "3+ file edits"), the orchestrator may run a single `qa-agent` dispatch instead of invoking this loop — no `model:` override; it inherits the agent's `fable` frontmatter pin (single low-volume verifier dispatch, per the split policy's verifier ≠ author rule). Once /qa-loop is invoked, run the full loop — don't downgrade mid-flight.
 
 ### Step 2: QA Loop (MAX_ITERATIONS = 10)
 
@@ -45,7 +45,9 @@ LOOP:
       findings re-verify on the resumed/next audit — they are neither confirmed
       nor refuted)
     - workflow disabled / errors → FALLBACK to a single qa-agent dispatch:
-        Pass changed files + standard QA prompt; wait for
+        Pass changed files + standard QA prompt; no `model:` override (inherits
+        the agent's `fable` frontmatter pin — one dispatch per iteration is
+        low-volume). Wait for
         ## VERIFICATION PASSED / ## ISSUES FOUND / ## BLOCKED (prior behavior).
 
   IF iteration >= MAX_ITERATIONS:
@@ -69,7 +71,7 @@ LOOP:
 
 ### Detection backend (`qa-audit` workflow)
 
-The audit step delegates to `~/.claude/workflows/qa-audit.js` — fan-out across 6 bug dimensions + 2-skeptic adversarial verification. A finding is confirmed only if **neither** skeptic refutes it (uncertain → refuted), so the loop only ever fixes high-confidence bugs. The workflow is **read-only**: it never edits files. The Fix step below owns all mutations, kept sequential and minimal per `~/.claude/rules/when-to-parallelize.md` (no parallel implementation agents on shared files).
+The audit step delegates to `~/.claude/workflows/qa-audit.js` — fan-out across 6 bug dimensions (finders pinned `opus`) + 2-skeptic adversarial verification per finding, cross-model (repro skeptic on `fable`, false-positive skeptic on `opus` — verifier ≠ author). A finding is confirmed only if **neither** skeptic refutes it (uncertain → refuted), so the loop only ever fixes high-confidence bugs. The workflow is **read-only**: it never edits files. The Fix step below owns all mutations, kept sequential and minimal per `~/.claude/rules/when-to-parallelize.md` (no parallel implementation agents on shared files).
 
 - Dynamic workflows are a research preview and may be disabled — the loop falls back to a single `qa-agent` automatically (no behavior change when off).
 - In default permission mode the first run prompts for approval; choose "don't ask again for qa-audit in this project" so it doesn't prompt every iteration.
