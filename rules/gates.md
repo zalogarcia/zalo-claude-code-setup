@@ -92,6 +92,7 @@ Skip any step = lying, not verifying
 | Frontend renders correctly     | `live-test` agent screenshot + console clean                 | Component compiles                      |
 | Coverage ("all X handled")     | Measured denominator: N of N + the measurement method        | Spot-check, sampling, "looks complete"  |
 | Deploy is live                 | The repo's `.claude/VERIFY.md` proof signal for THAT surface | Green CI, a different pipeline's signal |
+| Feature works end-to-end       | Simulated-traffic harness or live-test against the real dev stack (real DB/queues) | Unit tests with mocked I/O, static reads, "on-disk proxies" |
 
 ### Coverage Claims Need Denominators
 
@@ -120,6 +121,7 @@ If measuring every member is impractical, the honest claim is "N of M checked (s
 - Thinking "just this once"
 - Tired and wanting work over
 - Claiming "fixed" for a failure environment you did NOT reproduce in this turn — if the failing device/app context (e.g. iPhone Safari, a specific vendor sandbox) wasn't reproduced, the claim ceiling is "deployed a candidate fix — please confirm on your device", never "fixed"
+- Claiming "COMPLETE" when behavior ACs were verified only by **on-disk proxies** (unit tests with mocked I/O, greps, "the code exists and typechecks") — if the live form of any behavior AC did not execute, the claim ceiling is **"CODE-COMPLETE — NOT LIVE-VERIFIED"**, with the unproven surfaces listed first, never as sub-bullets (2026-07 GHL post-mortem: four buried deferrals → 39 live-test defects)
 - **ANY wording implying success without having run verification in this message**
 
 ### Bottom Line

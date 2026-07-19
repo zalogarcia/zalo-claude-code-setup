@@ -12,7 +12,7 @@ Custom agents, skills, commands, MCP servers, auto-formatting hooks, and workflo
 
 ## Interactive Architecture
 
-See how the pieces fit together: 7 agents, 15 shared rules (+ on-demand `rules-ref/`), 6 commands, 9 skills, 3 workflows, hooks, MCP servers — plus animated request flows (`/autopilot`, `/bug`, `/qa-loop`, `/brainstorm`, `/plan`).
+See how the pieces fit together: 7 agents, 15 shared rules (+ on-demand `rules-ref/`), 9 commands, 9 skills, 3 workflows, hooks, MCP servers — plus animated request flows (`/autopilot`, `/bug`, `/qa-loop`, `/brainstorm`, `/plan`).
 
 **→ [Open the interactive visualization](https://zalogarcia.github.io/zalo-claude-code-setup/visualization/)**
 
@@ -146,7 +146,7 @@ Close and reopen Claude Code to pick up all changes.
 | **outcomes-grader**     | Grades plans and artifacts against the engineering-principles rubric. Returns PASS/FAIL with quoted evidence per outcome.                                                                   |
 | **brainstorm**          | Deep-thinking agent that challenges assumptions, eliminates complexity, and stress-tests plans using first principles, Elon Musk's 5-step philosophy, inversion, and second-order thinking. |
 
-### Commands (6)
+### Commands (9)
 
 Slash commands for workflow automation. Invoke with `/<command-name>`.
 
@@ -154,10 +154,13 @@ Slash commands for workflow automation. Invoke with `/<command-name>`.
 | ------------------- | ------------------------------------------------------------------------------------------------------ |
 | **autopilot**       | Autonomous multi-phase orchestrator: plan → implement → QA → commit                                    |
 | **autopilot-merge** | Consolidates completed autopilot worktrees back into the main branch                                   |
+| **go-live**         | Activation & live-verification bridge: executes the activation runbook (flags, migrations, deploys), checkpoints vendor-console steps, then proves the feature live with the traffic harness + live-test campaign |
+| **goal**            | Goal-driven convergence loop: pin goal + acceptance criteria to `.claude/GOAL.md`, implement → live-verify → repeat until every criterion passes |
 | **bug**             | Bug-fix workflow: trace, diagnose, fix, validate                                                       |
 | **qa-loop**         | Iterative audit-and-fix loop — finds and fixes bugs until the codebase is clean                        |
 | **plan**            | Plan something with brainstorm + principles verification                                               |
 | **brainstorm**      | Deep-analyze a problem, plan, or decision with first principles, inversion, and structured elimination |
+| **redesign**        | Redesign an existing UI through collaborative brainstorming, mockup options, implementation, and visual verification |
 
 ### Skills (9)
 

@@ -35,9 +35,11 @@ Deliver a plan that:
 - **Risks**: What could break, severity, rollback difficulty
 - **Alternatives**: At least 2 approaches when applicable, with tradeoffs
 - **Steps**: Ordered, atomic changes with dependencies noted. Mark parallelizable steps. Insert VERIFY gates after critical steps.
+- **Activation path** (required when the plan introduces/extends a user-facing capability; otherwise write "N/A — <reason>"): enumerate how a real user/tenant turns the capability ON in production — UI control (verify it exists by citing the file, or add a work unit to build it; NEVER assume), env/feature flags (global AND per-tenant), credentials/config, vendor-console steps. Every step maps to a work unit or an explicit human-action checklist item. (Basis: 2026-07 GHL post-mortem — a fully-plumbed feature shipped with no way to turn it on; rubric: engineering-principles Outcome 2.5.)
+- **Parity inventory** (required when the task replaces or parallels an existing implementation of the same user-facing behavior; otherwise "N/A — <reason>"): enumerate the existing path's behaviors from its code (cite files) — message/media types, chunking, debounce, events emitted, enrichment, manual/operator paths — each marked parity (work-unit ref) / intentionally dropped (reason) / deferred (follow-up location). (Rubric: Outcome 4.6.)
 - **Do NOT change**: Files/patterns to preserve (Chesterton's fence)
 - **Rollback plan**: Trigger conditions, reversal steps, data recovery, irreversible items
-- **Testing strategy**: Existing tests to pass, new tests needed, manual verification. Recommend `qa-agent` after implementation.
+- **Testing strategy**: Existing tests to pass, new tests needed, manual verification. Recommend `qa-agent` after implementation. For work units receiving external inbound traffic (webhooks, callbacks), name a **simulated-traffic check** — fabricated vendor payloads against the real dev stack (real Postgres/Redis, not mocks), asserting rows+constraints, tenant scoping, emitted events, and the user-visible result — as its own work unit + gate; check the repo's `.claude/VERIFY.md` "Traffic harness" section first and extend it if present. Mocked unit tests do not satisfy this. (Rubric: Outcome 4.5.)
 
 ## Mandatory Initial Read
 

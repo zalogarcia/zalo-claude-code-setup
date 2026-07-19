@@ -49,9 +49,12 @@ Example `.claude/rubric.md`:
 
 **Step 3 — Review the run.**
 
-After autopilot reports COMPLETE / COMPLETE_WITH_ISSUES:
+After autopilot reports COMPLETE / CODE-COMPLETE — NOT LIVE-VERIFIED / COMPLETE_WITH_ISSUES:
 
-- `.autopilot/report.md` — full run summary
+- `.autopilot/report.md` — full run summary (a NOT LIVE-VERIFIED status means the
+  behavior ACs were proven only by on-disk proxies — run `/go-live` before trusting them)
+- `.autopilot/activation.md` — go-live runbook (flags, migrations, vendor-console
+  steps); consumed by `/go-live`
 - `.autopilot/rubric.md` — final rubric (edit it and re-run if auto-gen missed something)
 - `.autopilot/unmet_outcomes.json` — any rubric items still unmet at exit
 - `git log --oneline` — review commits before pushing
@@ -473,6 +476,7 @@ Every dispatch must handle ALL possible markers:
 | `qa_findings_iter{N}.md`          | Aggregated QA findings for iteration N (concatenation of partition files)         | Orchestrator (Phase 3, after fan-out collect)        |
 | `agent_returns/<id>.md`           | Overflow detail when a sub-agent return exceeds the 50-line cap (Return Contract) | Sub-agent writes; orchestrator reads on demand       |
 | `report.md`                       | Final report                                                                      | Phase 5                                              |
+| `activation.md`                   | Go-live runbook: Claude-automatable steps + human vendor-console steps (consumed by `/go-live`) | Phase 5 (before report)                 |
 
 ### State File: `.autopilot/state.json`
 
@@ -529,7 +533,7 @@ Updated after EVERY micro-step (phase transition, batch completion, QA iteration
 }
 ```
 
-`worktree_spawned` / `worktree_path` / `worktree_branch` are set during Phase 0 by the Workspace Isolation block (always `true` on fresh invocations under the always-worktree policy). `terminal_state` is `null` while running; the final Phase 5 (or any abort path) sets it to one of `"complete" | "complete_with_issues" | "aborted" | "aborted_api_outage"` BEFORE deleting `.autopilot/lock`. `/autopilot resume` reads `terminal_state` from the local worktree's `.autopilot/state.json` — if set, the prior run already terminated; abort with "Nothing to resume."
+`worktree_spawned` / `worktree_path` / `worktree_branch` are set during Phase 0 by the Workspace Isolation block (always `true` on fresh invocations under the always-worktree policy). `terminal_state` is `null` while running; the final Phase 5 (or any abort path) sets it to one of `"complete" | "code_complete_not_live_verified" | "complete_with_issues" | "aborted" | "aborted_api_outage"` BEFORE deleting `.autopilot/lock`. `/autopilot resume` reads `terminal_state` from the local worktree's `.autopilot/state.json` — if set, the prior run already terminated; abort with "Nothing to resume."
 
 When `current_dispatch_retry` is active (an Agent dispatch is mid-retry-backoff), it has shape:
 
@@ -717,6 +721,9 @@ Inventory this project. Report:
 5. Package manager (npm, pnpm, yarn, bun, pip, cargo, etc.)
 6. Key directories and their purpose (src/, app/, lib/, components/, etc.)
 7. Admin/test email if found in .env*, .env.local, CLAUDE.md (for live testing)
+7b. **Traffic harness**: report the command from VERIFY.md's "Traffic harness" section
+   (simulated inbound-webhook/e2e harness against the dev stack) — or "none" if VERIFY.md
+   lacks the section or doesn't exist.
 8. **Available config inventory** (so sub-agents never need to ask the user for secrets):
    - List all keys (NAMES ONLY, never values) in `.env`, `.env.local`, `.env.development`, `.env.production` if present
    - If this is a Supabase project (has `supabase/` dir or `@supabase/*` deps), run `supabase secrets list 2>/dev/null` and report the secret names
@@ -725,7 +732,7 @@ Inventory this project. Report:
 Write findings to .autopilot/project_context.md as structured markdown. The "Available config inventory" section is critical — sub-agents will read it to confirm a secret exists before assuming it's missing.
 ```
 
-Parse the agent's findings into state.json fields: `build_command`, `test_command`, `typecheck_command`, `package_manager`, `admin_email`, `live_test_enabled` (false if no admin email found).
+Parse the agent's findings into state.json fields: `build_command`, `test_command`, `typecheck_command`, `package_manager`, `admin_email`, `live_test_enabled` (false if no admin email found), `harness_command` (null if "none" — the VERIFY.md "Traffic harness" command).
 
 If the inventory reported `VERIFY.md: missing`, log `verify_manifest_missing: run /repo-init` to `decisions.log` and surface it in the Phase 5 report's Remaining Issues — deploy-proof signals will have to be derived ad hoc this run, which is exactly the condition that produced the ECS-green-cited-for-a-Vercel-surface overclaim (2026-07 audit).
 
@@ -738,6 +745,7 @@ jq --arg bc "$BUILD_CMD" \
    --arg pm "$PACKAGE_MANAGER" \
    --arg ae "$ADMIN_EMAIL" \
    --argjson lte "$LIVE_TEST_ENABLED" \
+   --arg hc "$HARNESS_CMD" \
    '. + {
      task_summary: "<from .autopilot/task.md>",
      build_command: $bc,
@@ -746,6 +754,7 @@ jq --arg bc "$BUILD_CMD" \
      package_manager: $pm,
      admin_email: $ae,
      live_test_enabled: $lte,
+     harness_command: (if $hc == "" or $hc == "none" then null else $hc end),
      work_units: [],
      files_touched: [],
      commits: [],
@@ -804,6 +813,24 @@ Rules for the rubric you produce:
 - 4-10 items typical. More if the task is broad. Fewer if the task is narrow.
 - Cover: primary deliverable existence, key behaviors, integration points,
   any explicit constraints from the task description (auth, persistence, etc.)
+- MANDATORY coverage items (the 2026-07 GHL post-mortem classes — a rubric
+  derived only from the task/plan inherits the plan's blind spots, so these
+  are required INDEPENDENT of what the plan says):
+  * If the task ships a user-facing capability: one item asserting the
+    ACTIVATION PATH exists and is reachable — "a user/tenant can turn this ON
+    via <named UI control/flag>; the control's file is cited" (engineering-
+    principles Outcome 2.5). Assumed-to-exist UI must be verified by file cite.
+  * If the task's code receives external inbound traffic (webhooks/callbacks):
+    one item asserting the simulated-traffic harness (state.json.harness_command,
+    or a harness this run builds) RUNS GREEN against the real dev stack —
+    mocked unit tests do not satisfy it (Outcome 4.5).
+  * If the task replaces or parallels an existing path: one item asserting the
+    parity inventory exists with each behavior marked parity/dropped/deferred,
+    sourced from the old path's code (Outcome 4.6).
+- For every behavior AC that can only be proven at runtime, mark it
+  `[RUNTIME]` — the grader may grade an on-disk proxy for it, but any item
+  marked [RUNTIME] whose live form was not executed FORCES the run's terminal
+  status to CODE-COMPLETE — NOT LIVE-VERIFIED (never COMPLETE).
 
 Output format — write to .autopilot/rubric.md as:
 
@@ -1221,6 +1248,27 @@ LOOP:
     # Skip empty partitions (defensive — shouldn't happen post-merge)
     partitions = [(pid, files) for (pid, files) in partitions if files]
 
+  # ── Seam partition (iteration 1 only) ──
+  # File-scoped partitions can only find bugs IN the diff — they are blind to
+  # the seams BETWEEN this change and the existing system (2026-07 GHL
+  # post-mortem: native messages persisted but never published to the realtime
+  # inbox; the persist file and the inbox file were each individually fine).
+  # On iteration 1, ALWAYS add one extra partition scoped by USER JOURNEY,
+  # not by files:
+  IF iteration == 1:
+    journeys = end-to-end data flows named in .autopilot/plan.md
+               (e.g. "inbound webhook → persist → events → realtime → UI")
+    partitions.append(("seam", scope_files))  # dispatched with the seam prompt:
+    # Seam-partition prompt REPLACES the subset prompt for this dispatch:
+    #   "Audit the INTEGRATION SEAMS of this change, not the files in isolation.
+    #    Journeys: {journeys}. For each journey, trace the full path through the
+    #    code — including PRE-EXISTING files the diff never touched — and flag
+    #    any hop where the new code fails to feed the next stage: events not
+    #    emitted, publishes missing, consumers never registered, UI reading a
+    #    field the new path never writes, config gates that dead-end the flow.
+    #    Existence of each hop is NOT enough — verify the wiring between hops
+    #    (per ~/.claude/rules/verification-patterns.md)."
+
   # ── Dispatch all partitions in PARALLEL ──
   # Single message, one Agent call per partition, all model: "opus"
   FOR each (partition_id, files) in partitions (PARALLEL):
@@ -1353,6 +1401,17 @@ Orchestrator runs all verification commands directly:
 1. **Typecheck** (if available): `{typecheck_command}` → must exit 0
 2. **Build** (if available): `{build_command}` → must exit 0
 3. **Tests** (if available): `{test_command}` → must pass
+3b. **Traffic harness** (MANDATORY when the change set touches code that receives
+   external inbound traffic — webhook handlers, third-party callbacks, inbound
+   message paths): run `{harness_command}` (from VERIFY.md via Phase 0), or the
+   harness this run built as a work unit → must pass against the real dev stack.
+   If the change set touches inbound-traffic code and NO harness exists and none
+   was built → this is a FAILED gate item, not a skippable one: log
+   `traffic_harness_missing` to decisions.log, add it to Remaining Issues as
+   HIGH, and cap the terminal status at CODE-COMPLETE — NOT LIVE-VERIFIED.
+   (Basis: 2026-07 GHL post-mortem — 41% of live-test defects had no static
+   signature; mocked unit tests cannot model real-PG constraints, CTE snapshot
+   visibility, realtime publishes, or media-only webhook payloads.)
 4. **Stub detection** (scoped to autopilot's changes):
    ```bash
    git diff {pre_autopilot_sha}..HEAD --name-only | xargs grep -lE "TODO|FIXME|placeholder|not implemented" 2>/dev/null
@@ -1560,13 +1619,52 @@ If budget exhausted → note failures, proceed to Phase 5.
 
 ### Phase 5: Report & Notify
 
+**Activation runbook (before the report):** If the plan contains an Activation
+Path section (or the task ships a user-facing capability), write
+`.autopilot/activation.md` — the go-live runbook `/go-live` consumes. Two
+parts, derived from the plan's Activation Path + VERIFY.md:
+
+1. **Claude-automatable** (ordered): migrations to apply (per
+   `~/.claude/rules/database-safety.md`, migrate-before-deploy), env/feature
+   flags to set (global AND per-tenant), deploys per VERIFY.md proof signals,
+   harness + live-test commands to re-run against the activated stack.
+2. **Human-action** (per `checkpoint:human-action` format): vendor-console
+   steps with exact navigation (webhook URLs + where to paste them, OAuth
+   callback URLs, API version to select, campaign/number assignments),
+   credentials to obtain, approvals to request — each with the verification
+   Claude will run after the human finishes.
+
+Every unset flag, empty credential, and unbuilt-but-required console step found
+during the run MUST appear here — this file is the contract that closes the
+"plumbing done, faucet handle missing" gap.
+
 Generate `.autopilot/report.md`:
 
 ```markdown
 # Autopilot Report
 
 **Task:** <summary>
-**Status:** COMPLETE | COMPLETE_WITH_ISSUES | ABORTED | ABORTED_API_OUTAGE
+**Status:** COMPLETE | CODE-COMPLETE — NOT LIVE-VERIFIED | COMPLETE_WITH_ISSUES | ABORTED | ABORTED_API_OUTAGE
+
+<!-- STATUS VOCABULARY (hard rule — 2026-07 GHL post-mortem: four "COMPLETE"
+reports with live verification deferred in sub-bullets produced 39 live-test
+defects and a two-day debugging session the user didn't expect):
+COMPLETE is claimable ONLY when every behavior AC was verified in its LIVE form
+this run — live-test ran (live_test_enabled=true) AND the traffic harness ran
+green when inbound-traffic code changed. If ANY behavior AC was graded via an
+on-disk proxy, live-test was skipped, or [RUNTIME] rubric items went unexecuted,
+the status is CODE-COMPLETE — NOT LIVE-VERIFIED and the section below is
+MANDATORY as the FIRST section of the report, not a sub-bullet. -->
+
+<!-- Include ONLY when status is CODE-COMPLETE — NOT LIVE-VERIFIED -->
+
+## NOT LIVE-VERIFIED — what remains unproven
+
+- <surface / AC>: verified by <proxy used>; live form NOT executed — <what a
+  live pass must show>
+- ...
+- **Next step:** run `/go-live` in this worktree (activation runbook at
+  `.autopilot/activation.md`) before treating any of the above as working.
 
 <!-- Worktree banner — include ONLY if state.json.worktree_spawned == true -->
 
@@ -1697,7 +1795,7 @@ Pre-flight ABORTs that occur BEFORE lock acquisition (none currently — the Wor
 
 **Terminal summary** (last thing the orchestrator emits before hard exit — NO questions, NO "want me to" sign-offs):
 
-- Status (COMPLETE / COMPLETE_WITH_ISSUES / ABORTED)
+- Status (COMPLETE / CODE-COMPLETE — NOT LIVE-VERIFIED / COMPLETE_WITH_ISSUES / ABORTED)
 - **If `worktree_spawned == true`:** the single line `WORKTREE: <worktree_path> (branch <worktree_branch>) — merge back when ready`
 - Files changed (count + list)
 - Bugs fixed (count)

@@ -71,6 +71,12 @@ Add or refine outcomes as patterns emerge from real runs. Each outcome must be:
 - **Measure:** For each choice a plan makes about where content appears, which side of a relation is filtered, or which population is in scope, the plan either quotes the user's words locking that choice or lists it as an explicit decision/AskUserQuestion. A user-visible choice defaulted without either = FAIL.
 - **Applicable when:** the plan makes user-visible placement/direction/scope choices.
 
+### Outcome 2.5: User-facing capability ships with its activation path
+
+- **Why:** The 2026-07 GHL-replacement post-mortem: 4 autopilot phases delivered a fully-plumbed native-messaging stack that no user could turn ON — the enable-UI was assumed ("channels tab exists"), the feature sat behind two unset flags, and the only toggle that reached the code path was mislabeled "No CRM — widget only". 7 of 39 live-test defects were pure activation gaps; the plumbing passed every gate while the faucet handle was never installed.
+- **Measure:** For any plan introducing or extending a user-facing capability, the plan contains an **Activation Path** section enumerating how a real user/tenant turns the capability ON in production: UI control (existing or to-be-built — "exists" must be verified, not assumed), env/feature flags (global AND per-tenant), required credentials/config, and vendor-console steps. Every activation step maps to either a work unit or an explicit human-action checklist item. A capability whose activation path is absent, or that relies on a UI element the plan asserts exists without citing the file, = FAIL.
+- **Applicable when:** plan introduces or extends a capability a user/tenant must be able to reach or enable (skip for pure internal refactors, tooling, docs).
+
 ---
 
 ## 3. Failure Resilience
@@ -140,6 +146,18 @@ Add or refine outcomes as patterns emerge from real runs. Each outcome must be:
 - **Why:** The 2026-07 60-session audit found every verification overclaim (4 of 4) was a coverage claim ("all X handled") backed by a spot-check. Correctness claims were never inflated; coverage claims were.
 - **Measure:** Every "all / every / complete / everything" claim in the plan (or artifact) pairs with a countable population and how it will be (or was) measured — "all N verticals" with N stated and enumerated, "every caption checked" with the checking method named. Bare universal claims with no denominator or method = FAIL.
 - **Applicable when:** plan or artifact makes a universal ("all/every") completeness claim.
+
+### Outcome 4.5: External-traffic boundaries get runtime verification, not on-disk proxies
+
+- **Why:** The 2026-07 GHL post-mortem: every QA gate was static (typecheck/build/unit tests with mocked DB — "LLM/Redis/PG paths not exercised") and behavior ACs were replaced with "on-disk proxies". 16 of 39 live-test defects (41%) — constraint violations, CTE snapshot invisibility, missing realtime publishes, orphaned threads, dropped media-only webhooks — had NO static signature and fell only to simulated inbound traffic against a real dev stack.
+- **Measure:** For each work unit that receives or processes external inbound traffic (vendor webhooks, third-party callbacks, inbound messages/emails), the plan names a **runnable simulated-traffic check** as a work unit + gate: fabricated vendor payloads POSTed at the real service against real dev infrastructure (Postgres/Redis, not mocks), asserting persisted rows + constraints, tenant scoping, emitted events/realtime publishes, and the user-visible result. Unit tests with mocked I/O do NOT satisfy this. If the repo's `.claude/VERIFY.md` names a traffic harness, extending it satisfies this; a plan that leaves the boundary verified only by mocks or static reads = FAIL.
+- **Applicable when:** plan touches code that receives external inbound traffic.
+
+### Outcome 4.6: Replacement/parity tasks carry a parity inventory with a measured denominator
+
+- **Why:** The GHL post-mortem: 6+ live-test defects were parity gaps — chunking, debounce/gather window, `message.inbound` events, manual composer, off-channel sends, name enrichment all existed in the old provider path and were silently absent from the new one. Nobody enumerated what the system-being-replaced actually did, so "replacement complete" had no denominator.
+- **Measure:** When the task replaces, mirrors, or adds a parallel implementation of an existing path (a provider, channel, handler, renderer), the plan contains a **Parity Inventory**: the enumerated behaviors of the existing path (sourced from its code — cite the files), each marked `parity` (work unit ref), `intentionally dropped` (reason), or `deferred` (follow-up location). A replacement plan without the inventory, or with an inventory not sourced from the existing implementation, = FAIL.
+- **Applicable when:** task replaces or runs parallel to an existing implementation of the same user-facing behavior.
 
 ---
 

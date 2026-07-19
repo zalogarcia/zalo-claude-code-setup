@@ -99,6 +99,24 @@ Canonical template (fill every `<placeholder>` from scan + verification evidence
 
 <!-- e.g. "dashboard-only commits SKIP all ECS jobs — ECS green is NOT proof for dashboard changes" -->
 
+## Traffic harness
+
+<!-- REQUIRED section when the repo has any external inbound-traffic boundary
+     (vendor webhooks, third-party callbacks, inbound messages). The harness is
+     the simulated-traffic e2e check: fabricated vendor payloads POSTed at the
+     real service against the real dev stack (real Postgres/Redis, NOT mocks),
+     asserting rows+constraints, tenant scoping, emitted events/realtime
+     publishes, and the reply. /autopilot's Phase 4 gate and /go-live run it.
+     If none exists yet, write the honest line below — it makes the gap
+     machine-visible instead of silently absent.
+     (Basis: 2026-07 GHL post-mortem — 41% of 39 live-test defects were only
+     catchable by simulated inbound traffic; mocked unit tests missed them all.) -->
+
+- command: <e.g. `npm run harness:webhooks` — sends recorded Twilio/Meta fixture payloads at the local gateway>
+- fixtures: <path — seed from REAL captured payloads, not hand-written guesses>
+- stack prereqs: <e.g. dev Postgres + Redis up via `docker compose up -d`>
+- OR: `none — gap: <which inbound boundaries are unverified without it>`
+
 ## Live-test safety
 
 - admin/test account: <where configured — never inline the secret>
@@ -129,6 +147,7 @@ Contract (hold it exactly):
 - **Modes:**
   - `./verify.sh` (default) runs the **LOCAL gate** — the typecheck / lint / build / test commands this skill actually verified for the repo, each as a named check.
   - `./verify.sh deploy <surface>` runs **THE proof-signal check** for that deploy surface from VERIFY.md (e.g. active ECS image tag == pushed/HEAD SHA, a health/version endpoint returns expected, a served-bundle grep). One function per surface named in the VERIFY.md deploy table; accept `all`.
+  - `./verify.sh harness` runs the VERIFY.md "Traffic harness" command when one is defined; when the section says `none — gap`, emit `SKIP harness (none — gap: <detail>)` so the absence is visible in every verify run.
   - `./verify.sh --list` prints the available checks + surfaces.
 - **Output discipline:** exactly one `PASS <check>` / `FAIL <check>` / `SKIP <check> (<reason>)` line per check; a final summary line `VERIFY: <n_pass>/<n_total> passed, <n_skip> skipped`; exit 0 only when nothing FAILed.
 - **SKIP — never FAIL, never silent-pass — for any check whose creds/network aren't available where it runs** (AWS creds, Vercel CLI, a management-plane MCP). The SKIP reason carries the exact command a human/agent should run. Distinguish a connection-level failure (network down → SKIP) from a reachable-but-wrong response (→ FAIL): e.g. curl exit 6/7/28 → SKIP, HTTP non-200 → FAIL.

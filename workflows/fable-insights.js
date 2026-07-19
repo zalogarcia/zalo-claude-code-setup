@@ -3,7 +3,7 @@ export const meta = {
   description:
     "Weekly self-audit: one deep-analysis agent per substantive Claude Code session (last N days), batched gist extraction for trivial sessions, manifest built at run time by an agent (workflow scripts have no filesystem access).",
   whenToUse:
-    "Weekly self-audit of Claude Code sessions; args {days} (default 7)",
+    "Weekly self-audit of Claude Code sessions; args {days} (default 7), {exclude_session_id} (REQUIRED — the invoking conversation's own session id, the UUID segment of your scratchpad path; only that transcript is skipped. Open sessions from other terminals ARE analyzed, marked in_progress)",
   phases: [
     {
       title: "Manifest",
@@ -35,6 +35,17 @@ if (typeof parsedArgs === "string") {
 const days =
   (parsedArgs && typeof parsedArgs === "object" && Number(parsedArgs.days)) ||
   7;
+// Session id of the audit's OWN conversation (the invoker derives it from its
+// scratchpad path). Only this transcript is excluded from analysis — open
+// sessions belonging to OTHER terminals are analyzed with in_progress: true.
+// (2026-07-19: the old lsof drop-all-open rule silently excluded the week's
+// highest-friction session — a 31MB still-open live-test session.)
+const excludeSessionId =
+  (parsedArgs &&
+    typeof parsedArgs === "object" &&
+    typeof parsedArgs.exclude_session_id === "string" &&
+    parsedArgs.exclude_session_id) ||
+  "";
 
 const ANALYZE_CAP = 80;
 const STUB_BATCH_SIZE = 9;
@@ -60,12 +71,17 @@ const SESSION_ITEM_SCHEMA = {
       description:
         'directory slug with "-Users-zalo-" prefix stripped; "home" for the bare -Users-zalo dir',
     },
+    in_progress: {
+      type: "boolean",
+      description:
+        "true if the transcript was open (lsof) or modified in the last 3 minutes at manifest time — analyzed as a snapshot; re-faceted next run",
+    },
   },
 };
 
 const MANIFEST_SCHEMA = {
   type: "object",
-  required: ["generated_on", "substantive", "trivial"],
+  required: ["generated_on", "substantive", "trivial", "excluded"],
   properties: {
     generated_on: {
       type: "string",
@@ -73,6 +89,19 @@ const MANIFEST_SCHEMA = {
     },
     substantive: { type: "array", items: SESSION_ITEM_SCHEMA },
     trivial: { type: "array", items: SESSION_ITEM_SCHEMA },
+    excluded: {
+      type: "array",
+      items: {
+        type: "object",
+        required: ["id", "reason"],
+        properties: {
+          id: { type: "string" },
+          reason: { type: "string" },
+        },
+      },
+      description:
+        "Every candidate dropped from analysis, with why (e.g. own-session). NO silent truncation — the synthesis report must show this list.",
+    },
   },
 };
 
@@ -87,6 +116,8 @@ const FACET_SCHEMA = {
     "friction",
     "verification_quality",
     "brief_summary",
+    "validates_prior_work",
+    "deferred_verification",
   ],
   properties: {
     goal: {
@@ -155,10 +186,11 @@ const FACET_SCHEMA = {
               "environment",
               "user_change_of_mind",
               "hook_by_design",
+              "post_delivery_defect",
               "other",
             ],
             description:
-              "Pinned taxonomy (2026-07-19: analysts were inventing singleton types, breaking week-over-week deltas). Use 'other' + detail rather than a new slug. 'hook_by_design' = a guard hook (sql-guard / git-guard / agent-model-guard) firing exactly as designed — a designed tax, not real friction.",
+              "Pinned taxonomy (2026-07-19: analysts were inventing singleton types, breaking week-over-week deltas). Use 'other' + detail rather than a new slug. 'hook_by_design' = a guard hook (sql-guard / git-guard / agent-model-guard) firing exactly as designed — a designed tax, not real friction. 'post_delivery_defect' = a defect discovered while live-testing/validating work an EARLIER session (or an autonomous run) delivered as done — charge it to the producing pipeline, not this session.",
           },
           detail: { type: "string" },
           root_cause: { type: "string" },
@@ -174,6 +206,16 @@ const FACET_SCHEMA = {
       enum: ["ground_truth", "partial", "claimed_only", "none_needed"],
       description:
         "Did Claude prove its done-claims with fresh evidence (live checks, test output) or just assert?",
+    },
+    validates_prior_work: {
+      type: "string",
+      description:
+        "If this session live-tests/debugs/validates something an earlier session or autonomous run delivered as done, name that artifact/run (e.g. 'autopilot GHL-replacement branch, 4 phases'); empty string otherwise. Synthesis pairs this with the producing session to compute defects-per-autonomous-delivery.",
+    },
+    deferred_verification: {
+      type: "boolean",
+      description:
+        "true if this session claimed work complete/done while its behavior-level verification was deferred (live tests skipped, ACs replaced by on-disk proxies, 'COMPLETE' with live checks left to a later run)",
     },
     wasted_cycles: {
       type: "string",
@@ -236,9 +278,11 @@ const manifestPrompt = `Build a manifest of Claude Code session transcripts from
 STEP 1 — candidate files (note: -maxdepth 2 and the subagents exclusion are both required):
 find "$HOME/.claude/projects" -maxdepth 2 -type f -name '*.jsonl' -mtime -${days} ! -path '*/subagents/*'
 
-STEP 2 — exclude the currently-running session if detectable:
+STEP 2 — exclusions and in-progress marking. Open sessions are ANALYZED, not dropped (2026-07-19: dropping all open transcripts silently excluded the week's highest-friction session — a 31MB live-test session open in another terminal).
+2a. Exclude ONLY the audit's own conversation${excludeSessionId ? `: drop any candidate whose basename is "${excludeSessionId}.jsonl", and record it in the excluded list as {id: "${excludeSessionId}", reason: "own-session"}` : ` — no exclude_session_id was provided this run, so exclude nothing here (record nothing)`}.
+2b. Detect open/live transcripts (do NOT drop them):
 lsof +D "$HOME/.claude/projects" 2>/dev/null | grep -o '/[^ ]*\\.jsonl' | sort -u
-Any path that command prints is an open (live) transcript — drop it from the candidate list. If lsof prints nothing (or errors), fall back to dropping candidates modified in the last 3 minutes: find "$HOME/.claude/projects" -maxdepth 2 -type f -name '*.jsonl' -mmin -3
+Every candidate that command prints (plus any candidate modified in the last 3 minutes: find "$HOME/.claude/projects" -maxdepth 2 -type f -name '*.jsonl' -mmin -3) gets in_progress: true in its manifest entry. Its analysis is a snapshot — the next weekly run re-analyzes it. All other candidates get in_progress: false.
 
 STEP 3 — per remaining file "$f", compute:
 - id: basename without the .jsonl extension
@@ -258,7 +302,7 @@ substantive = user_msgs >= 3 OR lines >= 100. Everything else is trivial.
 
 STEP 5 — stamp generated_on with: date +%F
 
-Return the full manifest via structured output: { generated_on, substantive: [...], trivial: [...] } with every surviving candidate accounted for in exactly one of the two arrays. Do NOT read transcript contents beyond the commands above — this is a metadata pass only.`;
+Return the full manifest via structured output: { generated_on, substantive: [...], trivial: [...], excluded: [...] } with every surviving candidate accounted for in exactly one of substantive/trivial, and every dropped candidate listed in excluded with its reason. Do NOT read transcript contents beyond the commands above — this is a metadata pass only.`;
 
 phase("Manifest");
 let manifest = await agent(manifestPrompt, {
@@ -342,8 +386,10 @@ ANALYZE DEEPLY — this is a Fable-tier pass, expected to beat a shallow facet e
 - Underlying goal: what did they actually want (read between requests)?
 - Outcome + concrete evidence. Do not credit "done" claims Claude never proved.
 - Satisfaction: judge from verbatim reactions ("perfect", "much better", "no", "wrong", silence then topic change). Quote them.
-- EVERY friction instance: what went wrong, root cause, and whether Claude could have avoided it upfront. Use ONLY the pinned type taxonomy (claude_bug / overclaimed_verification / tooling_breakage / usage_limit / wrong_approach / environment / user_change_of_mind / hook_by_design / other) — never invent a new slug; if none fits, use 'other' and explain in detail. A guard hook (sql-guard / git-guard / agent-model-guard) blocking or holding as designed is 'hook_by_design', NOT environment friction.
+- EVERY friction instance: what went wrong, root cause, and whether Claude could have avoided it upfront. Use ONLY the pinned type taxonomy (claude_bug / overclaimed_verification / tooling_breakage / usage_limit / wrong_approach / environment / user_change_of_mind / hook_by_design / post_delivery_defect / other) — never invent a new slug; if none fits, use 'other' and explain in detail. A guard hook (sql-guard / git-guard / agent-model-guard) blocking or holding as designed is 'hook_by_design', NOT environment friction. A defect found while live-testing work an EARLIER session or autonomous run had delivered as done is 'post_delivery_defect' — it charges the producing pipeline, not this session's Claude.
 - Verification quality: did Claude ground-truth its claims (live checks, fresh test output, probes) or assert "should work"?
+- validates_prior_work: if this session's real job is live-testing/debugging/validating something an earlier session or autonomous run (autopilot, workflow) delivered as done, name that artifact/run; else empty string.
+- deferred_verification: true if THIS session claimed completion while behavior-level verification was deferred (live tests skipped, "COMPLETE" on on-disk proxies, live checks left "for later"). A green typecheck/build/unit-test run does NOT make a behavior claim live-verified.
 - Wasted cycles: repeated attempts, blind alleys, re-derived environment quirks.
 - Standout: the single most impressive thing, if any.
 - One short verbatim user quote that captures the session, if any exists.
@@ -442,6 +488,11 @@ const manifest_counts = {
   skipped_by_cap: substantive.length - toAnalyze.length,
   stub_batches: chunks.length,
   stubs_missing: missingStubs.length,
+  in_progress_snapshots: substantive
+    .concat(trivial)
+    .filter((s) => s.in_progress)
+    .map((s) => s.id),
+  excluded: Array.isArray(manifest.excluded) ? manifest.excluded : [],
 };
 
 log(

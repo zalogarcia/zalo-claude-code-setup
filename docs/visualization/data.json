@@ -1,11 +1,12 @@
 {
   "meta": {
-    "generatedAt": "2026-07-19T16:10:34.750Z",
+    "generatedAt": "2026-07-19T20:33:15.993Z",
     "repo": "zalo-claude-code-setup",
     "changelog": [
       {
         "date": "2026-07-19",
         "entries": [
+          "feat(hooks): mechanization pass — 3 new guards, verify.sh, prose diet",
           "Split QA model policy by stage: verifier ≠ author"
         ]
       },
@@ -139,8 +140,7 @@
           "[autopilot] Batch 1: wu-1 + wu-2 + wu-3 (4 MEDIUMs from prior run)",
           "[setup] gitignore: .autopilot.prev* archived prior runs",
           "[autopilot] QA iteration 1 — fixed 1 HIGH (stale marker reference)",
-          "[autopilot] Batch 2: wu-3 autopilot api-retry integration",
-          "[autopilot] Batch 1: wu-1 (bug-fix confidence gate) + wu-2 (scalability outcome 3.5)"
+          "[autopilot] Batch 2: wu-3 autopilot api-retry integration"
         ]
       }
     ]
@@ -365,6 +365,22 @@
       "summary": "Upload files to GoHighLevel's media library via API.",
       "includes": [],
       "dispatches": []
+    },
+    {
+      "id": "command.go-live",
+      "kind": "command",
+      "label": "/go-live",
+      "path": "commands/go-live.md",
+      "summary": "Closes the seam between \"code complete on a branch\" and \"verified working in production\" — the gap where the 2026-07 GHL post-mortem's 39 live-test defects lived. Consumes the activation runbook an `/autopilot` run wrote (or derives one), executes every step Claude can execute, c",
+      "includes": [
+        "rule.gates",
+        "rule.checkpoints",
+        "rule.database-safety",
+        "rule.testing-safety"
+      ],
+      "dispatches": [
+        "agent.live-test"
+      ]
     },
     {
       "id": "command.goal",
@@ -1051,6 +1067,36 @@
     {
       "source": "meta.orchestrator",
       "target": "command.ghl-upload",
+      "type": "routes"
+    },
+    {
+      "source": "command.go-live",
+      "target": "rule.gates",
+      "type": "include"
+    },
+    {
+      "source": "command.go-live",
+      "target": "rule.checkpoints",
+      "type": "include"
+    },
+    {
+      "source": "command.go-live",
+      "target": "rule.database-safety",
+      "type": "include"
+    },
+    {
+      "source": "command.go-live",
+      "target": "rule.testing-safety",
+      "type": "include"
+    },
+    {
+      "source": "command.go-live",
+      "target": "agent.live-test",
+      "type": "dispatch"
+    },
+    {
+      "source": "meta.orchestrator",
+      "target": "command.go-live",
       "type": "routes"
     },
     {

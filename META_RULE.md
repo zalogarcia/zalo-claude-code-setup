@@ -14,6 +14,7 @@ Edit this file freely — the `session-start.sh` hook reads it fresh each time.
 **Slash commands** — workflow orchestrators (thin; they `@`-include rules + dispatch agents).
 
 - Core delivery: `/autopilot`, `/autopilot-merge`, `/bug`, `/qa-loop`
+- Go-live: `/go-live` — activation & live-verification bridge for built-but-unactivated features (consumes `.autopilot/activation.md`; runs the traffic harness + live-test campaign; the mandatory next step after any `CODE-COMPLETE — NOT LIVE-VERIFIED` autopilot run)
 - Thinking: `/brainstorm`, `/plan`
 
 **Skills** — compound tools.
@@ -28,7 +29,7 @@ Edit this file freely — the `session-start.sh` hook reads it fresh each time.
 
 - `qa-audit` — read-only parallel bug hunt + adversarial verify (backs `/qa-loop`). Its return carries `verdict`/`untrusted`: dead finder or skeptic agents mark the run UNTRUSTED — never treat an untrusted result as a clean pass; resume the run instead.
 - `plan-verify` — brainstorm + principles gates with one revision pass (backs `/plan`)
-- `fable-insights` — self-audit: one deep-analysis agent per session transcript, args `{days}` (default 7). Run it interactively when you want a usage audit. The orchestrator then synthesizes per `~/.claude/workflows/fable-insights-synthesis.md` (artifact names, baseline comparison, MECHANIZATION + DEMOTION bias — every proposed change declares its enforcement form, mechanism by default) into `~/.claude/usage-data/`. (Interactive only — the Workflow tool's background-callback model can't complete under a one-shot headless `claude -p`, so it is not cron-scheduled.)
+- `fable-insights` — self-audit: one deep-analysis agent per session transcript, args `{days}` (default 7) + `{exclude_session_id}` (REQUIRED: your own session id — the UUID segment of your scratchpad path; only that transcript is skipped, open sessions from other terminals ARE analyzed as in-progress snapshots). Run it interactively when you want a usage audit. The orchestrator then synthesizes per `~/.claude/workflows/fable-insights-synthesis.md` (artifact names, baseline comparison, MECHANIZATION + DEMOTION bias — every proposed change declares its enforcement form, mechanism by default) into `~/.claude/usage-data/`. (Interactive only — the Workflow tool's background-callback model can't complete under a one-shot headless `claude -p`, so it is not cron-scheduled.)
 
 **Hooks (mechanized rules)** — prose rules that were historically skipped are now enforced at the tool layer:
 
@@ -69,7 +70,7 @@ For independent units of work (3+ failing tests in different subsystems, multipl
 
 **Quick inline action for trivial tasks is fine.** Typo fixes, single-line changes, and pure conversation don't need skills/agents/rules. Use judgment — invoke when a skill clearly applies; skip when it's a stretch. Over-invocation wastes time as much as under-invocation.
 
-**Verify before claiming done.** Per `~/.claude/rules/gates.md` Verification Gate Function: run the command in this turn, read the output, then claim. No "should work" / "probably passes" / "Looks good!" without fresh evidence. Coverage claims ("all/every X") additionally need a measured denominator — N of N plus the method (gates.md "Coverage Claims Need Denominators"). Deploy claims use the changed surface's proof signal from the repo's `.claude/VERIFY.md`, never a different pipeline's green.
+**Verify before claiming done.** Per `~/.claude/rules/gates.md` Verification Gate Function: run the command in this turn, read the output, then claim. No "should work" / "probably passes" / "Looks good!" without fresh evidence. Coverage claims ("all/every X") additionally need a measured denominator — N of N plus the method (gates.md "Coverage Claims Need Denominators"). Deploy claims use the changed surface's proof signal from the repo's `.claude/VERIFY.md`, never a different pipeline's green. Behavior claims proven only by on-disk proxies (mocked unit tests, greps, typecheck) cap at **CODE-COMPLETE — NOT LIVE-VERIFIED** — never "COMPLETE"/"works" (gates.md Red Flags; run the repo's traffic harness / `/go-live` to lift the ceiling).
 
 **Budget the fan-out.** A wave of >5 Fable-bound agents requires the Fable Fan-Out Preflight in `~/.claude/rules/api-retry.md` — surface the limit math as a checkpoint:decision; never comply silently. After limit kills: resume, never restart (workflow cache replay / state.json).
 
