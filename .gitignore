@@ -62,3 +62,15 @@ daemon-auth*
 __pycache__/
 hooks/*.bak
 .claude/
+
+# skills.sh-managed symlinks → ~/.agents/skills (machine-specific, added 2026-07-20)
+skills/mediabunny
+skills/remotion-best-practices
+skills/remotion-captions
+skills/remotion-create
+skills/remotion-docs
+skills/remotion-interactivity
+skills/remotion-markup
+skills/remotion-render
+skills/remotion-saas
+skills/remotion-upgrade
