@@ -14,3 +14,4 @@
 - Two failed guesses against an external API → the next action is a ground-truth probe (validate_only / dry-run / GET the live resource), never a third guess.
 - Formatter hooks rewrite ts/js/css/json on save — if an Edit fails "String not found", re-Read the file first (md/html are exempt).
 - git is read-only for subagents; destructive git ops (`reset --hard`, `checkout .`, `clean -f`, `stash`) are hook-blocked without explicit user approval.
+- Dual Homebrew: `/usr/local/bin` (Intel/Rosetta) precedes `/opt/homebrew/bin` (arm64/Metal) in PATH — bare tool names can resolve to CPU-only Intel builds (whisper-cli cost a ~50x-slower run, 2026-07-27). For compute-heavy CLIs, use the `/opt/homebrew/bin/...` absolute path and verify with `file $(command -v <tool>)` → must say arm64.
