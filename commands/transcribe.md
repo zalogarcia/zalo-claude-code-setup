@@ -52,10 +52,15 @@ if [ ! -x "$WHISPER_BIN" ]; then WHISPER_BIN="$(command -v whisper-cli)"; fi
 file "$WHISPER_BIN" | grep -q arm64 || echo "WARNING: $WHISPER_BIN is not arm64 — transcription will be ~50x slower. Find the Metal build before proceeding."
 
 # Transcribe (whisper-cli supports mp3, wav, flac, ogg directly)
+# --max-context 0 is REQUIRED: without it, large-v3 can enter a conditioned-repetition
+# death spiral (one phrase repeated at 1s intervals for the rest of the file — a 66-min
+# video once lost 52 min to "We're going to do it step-by-step" ×3160, 2026-07-27).
+# Prefer an explicit -l (e.g. en) over auto when the language is known.
 "$WHISPER_BIN" \
   -m ~/.local/share/whisper-cpp/models/ggml-$MODEL.bin \
   -f "$AUDIO_FILE" \
   -l auto \
+  --max-context 0 \
   --output-srt \
   --output-vtt \
   --output-json-full \
@@ -68,17 +73,26 @@ If whisper-cpp is not available, fall back to Python whisper:
 whisper "$AUDIO_FILE" --model $MODEL --output_format all --word_timestamps True $LANGUAGE_FLAG
 ```
 
-4. Read and display the transcript to the user. Show:
+4. **Hallucination-loop check (MANDATORY before trusting the output):**
+```bash
+sort "$OUT.txt" | uniq -c | sort -rn | head -3
+```
+If any line repeats more than ~20×, the decode derailed — the transcript past the first
+repeat is garbage. Verify the SRT's last cue timestamp covers the full media duration of
+REAL content, and re-run (with `--max-context 0` if it was somehow dropped, or with an
+explicit `-l <lang>`). Do not hand a looped transcript to the user.
+
+5. Read and display the transcript to the user. Show:
    - The full text transcript
    - Note the language detected (if auto-detected)
    - Mention that SRT/VTT/JSON files were also generated
 
-5. Clean up the temporary audio file:
+6. Clean up the temporary audio file:
 ```bash
 rm -f "$AUDIO_FILE"
 ```
 
-6. Ask the user if they want:
+7. Ask the user if they want:
    - The transcript saved to a specific file
    - A summary of the content
    - Subtitles in SRT/VTT format copied somewhere
