@@ -5,7 +5,9 @@ description: Triage one voice call (or "the last call") on Delta Agents prod —
 
 Triage a single Delta Agents voice call end-to-end: DB evidence → tool timeline → gateway logs → config diff. Collect ALL FOUR evidence layers BEFORE hypothesizing (the past 20-iteration loops came from fixing the first plausible theory instead of reading the second evidence layer).
 
-Repo root assumed at `/Users/zalo/dev/delta-agents` (adjust if the checkout lives elsewhere). All prod reads go through the Supabase MCP (`mcp__supabase__execute_sql`, project `xbwcziymjfsobaxmanlo`) — never local `psql`. Column names below are verified against `docs/SCHEMA-PROD.md`; re-check there before editing any query.
+Repo root assumed at `/Users/zalo/dev/delta-agents` (adjust if the checkout lives elsewhere). All prod reads go through the Supabase MCP (`mcp__supabase__execute_sql`, project `$DELTA_PROD_PROJECT_REF`) — never local `psql`. Column names below are verified against `docs/SCHEMA-PROD.md`; re-check there before editing any query.
+
+> **Resolving `$DELTA_PROD_PROJECT_REF`:** `jq -r '.env.DELTA_PROD_PROJECT_REF' ~/.claude/settings.local.json` (gitignored). Fallback: `mcp__supabase__list_projects` and pick the delta-agents prod project. Never paste the literal ref back into this file — it is committed to a public repo.
 
 ## When to invoke
 

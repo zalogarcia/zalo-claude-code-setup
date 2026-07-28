@@ -15,7 +15,9 @@ All SQL below uses REAL column names verified against `docs/SCHEMA-PROD.md` (in 
 
 ## Preflight — transport check
 
-Run `SELECT 1` via `mcp__supabase__execute_sql` (`project_id: xbwcziymjfsobaxmanlo`) first. If it fails, the MCP transport is down — back off and report; do not rewrite queries trying to "fix" them.
+Run `SELECT 1` via `mcp__supabase__execute_sql` (`project_id: $DELTA_PROD_PROJECT_REF`) first. If it fails, the MCP transport is down — back off and report; do not rewrite queries trying to "fix" them.
+
+> **Resolving `$DELTA_PROD_PROJECT_REF`:** `jq -r '.env.DELTA_PROD_PROJECT_REF' ~/.claude/settings.local.json` (gitignored). Fallback: `mcp__supabase__list_projects` and pick the delta-agents prod project. Never paste the literal ref back into this file — it is committed to a public repo.
 
 **Read-only contract: every query in this skill is a SELECT. Never write to prod during triage.**
 
@@ -60,7 +62,7 @@ Use the same window in every SQL `interval` and in the epoch-ms `--start-time` f
 
 ## Step 3 — Parallel evidence pull
 
-Each block is one `mcp__supabase__execute_sql` call (`project_id: xbwcziymjfsobaxmanlo`). They are independent — run them in parallel (single message, multiple tool calls). Substitute `<tenant_id>` and the window. Skip 3c/3d when the symptom is clearly not voice; run everything else always.
+Each block is one `mcp__supabase__execute_sql` call (`project_id: $DELTA_PROD_PROJECT_REF`). They are independent — run them in parallel (single message, multiple tool calls). Substitute `<tenant_id>` and the window. Skip 3c/3d when the symptom is clearly not voice; run everything else always.
 
 **3a — Recent sessions + last-turn shape** (`conversation` is a jsonb array of turns; take the raw last element rather than guessing its keys):
 

@@ -12,7 +12,9 @@ Refresh `docs/SCHEMA-PROD.md` from the live production database so ad-hoc SQL ne
 - A prod query failed with `column ... does not exist` / `relation ... does not exist` on a name the snapshot lists — the snapshot may be stale.
 - The user asks to refresh/regenerate the schema snapshot.
 
-Skip for: local-dev databases (`supabase start`), branches — this snapshot documents **prod** (`xbwcziymjfsobaxmanlo`) only.
+Skip for: local-dev databases (`supabase start`), branches — this snapshot documents **prod** (`$DELTA_PROD_PROJECT_REF`) only.
+
+> **Resolving `$DELTA_PROD_PROJECT_REF`:** `jq -r '.env.DELTA_PROD_PROJECT_REF' ~/.claude/settings.local.json` (gitignored). Fallback: `mcp__supabase__list_projects` and pick the delta-agents prod project. Never paste the literal ref back into this file — it is committed to a public repo.
 
 ## Preflight — transport check
 
@@ -20,7 +22,7 @@ Run `SELECT 1` via `mcp__supabase__execute_sql` first. **If `SELECT 1` fails, th
 
 ## The queries (run all four; 1, 2, 3 are independent — run in parallel)
 
-All via `mcp__supabase__execute_sql` with `project_id: xbwcziymjfsobaxmanlo`.
+All via `mcp__supabase__execute_sql` with `project_id: $DELTA_PROD_PROJECT_REF`.
 
 **Query 1 — leaf-table columns** (one aggregated row per table keeps output small):
 
