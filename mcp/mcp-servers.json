@@ -6,21 +6,42 @@
   "playwright": {
     "type": "stdio",
     "command": "npx",
-    "args": ["-y", "@playwright/mcp@latest"],
+    "args": [
+      "-y",
+      "@playwright/mcp@latest"
+    ],
     "env": {}
   },
   "github": {
     "type": "stdio",
     "command": "npx",
-    "args": ["-y", "@modelcontextprotocol/server-github"],
+    "args": [
+      "-y",
+      "@modelcontextprotocol/server-github"
+    ],
     "env": {
       "GITHUB_PERSONAL_ACCESS_TOKEN": "__GITHUB_PAT__"
+    }
+  },
+  "n8n-api": {
+    "type": "stdio",
+    "command": "node",
+    "args": [
+      "__HOME__/Documents/AI Projects/n8n-zk/n8n-mcp-server/index.js"
+    ],
+    "env": {
+      "N8N_HOST": "__N8N_HOST__",
+      "N8N_API_KEY": "__N8N_API_KEY__",
+      "NODE_TLS_REJECT_UNAUTHORIZED": "0"
     }
   },
   "supabase": {
     "type": "stdio",
     "command": "npx",
-    "args": ["-y", "@supabase/mcp-server-supabase@latest"],
+    "args": [
+      "-y",
+      "@supabase/mcp-server-supabase@latest"
+    ],
     "env": {
       "SUPABASE_ACCESS_TOKEN": "__SUPABASE_ACCESS_TOKEN__"
     }

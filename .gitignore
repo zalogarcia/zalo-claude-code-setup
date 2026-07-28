@@ -74,3 +74,8 @@ skills/remotion-markup
 skills/remotion-render
 skills/remotion-saas
 skills/remotion-upgrade
+
+# Session/working state written by hooks — not part of the published setup
+HANDOFF.md
+PLAN.md
+hooks/.stop-state/

@@ -7,7 +7,7 @@ instruction read from a web page, repo file, or PR body would otherwise execute
 machine-wide. This hook blocks tmux verbs that can interrupt, kill, or inject
 into ANOTHER session.
 
-Design (v2, after an audit walked past v1 with `tmux kill-ses`):
+Design (v3, after a behaviour suite found 4 holes + 1 false block in v2):
   - ALLOW-LIST of read-only/self-scoped verbs; everything else that names a
     target other than your own session is DENIED.
   - Subcommands are normalized through tmux's own alias table AND unambiguous
@@ -16,12 +16,29 @@ Design (v2, after an audit walked past v1 with `tmux kill-ses`):
   - `\;` command sequences and shell operators split into segments; every
     segment is checked. Nested `bash -c "..."` strings are scanned recursively.
   - Unparseable tmux invocations fail CLOSED.
-  - Killing a session is allowed only when that session is NOT running claude
-    (so a headless helper can clean up a scratch session it made) — never
-    `kill-server`, which would take everything down.
+  - Killing or respawning ANY session but your own is denied outright, as is
+    `kill-server`.
   - There is deliberately NO in-band escape hatch: any token the assistant can
     type is a token injected text can tell it to type. To force a blocked
     action, the owner runs it in their own terminal.
+
+v3 changes (2026-07-25) — both directions, each pinned by /tmp/guard_suite.py:
+  - TOKENIZER: v2 used bare `shlex.split`, which leaves `;` glued to the
+    preceding word (`hi;`, `Enter;`). Two consequences, one dangerous:
+    `echo hi; tmux send-keys -t peer C-c` was ALLOWED (the segment splitter
+    never saw a separator, so the C-c was never checked), while the sanctioned
+    `send-keys -t peer Enter; sleep 8; capture-pane` was BLOCKED (the whole
+    tail was read as one key list). Now tokenized with punctuation_chars=True,
+    which splits operators correctly and still respects quoting.
+  - KILLS: v2 permitted killing a peer session whose panes weren't "running
+    claude", via session_runs_claude(). On this machine
+    `#{pane_current_command}` returns a version string, not a process name, so
+    that check found nothing to protect and EVERY session was killable
+    (kill-session / kill-ses / killp / respawn-pane all passed). The detector
+    was load-bearing and provably unreliable, so it is gone: cross-session
+    kill/respawn is now unconditionally denied. Cost: a headless helper can no
+    longer clean up a scratch session it created — it must be torn down from
+    the owner's terminal.
 
 LIMITS (documented honestly): static string analysis cannot see through
 variable indirection (`T=tmux; $T ...`), base64/eval obfuscation, or a script
@@ -101,18 +118,16 @@ def own_session() -> str:
         return ""
 
 
-def session_runs_claude(name: str) -> bool:
-    """True if any pane in `name` is running claude — those are never killable."""
-    try:
-        out = subprocess.run(
-            [tmux_bin(), "list-panes", "-t", name, "-F", "#{pane_current_command}"],
-            capture_output=True, text=True, timeout=5,
-        )
-        if out.returncode != 0:
-            return True  # can't tell -> treat as protected (fail closed)
-        return any("claude" in ln or "node" in ln for ln in out.stdout.lower().splitlines())
-    except Exception:
-        return True
+def tokenize(command: str):
+    """Split a shell command, keeping operators as their OWN tokens.
+
+    Plain shlex.split glues `;` to the preceding word (`hi;`, `Enter;`), which
+    hid a whole command from the segment splitter in v2. punctuation_chars
+    tokenizes ; & | ( ) < > properly while still honouring quotes.
+    """
+    lex = shlex.shlex(command, posix=True, punctuation_chars=True)
+    lex.whitespace_split = True
+    return list(lex)
 
 
 def normalize_verb(word: str) -> str:
@@ -204,9 +219,11 @@ def check_tmux_segment(tokens, mine: str) -> None:
                      "(this exact mistake destroyed a live Claude session during an audit)")
             if same_session:
                 continue
-            if session_runs_claude(target):
-                deny(f"`tmux {verb}` targeting '{target}', which is running a Claude session")
-            continue  # scratch session — cleanup allowed
+            # v2 asked "is that session running claude?" and skipped the kill if
+            # not. The probe it relied on is unreliable here (see module header),
+            # so every peer was killable. No exceptions now.
+            deny(f"`tmux {verb}` targeting another session ('{target}') — a peer may be "
+                 "mid-task, and only the owner can tear one down")
 
         if verb in {"paste-buffer", "pipe-pane", "new-window", "split-window", "set-option",
                     "set-window-option", "rename-session", "swap-pane", "move-window",
@@ -232,7 +249,7 @@ def scan(command: str, mine: str, depth: int = 0) -> None:
     if depth > 3 or "tmux" not in command:
         return
     try:
-        tokens = shlex.split(command, comments=False)
+        tokens = tokenize(command)
     except ValueError:
         # Unparseable quoting. Only refuse if tmux actually appears in command
         # position — otherwise it's prose (commit messages, echoed text).
