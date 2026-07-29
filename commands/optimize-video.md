@@ -19,7 +19,9 @@ ffmpeg -y -i "$LOCAL_PATH" \
 
 2. Show the before/after file sizes and compression ratio.
 
-3. Upload to Supabase Storage bucket `course-content` on project `dqzxcphqxelkfwynfljc` using the service role key (get it via `supabase projects api-keys --project-ref dqzxcphqxelkfwynfljc`). Use curl with `x-upsert: true` header to overwrite if the file already exists.
+3. Upload to Supabase Storage bucket `course-content` on project `$CMAA_PROD_PROJECT_REF` using the service role key (get it via `supabase projects api-keys --project-ref $CMAA_PROD_PROJECT_REF`). Use curl with `x-upsert: true` header to overwrite if the file already exists.
+
+> **Resolving `$CMAA_PROD_PROJECT_REF`:** `jq -r '.env.CMAA_PROD_PROJECT_REF' ~/.claude/settings.local.json` (gitignored). Fallback: `mcp__supabase__list_projects` and pick the CMAA prod project. Never paste the literal ref back into this file — it is committed to a public repo.
 
 4. Verify the upload by checking the Content-Length header of the uploaded file.
 
@@ -32,4 +34,4 @@ If the user provides just a local path without a storage path, ask them for the 
 - Audio: AAC 128kbps
 - Always enable faststart (`-movflags +faststart`)
 - Bucket: `course-content`
-- Supabase project: `dqzxcphqxelkfwynfljc`
+- Supabase project: `$CMAA_PROD_PROJECT_REF`
