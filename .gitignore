@@ -48,6 +48,8 @@ dreams/
 # Claude Code internal runtime state
 daemon/
 daemon.log
+daemon.lock
+daemon.status.json
 jobs/
 
 # Archived deprecated subprojects (kept locally, not in repo)
