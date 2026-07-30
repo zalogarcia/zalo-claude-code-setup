@@ -23,6 +23,21 @@ fmt_long() {
   [ "$d" -gt 0 ] && echo "${d}d${h}h" || echo "${h}h"
 }
 
+# Cache the real rate-limit block for consumers that get no statusline stdin of
+# their own — the Telegram bridge's /context runs headless, so this file is its
+# only source for the same 5h/weekly numbers this footer shows. resets_at is an
+# absolute epoch, so "time left" stays exact even when the % reading is stale.
+if [ -n "$five_h" ] || [ -n "$seven_d" ]; then
+  cache="$HOME/.claude/cache/rate-limits.json"
+  mkdir -p "$HOME/.claude/cache" 2>/dev/null
+  if printf '%s' "$input" | jq -c --argjson now "$now" \
+      '{captured_at:$now, rate_limits:.rate_limits}' >"$cache.tmp.$$" 2>/dev/null; then
+    mv -f "$cache.tmp.$$" "$cache" 2>/dev/null || rm -f "$cache.tmp.$$"
+  else
+    rm -f "$cache.tmp.$$"
+  fi
+fi
+
 parts=""
 [ -n "$model" ] && parts="$model"
 [ -n "$effort" ] && parts="${parts:+$parts }(${effort})"
