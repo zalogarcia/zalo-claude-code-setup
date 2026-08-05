@@ -118,6 +118,12 @@ For genuinely UI-design-heavy work (a new page, a component-library piece, a vis
 - For branded motion-graphics "slides b-roll" (VSL-style slides, YouTube segment graphics, teleprompter-script b-roll), invoke the `machine-editorial-broll` skill — it maps script beats to the Machine Editorial comp archetypes in the Remotion studio at `~/dev/operator-broll`. Do not hand-roll Remotion comps outside the studio's token/move system.
 - Disambiguation: `machine-editorial-broll` = branded typographic slide graphics (Remotion). `seedance` = AI-generated _footage_ (people, scenes, camera moves). A "b-roll" request for graphics/slides goes to the former; filmed-looking clips go to the latter.
 
+## Zoom / Webcam Testimonial Video
+
+- For AI video that must pass as a **real low-quality video call** (testimonials, social proof, "make this clip look like a webcam"), invoke the `zoom-testimonial` skill — it encodes the 5 camera profiles, the 16 built templates with their exact prompts, the packet-loss freeze technique, and the numeric verification. Do not hand-roll a "make it look low quality" grade; that produces clean AI footage with a blur on top.
+- Re-running new dialogue through an existing look is `scripts/new-clip.sh <template> <clip.mp4>` — never re-derive a grade that already exists.
+- Disambiguation: `zoom-testimonial` = amateur-webcam realism from AI footage. `seedance` = the generation itself (this skill is everything after it). `machine-editorial-broll` = branded motion graphics.
+
 ## Infographic Production
 
 - For static educational/marketing **infographics** (concept explainers, before/after comparisons, process flows, visual cheat sheets), invoke the `infographics` skill — it encodes the layout archetypes, style presets, quoted-string text-budget prompt architecture, and the mandatory read-back text audit, generating via gpt-image-2 through the `image-craft-expert` agent. Do not hand-roll a one-line "make an infographic about X" image prompt.
@@ -212,3 +218,6 @@ Interactive Claude Code sessions launched from the xbar menu run inside **named 
 
 - **Sleep-polling**: foreground `sleep`/poll loops are blocked by the harness — use `run_in_background: true` for long commands, or the Monitor tool with an until-condition, to wait (2026-07-02)
 - **Background agents**: after dispatching background agents, don't strand their completion notifications — stay resumable (end the turn cleanly with pending work noted) or schedule a wakeup to collect results (2026-07-02)
+- **Fix/edit spirals**: the 3+ Fixes and 2-Strike Probe rules are hook-enforced — `~/.claude/hooks/loop-detector.py` injects them on 3 same-shape Bash failures, 2 same-endpoint API failures, or 4 same-file edits without passing verification; tests: `python3 ~/.claude/hooks/loop-detector.test.py` (2026-08-01)
+- **Package installs**: hook-enforced — `~/.claude/hooks/npm-install-guard.py` blocks new deps, sub-7-day versions, `-g`, and bare `npm install` where a lockfile exists (use `npm ci`); `min-release-age=7` in `~/.npmrc` covers transitive deps but needs npm ≥ 11.10.0; tests: `python3 ~/.claude/hooks/npm-install-guard.test.py` (2026-08-05)
+- **Supabase edge deploys**: hook-enforced — `~/.claude/hooks/edge-deploy-guard.py` blocks `mcp__supabase__deploy_edge_function` for any file containing a backslash, because the MCP doubles every `\` in the uploaded content (a corrupted `demo-chat` returned 0 AI replies to 31 prospects for ~7 hours while its version bumped cleanly). Deploy with `supabase functions deploy <name> --project-ref <ref> --no-verify-jwt --use-api`, then pull the content back and confirm single backslashes — **a version bump is not proof a deploy is good**; tests: `python3 ~/.claude/hooks/edge-deploy-guard.test.py` (2026-08-05)
