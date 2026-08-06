@@ -39,7 +39,7 @@ def check(label, payload, expected, expect_in_stderr=None):
             print(f"        stderr was: {err[:400]}")
 
 
-def deploy(files, name="demo-chat", project_id="dqzxcphqxelkfwynfljc"):
+def deploy(files, name="demo-chat", project_id="testprojectref00"):
     return {
         "tool_name": "mcp__supabase__deploy_edge_function",
         "tool_input": {
