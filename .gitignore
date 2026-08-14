@@ -81,3 +81,14 @@ skills/remotion-upgrade
 HANDOFF.md
 PLAN.md
 hooks/.stop-state/
+hooks/state/
+
+# Commercial skills — NEVER publish. `ghl-account-copilot` is the paid product
+# sold at copymyaiagency.com/blueprint ($99, extension + skill); `ghl-build` and
+# `ghl-json` are its ancestors and give away the same design. This repo is
+# PUBLIC (zalo-claude-code-setup), so an untracked skill dir here is one
+# `git add -A` away from publishing the thing being sold. Ignored, not trusted
+# to a convention.
+skills/ghl-account-copilot/
+skills/ghl-build/
+skills/ghl-json/
