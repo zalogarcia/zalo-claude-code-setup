@@ -36,14 +36,29 @@ Two modes:
 **Sessions** — Claude Code transcripts:
 
 ```bash
-find ~/.claude/projects -name '*.jsonl' -newermt "<WATERMARK>" \
-  | grep -vE '/(subagents|workflows)/'
+python3 ~/.claude/scripts/gather-transcripts.py --since "<WATERMARK>" --min-size 50000 --show-dropped
 ```
 
-- The `/subagents/` and `/workflows/` paths are noise — always excluded. (For scale: a 30-day
-  window is ~5700 files total but only ~300 top-level sessions, ~175 of them >50KB.)
-- Prioritise files >50KB — those are substantive sessions. Skim smaller ones only if a project
-  has no other signal.
+Output is TSV — `path  size_bytes  first_record  last_record  in_window_records` — sorted by
+in-window record count, so the first rows are genuinely the richest sources. `--json` gives the
+same data structured. `--show-dropped` prints the rejects to stderr; keep it on and glance at
+them, since a surprising drop is usually the interesting signal.
+
+- **Never gather by `mtime` alone.** `find -newermt` was the old step and it silently
+  over-selects: Claude Code appends metadata-only lines (`last-prompt`, `custom-title`, `mode`)
+  that carry **no timestamp**, so a session whose conversation ended days ago gets a fresh mtime
+  and enters the window looking substantive. On 2026-08-03 that cost **three of six cluster
+  agents their entire budget proving an empty window** — including a 90MB zalo-ads transcript
+  briefed as "the richest source in the window" whose last real record was two days stale. The
+  script keeps mtime as a cheap prefilter (it never *under*-selects) and then drops anything
+  whose newest real record predates the watermark. Measured on that same window: 8 of 35 mtime
+  candidates were fake, in 0.3s.
+- **Brief agents with the transcript's true span, never its mtime.** The `first_record` /
+  `last_record` columns exist for exactly this — put them in the dispatch prompt.
+- The `/subagents/` and `/workflows/` paths are noise — always excluded (the script does this).
+  For scale: a 30-day window is ~5700 files total but only ~300 top-level sessions, ~175 >50KB.
+- `--min-size 50000` keeps this to substantive sessions. Drop the flag to sweep smaller ones when
+  a project has no other signal.
 - Map transcript dir → project: `-Users-zalo-dev-<repo>` → `~/dev/<repo>`;
   `-Users-zalo-zalo-ads` → `~/zalo-ads`; `-Users-zalo` → home/general;
   `-private-tmp-...-scratchpad` → ignore unless it's the only record of real work.
