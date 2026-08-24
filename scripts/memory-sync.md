@@ -28,8 +28,20 @@ Two modes:
 **Git** — for each repo in `~/dev/*/` plus `~/zalo-ads/`:
 
 - SKIP any path matching `*-autopilot-*` (throwaway worktrees) and `node_modules`.
-- `git -C <repo> log --since="<WATERMARK>" --oneline` — skip the repo entirely if zero commits
-  AND the working tree is clean.
+- `git -C <repo> log --all --since="<WATERMARK>" --oneline --format='%h%d %s'` — **`--all`, never
+  HEAD-only.** Skip the repo entirely only if this returns zero commits AND the working tree is
+  clean. A HEAD-only `log --since` misses every commit that landed on a feature branch, inside a
+  worktree, or on `origin/<default>` while local `<default>` sat behind — which is the normal
+  shape of a day here, not an edge case. Measured 2026-08-22: the HEAD-only census reported 9
+  delta-agents commits; `--all` found that `origin/main` was **7 commits AHEAD of local `main`**
+  plus six merged feature branches and one unmerged local-only harness branch. Nearly the whole
+  window was invisible to the prescribed command. (This line was worked around by hand in
+  dispatch prompts for four consecutive runs before being fixed here.)
+- Then RESOLVE what that census found, per branch with in-window commits:
+  - merged? `git merge-base --is-ancestor <branch> origin/<default> && echo MERGED || echo UNMERGED`
+  - pushed? `git rev-parse --verify -q origin/<branch>`
+  - is local behind its own remote? `git log <default>..origin/<default> --oneline`
+  - live worktrees: `git worktree list` (a worktree is where unmerged work actually lives)
 - Also capture: current branch, uncommitted/untracked files, unpushed commits
   (`git log @{u}.. --oneline` where an upstream exists).
 
