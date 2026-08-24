@@ -1,6 +1,6 @@
 ---
 name: voice-agent-forge
-description: Generate production-ready Retell-style voice/chat agent system prompts in the Operator Base "house format" — the same structure the game-app's Prompt Forge (Prompt Studio) and demo-retell-setup templates produce. Use when the user says "write a voice agent prompt", "build a Retell agent", "make an orchestrator bot", "create the sub-agents", "forge a prompt for [client]", "draft the AI receptionist prompt", or asks for a multi-bot routing setup (orchestrator + specialized agents). Produces the full <identity>/<company_identity>/<goal>/<context>/<important_information>/<conversational_style_guideline>/<conversation_steps>/<objection_handling_database>/<knowledge_database> skeleton with the voice-specific rules baked in, so every client bot comes out consistent instead of re-derived from scratch each time.
+description: Generate production-ready Retell-style voice/chat agent system prompts in the Operator Base "house format" — the same structure the game-app's Prompt Forge (Prompt Studio) and demo-retell-setup templates produce. Use when the user says "write a voice agent prompt", "build a Retell agent", "make an orchestrator bot", "create the sub-agents", "forge a prompt for [client]", "draft the AI receptionist prompt", or asks for a multi-bot routing setup (orchestrator + specialized agents). Produces the full <identity>/<company_identity>/<goal>/<context>/<important_information>/<conversational_style_guideline>/<conversation_steps>/<selling_method>/<objection_handling_database>/<knowledge_database> skeleton with the voice-specific rules and the Selling Method block baked in, so every client bot comes out consistent instead of re-derived from scratch each time.
 ---
 
 Forge voice (Retell) and chat (ADRS) agent system prompts in Operator Base house format. One client = an orchestrator bot plus N specialized sub-agents the orchestrator transfers to. This skill gives you the exact section taxonomy, the voice-specific rules, and the generation discipline so every bot comes out in the same shape.
@@ -18,9 +18,10 @@ Skip for: editing an existing prompt's wording (just edit the file), one-line to
 
 This is the game-app "Prompt Forge" promoted into Claude Code. Canonical references (read them if present, they are the source of truth for wording):
 
-- House structure & voice rules: `…/Operator Base/game-app/supabase/functions/demo-retell-setup/templates.ts` (`ORCHESTRATOR_GLOBAL_PROMPT`, `ENG_LLM_PROMPT`, `ESP_LLM_PROMPT`)
-- The in-app Forge assistant prompt: `…/game-app/src/components/Toolkit/PromptStudio/useAnthropicChat.js` (`DEFAULT_SYSTEM_PROMPT`)
-- Onboarding → Forge seed contract: `…/game-app/src/components/Toolkit/ClientOnboarding/buildForgeSeedFromSubmission.js`
+- House structure & voice rules: `~/dev/90-day-cmaa-game-app/supabase/functions/demo-retell-setup/templates.ts` (`ORCHESTRATOR_GLOBAL_PROMPT`, `ENG_LLM_PROMPT`, `ESP_LLM_PROMPT`)
+- The in-app Forge system prompt (repo-tracked source of truth for the `prompt_forge_system_prompt` app_settings row — the code `DEFAULT_SYSTEM_PROMPT` in useAnthropicChat.js is only a minimal fallback): `~/dev/90-day-cmaa-game-app/docs/prompt-forge/system-prompt.md`
+- **The Selling Method block (canonical, paste-verbatim artifact):** `~/Documents/Zalo Content/Sales System/agent-prompt-block/SELLING-METHOD.block.md` — 530-conversation-measured; its README documents the evidence and deploy gates
+- Onboarding → Forge seed contract: `~/dev/90-day-cmaa-game-app/src/components/Toolkit/ClientOnboarding/buildForgeSeedFromSubmission.js`
 
 If those files aren't on disk, this skill is self-contained — the skeleton and rules below are the full spec.
 
@@ -31,6 +32,8 @@ If those files aren't on disk, this skill is self-contained — the skeleton and
 3. **Every prompt includes:** Identity, Voice/Tone, the Offering/Services, qualification criteria, FAQs/knowledge, and Guardrails (out-of-scope → human handoff).
 4. **Tools are external.** Never write real URLs or phone numbers as links. Reference _using_ a tool ("I'll send you the calendar link now") — the platform owns the actual send. Booking, SMS, email, agent-transfer, and human-handoff tools are configured in Retell/the platform, not in the prompt.
 5. **Out-of-scope → hand off, don't guess.** When a question falls outside the grounded context, escalate to the human team.
+6. **Sales-mission bots get the Selling Method block VERBATIM.** A sales-mission bot is any bot whose job moves someone toward a purchase — outbound sales, inbound lead qualification, revival/re-engagement, and appointment-setters whose booking IS the sales next step. Insert `~/Documents/Zalo Content/Sales System/agent-prompt-block/SELLING-METHOD.block.md` word-for-word as the `<selling_method>` section (client bots get the FULL block, fact-sourcing rules included — those rules only get adapted in demo contexts). Exactly two permitted adaptations: (a) `set_dnd` — Delta Agents platform bots HAVE the tool, keep those sentences exactly; only swap for the platform's real opt-out mechanism when the target platform genuinely lacks one; (b) voice bots — adapt the handful of text-channel phrases to speech ("in writing" → "on a call", "scroll up and reread" → "remembers what you said", "block a number" → "hang up and block a number"). Pure support bots, receptionists/after-hours catch-alls, and post-purchase bots do NOT get the block or an objection database — on those it is pure cost and distorts behavior. A routing-only orchestrator does not get it; an orchestrator that itself sells does.
+7. **Objection handlers are generated per client, never canned.** After the block, write `<objection_handling_database>` as 8-15 objections this client's prospects actually raise — composed from the block's ten patterns + the client's niche, offer, pricing, and stated objections — each response following the four-step move (accept briefly → exit out loud → one diagnostic question → concrete answer + next step) and obeying the block's "Never do these". No stock script libraries, no invented statistics/success rates/social proof.
 
 ## The house format (section order is fixed)
 
@@ -48,7 +51,8 @@ Emit sections in this exact order. Orchestrators and sub-agents share the skelet
                       Concise rule; match energy. AI DISCLOSURE (tell the truth if asked, offer human).
                       CONVERSATION ENERGY MANAGEMENT (5 energy types).
                       <conversation_flow_flexibility> … adaptive-framework block …
-                      MAXIMUM ATTEMPT RULES (same question 3× → human handoff; routing 2× max).
+                      MAXIMUM ATTEMPT RULES (same question 3× → human handoff; routing 2× max;
+                      objections defer to the Selling Method three-attempt budget — never a separate "price 2× max" rule).
                       TOOLS ARE EXTERNAL (no raw URLs; reference using the tool).
                       CRITICAL GUIDELINES (never break character; redirect off-scope).
 <conversational_style_guideline>
@@ -56,8 +60,11 @@ Emit sections in this exact order. Orchestrators and sub-agents share the skelet
 <conversation_steps>  Numbered flow. Sub-agents: warm pickup (acknowledge the transfer, don't re-greet from scratch)
                       → qualification (one question at a time) → send links/info via tools → booking sequence
                       → CRM add / reminder offer → confirm. Orchestrator: greeting → identify intent → route.
+<selling_method>      SALES-MISSION BOTS ONLY (see discipline #6): the Selling Method block, verbatim, with only the
+                      two permitted adaptations. Omit entirely for support/receptionist/routing-only/post-purchase bots.
 <objection_handling_database>
-                      Caller-type-specific objections, each with a one-line spoken response.
+                      SALES-MISSION BOTS ONLY: 8-15 niche-specific handlers generated per discipline #7 —
+                      the client's real objections in the four-step move shape. Never a canned library.
 <knowledge_database>  Grounded facts: schedule, programs, regions, rates-by-link, etc. Spell dates/numbers in words.
 ```
 
@@ -96,6 +103,9 @@ Accordingly, Additionally, Arguably, Certainly, Consequently, Hence, However, In
 ## Anti-patterns
 
 - ❌ Inventing prices/rates/dates to fill a section — collect the lead and send a link via the SMS tool instead.
+- ❌ Canned objection scripts (the old "Common objections" / stock objection database) — superseded 2026-08-24 by the Selling Method block + per-client handlers. If you find yourself pasting an objection response you didn't derive from THIS client's context, stop.
+- ❌ Pasting `<selling_method>` into a support, receptionist, or routing-only bot — the block itself documents this as pure cost that distorts behavior.
+- ❌ Paraphrasing or trimming the Selling Method block — it is a measured artifact; verbatim or absent, nothing in between (the two platform adaptations in discipline #6 are the only exceptions).
 - ❌ Writing real URLs or phone numbers as clickable links inside the prompt — tools are external; reference using them.
 - ❌ IVR "press 1 for…" menus — the client wants natural conversation.
 - ❌ Letting `<company_identity>` or the voice block drift between bots in the same set — paste identical.
