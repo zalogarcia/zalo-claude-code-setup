@@ -107,7 +107,9 @@ KEY_LITERAL_RE = re.compile(r"(?:sk|rk)_live", re.IGNORECASE)
 
 # The key file. `live-key` alone is specific enough that false positives are
 # effectively nil, and it survives `cd ~/.config/stripe && cat live-key`.
-KEY_PATH_RE = re.compile(r"live-key|(?:\.)?config/stripe/[*?]", re.IGNORECASE)
+# The second branch catches a glob anywhere inside the stripe config dir.
+KEY_PATH_RE = re.compile(r"live-key|(?:\.)?config/stripe/[^\s;|&\"']*[*?]",
+                         re.IGNORECASE)
 
 STRIPE_ENV_RE = re.compile(r"\$\{?STRIPE_[A-Za-z0-9_]*", re.IGNORECASE)
 
@@ -186,9 +188,10 @@ Be clear about what this hook is. It reads COMMAND TEXT ONLY, so it
 cannot see inside a script file. On 2026-08-30 a real refund was issued by
 `python3 /tmp/stripe-refund.py`, and a hook like this one would have seen an
 interpreter and a path, nothing else. The control that actually protects the
-money is CUSTODY: the live key is no longer in any environment, it lives only
-in {KEY_FILE_HINT} (mode 600), and {WRAPPER} is the only
-thing that reads it. This hook just closes the easy routes.
+money is CUSTODY: the live key belongs in exactly one place,
+{KEY_FILE_HINT} (mode 600), and {WRAPPER} is the only thing
+that reads it. If a copy is still sitting in an environment variable, a .env or
+a transcript, THAT is the thing to fix — this hook only closes the easy routes.
 
 There is no in-band override. If a money operation genuinely needs to happen
 and the wrapper cannot express it, say so and let Zalo run it in his own
@@ -321,24 +324,73 @@ def strip_prefixes(seg):
     return seg[i:]
 
 
-def is_wrapper_invocation(seg):
-    """True only when stripe-money.py is the thing being EXECUTED.
+def resolves_to_wrapper(token, cwd):
+    """Does this path token resolve to THE wrapper, not just something named
+    like it? `python3 /tmp/stripe-money.py` must not be allowed through."""
+    t = token.replace("${HOME}", "~").replace("$HOME", "~")
+    t = os.path.expanduser(t)
+    if not os.path.isabs(t):
+        t = os.path.join(cwd or os.getcwd(), t)
+    try:
+        return os.path.realpath(t) == os.path.realpath(WRAPPER_PATH)
+    except OSError:
+        return False
 
-    Deliberately not "the token appears somewhere": a comment or a string
-    mentioning the wrapper inside `python3 -c "..."` must not launder a call.
+
+def is_wrapper_invocation(seg, cwd):
+    """True only when THE wrapper is the thing being EXECUTED.
+
+    Two ways this has to be tight:
+      * not "the token appears somewhere" — a comment or a string mentioning
+        the wrapper inside `python3 -c "..."` must not launder a call;
+      * not "a file with that basename" — a hostile `/tmp/stripe-money.py`
+        would otherwise inherit the allowance. The path must resolve to
+        WRAPPER_PATH on disk.
     """
     seg = strip_prefixes(seg)
     if not seg:
         return False
-    head = os.path.basename(seg[0])
-    if head == WRAPPER:
+    if resolves_to_wrapper(seg[0], cwd):
         return True
-    if head in INTERPRETERS:
+    if os.path.basename(seg[0]) in INTERPRETERS:
         for tok in seg[1:]:
             if tok.startswith("-"):
                 continue
-            return os.path.basename(tok) == WRAPPER
+            return resolves_to_wrapper(tok, cwd)
     return False
+
+
+def executed_target(seg):
+    """The file a segment actually runs: itself, or an interpreter's script."""
+    seg = strip_prefixes(seg)
+    if not seg:
+        return None
+    if os.path.basename(seg[0]) in INTERPRETERS:
+        for tok in seg[1:]:
+            if tok.startswith("-"):
+                continue
+            return tok
+        return None
+    return seg[0]
+
+
+def check_wrapper_impersonation(seg, cwd):
+    """`python3 /tmp/stripe-money.py ...` must not inherit the allowance.
+
+    Naming a file after the sanctioned wrapper is the cheapest way to launder
+    an arbitrary script past a name-based allowlist, so an executed file with
+    that basename that is NOT the wrapper is denied outright and loudly. Merely
+    naming the path (`cat`, `git add`, `ls`) is untouched — only execution.
+    """
+    target = executed_target(seg)
+    if not target or os.path.basename(target) != WRAPPER:
+        return
+    if resolves_to_wrapper(target, cwd):
+        return
+    deny(f"`{target}` is named after the sanctioned wrapper but is not it",
+         f"The only {WRAPPER} with any standing here is\n  {WRAPPER_PATH}\n"
+         "A file with that name anywhere else is either a mistake or an attempt to\n"
+         "borrow its allowance, and this guard cannot see what is inside it either way.")
 
 
 def http_method(seg):
@@ -370,6 +422,23 @@ def http_method(seg):
 # --------------------------------------------------------------------------
 # checks
 # --------------------------------------------------------------------------
+
+def dequoted_forms(command):
+    """The command as written, plus two quote-normalised views of it.
+
+    shlex removes quoting, so `sk''_live` and `"live"'-key'` collapse back to
+    the thing they were splicing apart. Without this, the absolute rules below
+    are one pair of quotes away from useless.
+    """
+    forms = [command]
+    try:
+        toks = tokenize(command.replace("\n", " "))
+    except ValueError:
+        return forms
+    forms.append(" ".join(toks))
+    forms.append("".join(toks))
+    return forms
+
 
 def check_key_literal(raw):
     if KEY_LITERAL_RE.search(raw):
@@ -562,6 +631,78 @@ def relevant(command):
             or KEY_PATH_RE.search(command) or PS_INVOCATION_RE.search(command))
 
 
+# --------------------------------------------------------------------------
+# Write / Edit: the route the 2026-08-30 refund actually took
+# --------------------------------------------------------------------------
+
+# A key-SHAPED string, not the bare prefix: this file, its suite and the
+# wrapper all discuss `sk_live` in prose and must remain editable.
+WRITTEN_KEY_RE = re.compile(r"(?:sk|rk)_live_[A-Za-z0-9]{20,}")
+CODE_SUFFIXES = (".py", ".sh", ".bash", ".zsh", ".js", ".mjs", ".cjs", ".ts",
+                 ".tsx", ".rb", ".pl", ".php", ".go", ".rs", ".swift")
+
+# The only files allowed to name the key path: the wrapper (which reads it),
+# this guard (which protects it) and their suites.
+KEY_PATH_EXEMPT = {
+    os.path.realpath(WRAPPER_PATH),
+    os.path.realpath(os.path.expanduser("~/.claude/scripts/stripe-money.test.py")),
+    os.path.realpath(os.path.expanduser("~/.claude/hooks/money-guard.py")),
+    os.path.realpath(os.path.expanduser("~/.claude/hooks/money-guard.test.py")),
+}
+
+
+def check_written(tool_input):
+    """A file that reads the key file is a money path with no command text.
+
+    This is the hole the incident went through: the Stripe call lived inside
+    /tmp/stripe-refund.py, so the Bash rules above would have seen `python3`
+    and a path. Blocking the AUTHORING of such a file is the only place a
+    text-matching guard can catch it.
+
+    Deliberately narrow — content that merely mentions Stripe is fine, code
+    that opens the key file is not — because broad content rules would fire on
+    every real Stripe integration in ~/dev. It is also only good for the naive
+    case: a script that assembles the path from pieces walks straight past it.
+    Say so rather than pretending otherwise.
+    """
+    path = str(tool_input.get("file_path") or "")
+    try:
+        real = os.path.realpath(os.path.expanduser(path))
+    except OSError:
+        real = path
+
+    chunks = []
+    for field in ("content", "new_string", "new_source"):
+        val = tool_input.get(field)
+        if isinstance(val, str):
+            chunks.append(val)
+    for edit in (tool_input.get("edits") or []):
+        if isinstance(edit, dict) and isinstance(edit.get("new_string"), str):
+            chunks.append(edit["new_string"])
+    body = "\n".join(chunks)
+    if not body:
+        return 0
+
+    if WRITTEN_KEY_RE.search(body):
+        deny(f"the content being written to {path or '<file>'} contains a live "
+             "Stripe key",
+             "A key written to disk outside its 600-mode home is a key out of custody.\n"
+             "Nothing on this box should be storing a second copy.")
+
+    if real in KEY_PATH_EXEMPT:
+        return 0
+    if KEY_PATH_RE.search(body) and path.endswith(CODE_SUFFIXES):
+        deny(f"the code being written to {path} reads the live Stripe key file",
+             f"Only {WRAPPER_PATH}\n"
+             "reads that file. A script that opens it is a money path with no command\n"
+             "text for the Bash rules to see — which is exactly how the 2026-08-30\n"
+             "refund happened: the Stripe call was inside /tmp/stripe-refund.py.\n"
+             "\n"
+             "If you need a money operation, use the wrapper. If the wrapper genuinely\n"
+             "cannot express it, say so — do not write a second one.")
+    return 0
+
+
 def main():
     try:
         payload = json.load(sys.stdin)
@@ -569,20 +710,30 @@ def main():
         return 0  # never block on a payload we cannot read
     if not isinstance(payload, dict):
         return 0
-    if payload.get("tool_name") != "Bash":
+    tool = payload.get("tool_name")
+    if tool in ("Write", "Edit", "MultiEdit", "NotebookEdit"):
+        ti = payload.get("tool_input")
+        return check_written(ti) if isinstance(ti, dict) else 0
+    if tool != "Bash":
         return 0
     tool_input = payload.get("tool_input")
     if not isinstance(tool_input, dict):
         return 0
     command = str(tool_input.get("command") or "")
-    if not command.strip() or not relevant(command):
+    cwd = payload.get("cwd") or os.getcwd()
+    if not command.strip():
         return 0
 
-    # 1. Absolute rules, scanned over the RAW text including heredoc bodies.
-    #    A key or the key path written into a file is exactly as bad as one
-    #    passed to a command.
-    check_key_literal(command)
-    check_key_path(command)
+    # 1. Absolute rules, scanned over the RAW text including heredoc bodies,
+    #    and over quote-normalised views of it. A key or the key path written
+    #    into a file is exactly as bad as one passed to a command.
+    forms = dequoted_forms(command)
+    if any(relevant(f) for f in forms):
+        for form in forms:
+            check_key_literal(form)
+            check_key_path(form)
+    if not relevant(command):
+        return 0
 
     # 2. Everything else: prose in a heredoc is not a call, but a heredoc fed
     #    to an interpreter is.
@@ -606,8 +757,9 @@ def main():
             if not seg:
                 continue
             raw_seg = " ".join(seg)
-            if is_wrapper_invocation(seg):
+            if is_wrapper_invocation(seg, cwd):
                 continue
+            check_wrapper_impersonation(seg, cwd)
             check_stripe_cli(seg)
             check_endpoints(seg, raw_seg, host_present)
             check_stripe_env(seg, raw_seg)

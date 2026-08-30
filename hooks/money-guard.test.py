@@ -245,11 +245,77 @@ case("bash heredoc reading the key file", "bash <<'SHEOF'\ncat ~/.config/stripe/
      "deny")
 
 
+# ------------------- denied: a look-alike wrapper is not the wrapper ---------
+case("a hostile /tmp/stripe-money.py does not inherit the allowance",
+     f"python3 /tmp/stripe-money.py refund --charge {CH} --expect-amount 700", "deny")
+case("nor one in the repo you happen to be in",
+     f"python3 ./stripe-money.py refund --charge {CH} --expect-amount 999999", "deny")
+
+# ------------------------- denied: quote-splicing the absolute rules ---------
+case("quote-spliced key prefix", "echo sk''_live_51FAKEfakefakefake00", "deny")
+case("quote-spliced key path", "cat ~/.config/stripe/live''-key", "deny")
+case("concatenated key path tokens", 'cat ~/.config/stripe/"live"-key', "deny")
+case("glob deeper in the stripe dir", "cat ~/.config/stripe/li*e-key", "deny")
+
+
 def run(cmd):
     payload = json.dumps({"tool_name": "Bash", "tool_input": {"command": cmd},
                           "cwd": "/Users/zalo/dev"})
     p = subprocess.run(["python3", HOOK], input=payload, capture_output=True, text=True)
     return ("allow" if p.returncode == 0 else "deny"), p.stdout + p.stderr
+
+
+def run_write(tool, tool_input):
+    payload = json.dumps({"tool_name": tool, "tool_input": tool_input,
+                          "cwd": "/Users/zalo/dev"})
+    p = subprocess.run(["python3", HOOK], input=payload, capture_output=True, text=True)
+    return ("allow" if p.returncode == 0 else "deny"), p.stdout + p.stderr
+
+
+WRITE_CASES = [
+    # The 2026-08-30 route: author a script that reads the key, then run it.
+    ("Write a python script that opens the key file", "Write",
+     {"file_path": "/tmp/refund.py",
+      "content": "import os\nk=open(os.path.expanduser('~/.config/stripe/live-key')).read()\n"},
+     "deny"),
+    ("Write a shell script that cats the key file", "Write",
+     {"file_path": "/tmp/refund.sh", "content": "K=$(cat ~/.config/stripe/live-key)\n"},
+     "deny"),
+    ("Edit an existing script to read the key file", "Edit",
+     {"file_path": "/Users/zalo/dev/some-repo/scripts/pay.ts",
+      "new_string": "const k = fs.readFileSync('/Users/zalo/.config/stripe/live-key')"},
+     "deny"),
+    ("MultiEdit smuggling it into one of several edits", "MultiEdit",
+     {"file_path": "/tmp/x.js",
+      "edits": [{"new_string": "const a = 1"},
+                {"new_string": "read('~/.config/stripe/live-key')"}]},
+     "deny"),
+    ("Write a real key into any file", "Write",
+     {"file_path": "/tmp/notes.md",
+      "content": "key is " + "sk_" + "live_" + "51FAKEfakefakefakefakefake00"},
+     "deny"),
+    # Must stay editable / writable.
+    ("the wrapper itself may name the key path", "Write",
+     {"file_path": "/Users/zalo/.claude/scripts/stripe-money.py",
+      "content": "KEY_PATH = '~/.config/stripe/live-key'"}, "allow"),
+    ("this guard itself may name the key path", "Edit",
+     {"file_path": "/Users/zalo/.claude/hooks/money-guard.py",
+      "new_string": "KEY_PATH_RE = re.compile(r'live-key')"}, "allow"),
+    ("this suite may name the key path", "Write",
+     {"file_path": "/Users/zalo/.claude/hooks/money-guard.test.py",
+      "content": "case('cat the key file', 'cat ~/.config/stripe/live-key', 'deny')"},
+     "allow"),
+    ("a markdown doc mentioning the key path is not code", "Write",
+     {"file_path": "/tmp/report.md",
+      "content": "The key lives at ~/.config/stripe/live-key, mode 600."}, "allow"),
+    ("ordinary Stripe integration code is untouched", "Write",
+     {"file_path": "/Users/zalo/dev/copymyaiagency/src/api/checkout.ts",
+      "content": "const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)\n"
+                 "await stripe.checkout.sessions.create({ mode: 'payment' })"}, "allow"),
+    ("writing this guard's own prose about sk_live is fine", "Write",
+     {"file_path": "/tmp/x.md", "content": "blocks a literal sk_live or rk_live string"},
+     "allow"),
+]
 
 
 def main():
@@ -265,18 +331,29 @@ def main():
             if output.strip():
                 print("        out: " + output.strip().split("\n")[0][:160])
 
-    # Non-Bash tools must be ignored entirely.
     extra_fails = 0
+
+    # Write / Edit: the "author a script that reads the key" route.
+    for label, tool, tool_input, expected in WRITE_CASES:
+        got, output = run_write(tool, tool_input)
+        ok = got == expected
+        if not ok:
+            extra_fails += 1
+        print(f"{'PASS ' if ok else 'FAIL '}| expected {expected:5} got {got:5} "
+              f"| {tool}: {label}")
+        if not ok and output.strip():
+            print("        out: " + output.strip().split("\n")[0][:160])
+
+    # A tool this hook has no opinion about must pass untouched.
     other = subprocess.run(
         ["python3", HOOK],
-        input=json.dumps({"tool_name": "Edit",
-                          "tool_input": {"file_path": "/tmp/x", "new_string": FAKE_SK}}),
+        input=json.dumps({"tool_name": "Read", "tool_input": {"file_path": "/tmp/x"}}),
         capture_output=True, text=True)
     if other.returncode != 0:
-        print("FAIL  | non-Bash tool payload should be ignored")
+        print("FAIL  | unrelated tool payload should be ignored")
         extra_fails += 1
     else:
-        print("PASS  | non-Bash tool payload ignored")
+        print("PASS  | unrelated tool payload ignored")
 
     for label, payload in (("malformed json", "not json at all"),
                            ("bare string payload", '"hello"'),
@@ -300,7 +377,7 @@ def main():
     else:
         print("PASS  | block message names the wrapper and states the hook's limit")
 
-    total = len(CASES) + 6
+    total = len(CASES) + len(WRITE_CASES) + 6
     passed = total - fails - extra_fails
     print(f"\n{passed}/{total} passed, {fails + extra_fails} failed")
     return 1 if (fails or extra_fails) else 0
