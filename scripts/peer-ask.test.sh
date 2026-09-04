@@ -37,8 +37,14 @@ F=$(mktemp); printf 'first half of the prompt\r\nsecond half\tof the prompt\r\n'
 SN2=u$$; pane "$SN2" 'IFS= read -r x; sleep 3; echo "GOT:$x"; echo "› "; sleep 90'
 out="$(PEER_ASK_SOCKET=peer-ask-test "$S" "$SN2" -f "$F" --timeout 25)"; rm -f "$F"
 printf '%s' "$out" | tr -d '\n' | grep -qF "GOT:first half of the prompt second half of the prompt" && ok "CRLF + tab folded, whole prompt delivered" || bad "CRLF folding: $(printf '%s' "$out" | grep GOT | cut -c1-80)"
-# 6. a pane that echoes the typed prompt, shows an idle marker, and never replies must NOT count as replied
-SN3=v$$; pane "$SN3" 'echo "● old answer from the previous turn"; echo "❯ "; sleep 120'
+# 6. a pane that echoes the typed prompt, shows an idle marker, and never replies must NOT count as replied.
+#    The stale marker is the Codex placeholder, which every version of the default regex matches, so the
+#    post-submit baseline is the only thing standing between this test and a false reply.
+SN3=v$$; pane "$SN3" 'echo "• old answer from the previous turn"; echo "› Ask Codex to do anything"; sleep 120'
 PEER_ASK_SOCKET=peer-ask-test "$S" "$SN3" -m "what is the capital of France" --timeout 10 >/dev/null 2>&1; rc=$?
 [ $rc -eq 3 ] && ok "echoed prompt + stale idle screen -> timeout, not a false reply" || bad "stale screen rc=$rc (expected 3)"
+# 7. the real Claude Code composer line is the glyph followed by a NON-BREAKING space, then spaces
+SN5=n$$; pane "$SN5" 'IFS= read -r x; sleep 3; echo "● Real answer: Paris"; printf "\xe2\x9d\xaf\xc2\xa0   \n"; sleep 90'
+out="$(PEER_ASK_SOCKET=peer-ask-test "$S" "$SN5" -m "capital of France" --timeout 25)"; rc=$?
+[ $rc -eq 0 ] && printf '%s' "$out" | grep -qF "Real answer: Paris" && ok "Claude glyph + NBSP composer line detected" || bad "NBSP composer rc=$rc"
 echo "$pass/$((pass+fail)) passed"; [ $fail -eq 0 ]

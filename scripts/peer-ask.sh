@@ -17,9 +17,9 @@
 # and the peer's first spinner are already in it. The pane counts as "replied"
 # when it differs from that baseline (the peer rendered something new), its last
 # 6 non-empty lines match --idle (default: the Codex composer placeholder, the
-# Claude Code prompt glyph, the Claude Code permissions footer; alternation, not
-# a bracket class, because grep reads multibyte glyphs bytewise without a
-# locale), and it has not
+# Claude Code prompt glyph followed by the non-breaking space it prints, the
+# Claude Code permissions footer; alternation, not a bracket class, because grep
+# reads multibyte glyphs bytewise without a locale), and it has not
 # changed across three consecutive 2 s polls. A peer that finishes inside the
 # 1.5 s settle window is not detected (real agents never do); a peer that never
 # reacts times out. Exit 0 replied, 3 timeout, 4 session ended, 2 usage error.
@@ -27,7 +27,7 @@ set -u
 usage() { echo "usage: peer-ask.sh <session> -m TEXT | -f FILE [--timeout SECONDS] [--idle REGEX]" >&2; exit 2; }
 SESSION="${1:-}"; [ -n "$SESSION" ] || usage
 shift
-TEXT=""; TIMEOUT=180; IDLE='Ask Codex to do anything|^(›|>|❯) *$|bypass permissions on'
+TEXT=""; TIMEOUT=180; IDLE='Ask Codex to do anything|^(›|>|❯)( | )*$|bypass permissions on'
 while [ $# -gt 0 ]; do
   case "$1" in
     -m|-f|--timeout|--idle) [ $# -ge 2 ] || { echo "peer-ask: $1 needs a value" >&2; exit 2; } ;;
