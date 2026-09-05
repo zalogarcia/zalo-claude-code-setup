@@ -128,7 +128,7 @@ adapter is `codex/AGENTS.delta.md`; extend it rather than forking the repo file.
 | Claude pin | Codex model | Effort | Agents |
 | --- | --- | --- | --- |
 | `fable` | `gpt-6-astra` | `xhigh` | brainstorm, bug-fix, qa-agent, safe-planner |
-| `opus` | `gpt-5.5` | `high` | frontend-specialist, image-craft-expert, live-test, outcomes-grader |
+| `opus` | `gpt-5.6-sol` | `high` | frontend-specialist, image-craft-expert, live-test, outcomes-grader |
 
 Same shape as the Claude split policy: the low-volume thinkers whose one verdict
 cascades get the flagship at the preserved `xhigh` effort; the high-volume implement and

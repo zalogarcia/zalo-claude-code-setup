@@ -330,7 +330,7 @@ def main():
     check("49: fable maps to the flagship at xhigh",
           cs.MODEL_MAP["fable"] == ("gpt-6-astra", "xhigh"))
     check("50: opus maps to the volume tier at high",
-          cs.MODEL_MAP["opus"] == ("gpt-5.5", "high"))
+          cs.MODEL_MAP["opus"] == ("gpt-5.6-sol", "high"))
     check("51: an unknown pin falls back to the volume tier",
           cs.MODEL_MAP.get("no-such-model", cs.DEFAULT_MODEL) == cs.MODEL_MAP["opus"])
 

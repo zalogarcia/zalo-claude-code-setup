@@ -68,13 +68,13 @@ SENTINEL_KEY = "CODEX-SYNC-SENTINEL"
 # a one-line edit here and a re-run.
 #   fable  -> GPT-6 Astra at the preserved xhigh effort. These are the low-volume,
 #             high-leverage thinkers whose single verdict cascades downstream.
-#   opus   -> GPT-5.5 at high. The high-volume implement/verify tier, and a
-#             different model family generation from the thinkers, which keeps
-#             the "the model that verifies is not the model that authored"
-#             property the Claude split policy exists for.
+#   opus   -> GPT-5.6 Sol at high. The high-volume implement/verify tier, one
+#             generation behind the thinkers, which keeps the "the model that
+#             verifies is not the model that authored" property the Claude
+#             split policy exists for. (Zalo 2026-09-04: 5.6 Sol, not 5.5.)
 MODEL_MAP = {
     "fable": ("gpt-6-astra", "xhigh"),
-    "opus": ("gpt-5.5", "high"),
+    "opus": ("gpt-5.6-sol", "high"),
 }
 DEFAULT_MODEL = MODEL_MAP["opus"]
 
