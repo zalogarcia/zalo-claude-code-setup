@@ -328,7 +328,7 @@ def main():
 
     # --- the model map is the single point of truth ------------------------
     check("49: fable maps to the flagship at xhigh",
-          cs.MODEL_MAP["fable"] == ("gpt-5.6-sol", "xhigh"))
+          cs.MODEL_MAP["fable"] == ("gpt-6-astra", "xhigh"))
     check("50: opus maps to the volume tier at high",
           cs.MODEL_MAP["opus"] == ("gpt-5.5", "high"))
     check("51: an unknown pin falls back to the volume tier",

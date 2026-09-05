@@ -66,14 +66,14 @@ SENTINEL_KEY = "CODEX-SYNC-SENTINEL"
 # Codex has no per-agent tool allowlist and no ToolSearch, so a Claude model pin
 # maps to (codex model slug, reasoning effort). ONE table: changing the tiers is
 # a one-line edit here and a re-run.
-#   fable  -> the flagship GPT-5.6 variant at xhigh. These are the low-volume,
+#   fable  -> GPT-6 Astra at the preserved xhigh effort. These are the low-volume,
 #             high-leverage thinkers whose single verdict cascades downstream.
 #   opus   -> GPT-5.5 at high. The high-volume implement/verify tier, and a
 #             different model family generation from the thinkers, which keeps
 #             the "the model that verifies is not the model that authored"
 #             property the Claude split policy exists for.
 MODEL_MAP = {
-    "fable": ("gpt-5.6-sol", "xhigh"),
+    "fable": ("gpt-6-astra", "xhigh"),
     "opus": ("gpt-5.5", "high"),
 }
 DEFAULT_MODEL = MODEL_MAP["opus"]

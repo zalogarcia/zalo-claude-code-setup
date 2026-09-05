@@ -2,7 +2,17 @@
 
 Codex CLI runs the same setup as Claude Code by reading a GENERATED projection
 of `~/.claude`. There is one source of truth and it is `~/.claude`. Nothing
-under `~/.codex` is hand-maintained.
+under `~/.codex` in the generated surfaces is hand-maintained. Top-level model
+and effort settings outside the managed config block remain user-owned.
+
+The `GPT-6 Astra behavior` section in `codex/AGENTS.delta.md` adapts the supplied
+OpenAI guide's prompts for initiative, skill precedence, writing, delegation,
+and calibrated testing. It makes existing owner approval and sandbox gates
+explicit exceptions to autonomous follow-through. It also requires exact skill
+citations when a skill causes a pause and bans em dashes and en dashes in
+authored text, with one carve-out: the agent completion markers in
+`rules/agent-contracts.md` are machine contracts that orchestrator regexes
+match on, so their canonical separator is emitted as specified. System and developer instructions remain higher priority.
 
 ## What is generated, and from what
 
@@ -113,15 +123,21 @@ adapter is `codex/AGENTS.delta.md`; extend it rather than forking the repo file.
 
 ## The model map
 
-`MODEL_MAP` in `codex-sync.py` is the only place model choice lives:
+`MODEL_MAP` in `codex-sync.py` owns generated custom-agent model choices:
 
 | Claude pin | Codex model | Effort | Agents |
 | --- | --- | --- | --- |
-| `fable` | `gpt-5.6-sol` | `xhigh` | brainstorm, bug-fix, qa-agent, safe-planner |
+| `fable` | `gpt-6-astra` | `xhigh` | brainstorm, bug-fix, qa-agent, safe-planner |
 | `opus` | `gpt-5.5` | `high` | frontend-specialist, image-craft-expert, live-test, outcomes-grader |
 
 Same shape as the Claude split policy: the low-volume thinkers whose one verdict
-cascades get the flagship at maximum reasoning; the high-volume implement and
-verify tier gets the cheaper previous generation, which also keeps the verifier
+cascades get the flagship at the preserved `xhigh` effort; the high-volume implement and
+verify tier keeps GPT-5.5 at `high`, which also keeps the verifier
 in a different model generation from the author. Retune by editing that table
 and running `codex-sync.py agents`.
+
+The Astra migration preserves effective effort as the guide recommends.
+The separate GPT-5.5 volume tier is intentionally retained: the guide provides
+no requirement to migrate every tier, and changing it would alter the existing
+workload split. This is a routing decision, not a measured cost claim. CLI
+defaults and Telegram bridge defaults are separate surfaces outside this repo.
