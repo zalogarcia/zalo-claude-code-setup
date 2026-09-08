@@ -87,11 +87,12 @@ unusual login prompt. Format: `YYYY-MM-DD HH:MM ET | channel | what the screen s
 ## Metros in play
 
 ```
-metros: Phoenix, Dallas-Fort Worth, Tampa
+metros: countrywide (tranche 1: Phoenix, Dallas-Fort Worth, Houston, Tampa, Orlando, Miami, Atlanta, Las Vegas, San Antonio, Austin, Charlotte, Jacksonville, plus the nationwide LinkedIn rail)
 ```
 
-Home metro goes first if it is one of these. Order comes from `prospects.csv`; this line
-records which metros the current push covers.
+Geography is countrywide by Zalo's decision on 2026-09-08. The metros actually in play are
+whatever `prospects.csv` contains; update this line when a new tranche is added. Miami is
+the home metro and unlocks the "I'm local" line.
 
 ## What is deliberately not in this file
 

@@ -69,9 +69,7 @@ Which rails and signals actually produce repliers. Shift hunting time toward wha
 | Tier D (no signal, side note only) | 0 | 0 | | |
 | maps rail | 0 | 0 | | |
 | linkedin rail | 0 | 0 | | |
-| Phoenix | 0 | 0 | | |
-| Dallas-Fort Worth | 0 | 0 | | |
-| Tampa | 0 | 0 | | |
+| (one row per metro present in prospects.csv, added on first send) | 0 | 0 | | |
 
 ## Learnings log
 

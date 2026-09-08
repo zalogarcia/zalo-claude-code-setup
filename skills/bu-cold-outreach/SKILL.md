@@ -1,6 +1,6 @@
 ---
 name: bu-cold-outreach
-description: Run Black Umbrella's own cold DM outreach. Triggers "run today's cold outreach", "cold DM batch", "outreach replies", "bu outreach", "approve the batch and send", "outreach report". Astra executes it in the codex-bare Codex session with Computer Use, sending from Zalo's real LinkedIn, Facebook and Instagram accounts in Chrome, to HVAC and plumbing owner operators in Phoenix, Dallas-Fort Worth and Tampa. Enforces the four part message one with no pitch and no link, the per channel caps, the ramp, the pacing, the stop on warning rule, and the approval mode in config.md. Not the course outreach-operator skill, which is for CMAA members sending by hand.
+description: Run Black Umbrella's own cold DM outreach. Triggers "run today's cold outreach", "cold DM batch", "outreach replies", "bu outreach", "approve the batch and send", "outreach report". Astra executes it in the codex-bare Codex session with Computer Use, sending from Zalo's real LinkedIn, Facebook and Instagram accounts in Chrome, to HVAC and plumbing owner operators countrywide (whatever metros prospects.csv holds; tranche 1 is twelve Sun Belt metros plus a nationwide LinkedIn rail). Enforces the four part message one with no pitch and no link, the per channel caps, the ramp, the pacing, the stop on warning rule, and the approval mode in config.md. Not the course outreach-operator skill, which is for CMAA members sending by hand.
 ---
 
 # Black Umbrella Cold Outreach
@@ -11,7 +11,8 @@ accounts. Zalo approves batches, makes the after hours mystery calls, and owns e
 thread from the moment a prospect replies.
 
 The target is the owner operator of a 3 to 8 truck HVAC or plumbing company doing $1M to
-$3M in Phoenix, Dallas-Fort Worth or Tampa. He is off the tools, spends on ads or is
+$3M, anywhere in the US (the strategy doc named Phoenix, Dallas-Fort Worth and Tampa
+first; Zalo widened it to countrywide on 2026-09-08). He is off the tools, spends on ads or is
 hiring office help, and every after hours call that hits voicemail is a service call or an
 install he already paid to generate.
 
