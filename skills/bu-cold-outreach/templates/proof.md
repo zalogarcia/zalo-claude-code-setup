@@ -69,7 +69,8 @@ never_quotes:      the bot does not give prices over the phone, only genuinely f
 ## The three sins this file exists to prevent
 
 1. A number nobody gave us. If Zalo did not write it here, it does not exist.
-2. Work claimed before it was done. "I trained a demo on your site" before a demo exists
-   is this sin wearing a different hat. Astra's message one never claims a demo.
+2. Work claimed before it was done, with one sanctioned exception: the demo line in
+   message one ("I went ahead and trained a demo AI setter on your website") is allowed
+   since 2026-09-08 because Zalo generates it in seconds on reply. No other claimed work.
 3. Invented urgency. No capped spots, no closing soon, no "before I move on to the next
    city" unless it is literally true and Zalo said so.

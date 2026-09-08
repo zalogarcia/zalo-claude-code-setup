@@ -404,11 +404,11 @@ why him (the specific thing you noticed about his business), what we do in his l
 (answers calls and texts in about five seconds, 24/7, books the job into the calendar),
 and a question he can answer in four words. No pitch, no link, no meeting ask.
 
-**State facts you read, never claim work you did.** This is the single biggest departure
-from the course copy that this skill was ported from. The course's champion angle says "I
-actually went ahead and used your website to train a demo". Under the Black Umbrella
-strategy that is claiming work before it was done, so **message one never says a demo
-exists.** The demo gets built after the reply, by Zalo, and delivered as message two.
+**State facts you read, never claim research effort.** The one exception is the demo:
+message one DOES say a demo has been trained on his website and offers to send it (Zalo's
+decision, 2026-09-08, restoring the course's champion angle), because Zalo generates the
+demo in seconds when the reply lands. No link in message one; the link is message two, from
+Zalo, in the same thread.
 
 **No invented proof, numbers or urgency.** Astra's messages carry no numbers about results
 at all. Nothing about a client appears unless Zalo wrote it in `proof.md` and authorized
@@ -500,9 +500,9 @@ put the fact in `side_note` in his own words, or tell Astra and it will write it
 never phones a prospect and never invents this fact.
 
 **Message two and everything after the reply.** Astra hands over a replied thread and
-stops. Zalo builds the demo on that business, tests it, and delivers the link in the same
-thread: "Built one on your info so you can see what I mean. No strings." Then the VSL, then
-the call. Reference notes for that half of the rail are at the bottom of
+stops. Zalo generates the demo on that business in seconds, checks it, and delivers the link
+in the same thread: "Here it is, built on your info so you can see what I mean. No
+strings." Then the VSL, then the call. Reference notes for that half of the rail are at the bottom of
 `templates/messages.md` and in `call-one-pager.md`.
 
 **Approving each batch while approval mode is on.** Read `batch-YYYY-MM-DD.md`, then say

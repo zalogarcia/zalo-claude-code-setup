@@ -17,28 +17,32 @@ no attachment, no calendar ask.
    you can literally see on a screen. "Saw the front desk role you posted on Indeed."
 2. **Why him.** The specific thing you actually noticed about HIS business, not his
    industry. This is the part that cannot be pasted into another company's DM.
-3. **What we do, in his language.** The outcome, in the words he uses. "I set up a system
-   that answers your calls and texts in about five seconds, 24/7, and books the job into
-   your calendar." Never "omni-channel conversational agent", never "AI-powered solution".
-4. **A question he can answer in four words.** Not a meeting ask, not a link, not "would
-   you be open to a quick call". Something he can thumb back from the truck.
-   "When someone calls after hours right now, where does it go?"
+3. **What we do, in his language, and that his demo exists.** The outcome, in the words he
+   uses, plus the fact that a demo has been trained on his own website. "I went ahead and
+   trained a demo AI setter on your website. It answers your calls and texts in about five
+   seconds, 24/7, and books the job into your calendar." Never "omni-channel
+   conversational agent", never "AI-powered solution". Zalo's decision, 2026-09-08: the
+   demo claim goes in message one because he generates the demo in seconds the moment a
+   reply lands, so the prospect never finds it missing.
+4. **The offer, as a question he can answer in one word.** "Want me to send it over?" or
+   "Want the link?" Not a meeting ask, and still no link in message one: the link is
+   message two, in the same thread, from Zalo.
 
 Length: LinkedIn up to about 90 words, Facebook and Instagram up to about 60. If it needs
 scrolling on a phone it does not get read.
 
 ## The rules that do not bend
 
-1. **State facts you read. Never claim work you did.** If you can point at it on a screen,
-   say it. If it is effort being claimed, cut it. "I went through your whole website" is
-   out. "I actually went ahead and used your website to train a demo" is out, and this is
-   the single biggest change from the course copy: at the moment message one goes out, no
-   demo exists, so saying one does is a lie that the prospect finds out about immediately.
+1. **State facts you read. Never claim research effort.** If you can point at it on a
+   screen, say it. "I went through your whole website" is out. The ONE claim of work that is
+   allowed is the demo line in part 3, because Zalo generates the demo in seconds when the
+   reply lands (his decision, 2026-09-08, overriding the earlier "no demo in message one"
+   rule). Everything else stays a fact you can see.
 2. **No invented proof, numbers or urgency.** No results nobody gave us, no capped spots,
    no "before I move on to the next city". Anything numeric has to be written in
    `proof.md` and authorized, and Astra's messages carry none of it regardless.
-3. **Message one gets the reply. Message two is the link.** Astra's job ends at the reply.
-   Zalo builds the demo on his information and sends it, in the same thread.
+3. **Message one gets the yes. Message two is the link.** Astra's job ends at the reply.
+   Zalo generates the demo on that business and sends the link, in the same thread.
 4. **Volume before judgment.** Work the ramp, fill the quota, judge nothing before the
    sample is real. A variant under 20 sends has no rate, only a count.
 5. **Match the channel.** LinkedIn is warm and professional, no emoji, full sentences.
@@ -69,17 +73,24 @@ other. The variant id in `learnings.md` is `<tier>-<channel>-<phrasing>`, for ex
 
 **P1, the mechanism:**
 
-> I set up a system that answers your calls and texts in about five seconds, 24/7, and
-> books the job straight into your calendar.
+> I went ahead and trained a demo AI setter on your website. It answers your calls and
+> texts in about five seconds, 24/7, and books the job straight into your calendar. Want
+> me to send it over?
 
 **P2, the replacement:**
 
-> I set up the thing that picks up when nobody can, calls and texts, day or night, and
-> books the job into your calendar instead of taking a message.
+> I built a quick demo off your website: the thing that picks up when nobody can, calls
+> and texts, day or night, and books the job into your calendar instead of taking a
+> message. Want the link?
 
 Both are literal descriptions of what the system does. Neither carries a number about a
 result. Do not write a P3 by hand; the weekly review writes it, in the working copy of
 this file, changing one element only.
+
+**Since 2026-09-08 P1 and P2 end with the demo offer, so in every template below the
+closing diagnostic question is DROPPED: opener line(s), then [P1 or P2], then nothing.**
+The openers stay exactly as written. On LinkedIn the whole thing also has to fit a 300
+character invitation note when the message travels inside the connection request.
 
 ## Tier A, the job post (strongest willingness signal that exists)
 
@@ -193,8 +204,7 @@ Never "just checking in", never "bumping this up", never a bare re-send.
 **Bump 1, day 3 after the first touch.** New fact, same soft question.
 
 > [The new true fact, one line, for example: "Saw the [role] post is still up." or "The
-> [offer] ad is still running."] Still curious where the after hours calls end up at
-> [Company].
+> [offer] ad is still running."] The demo is still sitting here if you want a look.
 
 **Bump 2, day 7, the takeaway. This is always the last thing Astra sends.**
 
