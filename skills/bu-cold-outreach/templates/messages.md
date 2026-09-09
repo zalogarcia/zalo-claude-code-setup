@@ -203,6 +203,17 @@ loses one. The second side note stays in the batch entry for the bump.
 - Read it once as the owner: if any sentence is there to sound smart instead of to say
   something, cut it.
 
+**The humanizer pass, mandatory before the batch file is written (Zalo, 2026-09-09).**
+Run every note through the humanizer skill at
+`/Users/zalo/dev/zalo-kabche-brand/.claude/skills/humanizer/SKILL.md` (read it; its 28
+patterns, the vocabulary tiers and the statistical tells apply to a 250 character note as
+much as to an article). Rewrite what it flags, keep every fact and quote exactly as
+researched, keep the four beats and the variant's "what we do" line, keep the LinkedIn
+note under 300. The checks above are the DM specific subset; the humanizer is the full
+audit. Record the result in the batch entry as `Humanizer: pass` or `Humanizer: changed
+[what]`, and in the final message per note. A note that cannot pass without losing its
+fact is a HOLD, not a send.
+
 **Two notes that ship, from the 2026-09-09 batch:**
 
 > Hi John, Clay's review this summer says he called after hours and Charles came out

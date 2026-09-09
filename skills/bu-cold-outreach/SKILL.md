@@ -326,7 +326,10 @@ screenshots, one quoted owner search, Indeed never opened):
    row.
 5. Write the finished message per `templates/messages.md`, every token filled. The
    opener passes the paste test (if it could go to another company with the name
-   swapped, it does not ship) and the dare closes it. LinkedIn rows carry the 300
+   swapped, it does not ship), the bridge clause ties it to the phones, the dare closes
+   it, and every note goes through the humanizer pass (the skill at
+   `~/dev/zalo-kabche-brand/.claude/skills/humanizer/SKILL.md`) before the batch file is
+   written. LinkedIn rows carry the 300
    character invitation note and nothing else; the acceptance follow up is fixed copy,
    so no second draft per row.
 6. Append the row to the research ledger: id, seconds, page loads, outcome.
