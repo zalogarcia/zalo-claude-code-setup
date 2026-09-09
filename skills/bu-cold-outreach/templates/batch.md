@@ -75,7 +75,7 @@ acceptance follow up is fixed copy in `templates/messages.md`):
 
 ### 4. [Owner Name], [Company], tier D
 
-**Open:** https://www.facebook.com/... (personal profile, not the business page)
+**Open:** https://www.facebook.com/... (the owner's personal profile, verified by the intro or posts naming the business; a business page URL here is a bug, pull the row)
 **Prospect id:** [id] · **Metro:** [metro] · **Variant:** D-fb-P1
 **Evidence:** [the strongest true side note, since tier D has no sniper signal]
 **Side note:** [detail]

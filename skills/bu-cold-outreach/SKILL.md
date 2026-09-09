@@ -327,7 +327,8 @@ screenshots, one quoted owner search, Indeed never opened):
 3. Resolve the owner with one quoted search for maps rail rows. Ambiguous means hold.
 4. Pick the channel: LinkedIn when the owner profile exists (the send is a connection
    request carrying the note, because the Message button is a paid Sales Navigator
-   prompt), then the owner's personal Facebook over the business page, then Instagram.
+   prompt), then the owner's PERSONAL Facebook profile (never the business page; a page
+   is not a channel, Zalo 2026-09-09), then Instagram.
    No channel on any active platform means `NO_CHANNEL` in the pipeline and take the next
    row.
 5. Write the finished message per `templates/messages.md`, every token filled. The

@@ -208,10 +208,13 @@ without searching.
    the last 7 days of them before sending another. Leave the pipeline row at `FOUND` with
    the pending request in the notes, so Step 2b of the daily loop picks it up and checks
    for an acceptance. The pipeline row becomes `SENT` only when a MESSAGE goes out.
-2. **The owner's personal Facebook profile.** Better than the business page, because a
-   page inbox goes to whoever manages the page and often lands in a filtered folder that
-   nobody opens. Only use the business Page when the personal profile cannot be found, and
-   record which one was used, because they behave differently.
+2. **The owner's personal Facebook profile, and ONLY that (Zalo, 2026-09-09).** A business
+   page is not a channel: its inbox goes to whoever manages the page, lands in a filtered
+   folder, and answers with an auto-responder (AJ's Air, 2026-09-09: "Thanks for messaging
+   us, we'll get back to you soon", the owners never saw it). If the personal profile
+   cannot be verified (the intro, work field, cover or posts name the business), the
+   Facebook channel for that row is closed: try LinkedIn or Instagram, else `NO_CHANNEL`.
+   Never message the page as a fallback.
 3. **Instagram DM.** Use when the account is active, meaning it posted within the last
    month or so. DMs from non followers land in Requests, which many owners rarely check,
    so this is a real channel and a slow one.
