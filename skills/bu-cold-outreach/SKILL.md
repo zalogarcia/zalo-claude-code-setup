@@ -252,6 +252,12 @@ Open each active channel's inbox in Chrome and read every reply on threads that 
    URL, the tier, the message that was sent, and the reply.
 4. Send nothing.
 
+**An auto-responder is not a reply (2026-09-09).** "Thanks for messaging us, we'll get back
+to you soon" and its cousins arrive within seconds of a Facebook page message and come
+from the page's settings, not a person. The row stays SENT with its bump clock; do not
+mark it REPLIED, do not clear next_due, and do not count it in the scoreboard. A reply is
+a human answering.
+
 Also check for anything the platform says. A captcha, a "slow down" notice, a restriction
 notice or an unusual login prompt is a warning event and is handled under the sending
 rules. A single message that failed to deliver is NOT a warning event: a deactivated or
@@ -380,6 +386,12 @@ raise the ceiling.
 warnings. Week 3 and after is up to the channel caps, and only if week 2 had zero warnings
 and replies are being read and reported daily. The current week and ceiling live in
 `config.md`. A warning event of any kind resets the ramp to week 1.
+
+**Messenger sends on Enter (2026-09-09).** A newline passed to the Facebook composer fires
+Send mid message: entry 4 of the 2026-09-08 batch went out as the opener alone. Type
+paragraph one, press Shift+Return twice, type paragraph two, then Send. Never pass a
+string containing a newline to the composer. LinkedIn's note field does not have this
+problem.
 
 **Pacing.** One message at a time, with a randomized gap of 2 to 5 minutes between sends.
 Never a burst. Bumps and any other message typed in these apps count for pacing even
