@@ -14,11 +14,14 @@ from 12 prospects in 10.95 minutes of research (15.89 with the artifact QA), 28 
 loads, 0 screenshots, every prospect under 4 minutes. Run session 2's way unless the
 session instruction says otherwise.
 
-1. **Hard budget per prospect: 3 page loads and 4 minutes.** A Google search is a load. The
-   fourth load or the fifth minute means the row is held with the reason written down and
-   the next row starts. No exception for a row that "almost" resolved.
-2. **Hard budget per session: stop at the ceiling or at 40 minutes of research, whichever
-   comes first.** Report the real number. Ten researched rows in 25 minutes beats fifteen
+1. **Hard budget per prospect: 4 page loads and 5 minutes.** A Google search is a load.
+   The loads are assigned: the homepage, the evidence load for the opener (default 5),
+   the owner search, and one reserve for opening the reviews. The fifth load or the sixth
+   minute means the row is held with the reason written down and the next row starts. No
+   exception for a row that "almost" resolved. (Was 3 loads and 4 minutes on 09-08; Zalo
+   returned that batch for generic openers, so one load moved to the specific.)
+2. **Hard budget per session: stop at the ceiling or at 45 minutes of research, whichever
+   comes first.** Report the real number. Ten researched rows in 30 minutes beats fifteen
    in 70.
 3. **Trust the seed evidence.** `prospects.csv` carries the hiring post (role and posted
    date) and the ad (offer, active count, start date), pulled the day the tranche was
@@ -28,11 +31,15 @@ session instruction says otherwise.
 4. **Never open Indeed.** It shows the bot a verification wall and burns minutes. Employer
    careers portals (prevueaps and the like) are fine when a re confirmation is actually
    due.
-5. **One website visit per prospect: the homepage, read through the accessibility tree.**
-   That single load answers everything in Step 0 (size, franchise, AI chat, commercial
-   only), confirms the seed's residential claim, and hands over the side note. Do not
-   browse to About, Reviews or Careers unless the owner name is the thing missing and
-   Step 2's single search failed.
+5. **Two loads carry the research, both read through the accessibility tree.** The
+   homepage answers Step 0 (size, franchise, AI chat, commercial only, residential, owner
+   if named). The evidence load finds the specific the opener needs, per the specificity
+   law in `templates/messages.md`: tier A, the employer's own job posting for the duties
+   line and the shift; tier C, the Google Business Profile panel (search "[Company]
+   [metro]") for the hours and a review snippet, with the ad's own words from the seed's
+   `meta_ads_offer` or one Ad Library load when that is thin; tier D, the same Google
+   panel for a review quote about the phone or the hours gap. A services list from the
+   homepage is bump material, never the opener.
 6. **One owner search, quoted.** `"Exact Company Name" owner linkedin`, plus the metro when
    the name is generic. Session 2's biggest time sink was owner ambiguity: unquoted names
    matched same name companies in other states. If the first search does not resolve to
@@ -49,6 +56,10 @@ session instruction says otherwise.
 10. **Write the ledger as you go.** `evidence/YYYY-MM-DD/session-N/research-ledger.json`
     with one entry per prospect touched: id, seconds, page loads, outcome (draft, held
     with reason, dead with reason). The report's efficiency block is computed from it.
+11. **The paste test before the note is written.** If the opener clause could go to
+    another company with only the name swapped, the row is not ready: spend the reserve
+    load on the reviews, or hold it with "no specific found". Never ship generic to save
+    a minute.
 
 Everything here is free and public: the company website, Google, LinkedIn, Facebook,
 Instagram, and, only when a re confirmation is due, the Meta Ad Library and employer
@@ -78,9 +89,10 @@ One load, read through the accessibility tree. From it, in this order:
    so far: one load, under 30 seconds.
 2. **Residential confirmed.** Service call language: repair, emergency, same day,
    residential, home.
-3. **The side note.** Whatever the homepage states that Step 4 would accept: on call
-   24/7, one number for three trades, hours, service areas, no chat widget in the tree.
-   Record it verbatim.
+3. **Bump material.** Whatever the homepage states that Step 4 would accept: on call
+   24/7, one number for three trades, service areas, no chat widget in the tree. Record
+   it verbatim, and know that none of it is the opener on its own: the opener comes from
+   the evidence load (speed default 5) and has to pass the paste test.
 4. **The owner, if named.** "Meet the owner", "family owned by", a founder line. Free.
 
 Session 2 held 6 of 12 rows at this step in 22 to 51 seconds each. That is the step
@@ -94,15 +106,18 @@ evidence has to be current. Currency comes from the seed first and the browser s
 **When the tranche is under 7 days old, the seed IS the confirmation.** Take the role and
 its posted date, or the ad and its start date, straight from the row and write the message
 from them. Record "seed, tranche dated YYYY-MM-DD" as the confirmation in the batch entry.
-The rest of this step applies to older tranches, to rows at FOUND being redrafted, and to
-bumps.
+Re confirmation applies to older tranches, to rows at FOUND being redrafted, and to bumps.
+The evidence load below happens on every tranche, because the opener needs what the seed
+row does not carry.
 
 **Tier A, the hiring signal.** Do not open Indeed (verification wall). Search
-`"[business_name]" careers` once and open the employer's own portal if one appears; the
-post has to still be up and still be the role in `indeed_role`. No portal in one search
-means the seed date decides: under 30 days old, use it; older, demote the row to tier D
-and open with a side note instead. A post older than about 30 days is stale even if it is
-technically still listed, unless the listing shows a recent repost date.
+`"[business_name]" careers` once and open the employer's own portal if one appears. This
+is the tier A evidence load even on a fresh tranche, because the opener needs the duties
+line and the shift from the posting ("answer incoming calls, texts and emails", "Monday
+to Friday, 9 to 5"), not the role title. On an older tranche the same load also confirms
+the post is still up and still the role in `indeed_role`. No portal in one search means
+the seed's role title plus the Google hours gap is the opener; a seed post older than
+about 30 days with no portal to confirm it demotes the row to tier D.
 
 **Tier C, the ads signal.** Go to `facebook.com/ads/library`, set the country, search the
 business name (or the page). The ad in `meta_ads_offer` has to still be ACTIVE. If the

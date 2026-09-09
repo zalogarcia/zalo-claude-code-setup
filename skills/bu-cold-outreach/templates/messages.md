@@ -16,20 +16,60 @@ no attachment, no calendar ask.
 1. **How you found him.** A fact that answers "who is this?" before he asks it. Something
    you can literally see on a screen. "Saw the front desk role you posted on Indeed."
 2. **Why him.** The specific thing you actually noticed about HIS business, not his
-   industry. This is the part that cannot be pasted into another company's DM.
+   industry, and wherever the research allows, the thing that ties to the phones. This
+   is the part that cannot be pasted into another company's DM, and it is the part Zalo
+   reads first when he approves a batch (2026-09-09: a batch went back because the
+   openers were services lists and ad dates). See "The specificity law" below.
 3. **What we do, in his language, and that his demo exists.** The outcome, in the words he
-   uses, plus the fact that a demo has been trained on his own website. "I went ahead and
-   trained a demo AI setter on your website. It answers your calls and texts in about five
-   seconds, 24/7, and books the job into your calendar." Never "omni-channel
+   uses, plus the fact that a demo has been trained on his own website. "I trained a demo
+   AI setter on your website. It answers your calls and texts in about five seconds,
+   24/7, and books the job into your calendar." Never "omni-channel
    conversational agent", never "AI-powered solution". Zalo's decision, 2026-09-08: the
    demo claim goes in message one because he generates the demo in seconds the moment a
    reply lands, so the prospect never finds it missing.
-4. **The offer, as a question he can answer in one word.** "Want me to send it over?" or
-   "Want the link?" Not a meeting ask, and still no link in message one: the link is
-   message two, in the same thread, from Zalo.
+4. **The dare, as a question he can answer in one word.** "Want to try and break it?"
+   and, when there is room, the how: "Call it, text it, throw it your weirdest customer."
+   Zalo's decision, 2026-09-09: the reply is a game, not a purchase. A skeptical owner
+   says yes to a dare faster than to a sales asset, and a prospect who tries to break the
+   demo has tested it, which is what sells it. Not a meeting ask, and still no link in
+   message one: the link is message two, in the same thread, from Zalo.
 
 Length: LinkedIn up to about 90 words, Facebook and Instagram up to about 60. If it needs
 scrolling on a phone it does not get read.
+
+## The specificity law (2026-09-09)
+
+The opener has to prove, in one clause, that a person looked at this business and not at
+a list. Zalo returned the 2026-09-08 batch because "saw True Home handles HVAC and
+appliance repair, with technicians on call 24/7" and "saw AAction Air's June 2 Facebook
+ads" are true and generic: a services list is what every HVAC site says, and an ad date
+ties to nothing.
+
+What counts as specific, strongest first:
+
+1. **A review quote about reaching them.** "Great work but took two days to call back",
+   with the month. The problem in the customer's own words, and only his customers said
+   it.
+2. **The duties line from the job post**, quoted. "Answer incoming calls, texts and
+   emails, schedule service appointments", with the shift ("Monday to Friday, 9 to 5").
+   The shift IS the after hours gap. Not the role title alone.
+3. **What the ad actually says**, quoted, plus where its clicks land. "Your $79 tune up
+   ad is running right now, and Google says you close at 5." Never the ad's start date
+   on its own.
+4. **The hours gap** from the Google Business Profile, as numbers. "Closes 5 pm weekdays,
+   closed Sunday."
+5. **A thing he did or said himself.** A truck wrap he posted, a podcast line, an owner
+   reply on a review, years in business in his own words on his About page.
+
+What never counts as the opener: a list of services, "family owned", "great reviews", a
+service area list, the ad's date, and "24/7 emergency service" on its own (every site
+says it; it counts only paired with the question it raises: "your site promises 24/7
+service and Google says the office closes at 5").
+
+The test before the note is written: **could this clause be pasted into another company's
+DM with only the name swapped?** If yes, it is not the opener. Find one of the five above
+inside the load budget, or hold the row with "no specific found" and take the next one. A
+held row beats a generic send; a generic send burns the profile's one shot at that owner.
 
 ## The rules that do not bend
 
@@ -73,22 +113,31 @@ other. The variant id in `learnings.md` is `<tier>-<channel>-<phrasing>`, for ex
 
 **P1, the mechanism:**
 
-> I went ahead and trained a demo AI setter on your website. It answers your calls and
-> texts in about five seconds, 24/7, and books the job straight into your calendar. Want
-> me to send it over?
+> I trained a demo AI setter on your website. It answers your calls and texts in about
+> five seconds, 24/7, and books the job straight into your calendar. Want to try and
+> break it? Call it, text it, throw it your weirdest customer.
 
 **P2, the replacement:**
 
 > I built a quick demo off your website: the thing that picks up when nobody can, calls
 > and texts, day or night, and books the job into your calendar instead of taking a
-> message. Want the link?
+> message. Want to try and break it?
+
+**Short forms for the LinkedIn note** (same variant id; the note has 300 characters and
+the specific opener comes first):
+
+> P1 short: I trained a demo AI setter on your website: answers calls and texts in about
+> five seconds, 24/7, books the job into your calendar. Want to try and break it?
+
+> P2 short: I built a demo off your website: it picks up when nobody can, day or night,
+> and books the job instead of taking a message. Want to try and break it?
 
 Both are literal descriptions of what the system does. Neither carries a number about a
 result. Do not write a P3 by hand; the weekly review writes it, in the working copy of
 this file, changing one element only.
 
-**Since 2026-09-08 P1 and P2 end with the demo offer, so in every template below the
-closing diagnostic question is DROPPED: opener line(s), then [P1 or P2], then nothing.**
+**Since 2026-09-08 P1 and P2 end with the demo offer, and since 2026-09-09 that offer is
+the dare, so in every template below the closing diagnostic question is DROPPED: opener line(s), then [P1 or P2], then nothing.**
 The openers stay exactly as written. On LinkedIn the whole thing also has to fit a 300
 character invitation note when the message travels inside the connection request.
 
@@ -101,19 +150,22 @@ one is drafted.
 
 Shape, 300 characters or fewer, counted before it is pasted:
 
-> Hi [First], [the opener fact in one clause, under 100 characters]. [P1 or P2, verbatim]
+> Hi [First], [the specific, per the specificity law, up to about 130 characters]. [P1
+> short or P2 short, verbatim]
 
-P1 and P2 are about 190 characters each, so the opener clause gets what is left. Compress
-the fact, never the "what we do" line: "saw GTX's Sep 1 dispatcher/receptionist opening"
-is the opener at full strength. Drop the side note from the note; it is kept in the batch
-entry for the bump.
+The short forms are about 150 characters, so the specific gets up to about 130. The
+specific is never what gets cut: when the note runs long, the "what we do" line loses
+words before the specific loses one. "saw GTX's Sep 1 dispatcher/receptionist opening"
+was the 09-08 shape and it is too thin; "saw GTX's Sep 1 dispatcher opening: answering
+calls, booking jobs, weekdays 8 to 5" is the shape that ships. The second side note stays
+in the batch entry for the bump.
 
 **After the connection is accepted with no reply** (Step 2b of the daily loop), the
 follow up is fixed copy, no per prospect drafting, and it counts as the message one send
 for the scoreboard and the bump clock:
 
-> Thanks for connecting, [First]. The demo on [Company]'s site is ready whenever you want
-> a look. Want me to send it over?
+> Thanks for connecting, [First]. The demo on [Company]'s site is ready when you are.
+> Want to try and break it?
 
 **Accepted with a reply**, of any kind, is REPLIED: Astra stops and hands the thread to
 Zalo. **Not accepted after 14 days** is `NO_CHANNEL` unless another channel is open.

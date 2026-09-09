@@ -298,24 +298,32 @@ the same order everywhere in this skill. Within a tier, prefer rows that already
 owner resolved (the linkedin rail), then higher `review_count`. Tier B rows exist only in
 `pipeline.csv`, never in the seed file, so they enter the batch through Step 2b below.
 
-For each row, per `hunting-playbook.md` and inside its speed defaults (3 page loads and 4
-minutes per prospect, 40 minutes of research per session, accessibility text not
+For each row, per `hunting-playbook.md` and inside its speed defaults (4 page loads and 5
+minutes per prospect, 45 minutes of research per session, accessibility text not
 screenshots, one quoted owner search, Indeed never opened):
 
 1. Load the homepage once. Kill on size, franchise, commercial only or an AI chat widget;
-   otherwise take the side note, and the owner name if it is there.
-2. Take the sniper evidence from the seed row when the tranche is under 7 days old. Re
-   confirm only for older tranches, FOUND redrafts and bumps. Dead evidence means demote
-   the tier or pull the row; never write around a fact that stopped being true.
+   otherwise take the owner name if it is there and keep the homepage facts as bump
+   material, not as the opener.
+2. Take the sniper evidence from the seed row when the tranche is under 7 days old (no re
+   confirmation), then spend one load on the specific the opener needs per the
+   specificity law in `templates/messages.md`: the duties and shift line on the
+   employer's own job posting (tier A), what the ad says plus the Google hours (tier C),
+   a review quote about the phone or the hours gap from the Google Business Profile
+   (tier D). Re confirm evidence only for older tranches, FOUND redrafts and bumps. Dead
+   evidence means demote the tier or pull the row; never write around a fact that
+   stopped being true.
 3. Resolve the owner with one quoted search for maps rail rows. Ambiguous means hold.
 4. Pick the channel: LinkedIn when the owner profile exists (the send is a connection
    request carrying the note, because the Message button is a paid Sales Navigator
    prompt), then the owner's personal Facebook over the business page, then Instagram.
    No channel on any active platform means `NO_CHANNEL` in the pipeline and take the next
    row.
-5. Write the finished message per `templates/messages.md`, every token filled. LinkedIn
-   rows carry the 300 character invitation note and nothing else; the acceptance follow
-   up is fixed copy, so no second draft per row.
+5. Write the finished message per `templates/messages.md`, every token filled. The
+   opener passes the paste test (if it could go to another company with the name
+   swapped, it does not ship) and the dare closes it. LinkedIn rows carry the 300
+   character invitation note and nothing else; the acceptance follow up is fixed copy,
+   so no second draft per row.
 6. Append the row to the research ledger: id, seconds, page loads, outcome.
 
 Stop researching at the ceiling or at 40 minutes, whichever comes first, and say which.
