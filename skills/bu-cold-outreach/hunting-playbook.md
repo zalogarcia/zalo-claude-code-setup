@@ -39,7 +39,11 @@ session instruction says otherwise.
    [metro]") for the hours and a review snippet, with the ad's own words from the seed's
    `meta_ads_offer` or one Ad Library load when that is thin; tier D, the same Google
    panel for a review quote about the phone or the hours gap. A services list from the
-   homepage is bump material, never the opener.
+   homepage is bump material, never the opener. In the reviews, look for the words that
+   mark the right review (after hours, Saturday, Sunday, pm, called back, voicemail, no
+   answer, never heard back, same day): a person handling a call outside office hours,
+   or a reachability complaint. A speed compliment with no day or time in it is not the
+   opener; keep looking within the budget, then hold.
 6. **One owner search, quoted.** `"Exact Company Name" owner linkedin`, plus the metro when
    the name is generic. Session 2's biggest time sink was owner ambiguity: unquoted names
    matched same name companies in other states. If the first search does not resolve to

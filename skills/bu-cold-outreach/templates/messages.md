@@ -66,6 +66,33 @@ service area list, the ad's date, and "24/7 emergency service" on its own (every
 says it; it counts only paired with the question it raises: "your site promises 24/7
 service and Google says the office closes at 5").
 
+**The right review (2026-09-09, second return of the same batch).** Not every review is
+an opener. The review has to show one of two things: a reachability complaint ("took two
+days to call back", "went to voicemail"), or a PERSON handling a call outside office
+hours, with the day or the time in it ("called me back Saturday", "came out after 10pm",
+"I called at 9 pm"). A speed compliment with no day or time in it ("very responsive",
+"reached out right away") is not the opener on its own; it argues against the offer
+unless a bridge clause turns it around, and even then it is the weakest of the five.
+Search the reviews for: after hours, Saturday, Sunday, pm, called back, call back,
+voicemail, no answer, never heard back, same day.
+
+**The bridge clause, mandatory.** Between the specific and the "what we do" line there is
+ONE short clause that says what the specific means for the phones. Without it a quote
+that praises how fast they answer reads as "you already do this well" followed by "buy
+the thing that does this", and the owner stops reading. Shapes, by opener type:
+
+| Opener type | Bridge clause |
+| --- | --- |
+| A person handled an after hours call | "Someone at AAction is picking up at 10pm." / "That is a person doing it by hand." |
+| The owner himself answered | "That is you on the phone." |
+| Hours gap | "Every call after 4 lands somewhere." |
+| Ad running | "Your Facebook ad is live, so those calls keep coming." |
+| Hiring for the phones | "That is the seat this replaces." / "Until that hire starts, the phone is on you." |
+| Reachability complaint | "That is the call this catches." |
+
+The bridge is a plain sentence, under 60 characters, no cleverness. It is the line that
+makes the demo claim follow from the research instead of sitting next to it.
+
 The test before the note is written: **could this clause be pasted into another company's
 DM with only the name swapped?** If yes, it is not the opener. Find one of the five above
 inside the load budget, or hold the row with "no specific found" and take the next one. A
@@ -124,13 +151,19 @@ other. The variant id in `learnings.md` is `<tier>-<channel>-<phrasing>`, for ex
 > message. Want to try and break it?
 
 **Short forms for the LinkedIn note** (same variant id; the note has 300 characters and
-the specific opener comes first):
+the specific opener plus the bridge come first). Plain sentences, never a colon list of
+features: the list form ("answers calls and texts in about five seconds, 24/7, books the
+job into your calendar") reads like a spec sheet and was retired 2026-09-09.
 
-> P1 short: I trained a demo AI setter on your website: answers calls and texts in about
-> five seconds, 24/7, books the job into your calendar. Want to try and break it?
+> P1 short: I trained a demo AI setter on your website that takes those calls 24/7 and
+> books the job. Want to try and break it?
 
-> P2 short: I built a demo off your website: it picks up when nobody can, day or night,
-> and books the job instead of taking a message. Want to try and break it?
+> P2 short: I built a quick demo off your website: it picks up when nobody can, day or
+> night, and books the job. Want to try and break it?
+
+"takes those calls" and "picks up" point back at the bridge clause, so the three beats
+read as one thought. Swap "those calls" for "them" or "it" when the bridge already said
+"calls".
 
 Both are literal descriptions of what the system does. Neither carries a number about a
 result. Do not write a P3 by hand; the weekly review writes it, in the working copy of
@@ -150,15 +183,41 @@ one is drafted.
 
 Shape, 300 characters or fewer, counted before it is pasted:
 
-> Hi [First], [the specific, per the specificity law, up to about 130 characters]. [P1
-> short or P2 short, verbatim]
+> Hi [First], [the specific, one sentence]. [The bridge clause, one short sentence].
+> [P1 short or P2 short, verbatim]
 
-The short forms are about 150 characters, so the specific gets up to about 130. The
-specific is never what gets cut: when the note runs long, the "what we do" line loses
-words before the specific loses one. "saw GTX's Sep 1 dispatcher/receptionist opening"
-was the 09-08 shape and it is too thin; "saw GTX's Sep 1 dispatcher opening: answering
-calls, booking jobs, weekdays 8 to 5" is the shape that ships. The second side note stays
-in the batch entry for the bump.
+Four beats, one sentence each, 180 to 290 characters. The specific is never what gets
+cut: when the note runs long, the "what we do" line loses words before the specific
+loses one. The second side note stays in the batch entry for the bump.
+
+**Sounding like a person, the checks before a note ships (2026-09-09):**
+
+- Time references the way people say them: "Clay's review this summer", "Jennifer's
+  review from June", "a review last month". Never "3-month-old review", never an exact
+  date unless it is the job post date.
+- The reviewer's first name only when quoting or paraphrasing that review. It shows the
+  research; it is not filler.
+- No filler openers: "caught my eye", "I noticed", "hope you're well", "I came across".
+  Start with the fact.
+- No colon feature lists, no "24/7" more than once, no three adjectives in a row.
+- Read it once as the owner: if any sentence is there to sound smart instead of to say
+  something, cut it.
+
+**Two notes that ship, from the 2026-09-09 batch:**
+
+> Hi John, Clay's review this summer says he called after hours and Charles came out
+> after 10pm. Someone at AAction is picking up at 10pm. I trained a demo AI setter on
+> your website that takes those calls 24/7 and books the job. Want to try and break it?
+
+> Hi Albert and Janet, saw AJ's is hiring an HVAC Office Manager, and Google lists the
+> office at 8 to 4 weekdays, closed weekends. Every call after 4 lands somewhere.
+>
+> I trained a demo AI setter on your website: it answers calls and texts in about five
+> seconds, 24/7, and books the job straight into your calendar. Want to try and break
+> it? Call it, text it, throw it your weirdest customer.
+
+The first is the LinkedIn shape (252 characters). The second is the Facebook shape: the
+specific and the bridge as the first paragraph, a blank line, then the full P1 or P2.
 
 **After the connection is accepted with no reply** (Step 2b of the daily loop), the
 follow up is fixed copy, no per prospect drafting, and it counts as the message one send
