@@ -216,7 +216,22 @@ loses one. The second side note stays in the batch entry for the bump.
 - **The bridge is casual and short.** "So somebody's picking up at 10 at night." Not
   "That is a person handling the call by hand."
 
-**The humanizer pass, mandatory before the batch file is written (Zalo, 2026-09-09).**
+**The gate, mandatory before the batch file is written (Zalo, 2026-09-09).** Three
+layers, in this order, every session:
+
+1. **Read `templates/gold-notes.md` first**, before drafting a single note. That is the
+   register. Draft toward it.
+2. **Run the lint.** Write the drafts to `evidence/YYYY-MM-DD/session-N/notes.json`
+   (a list of `{"entry", "channel", "variant", "text"}`) and run
+   `python3 ~/.claude/skills/bu-cold-outreach/scripts/note-lint.py <that file>`. It is
+   deterministic: contractions, banned phrases, the bridge, the dare, the fixed line
+   per variant, length, dashes, sentence count, and opener diversity across the batch.
+   `ALL PASS` is required; a FAIL is a rewrite, never a send. Paste the lint output
+   into the batch session header. The lint was built from the three returned rounds of
+   2026-09-09 and fails every one of them.
+3. **The humanizer pass**, below, for what a regex cannot see.
+
+**The humanizer pass.**
 Run every note through the humanizer skill at
 `/Users/zalo/dev/zalo-kabche-brand/.claude/skills/humanizer/SKILL.md` (read it; its 28
 patterns, the vocabulary tiers and the statistical tells apply to a 250 character note as

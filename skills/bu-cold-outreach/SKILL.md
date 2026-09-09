@@ -327,9 +327,11 @@ screenshots, one quoted owner search, Indeed never opened):
 5. Write the finished message per `templates/messages.md`, every token filled. The
    opener passes the paste test (if it could go to another company with the name
    swapped, it does not ship), the bridge clause ties it to the phones, the dare closes
-   it, and every note goes through the humanizer pass (the skill at
-   `~/dev/zalo-kabche-brand/.claude/skills/humanizer/SKILL.md`) before the batch file is
-   written. LinkedIn rows carry the 300
+   it, and every note goes through the gate in `templates/messages.md` before the batch
+   file is written: read `templates/gold-notes.md` first, then `ALL PASS` from
+   `scripts/note-lint.py` on the session's `notes.json`, then the humanizer pass (the
+   skill at `~/dev/zalo-kabche-brand/.claude/skills/humanizer/SKILL.md`). The lint output
+   goes in the batch header. LinkedIn rows carry the 300
    character invitation note and nothing else; the acceptance follow up is fixed copy,
    so no second draft per row.
 6. Append the row to the research ledger: id, seconds, page loads, outcome.
@@ -553,3 +555,6 @@ to claim, and filling the price fields in `call-one-pager.md` before the first b
 - `templates/pipeline.csv`, `templates/sent-log.csv`, the two working files' headers.
 - `templates/batch.md`, `templates/report.md`, the two documents written per session.
 - `templates/config.md`, `templates/proof.md`, `templates/learnings.md`, seeded once.
+- `templates/gold-notes.md`, the approved notes to write toward; read before drafting.
+- `scripts/note-lint.py`, the deterministic gate on a session's `notes.json`; `ALL PASS`
+  or the batch does not ship.
