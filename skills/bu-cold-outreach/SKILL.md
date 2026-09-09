@@ -194,6 +194,11 @@ report can tell him what is due.
 
 ### `sent-log.csv`, the audit trail
 
+Since 2026-09-09 every row also carries `variant`, `opener_type` and the full
+`message_text`, so the log is the ledger that answers "which message style works":
+`learnings.md` rule 5 (retire a variant at 20 sends with 0 replies, change one element)
+and rule 6 (report by opener type) are computed from it.
+
 ```
 timestamp_et,channel,prospect_id,profile_url,stage,message_sha1,message_head
 ```

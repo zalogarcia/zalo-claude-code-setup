@@ -1,1 +1,1 @@
-timestamp_et,channel,prospect_id,profile_url,stage,message_sha1,message_head
+timestamp_et,channel,prospect_id,profile_url,stage,message_sha1,message_head,variant,opener_type,message_text

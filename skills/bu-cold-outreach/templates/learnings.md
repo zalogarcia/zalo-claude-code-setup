@@ -56,6 +56,17 @@ Judgment rules:
    least 20 sends each, retire the loser on that channel and write ONE new challenger as
    P3 in the working copy of `messages.md`, changing one element only.
 4. Positive replies break ties. Demos agreed beats both.
+5. **The kill rule (Zalo, 2026-09-09).** A variant that reaches 20 sends on a channel
+   with 0 replies is retired on that channel the same day, and its replacement changes
+   ONE element (the opener type, the "what we do" line, or the dare) and gets its own id.
+   1 reply in 20 is not a kill: report it and keep going to 40. On LinkedIn a send is
+   the connection note and a reply is an answer to the acceptance follow up, so report
+   the acceptance rate and the reply rate side by side.
+6. **The second axis is the opener type.** `sent-log.csv` records `opener_type` (review
+   quote, duties line, ad plus hours, hours gap, self made) and the full `message_text`
+   for every send. Once any opener type reaches 20 sends, report replies by opener type
+   next to the variant table; the opener is expected to move replies more than the
+   phrasing does.
 
 ## Source performance
 
