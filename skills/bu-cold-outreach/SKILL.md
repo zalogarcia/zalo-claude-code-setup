@@ -276,8 +276,10 @@ them, because Step 3 only takes rows that are not already in the pipeline.
 
 For each `FOUND` row:
 
-- **Connection request pending on LinkedIn.** Check whether it was accepted. Accepted means
-  draft message one into today's batch. Still pending after 14 days means set `NO_CHANNEL`
+- **Connection request pending on LinkedIn.** Check whether it was accepted. Accepted with
+  no reply means put the fixed acceptance follow up from `templates/messages.md` into
+  today's batch (no new drafting; it is the message one send for that row). Accepted with
+  a reply is REPLIED and goes to Zalo. Still pending after 14 days means set `NO_CHANNEL`
   unless another active channel is open, in which case switch the channel and redraft.
 - **Pulled for stale evidence.** Re confirm per the hunting playbook. Live again means
   redraft. Still dead means demote the tier and open on a side note, or set `NO_CHANNEL`.
@@ -296,16 +298,27 @@ the same order everywhere in this skill. Within a tier, prefer rows that already
 owner resolved (the linkedin rail), then higher `review_count`. Tier B rows exist only in
 `pipeline.csv`, never in the seed file, so they enter the batch through Step 2b below.
 
-For each row, per `hunting-playbook.md`:
+For each row, per `hunting-playbook.md` and inside its speed defaults (3 page loads and 4
+minutes per prospect, 40 minutes of research per session, accessibility text not
+screenshots, one quoted owner search, Indeed never opened):
 
-1. Re confirm the sniper evidence is still live. Dead evidence means demote the tier or
-   pull the row; never write around a fact that stopped being true.
-2. Resolve the owner and the DM handle in the browser for maps rail rows.
-3. Grab one extra true side note.
-4. Pick the channel: LinkedIn when the owner profile exists and a DM or connection path is
-   open, then the owner's personal Facebook over the business page, then Instagram. No
-   channel on any active platform means `NO_CHANNEL` in the pipeline and take the next row.
-5. Write the finished message per `templates/messages.md`, every token filled.
+1. Load the homepage once. Kill on size, franchise, commercial only or an AI chat widget;
+   otherwise take the side note, and the owner name if it is there.
+2. Take the sniper evidence from the seed row when the tranche is under 7 days old. Re
+   confirm only for older tranches, FOUND redrafts and bumps. Dead evidence means demote
+   the tier or pull the row; never write around a fact that stopped being true.
+3. Resolve the owner with one quoted search for maps rail rows. Ambiguous means hold.
+4. Pick the channel: LinkedIn when the owner profile exists (the send is a connection
+   request carrying the note, because the Message button is a paid Sales Navigator
+   prompt), then the owner's personal Facebook over the business page, then Instagram.
+   No channel on any active platform means `NO_CHANNEL` in the pipeline and take the next
+   row.
+5. Write the finished message per `templates/messages.md`, every token filled. LinkedIn
+   rows carry the 300 character invitation note and nothing else; the acceptance follow
+   up is fixed copy, so no second draft per row.
+6. Append the row to the research ledger: id, seconds, page loads, outcome.
+
+Stop researching at the ceiling or at 40 minutes, whichever comes first, and say which.
 
 Write `batch-YYYY-MM-DD.md` from `templates/batch.md`, grouped by channel, tier order
 inside each channel, bumps last within each channel.
@@ -330,8 +343,9 @@ sleep $((120 + RANDOM % 181))
 ### 4. Report
 
 Write `reports/YYYY-MM-DD.md` from `templates/report.md` and print the same content as the
-final message of the session, because M relays the final message to Zalo. Update
-`learnings.md` in the same step: the variant scoreboard from `sent-log.csv`, the source
+final message of the session, because M relays the final message to Zalo. The efficiency
+block comes from the research ledger, not from memory. Update `learnings.md` in the same
+step: the variant scoreboard from `sent-log.csv`, the source
 table, any learning, any objection heard verbatim.
 
 ## Sending rules, non negotiable
@@ -514,8 +528,9 @@ to claim, and filling the price fields in `call-one-pager.md` before the first b
 ## Files in this skill
 
 - `SKILL.md`, this file. The lane, the loop, the sending rules, the numbers.
-- `hunting-playbook.md`, the browser procedure: re confirm the evidence, resolve the owner
-  and the channel, grab the side note.
+- `hunting-playbook.md`, the browser procedure and its speed defaults: one homepage load,
+  seed evidence trusted for 7 days, one quoted owner search, 3 loads and 4 minutes per
+  prospect, 40 minutes per session, the research ledger.
 - `call-one-pager.md`, Zalo's call sheet. Prices are fields, not numbers.
 - `RUNBOOK.md`, how M or Zalo starts a session, and how to verify Codex sees this skill.
 - `templates/messages.md`, the copy contract and every message shape.

@@ -30,11 +30,15 @@ cold tier A, then B, then C, then D, then the bumps due on that channel.
 
 **Open:** https://www.linkedin.com/in/...
 **Prospect id:** [id] · **Metro:** [metro] · **Variant:** A-li-P1
-**Evidence:** [the verbatim sniper fact, and the date it was confirmed still live]
-**Side note:** [the extra true detail]
+**Evidence:** [the verbatim sniper fact; "seed, tranche dated YYYY-MM-DD" when the tranche is under 7 days old, otherwise the date it was re confirmed]
+**Side note:** [the extra true detail, from the homepage]
+**Budget:** [n] loads, [n] seconds
+
+**Invitation note** ([n]/300 characters, the whole artifact for a LinkedIn row; the
+acceptance follow up is fixed copy in `templates/messages.md`):
 
 ```
-[The finished message. Every token filled. No brackets.]
+[The note. Under 300 characters. Every token filled. No brackets.]
 ```
 
 **Status:** DRAFT
@@ -43,8 +47,9 @@ cold tier A, then B, then C, then D, then the bumps due on that channel.
 
 **Open:** https://www.linkedin.com/in/...
 **Prospect id:** [id] · **Metro:** [metro] · **Variant:** C-li-P2
-**Evidence:** [verbatim, re confirmed today]
+**Evidence:** [verbatim; seed date or the date re confirmed]
 **Side note:** [detail]
+**Budget:** [n] loads, [n] seconds
 
 ```
 [Message]
@@ -105,6 +110,7 @@ cold tier A, then B, then C, then D, then the bumps due on that channel.
 | Value | Meaning |
 | --- | --- |
 | `DRAFT` | written, not sent, waiting on approval or on its turn in the pacing queue |
+| `CONNECT SENT YYYY-MM-DD HH:MM ET` | LinkedIn connection request with the note sent; a `CONNECT` row exists in `sent-log.csv`; pipeline row stays `FOUND` until the message goes out after acceptance |
 | `SENT YYYY-MM-DD HH:MM ET` | sent, and a row exists in `sent-log.csv` with the same timestamp |
 | `HELD, cap reached` | the channel hit its daily cap before this entry; it rolls to tomorrow |
 | `HELD, channel stopped` | a warning event stopped that channel for the day |

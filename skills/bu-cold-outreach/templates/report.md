@@ -44,6 +44,16 @@ many threads are sitting unanswered and for how long.)
 - Replies read: [n] · marked DEAD: [n]
 - Mode: [approval on, nothing sent, [n] drafts waiting] or [approval off, sent within caps]
 
+## Efficiency (from the research ledger)
+
+- Research minutes: [n] · total with artifact QA: [n]
+- Prospects reviewed: [n] · drafts: [n] · held: [n] · dead: [n]
+- Page loads: [n] ([n] websites, [n] searches, [n] profiles); max per prospect: [n] of 3
+- Screenshots during research: [n] (0 is the target)
+- Slowest prospect: [name, seconds, why]
+- Biggest time sink: [one line]
+- Stopped because: [ceiling reached] or [40 minutes] or [seed exhausted]
+
 ## The funnel
 
 Against the strategy shape: 100 messages, about 10 replies, about 3 real conversations,

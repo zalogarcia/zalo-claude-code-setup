@@ -92,6 +92,32 @@ closing diagnostic question is DROPPED: opener line(s), then [P1 or P2], then no
 The openers stay exactly as written. On LinkedIn the whole thing also has to fit a 300
 character invitation note when the message travels inside the connection request.
 
+## The LinkedIn invitation note (the default LinkedIn send since 2026-09-08)
+
+On every owner profile opened on 2026-09-08 the Message button opened a paid Sales
+Navigator prompt, so the LinkedIn send is a connection request with the message as its
+note. The note is the whole artifact for a LinkedIn row; no separate full length message
+one is drafted.
+
+Shape, 300 characters or fewer, counted before it is pasted:
+
+> Hi [First], [the opener fact in one clause, under 100 characters]. [P1 or P2, verbatim]
+
+P1 and P2 are about 190 characters each, so the opener clause gets what is left. Compress
+the fact, never the "what we do" line: "saw GTX's Sep 1 dispatcher/receptionist opening"
+is the opener at full strength. Drop the side note from the note; it is kept in the batch
+entry for the bump.
+
+**After the connection is accepted with no reply** (Step 2b of the daily loop), the
+follow up is fixed copy, no per prospect drafting, and it counts as the message one send
+for the scoreboard and the bump clock:
+
+> Thanks for connecting, [First]. The demo on [Company]'s site is ready whenever you want
+> a look. Want me to send it over?
+
+**Accepted with a reply**, of any kind, is REPLIED: Astra stops and hands the thread to
+Zalo. **Not accepted after 14 days** is `NO_CHANNEL` unless another channel is open.
+
 ## Tier A, the job post (strongest willingness signal that exists)
 
 He is hiring a CSR, dispatcher or front desk person right now. He is in buying mode today
