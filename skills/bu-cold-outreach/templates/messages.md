@@ -202,6 +202,19 @@ loses one. The second side note stays in the batch entry for the bump.
 - No colon feature lists, no "24/7" more than once, no three adjectives in a row.
 - Read it once as the owner: if any sentence is there to sound smart instead of to say
   something, cut it.
+- **Contractions, always** (Zalo, 2026-09-09, "still sounds robotic"): "that's", "you're",
+  "somebody's picking up", "ad's running". A note with zero contractions reads as
+  written by a machine, whatever else it does right. The fixed P1 and P2 lines stay as
+  written; everything around them sounds like a text to a peer.
+- **Vary the opener shape across a batch.** Not every note starts "[Name]'s review this
+  summer says". Some start with "saw", some with the fact, some with the quote itself.
+  The four beats are the skeleton, not the wording; if three notes in a batch open the
+  same way, rewrite one.
+- **Say what happened, not what the review "says".** "Clay called after hours and Charles
+  came out past 10pm" beats "Clay's review says he called after hours". Name the
+  reviewer once, then talk about the event.
+- **The bridge is casual and short.** "So somebody's picking up at 10 at night." Not
+  "That is a person handling the call by hand."
 
 **The humanizer pass, mandatory before the batch file is written (Zalo, 2026-09-09).**
 Run every note through the humanizer skill at
