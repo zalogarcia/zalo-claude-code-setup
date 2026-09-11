@@ -60,7 +60,12 @@ t has-session -t "=$SESSION" 2>/dev/null || { echo "peer-ask: no tmux session na
 # composer on every frame, so a raw capture never matches its previous poll and
 # every ask timed out on an idle session. Strip that block and trailing blanks
 # before comparing; nothing a peer types or replies uses those code points.
-capture() { t capture-pane -t "$SESSION:" -p -J -S -80 2>/dev/null | perl -CSD -pe 's/[\x{2800}-\x{28FF}]//g; s/[ \t]+$//'; }
+# The dots also sit INSIDE lines (between the composer glyph and its placeholder,
+# and in otherwise blank lines), so once they are gone the leftover runs of
+# spaces still differ from frame to frame; collapse every run to one space.
+# And the blinking cursor sits right after the composer glyph, so that line
+# alternates between "›Ask Codex" and "› Ask Codex": pin exactly one space there.
+capture() { t capture-pane -t "$SESSION:" -p -J -S -80 2>/dev/null | perl -CSD -pe 's/[\x{2800}-\x{28FF}]//g; s/[ \t]+/ /g; s/ $//; s/^([\x{203A}>\x{276F}]) ?/$1 /'; }
 
 # Type in chunks of 100 bytes with a short gap: one long single write failed on
 # a live Codex pane (2026-09-04, unexplained, not reproducible offline). The
@@ -83,6 +88,9 @@ while :; do
     echo "peer-ask: session '$SESSION' ended" >&2; exit 4
   fi
   now="$(capture)"
+  # PEER_ASK_DEBUG=<file>: append every normalized poll, to see what keeps a
+  # pane from reading as stable (the Codex 0.154.0 animation was found this way).
+  [ -n "${PEER_ASK_DEBUG:-}" ] && printf '=== poll %s\n%s\n' "$(date +%s)" "$now" >> "$PEER_ASK_DEBUG"
   tail6="$(printf '%s\n' "$now" | grep -v '^[[:space:]]*$' | tail -6)"
   if [ "$now" != "$baseline" ] && [ "$now" = "$prev" ] && printf '%s\n' "$tail6" | grep -qE "$IDLE"; then
     polls=$((polls + 1))
