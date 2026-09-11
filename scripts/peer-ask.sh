@@ -56,7 +56,11 @@ TMUX_BIN="$(command -v tmux || echo /usr/local/bin/tmux)"
 # bash 3.2 aborts on an empty array under set -u.
 t() { "$TMUX_BIN" ${PEER_ASK_SOCKET:+-L "$PEER_ASK_SOCKET"} "$@"; }
 t has-session -t "=$SESSION" 2>/dev/null || { echo "peer-ask: no tmux session named '$SESSION'" >&2; exit 2; }
-capture() { t capture-pane -t "$SESSION:" -p -J -S -80 2>/dev/null; }
+# Codex 0.154.0 (2026-09-11) animates braille dots (U+2800 to U+28FF) around the
+# composer on every frame, so a raw capture never matches its previous poll and
+# every ask timed out on an idle session. Strip that block and trailing blanks
+# before comparing; nothing a peer types or replies uses those code points.
+capture() { t capture-pane -t "$SESSION:" -p -J -S -80 2>/dev/null | perl -CSD -pe 's/[\x{2800}-\x{28FF}]//g; s/[ \t]+$//'; }
 
 # Type in chunks of 100 bytes with a short gap: one long single write failed on
 # a live Codex pane (2026-09-04, unexplained, not reproducible offline). The
