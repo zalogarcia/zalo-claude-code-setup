@@ -90,6 +90,15 @@ Wait for the composer placeholder ("Ask Codex to do anything") to appear before 
 anything. `peer-ask.sh` already waits on that string as its idle marker, so a call fired
 too early will time out rather than land silently.
 
+**Refreshing codex-bare without Zalo (authorized 2026-09-11).** When the ping exits 2 (no
+session) or the reply contains "This application session has been explicitly stopped by the
+user for this turn" (the TUI answers but its Computer Use app session is stuck), run
+`~/.claude/scripts/peer-refresh.sh codex-bare --force-thread --reason "outreach recon"` and
+fire once more. It is the only sanctioned path: fresh thread (`/new`) first, then kill and
+relaunch through the launcher above, a ping after each step, one log line per step in
+`~/.claude/logs/peer-refresh.log`; exit 0 healthy, 1 refused, 2 relaunch failed, 3 busy.
+Never type `/new` or a kill verb at the session yourself; the guard blocks both.
+
 ## Verifying Codex sees the skill
 
 Codex reads skills from `~/.agents/skills/`, which is a generated projection of
@@ -148,7 +157,8 @@ report and the sent log disagree, the sent log is right.
 | --- | --- | --- |
 | Astra says it is in a sandboxed lane and will only draft | the job went to `bg.mjs --engine codex` or a `codex exec` run | re-send it to codex-bare |
 | `peer-ask.sh` exits 3 | the session is still working, or was never ready | raise `--timeout`, or check the pane with `tmux capture-pane -t codex-bare -p -S -60` |
-| `peer-ask.sh` exits 4 | codex-bare ended | relaunch it with the xbar script above |
+| `peer-ask.sh` exits 4 | codex-bare ended | `~/.claude/scripts/peer-refresh.sh codex-bare --reason "session ended"` relaunches it |
+| the reply says the application session has been explicitly stopped | the Computer Use app session inside Codex is stuck; the TUI itself still answers | `~/.claude/scripts/peer-refresh.sh codex-bare --force-thread --reason "app session stopped"`, then re-send the instruction once |
 | Astra reports a channel logged out | Chrome profile lost the session | Zalo logs in in that profile, then re-run |
 | Astra reports a warning event and a stopped channel | a captcha, a slow down notice, or a restriction | leave it stopped. The ramp is back at week 1 and a hold is written into the channel holds block of `config.md`, halving that channel for 7 days after a captcha or slow down, stopping it for 7 days after a restriction. Astra lifts a hold when its date passes. Only Zalo lifts one early |
 | Nothing sends and the report says drafts waiting | approval mode is on and this is working as designed | Zalo reads the batch file and approves it by name |

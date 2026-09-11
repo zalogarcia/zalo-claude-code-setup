@@ -92,3 +92,6 @@ hooks/state/
 skills/ghl-account-copilot/
 skills/ghl-build/
 skills/ghl-json/
+
+# runtime logs written by hooks and scripts (peer-refresh.log, stripe-actions.jsonl)
+logs/

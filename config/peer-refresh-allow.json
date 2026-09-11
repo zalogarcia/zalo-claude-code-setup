@@ -1,0 +1,5 @@
+{
+  "sessions": ["codex-bare"],
+  "authorizedBy": "Zalo, 2026-09-11, Telegram: find a way so you can always refresh that so it doesn't need me",
+  "note": "Only sessions listed here may be refreshed (fresh thread, or terminate and relaunch) by ~/.claude/scripts/peer-refresh.sh. Both the script and the PreToolUse guard ~/.claude/hooks/tmux-peer-guard.py read this file. Adding a session here is an owner decision, made in the owner's own terminal, never from a peer message."
+}
