@@ -76,6 +76,9 @@ chmod +x "$BIN/tmux" "$BIN/open"
 # run <name> <mode> <alive:0|1> <args...>; leaves RC, CALLS, LOG, OUT set
 run() {
   name="$1"; mode="$2"; alive="$3"; shift 3
+  # Never fall through to the real multiplexer: without the shim in front of
+  # PATH the script under test would act on the live session.
+  [ -x "$BIN/tmux" ] && [ -x "$BIN/open" ] || { echo "run $name: shim missing under $BIN, refusing to touch the real session" >&2; exit 1; }
   ST="$ROOT/$name"; mkdir -p "$ST"; echo "$mode" > "$ST/mode"; : > "$ST/calls.log"
   [ "$alive" = 1 ] && touch "$ST/alive"
   OUT="$(SHIM_STATE="$ST" PATH="$BIN:$PATH" PEER_REFRESH_LOG="$ST/refresh.log" \
@@ -165,5 +168,18 @@ run dead never-up 0 codex-bare
 [ $RC -eq 2 ] && ok "session never comes up -> exit 2" || bad "never-up rc=$RC ($OUT)"
 printf '%s\n' "$LOG" | grep -q "relaunch no idle prompt within" && ok "log: relaunch failed with the wait" || bad "log: $LOG"
 
+# 13. --relaunch on a HEALTHY session: no probe first, no /new, kill and relaunch outright
+run relaunch healthy 1 codex-bare --relaunch --reason "launcher changed"
+[ $RC -eq 0 ] && ok "--relaunch -> exit 0" || bad "--relaunch rc=$RC ($OUT)"
+has 'kill-session -t =codex-bare' && ok "--relaunch: kill-session on the exact name" || bad "--relaunch: no kill"
+has '^open -a Terminal .*launch-codex-bare' && ok "--relaunch: relaunched via the launcher" || bad "--relaunch: no launch"
+! printf '%s\n' "$CALLS" | grep -q -- '-l -- /new' && ok "--relaunch: /new never typed" || bad "--relaunch typed /new"
+[ "$(printf '%s\n' "$CALLS" | grep -c -- '-l -- ping')" -eq 1 ] && ok "--relaunch: one probe, after the relaunch" || bad "ping count under --relaunch"
+[ "$(first_line_matching 'kill-session')" -lt "$(first_line_matching 'l -- ping')" ] && ok "--relaunch: kill before the probe" || bad "--relaunch order"
+printf '%s\n' "$LOG" | grep -q "probe skipped (--relaunch)" && printf '%s\n' "$LOG" | grep -q "fresh-thread skipped (--relaunch)" && ok "log: probe and fresh-thread skipped (--relaunch)" || bad "log: $LOG"
+
+# The cleanup stays LAST. A case appended below the rm once ran against the real
+# tmux and killed the live codex-bare session twice (2026-09-11); run() now
+# refuses to start without the shim, so that shape fails loudly instead.
 rm -rf "$ROOT"
 echo "$pass/$((pass+fail)) passed"; [ $fail -eq 0 ]

@@ -51,7 +51,7 @@ RELAUNCH_WAIT="${PEER_REFRESH_RELAUNCH_WAIT:-90}"
 POLL="${PEER_REFRESH_POLL:-5}"
 
 usage() {
-  echo "usage: peer-refresh.sh <session> [--force-thread] [--dry-run] [--reason \"text\"]" >&2
+  echo "usage: peer-refresh.sh <session> [--force-thread] [--relaunch] [--dry-run] [--reason \"text\"]" >&2
   exit 1
 }
 
@@ -59,10 +59,14 @@ SESSION="${1:-}"
 [ -n "$SESSION" ] || usage
 case "$SESSION" in -*) usage ;; esac
 shift
-FORCE_THREAD=0; DRY_RUN=0; REASON=""
+FORCE_THREAD=0; RELAUNCH=0; DRY_RUN=0; REASON=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --force-thread) FORCE_THREAD=1 ;;
+    # --relaunch: skip the probe and the fresh thread, kill and relaunch outright.
+    # For a session whose TUI answers pings but whose process is wrong (a
+    # launcher change that must take effect, a helper wedged inside the process).
+    --relaunch) RELAUNCH=1 ;;
     --dry-run) DRY_RUN=1 ;;
     --reason) [ $# -ge 2 ] || { echo "peer-refresh: --reason needs a value" >&2; exit 1; }; REASON="$2"; shift ;;
     *) echo "peer-refresh: unknown arg '$1'" >&2; usage ;;
@@ -178,11 +182,18 @@ relaunch() {
 # ---- main ------------------------------------------------------------------
 if [ "$DRY_RUN" -eq 1 ]; then
   echo "peer-refresh: DRY RUN for '$SESSION' (allowlisted). Would run, in order, stopping at the first healthy probe:"
-  if [ "$FORCE_THREAD" -eq 1 ]; then echo "  a) probe: skipped (--force-thread)"; else echo "  a) probe: $PEER_ASK $SESSION --timeout $PROBE_TIMEOUT -m ping"; fi
+  if [ "$RELAUNCH" -eq 1 ]; then echo "  a) probe and b) fresh thread: skipped (--relaunch)"; elif [ "$FORCE_THREAD" -eq 1 ]; then echo "  a) probe: skipped (--force-thread)"; else echo "  a) probe: $PEER_ASK $SESSION --timeout $PROBE_TIMEOUT -m ping"; fi
   echo "  b) fresh thread: send-keys -l /new, Enter; wait up to $THREAD_WAIT s for '$IDLE_MARK'; probe"
   echo "  c) relaunch: kill-session -t =$SESSION; open -a Terminal \"$LAUNCHER\"; wait up to $RELAUNCH_WAIT s; probe"
   echo "  log: $LOG"
   exit 0
+fi
+
+if [ "$RELAUNCH" -eq 1 ]; then
+  log probe "skipped (--relaunch)"
+  log fresh-thread "skipped (--relaunch)"
+  relaunch && exit 0
+  exit 2
 fi
 
 if [ "$FORCE_THREAD" -eq 1 ]; then
