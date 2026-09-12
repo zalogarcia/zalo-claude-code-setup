@@ -22,7 +22,15 @@ session instruction says otherwise.
    returned that batch for generic openers, so one load moved to the specific.)
 2. **Hard budget per session: stop at the ceiling or at 45 minutes of research, whichever
    comes first.** Report the real number. Ten researched rows in 30 minutes beats fifteen
-   in 70.
+   in 70. Since 2026-09-12 the ceiling is PER CHANNEL, so the 45 minutes is split across
+   the channels that are open rather than spent on whichever one is opened first. A day
+   with LinkedIn at 10 and Facebook at 10 does not get 90 minutes; it gets 45 and delivers
+   fewer rows on both, which is the honest outcome and goes in the report as a number.
+   **A Facebook J row gets 5 loads and 6 minutes**, not 4 and 5, because the owner's
+   personal profile has to be resolved from nothing (Step 2F) and the opener needs no
+   evidence load at all. Expect 6 to 8 resolved owners inside a 45 minute session, not 10.
+   The Facebook ceiling of 10 will usually not be filled by research, and that is fine:
+   send fewer, never pad, never fall back to the business page.
 3. **Trust the seed evidence.** `prospects.csv` carries the hiring post (role and posted
    date) and the ad (offer, active count, start date), pulled the day the tranche was
    built. Use it verbatim in the message and do not reopen the source while the tranche
@@ -188,6 +196,48 @@ phones at [Company]". Prefer named rows every time. Never guess a name, never us
 from a review written BY a customer, and never use a first name that appears only in a
 Google review as if it were the owner's.
 
+## Step 2F, resolve the owner's PERSONAL Facebook profile (the Facebook rail, 2026-09-12)
+
+The seed file carries 1,481 business Facebook URLs and ZERO owner personal Facebook URLs
+across 2,264 rows. A business page is not a channel (Zalo, 2026-09-09), so every Facebook
+row is an owner resolution before it is anything else. This step is the whole cost of the
+Facebook rail, and budgeting for it is what stops the rail from quietly becoming a business
+page rail.
+
+**Budget: 5 page loads and 6 minutes for the row, of which this step gets 3 loads and about
+4 minutes.** A J arm row needs no evidence load, because the joke opener carries no fact
+about the business, so the budget that would have bought the specific buys the owner here
+instead. Over the budget means hold the row and write the reason; never guess a profile.
+
+The ladder, cheapest first, stopping at the first hit:
+
+**2F.1. The name you already have.** `prospects.csv` fills `owner_name` for many linkedin
+rail rows, and Step 0's homepage load often names him outright. A name in hand turns this
+step into one search.
+
+**2F.2. The business page, About and the posts.** Open the page once. The About section
+sometimes lists the owner. More reliably, read who writes the posts and who answers the
+comments in the owner's own voice, signed with a first name. Take the name, not the page.
+
+**2F.3. Facebook people search, name plus metro.** Search the person by name and city. The
+photo, the work field and the friends of the business are what disambiguate a common name.
+A profile with no connection to the trade or the metro is not him.
+
+**2F.4. Verify the personal profile before it is a channel.** The intro, the work field,
+the cover photo or a recent post has to name THIS business in THIS metro. That check is
+from Step 3.2 and it does not get relaxed for a test arm. Record the exact profile URL in
+the batch entry.
+
+**2F.5. No verified personal profile.** The Facebook channel for that row is closed. Try
+LinkedIn, then Instagram if `config.md` has it active (it is inactive as of 2026-09-12, so
+today the ladder is LinkedIn then nothing), then `NO_CHANNEL`. Never message the business page as a
+substitute, never send to a shared inbox, and never put a page URL in a batch entry: that
+is a bug, not a fallback, and the 2026-09-09 AJ's Air page message is the reason the rule
+exists (an auto responder answered, the owners never saw it).
+
+While the personal profile is open, take whatever true detail is free for the `side_note`
+field. The J arm's messages do not use it, but the moment he replies, Zalo does.
+
 ## Step 3, pick the channel
 
 Only channels marked active in `config.md` count, and only accounts Zalo is actually
@@ -203,7 +253,9 @@ without searching.
    invitation note per `templates/messages.md`, and the full message one goes out only
    after the connection is accepted (Step 2b of the daily loop picks that up). Do not
    click Message to find out; open More, then Connect, then Add a note. A connection
-   request counts against the 80 per week limit, not the 15 DMs per day. **Log it as a
+   request counts against BOTH budgets, the 80 per week limit AND that day's LinkedIn cold
+   first touch number (corrected 2026-09-12; this line used to say "not the 15 DMs per day",
+   which left invitations with no daily brake at all). **Log it as a
    row in `sent-log.csv` with `stage` set to `CONNECT`**, because those rows are the only denominator the 80 per week cap has: count
    the last 7 days of them before sending another. Leave the pipeline row at `FOUND` with
    the pending request in the notes, so Step 2b of the daily loop picks it up and checks

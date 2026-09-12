@@ -137,8 +137,10 @@ The working folder is:
 Astra seeds it on the first run, copying from this skill's `templates/` only the files that
 do not exist. Two things must happen before the first send, and neither is Astra's:
 
-1. Zalo fills `config.md`: `ramp_start_date`, which channels are active, and the approval
-   mode. It ships with `approval_mode: on`.
+1. Zalo fills `config.md`: which channels are active, a `<channel>_ramp_start_date` for
+   each ACTIVE one (since 2026-09-12 every channel has its own ramp, so opening a second
+   channel costs the first nothing), and the approval mode. It ships with
+   `approval_mode: on`.
 2. `prospects.csv` has to be in the folder. It is produced elsewhere and this skill never
    writes it.
 
@@ -160,6 +162,6 @@ report and the sent log disagree, the sent log is right.
 | `peer-ask.sh` exits 4 | codex-bare ended | `~/.claude/scripts/peer-refresh.sh codex-bare --reason "session ended"` relaunches it |
 | the reply says the application session has been explicitly stopped | the Computer Use app session inside Codex is stuck; the TUI itself still answers | `~/.claude/scripts/peer-refresh.sh codex-bare --force-thread --reason "app session stopped"`, then re-send the instruction once |
 | Astra reports a channel logged out | Chrome profile lost the session | Zalo logs in in that profile, then re-run |
-| Astra reports a warning event and a stopped channel | a captcha, a slow down notice, or a restriction | leave it stopped. The ramp is back at week 1 and a hold is written into the channel holds block of `config.md`, halving that channel for 7 days after a captcha or slow down, stopping it for 7 days after a restriction. Astra lifts a hold when its date passes. Only Zalo lifts one early |
+| Astra reports a warning event and a stopped channel | a captcha, a slow down notice, or a restriction | leave it stopped. THAT channel's ramp is back at week 1 (the other channels keep theirs, unless it is the second warning on a second channel inside 7 days) and a hold is written into the channel holds block of `config.md`, halving that channel for 7 days after a captcha or slow down, stopping it for 7 days after a restriction. Astra lifts a hold when its date passes. Only Zalo lifts one early |
 | Nothing sends and the report says drafts waiting | approval mode is on and this is working as designed | Zalo reads the batch file and approves it by name |
 | `codex-sync.py check` exits 1 | the projection is stale | run `python3 ~/.claude/scripts/codex-sync.py all` |

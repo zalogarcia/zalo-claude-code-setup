@@ -7,15 +7,18 @@ messages get better every week because of what is written here, and nowhere else
 
 The split test is the TIER OPENER crossed with the CHANNEL, plus the phrasing of the
 "what we do" line (P1 or P2 from `templates/messages.md`). A variant id is
-`<tier>-<channel>-<phrasing>`, for example `A-li-P1` or `D-ig-P2`.
+`<tier>-<channel>-<phrasing>`, for example `A-li-P1` or `D-ig-P2`. Since 2026-09-12 the
+phrasing slot also carries the two test arms: `N1`, the LinkedIn note with no pitch, and
+`J1` / `J2`, the Facebook trade joke opener with its two asks.
 
-Where each column comes from. **Sends** are counted from `sent-log.csv`, excluding rows
-whose `stage` is `CONNECT`, because a connection request is not a message. **Replies**,
-**positive** and **agreed to demo** come from the `pipeline.csv` stages, since a reply never
-appears in the sent log: replies are rows that reached `REPLIED` or beyond, positive is
-Astra's read of the recorded reply text, agreed to demo is a row Zalo advanced to
-`DEMO_SENT`. A drafted message is not a send, and counting one corrupts every rate below
-it.
+Where each column comes from. **Sends** are counted from `sent-log.csv`, counting ONLY rows
+whose `stage` is `SENT`. A `CONNECT` row is an invitation, not a delivered message. A
+`SENT_CONT` row is the second or third part of one multi part first touch, and counting it
+would count one prospect twice. **Replies**, **positive** and **agreed to demo** come from
+the `pipeline.csv` stages, since a reply never appears in the sent log: replies are rows
+that reached `REPLIED` or beyond, positive is Astra's read of the recorded reply text,
+agreed to demo is a row Zalo advanced to `DEMO_SENT`. A drafted message is not a send, and
+counting one corrupts every rate below it.
 
 | Variant | Sends | Replies | Positive | Agreed to demo | Reply rate |
 | --- | --- | --- | --- | --- | --- |
@@ -44,6 +47,26 @@ it.
 | D-ig-P1 | 0 | 0 | 0 | 0 | |
 | D-ig-P2 | 0 | 0 | 0 | 0 | |
 
+The four test arm ids, added 2026-09-12. `D-li-N1`, `D-fb-J1` and `D-fb-J2` are live on
+tier D. `C-li-N1` is registered so the id means one thing everywhere, and it is NOT
+sendable until Zalo opens the arm to tier C.
+
+| Variant | Sends | Replies | Positive | Agreed to demo | Reply rate |
+| --- | --- | --- | --- | --- | --- |
+| D-li-N1 | 0 | 0 | 0 | 0 | |
+| C-li-N1 (reserved, not sendable) | 0 | 0 | 0 | 0 | |
+| D-fb-J1 | 0 | 0 | 0 | 0 | |
+| D-fb-J2 | 0 | 0 | 0 | 0 | |
+
+On LinkedIn the arms are judged on the ACCEPTANCE table below, not on this one, because
+acceptance is the gate the note is competing for.
+
+| LinkedIn variant | CONNECT notes aged 14 days | Accepted | Acceptance rate | Follow ups sent | Human replies |
+| --- | --- | --- | --- | --- | --- |
+| D-li-P1 | 0 | 0 | | 0 | 0 |
+| D-li-P2 | 0 | 0 | | 0 | 0 |
+| D-li-N1 | 0 | 0 | | 0 | 0 |
+
 Judgment rules:
 
 1. No verdict on a variant under 20 sends. Under 20, report the count, never the rate,
@@ -59,14 +82,31 @@ Judgment rules:
 5. **The kill rule (Zalo, 2026-09-09).** A variant that reaches 20 sends on a channel
    with 0 replies is retired on that channel the same day, and its replacement changes
    ONE element (the opener type, the "what we do" line, or the dare) and gets its own id.
-   1 reply in 20 is not a kill: report it and keep going to 40. On LinkedIn a send is
-   the connection note and a reply is an answer to the acceptance follow up, so report
-   the acceptance rate and the reply rate side by side.
-6. **The second axis is the opener type.** `sent-log.csv` records `opener_type` (review
-   quote, duties line, ad plus hours, hours gap, self made) and the full `message_text`
-   for every send. Once any opener type reaches 20 sends, report replies by opener type
-   next to the variant table; the opener is expected to move replies more than the
-   phrasing does.
+   1 reply in 20 is not a kill: report it and keep going to 40. On LinkedIn the two gates
+   are judged separately, each against its own denominator, per rule 7.
+6. **The second axis is the opener type.** `sent-log.csv` records `opener_type` and the
+   full `message_text` for every send. The permitted values, revised 2026-09-12 to split
+   the review quote bucket in two because the two halves argue in opposite directions, and
+   to add the joke arm: `reachability failure`, `after hours praise`, `duties line`,
+   `ad plus hours`, `hours gap`, `self made`, `trade joke`. Once any opener type reaches 20
+   sends, report replies by opener type next to the variant table; the opener is expected
+   to move replies more than the phrasing does.
+
+   Rows logged before 2026-09-12 used `review quote` for both halves. Leave them as
+   written; the audit trail is append only. The memo at
+   `research/dylan-gigz-2026-09-12.md` records the split for those 25 rows: 23 after hours
+   praise, 2 reachability failure.
+7. **On LinkedIn the scoreboard has two tables, not one**, per the two gate rule in
+   `SKILL.md`. An acceptance table (denominator: CONNECT notes aged 14 days or more) and a
+   reply table (denominator: acceptance follow ups actually sent). The kill rule in rule 5
+   applies to each gate separately, against its own denominator. A variant with 20
+   invitations still pending has NOT reached 20 sends for kill rule purposes, and a zero on
+   the acceptance gate is never reported as a copy failure while the reply gate has no
+   traffic: nothing was delivered, so nothing was read.
+8. **A multi part first touch is one send.** The `J` arm types three messages per prospect.
+   Only the `SENT` row counts; the `SENT_CONT` rows are audit and pacing evidence. One
+   prospect, one send, one cold first touch against the daily cap, however many messages it
+   took. Counting the parts is how the 2026-09-08 Geo entry briefly read as two prospects.
 
 ## Source performance
 

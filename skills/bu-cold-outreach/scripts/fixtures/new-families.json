@@ -1,0 +1,56 @@
+[
+  {
+    "entry": 1,
+    "channel": "linkedin",
+    "variant": "D-li-N1",
+    "text": "Hi Mike, Dana's review from July says she left two messages before anyone called her back. That's the call this catches. Mind if I ask you something about it?"
+  },
+  {
+    "entry": 2,
+    "channel": "linkedin",
+    "variant": "D-li-N1",
+    "text": "Hi Rachel, Google has the office closed Sundays and your site's promising emergency service any time. So somebody's phone is buzzing on a Sunday. Mind if I ask you something about it?"
+  },
+  {
+    "entry": 3,
+    "channel": "facebook",
+    "variant": "D-fb-J1",
+    "part": "setup",
+    "text": "Why don't ducts keep secrets?"
+  },
+  {
+    "entry": 3,
+    "channel": "facebook",
+    "variant": "D-fb-J1",
+    "part": "punchline",
+    "text": "Everything leaks eventually."
+  },
+  {
+    "entry": 3,
+    "channel": "facebook",
+    "variant": "D-fb-J1",
+    "part": "ask",
+    "text": "Alright Mike, real question and then I'll leave the jokes alone. Would you be open to talking about the calls that come in after you close?"
+  },
+  {
+    "entry": 4,
+    "channel": "facebook",
+    "variant": "D-fb-J2",
+    "part": "setup",
+    "text": "My kid asked me what a plumber's favorite shoe is."
+  },
+  {
+    "entry": 4,
+    "channel": "facebook",
+    "variant": "D-fb-J2",
+    "part": "punchline",
+    "text": "Clogs. He's seven and I'm still mad about it."
+  },
+  {
+    "entry": 4,
+    "channel": "facebook",
+    "variant": "D-fb-J2",
+    "part": "ask",
+    "text": "Okay Rachel, that's my one joke of the day. Mind if I ask you something about the calls that come in after you close?"
+  }
+]

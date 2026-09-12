@@ -38,7 +38,8 @@ many threads are sitting unanswered and for how long.)
 
 ## What ran today
 
-- Cold sent: [n] ([n] LinkedIn, [n] Facebook, [n] Instagram) against a ceiling of [n]
+- Cold first touches sent, per channel against that channel's own number: LinkedIn [n] of [n], Facebook [n] of [n], Instagram [inactive or n of n]. Total [n], which is the sum
+- Test arms: [n] `D-li-N1` of 20, [n] `D-fb-J1` of 20, [n] `D-fb-J2` of 20, and the control counts beside them
 - Bumps sent: [n] ([n] first bumps, [n] takeaways)
 - New rows worked: [n] found, [n] owner resolved, [n] NO_CHANNEL, [n] pulled on stale evidence
 - Replies read: [n] · marked DEAD: [n]
@@ -48,11 +49,11 @@ many threads are sitting unanswered and for how long.)
 
 - Research minutes: [n] · total with artifact QA: [n]
 - Prospects reviewed: [n] · drafts: [n] · held: [n] · dead: [n]
-- Page loads: [n] ([n] websites, [n] searches, [n] profiles); max per prospect: [n] of 3
+- Page loads: [n] ([n] websites, [n] searches, [n] profiles); max per prospect: [n] of its budget (4, or 5 on a Facebook J row)
 - Screenshots during research: [n] (0 is the target)
 - Slowest prospect: [name, seconds, why]
 - Biggest time sink: [one line]
-- Stopped because: [ceiling reached] or [40 minutes] or [seed exhausted]
+- Stopped because: [every channel at its own number] or [45 minutes] or [seed exhausted]
 
 ## The funnel
 
@@ -75,7 +76,7 @@ below a break is starved of traffic and its percentage is noise]
 
 ## On deck tomorrow
 
-- [n] cold at the ceiling of [n], tier [A] first, [metro]
+- [n] cold on LinkedIn at its ceiling of [n] and [n] on Facebook at its ceiling of [n], tier [A] first, [metro]
 - [n] bumps due: [names]
 - [anything Zalo needs to do: a mystery call, a batch approval, an exhausted seed list]
 

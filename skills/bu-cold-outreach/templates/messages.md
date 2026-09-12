@@ -190,6 +190,50 @@ Four beats, one sentence each, 180 to 290 characters. The specific is never what
 cut: when the note runs long, the "what we do" line loses words before the specific
 loses one. The second side note stays in the batch entry for the bump.
 
+**Test arm N1, the note with no pitch (added 2026-09-12, tier D only, 20 sends).** The
+invitation note is not a DM. It is a card a stranger sees next to an unknown face, and its
+only job is to get the accept; the pitch has a whole message waiting for it on the other
+side. Arm N1 carries the first two beats and stops:
+
+> Hi [First], [the specific, one sentence]. [The bridge clause, one short sentence].
+> Mind if I ask you something about it?
+
+Shape: three beats, 3 to 5 sentences, 120 to 240 characters, and it ends on the question.
+No demo claim, no dare, no link, contractions throughout, same specificity law and same
+paste test as the control. The specific keeps whatever numbers it needs (a quoted shift, an
+hours gap, "she called at 9 pm"), because those are facts read off a screen; what is banned
+here is what is banned everywhere, a number about a RESULT. The specific is still researched exactly as hard; this
+arm removes the pitch, not the work.
+
+Variant id `<tier>-li-N1`. **Live today: `D-li-N1` only.** `C-li-N1` is registered in the
+scoreboard and is NOT sendable: tier C stays on the control while the accept gate has no
+number, and it opens only when Zalo says so or when the gate is measured. Tier A and B keep
+the control throughout, because those rows are too scarce to spend on a channel test.
+
+It runs at 20 sends against 20 sends of the four beat note on the same tier, and it is
+judged at 14 days on the ACCEPTANCE rate, not the reply rate, because acceptance is the
+gate it is trying to move.
+
+**The N1 acceptance follow up, fixed copy, N1 rows only.** When an N1 row is accepted, this
+is its message one, and it carries the pitch the note left out so the prospect gets the
+same offer one message later:
+
+> Thanks for connecting, [First]. I trained a demo AI setter on [Company]'s website that
+> takes those calls 24/7 and books the job. Want to try and break it?
+
+**Every other row keeps the existing acceptance follow up unchanged** ("Thanks for
+connecting, [First]. The demo on [Company]'s site is ready when you are. Want to try and
+break it?"), because for those the note already carried the pitch.
+
+Evidence for the arm: the offer first shape is the single largest disagreement between our
+rail and the most detailed cold DM teaching available (`2XvCxwDHSgM`, a whole video titled
+"WHY MAKING THE OFFER FIRST KILLS THE CONVERSATION"; `lFkHRLHGHVc` [00:01] and [00:59],
+where the opener replaced is a free deliverable offered up front and the replacement is a
+question). Evidence against it, which is why it is an arm and not a rule: his model assumes
+a live chat thread with a prospect who logs in daily, and a bare permission question gives
+a busy owner no reason to accept an invitation from a stranger. The 20 versus 20 exists to
+settle that, and neither side of it gets declared a winner under 20 sends.
+
 **Sounding like a person, the checks before a note ships (2026-09-09):**
 
 - Time references the way people say them: "Clay's review this summer", "Jennifer's
@@ -224,8 +268,13 @@ layers, in this order, every session:
 2. **Run the lint.** Write the drafts to `evidence/YYYY-MM-DD/session-N/notes.json`
    (a list of `{"entry", "channel", "variant", "text"}`) and run
    `python3 ~/.claude/skills/bu-cold-outreach/scripts/note-lint.py <that file>`. It is
-   deterministic: contractions, banned phrases, the bridge, the dare, the fixed line
-   per variant, length, dashes, sentence count, and opener diversity across the batch.
+   deterministic: contractions, banned phrases, links, unfilled tokens, length, dashes,
+   sentence count, and opener diversity across the batch, plus the laws of the note's own
+   variant family. The control (`P1`, `P2`) must carry the bridge, the dare and its fixed
+   "what we do" line. `N1` must carry none of those and must end on its fixed question.
+   `J1` and `J2` must be the approved joke copy, three parts per prospect, with the
+   punchline matching its own setup and no digit anywhere. A `part` field
+   (`setup`, `punchline`, `ask`) is required on joke notes and ignored elsewhere.
    `ALL PASS` is required; a FAIL is a rewrite, never a send. Paste the lint output
    into the batch session header. The lint was built from the three returned rounds of
    2026-09-09 and fails every one of them.
@@ -267,6 +316,102 @@ for the scoreboard and the bump clock:
 
 **Accepted with a reply**, of any kind, is REPLIED: Astra stops and hands the thread to
 Zalo. **Not accepted after 14 days** is `NO_CHANNEL` unless another channel is open.
+
+## Test arm J, the trade joke opener (Facebook only, tier D only, added 2026-09-12)
+
+The only cold DM tactic in the researched material with a measured LOCAL SERVICE BUSINESS
+result behind it. Dylan Gigliotti's client Jacob Michaels runs an agency selling "your
+roofers, your deck builders" (`lfKrZFodLx4` [00:37]). His previous opener was the market
+standard greeting plus a light personalization, and it burned out. Replacing it with a joke
+is the change he credits: "We're opening with dad jokes. And it's working selling service
+based businesses and it's crazy" ([23:09]), CLAIM on the result at [04:58], "response rates
+up from ... like 5% up to like 10% or 15% ... we pretty much tripled it". He is explicit
+that it transfers: "if you are somebody that's even possibly a local service-based
+business, I've proven this works great with that" ([68:00]). Every number in that paragraph
+is his unverified claim and none of it goes in a message.
+
+**Three messages, in three separate sends. Never one block.** The joke is the two part
+opener, typed as two deliberate sends per the Messenger Enter rule. The ask is the third.
+
+1. The setup line alone, from the approved list in `templates/gold-notes.md`:
+
+   > Why don't ducts keep secrets?
+
+2. The punchline, its own send:
+
+   > Everything leaks eventually.
+
+3. The ask, only if nothing came back:
+
+   > **J1:** Alright [First], real question and then I'll leave the jokes alone. Would you
+   > be open to talking about the calls that come in after you close?
+
+   > **J2:** Okay [First], that's my one joke of the day. Mind if I ask you something about
+   > the calls that come in after you close?
+
+**The split is the ask, not the joke.** `D-fb-J1` and `D-fb-J2` differ only in that third
+message; the joke varies per row by the diversity rule and is never the axis being
+measured. Alternate J1 and J2 so the two stay within a few sends of each other, exactly as
+P1 and P2 alternate.
+
+**A reply ends the sequence.** If the owner answers anything at all after the setup or
+after the punchline, including one word or one emoji, the row is REPLIED, the remaining
+parts are NEVER sent, and the thread is Zalo's. On this arm a laugh is a reply, so he is
+usually the one who asks the question. That is our rule, not Dylan's, and it wins.
+
+**Building the jokes.** Six are approved in `templates/gold-notes.md`, three for HVAC and
+three for plumbing. To write more, prompt the model for "10 witty jokes for HVAC
+technicians" or "10 witty jokes for plumbers", and do NOT tell it the jokes are for a sales
+message or a DM script. Dylan's reason, `1Q-8UzDvHM4` [00:17]: "it's going to start adding
+in all of the noise and the crap from the sales market and it's going to stop working
+because it's not social." A new joke is approved by Zalo before it ships, like any other
+copy.
+
+**Vary the joke across the batch, inside what six approved jokes allow.** Three per trade
+against a Facebook ceiling of 10 means a single trade day cannot give every row a different
+joke, so the rule is a cap, not a ban: **no joke goes to more than 4 rows in one day**, mix
+the two trades wherever the batch allows it, and rotate which joke leads. Zalo approving
+more jokes is what raises the variety; until then, state the repeat count in the batch
+header rather than pretending it is zero.
+
+**The setup carries no greeting and no name.** Not "Hey Mike, why don't ducts keep
+secrets?" The name arrives in the ask. A name in front of a joke makes it read as a sales
+line, and it also makes the batch diversity check in `scripts/note-lint.py` unreadable,
+because every note would then open with a different first name.
+
+**Rules that still bind.** Messenger sends on Enter, so these are separate deliberate
+sends, never a string with newlines in it (our own 2026-09-09 learning). The personal
+profile only, never the business page. The 2 to 5 minute pacing gap applies between every
+one of the three sends as it does to every message typed in these apps, so the batch runs
+in passes: every setup, then every punchline, then every ask, which is also how Dylan runs
+it ("This will be the first line you'd send like 100 of those to roofers. And then you send
+the punchline", `1Q-8UzDvHM4` [00:53]). No dashes, no banned phrases, no digits anywhere in
+the three messages, no link, no demo claim, no dare.
+
+**The one sanctioned exception to the specificity law, and its scope.** These three
+messages carry no fact about his business at all, so they fail the paste test by design.
+That exemption is this arm only: Facebook, tier D, 20 sends. It exists because the arm
+tests a pattern interrupt AGAINST our specificity bet, and an opener that carried a
+specific would not be the thing Dylan measured. The row still gets whatever true detail the
+homepage gives for free, recorded as `side_note` in the batch entry, so Zalo has something
+to work with the moment the thread opens. The load that would have gone to the opener's
+specific goes to resolving the owner's personal profile instead.
+
+**What it is testing, stated honestly.** Three variables at once: the channel, the opener
+shape and the absence of any offer. That is bad experimental hygiene and it is acceptable
+here only because all three are unmeasured on Facebook today and the arm spends 20 rows of
+the tier with 2,102 of them. It cannot tell us WHICH of the three moved a reply rate, only
+whether this shape produces replies at all.
+
+**Scope and judgment.** Tier D only, 20 sends per phrasing, judged on replies at day 7, and
+under 20 sends it has a count and not a rate. One prospect is ONE cold first touch against
+the Facebook cap of 10 and three typed messages against the pacing gap.
+
+**The constraint to state out loud in the batch header.** `prospects.csv` carries 1,481
+business Facebook URLs and ZERO owner personal Facebook URLs across 2,264 rows, so every J
+row costs an owner resolution in the browser before it can be sent at all. Budget for it
+per Step 2F of `hunting-playbook.md` or the arm will quietly become a business page arm,
+which the rules forbid.
 
 ## Tier A, the job post (strongest willingness signal that exists)
 

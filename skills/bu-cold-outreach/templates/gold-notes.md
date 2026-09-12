@@ -58,6 +58,71 @@ reviewer named once, no adjectives, no exclamation marks, no colon lists.
 > seconds, 24/7, and books the job straight into your calendar. Want to try and break
 > it? Call it, text it, throw it your weirdest customer.
 
+## Test arm N1, the LinkedIn note with no pitch (drafted 2026-09-12, awaiting Zalo's read)
+
+Three beats and a question: the specific, the bridge, and the ask for permission. No demo
+claim, no dare, no link. The pitch arrives in the N1 acceptance follow up, one message
+later, once the accept is won. Same register as everything above: contractions, the fact
+told as an event, the bridge starting with "So" or "That's". Variant `D-li-N1`, tier D
+only, and nothing on this arm ships until Zalo has read these two.
+
+> Hi Mike, Dana's review from July says she left two messages before anyone called her
+> back. That's the call this catches. Mind if I ask you something about it?
+
+> Hi Rachel, Google has the office closed Sundays and your site's promising emergency
+> service any time. So somebody's phone is buzzing on a Sunday. Mind if I ask you
+> something about it?
+
+## Test arm J, the Facebook trade joke openers (drafted 2026-09-12, awaiting Zalo's read)
+
+Six approved openers, three for HVAC owners and three for plumbing owners, in the trade
+voice: short, dry, the kind of thing a guy types with one thumb. Each is TWO deliberate
+sends, the setup and then the punchline, never one block and never with a newline in it.
+No greeting and no first name in the setup; the name arrives in the ask. Written for our
+rail, not copied from the researched examples. Vary them across a batch: three jokes per
+trade against a ceiling of 10 rows means repeats are unavoidable, so the cap is no joke to
+more than 4 rows in one day. Nothing on this arm ships until Zalo has read these six.
+
+**HVAC**
+
+> Why don't ducts keep secrets?
+>
+> Everything leaks eventually.
+
+> My AC and I are fighting again.
+>
+> Now it's giving me the cold shoulder.
+
+> Serious question for you. Why did the thermostat get promoted over the whole crew?
+>
+> Only one with a degree.
+
+**Plumbing**
+
+> Why did the plumber fold in poker?
+>
+> He kept getting flushed.
+
+> My kid asked me what a plumber's favorite shoe is.
+>
+> Clogs. He's seven and I'm still mad about it.
+
+> What do you call a plumber who works every Saturday?
+>
+> Drained.
+
+**The ask, third send, only if nothing came back.** J1 and J2 are the two phrasings, and
+they are the only thing the split measures:
+
+> J1: Alright [First], real question and then I'll leave the jokes alone. Would you be open
+> to talking about the calls that come in after you close?
+
+> J2: Okay [First], that's my one joke of the day. Mind if I ask you something about the
+> calls that come in after you close?
+
+If he answers the setup or the punchline with anything at all, the ask never goes: the row
+is REPLIED and Zalo takes the thread while the man is still laughing.
+
 ## The three versions of one note, so the drift is visible
 
 Generic (returned): "Hi John, saw Atlanta AAction Air's June 2 Facebook ads. I went

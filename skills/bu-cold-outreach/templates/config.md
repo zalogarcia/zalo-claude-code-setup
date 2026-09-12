@@ -1,8 +1,8 @@
 # Cold Outreach Config
 
 Astra reads this file at the START of every session, before anything else, and states
-the mode, the ramp week and today's per channel quota in its first lines of output.
-Zalo owns this file. Astra edits only the fields marked "Astra maintains".
+the mode, and then PER CHANNEL the ramp week and today's quota, in its first lines of
+output. Zalo owns this file. Astra edits only the fields marked "Astra maintains".
 
 ## Mode
 
@@ -31,11 +31,16 @@ and that are older than about 6 months with a real photo and a bio that says wha
 | --- | --- | --- | --- | --- |
 | LinkedIn | yes | Zalo Kabche | 15 | 80 connection requests per week |
 | Facebook Messenger | yes | Zalo Kabche | 10 | |
-| Instagram | yes | Zalo Kabche | 10 | |
+| Instagram | no | Zalo Kabche | 10 | |
 
-Maximum cold volume with all three live is 35 a day. There is no configuration that
-produces more. Adding a channel is the only way to raise the ceiling, and no hold, mode or
-ramp week ever raises a cap above the number in this table.
+Maximum cold volume is the sum of the caps of the ACTIVE channels, and 35 a day if all
+three ever run at their caps. There is no configuration that produces more. Adding a
+channel is the only way to raise the ceiling, and no hold, mode or ramp week ever raises a
+cap above the number in this table.
+
+A channel whose Active column says no gets no ramp and no sends. Opening it is Zalo
+setting Active to yes and giving it a start date in the ramp section, which buys it a
+week 1 of its own and takes nothing from the channels already running.
 
 ## Channel holds (Astra maintains)
 
@@ -45,35 +50,118 @@ any quota. Format: `channel | cap N or stopped | until YYYY-MM-DD | reason`. A c
 stops that channel for 7 days. Astra removes a hold once its date has passed and reports it
 as lifted. Zalo is the only one who lifts a hold early.
 
+**A hold whose `until` is a CONDITION rather than a date is never auto lifted** (added
+2026-09-12). It comes off when the condition is met and somebody says so, and until then it
+binds every quota computation. The ramp holds written in the ramp section below always get a
+matching line here, because this block is what the arithmetic reads.
+
 ```
 (none)
 ```
 
 Today's quota per channel is the cap in the table above, reduced by any active hold, then
-capped again by the ramp ceiling below.
+capped again by that channel's own ramp ceiling below.
 
-## Ramp
+## Ramp, one per channel (restructured 2026-09-12)
+
+Every ACTIVE channel carries its own start date, its own week and its own ceiling. Opening
+a channel never costs an open one a send, and a channel that gets held or reset never drags
+the others back with it. Before 2026-09-12 there was one shared ramp for all three, which
+made opening a second channel either impossible or a silent halving of the first.
+
+Astra maintains the derived `ramp_week` and `daily_cold_ceiling` lines. A channel's week 1
+is the 7 days from its own start date.
+
+### LinkedIn
 
 ```
-ramp_start_date: YYYY-MM-DD
+linkedin_ramp_start_date: YYYY-MM-DD
+linkedin_ramp_week: 1
+linkedin_daily_cold_ceiling: 10
 ```
 
-Astra maintains the derived line below. Week 1 is the 7 days from `ramp_start_date`.
+### Facebook Messenger
 
 ```
-ramp_week: 1
-daily_cold_ceiling: 10
+facebook_ramp_start_date: YYYY-MM-DD
+facebook_ramp_week: 1
+facebook_daily_cold_ceiling: 10
 ```
 
-| Ramp week | Cold sends per day | Condition to advance |
+Facebook's cap is 10, so its week 1 ceiling is already the cap: week 2 and week 3 raise
+nothing on this channel. The J arm in `templates/messages.md` types three messages per
+prospect, so 10 cold first touches is up to 30 typed messages, each taking the 2 to 5
+minute pacing gap. Send fewer and report the real number rather than compress the gap.
+
+### Instagram
+
+Inactive by default. No ramp until Zalo activates it in the channel table and writes
+`instagram_ramp_start_date` here.
+
+### The ladder every channel climbs, separately
+
+| Ramp week | Cold first touches per day | Condition to advance |
 | --- | --- | --- |
 | 1 | 10 | none |
-| 2 | 20 | zero warnings, captchas or restrictions in week 1 |
-| 3 and after | up to the per channel caps (35 max) | zero warnings in week 2 AND replies read and reported daily |
+| 2 | 20, and never above that channel's own cap | zero warnings, captchas or restrictions ON THAT CHANNEL in its week 1 AND that channel has a measured delivery number |
+| 3 and after | that channel's cap (LinkedIn 15, Facebook 10, Instagram 10) | zero warnings on that channel in its week 2 AND replies read and reported daily |
 
-A warning event of any kind resets the ramp: Astra sets `ramp_week: 1` and
-`daily_cold_ceiling: 10`, writes the event into `learnings.md`, and reports it. Zalo is
-the only one who can advance the week early.
+**Zero warnings is a safety condition, not a funnel condition, and it is not enough on its
+own.** A channel does not advance while it has no measured delivery rate. The measured
+number, per channel:
+
+- **LinkedIn:** at least 20 CONNECT notes have reached 14 days old, so there is an
+  acceptance rate to read.
+- **Facebook and Instagram:** at least 20 delivered owner DMs have reached day 7, so there
+  is a reply rate to read.
+
+Doubling volume into an unmeasured gate spends the scarce tiers fastest and learns nothing
+(2026-09-12: 43 of 144 tier C rows nationwide were consumed in five days with zero
+delivered messages).
+
+### Today's quota arithmetic, stated in the session header
+
+Per channel, in this order:
+
+1. Start at that channel's daily cold cap from the channel table.
+2. Reduce it by an active hold on that channel.
+3. Cap it again by that channel's `daily_cold_ceiling`.
+4. On LinkedIn only, also read the weekly invitation cap: 80 minus the CONNECT rows in
+   `sent-log.csv` from the last 7 days. If what is left is smaller than the number from
+   step 3, that remainder is today's LinkedIn number.
+5. Subtract what already went out on that channel today.
+
+**A connection request is a cold first touch and consumes a daily slot**, as well as being
+the denominator for the 80 per week limit. It is counted against both budgets and both bind.
+The daily number is not a DM only number: the skill used to say an invitation counted
+"against the 80 per week limit, not the 15 DMs per day", which would have allowed a whole
+weekly remainder to go out in one afternoon.
+
+**A missing, placeholder or unreadable ramp field is week 1, not the cap.** If a channel's
+`ramp_week` or `daily_cold_ceiling` is absent or unparseable, treat that channel as week 1
+at 10 and say so in the session header. If its `<channel>_ramp_start_date` is missing or
+still the literal `YYYY-MM-DD`, that channel has no ramp and sends nothing until Zalo writes
+a date. A ramp field never fails open to the cap.
+
+The result can never be above the channel's cap in the table, whatever the ramp says. The
+day's total is the sum of the per channel quotas, and nothing computes a total first and
+then divides it.
+
+A **cold first touch** is one prospect, not one typed message. A three part joke sequence
+is ONE cold first touch against the cap and three typed messages against the pacing gap.
+
+### Warning events reset the channel they happened on
+
+Astra sets THAT channel's `ramp_week` to 1 and its `daily_cold_ceiling` to 10, writes the
+event into `learnings.md`, and reports it. The other channels keep their ramps, because a
+captcha on one platform is evidence about one account's standing on that platform, and the
+channel holds block above is already per channel.
+
+**The exception:** two warning events on two different channels inside 7 days resets EVERY
+channel to week 1 and 10 a day. That pattern is about how we are sending, not about one
+platform, and it is the one case where a channel that has done nothing wrong still pays.
+
+Zalo is the only one who can advance a week early.
 
 ## Warning events (Astra maintains, append only)
 
