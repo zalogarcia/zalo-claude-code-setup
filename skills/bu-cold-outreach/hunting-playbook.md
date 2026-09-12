@@ -23,9 +23,20 @@ session instruction says otherwise.
 2. **Hard budget per session: stop at the ceiling or at 45 minutes of research, whichever
    comes first.** Report the real number. Ten researched rows in 30 minutes beats fifteen
    in 70. Since 2026-09-12 the ceiling is PER CHANNEL, so the 45 minutes is split across
-   the channels that are open rather than spent on whichever one is opened first. A day
-   with LinkedIn at 10 and Facebook at 10 does not get 90 minutes; it gets 45 and delivers
-   fewer rows on both, which is the honest outcome and goes in the report as a number.
+   the channels that are open rather than spent on whichever one is opened first. A
+   research session with LinkedIn at 10 and Facebook at 10 does not get 90 minutes; it
+   gets 45 and delivers fewer rows on both, which is the honest outcome and goes in the
+   report as a number.
+   **Two sessions a day, each with its own 45 (added 2026-09-12 evening).** A day may run
+   a research and resolution session (owner names, Step 2F, the open profile check on
+   every LinkedIn row, the drafts, the lint) and then a send session, and each session
+   has its own 45 minute research budget; the send session types and paces only, and
+   every row it sends was drafted, linted and, where relevant, checked for an open profile
+   in the research session. The measured reason: at 20 sends a day the throughput on the
+   09-10 to 09-12 ledgers (95 rows touched, 29 drafts, 5,013 seconds) needs 58 minutes of
+   research plus 83 minutes of paced sending at the measured mean gap of 218 seconds, 2.3
+   browser hours, and one session has stalled at entry 6 before (learnings, 2026-09-11).
+   One session still never exceeds its own 45; a third session does not exist.
    **A Facebook J row gets 5 loads and 6 minutes**, not 4 and 5, because the owner's
    personal profile has to be resolved from nothing (Step 2F) and the opener needs no
    evidence load at all. Expect 6 to 8 resolved owners inside a 45 minute session, not 10.
@@ -247,26 +258,42 @@ without searching.
 **Priority order:**
 
 1. **LinkedIn, the owner's own profile.** Best channel for owner operators at this size.
-   Measured 2026-09-08: on every owner profile opened, the Message button opened a paid
-   Sales Navigator prompt, so the free path is a connection request carrying the message
-   as its note (300 character limit). That is the default LinkedIn send: draft the
-   invitation note per `templates/messages.md`, and the full message one goes out only
-   after the connection is accepted (Step 2b of the daily loop picks that up). Do not
-   click Message to find out; open More, then Connect, then Add a note. A connection
-   request counts against BOTH budgets, the 80 per week limit AND that day's LinkedIn cold
-   first touch number (corrected 2026-09-12; this line used to say "not the 15 DMs per day",
-   which left invitations with no daily brake at all). **Log it as a
-   row in `sent-log.csv` with `stage` set to `CONNECT`**, because those rows are the only denominator the 80 per week cap has: count
-   the last 7 days of them before sending another. Leave the pipeline row at `FOUND` with
-   the pending request in the notes, so Step 2b of the daily loop picks it up and checks
-   for an acceptance. The pipeline row becomes `SENT` only when a MESSAGE goes out.
+   Three lanes inside the one daily cap of 15, checked in this order (lanes added
+   2026-09-12 evening; the counting rules are in the sent-log section of `SKILL.md`):
+   **First, the open profile check, one click.** Open the profile while not connected and
+   click Message. A free composer means the owner is an Open Profile Premium member: the
+   row is an open profile send, variant `<tier>-li-O1`, the control four part message one
+   inside 300 characters, delivered on send with no accept gate. An InMail credit prompt
+   or a Sales Navigator upsell means the profile is closed: close it and move on. Either
+   way record `open_profile: yes|no` in the pipeline notes; measured 2026-09-08, every
+   owner profile opened was closed, and the share in this ICP is being measured on every
+   row from now on.
+   **Second, InMail for a closed tier A profile, then tier C, A first** (`<tier>-li-I1`),
+   inside `inmail_credits_per_month` in `config.md`, delivered on send.
+   **Third, the connection request carrying the message as its note** (300 character
+   limit), the default for every other closed profile, and tier D only while the ramp hold
+   in `config.md` is on: draft the invitation note per `templates/messages.md`, and the
+   full message one goes out only after the connection is accepted (Step 2b of the daily
+   loop picks that up). Open More, then Connect, then Add a note. A connection request
+   counts against BOTH budgets, the 80 per week limit AND that day's LinkedIn cold first
+   touch number (corrected 2026-09-12; this line used to say "not the 15 DMs per day",
+   which left invitations with no daily brake at all). **Log it as a row in
+   `sent-log.csv` with `stage` set to `CONNECT`**, because those rows are the only
+   denominator the 80 per week cap has: count the last 7 days of them before sending
+   another. Leave the pipeline row at `FOUND` with the pending request in the notes, so
+   Step 2b of the daily loop picks it up and checks for an acceptance. The pipeline row
+   becomes `SENT` only when a MESSAGE goes out.
 2. **The owner's personal Facebook profile, and ONLY that (Zalo, 2026-09-09).** A business
    page is not a channel: its inbox goes to whoever manages the page, lands in a filtered
    folder, and answers with an auto-responder (AJ's Air, 2026-09-09: "Thanks for messaging
    us, we'll get back to you soon", the owners never saw it). If the personal profile
    cannot be verified (the intro, work field, cover or posts name the business), the
    Facebook channel for that row is closed: try LinkedIn or Instagram, else `NO_CHANNEL`.
-   Never message the page as a fallback.
+   Never message the page as a fallback. A verified personal profile takes ONE of two
+   Facebook lanes on a given day, and the batch entry says which: the cold DM now, or the
+   friend request first (`FRIEND` row, its own daily number in `config.md`, the message
+   into the accepted thread later; Zalo's written yes, 2026-09-12). Miami rows go first
+   on Facebook, for the delivery reason in `config.md`.
 3. **Instagram DM.** Use when the account is active, meaning it posted within the last
    month or so. DMs from non followers land in Requests, which many owners rarely check,
    so this is a real channel and a slow one.

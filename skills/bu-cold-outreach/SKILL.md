@@ -138,7 +138,9 @@ file written with or without a space after each comma both work. Never read by p
 prospect_id,business_name,metro,tier,channel,profile_url,owner_name,stage,last_touch,next_due,angle,side_note,demo_link,demo_views_last,touches,notes
 ```
 
-`angle` is the variant id, `<tier>-<channel>-<phrasing>`, for example `A-li-P1`. `touches`
+`angle` is the variant id, `<tier>-<channel>-<phrasing>`, for example `A-li-P1`, or the lane
+id `<tier>-li-O1` (open profile message) or `<tier>-li-I1` (InMail) for the two delivered
+LinkedIn lanes added 2026-09-12. `touches`
 is how many messages Astra has sent to this row (0, 1 for the first touch, 2 after bump 1,
 3 after bump 2). `demo_link` and `demo_views_last` are Zalo's columns; Astra reads them and
 never writes them. `notes` carries the reply text verbatim once a reply lands.
@@ -161,8 +163,9 @@ never writes them. `notes` carries the reply text verbatim once a reply lands.
 | `DEAD` | said stop, not interested, or blocked | Astra sets it on sight, forever |
 | `NO_CHANNEL` | qualified, no open DM path on any active channel | Astra |
 
-`CONNECT` is not a pipeline stage. It is a value that appears only in the `stage` column of
-`sent-log.csv`, marking a LinkedIn connection request rather than a message. A prospect
+`CONNECT` and `FRIEND` are not pipeline stages. They are values that appear only in the
+`stage` column of `sent-log.csv`: `CONNECT` marks a LinkedIn connection request and `FRIEND`
+a Facebook friend request (added 2026-09-12), neither of which is a message. A prospect
 whose request is pending stays at `FOUND` in the pipeline.
 
 **Follow up timing.** Astra runs only the first two rows of this table. Everything below
@@ -213,6 +216,47 @@ with newlines replaced by spaces and any comma quoted per CSV rules.
 Count the `CONNECT` rows from the last 7 days before sending any new request; they are the
 denominator for the 80 per week limit.
 
+**Facebook friend requests get a row too (added 2026-09-12 on Zalo's written yes).** A
+friend request carries no message and is not a cold first touch. Its row has `stage`
+`FRIEND`, `channel` `fb`, the owner's PERSONAL profile URL, `variant` set to the id the
+accepted thread will carry (`D-fb-J1`, `D-fb-J2` or the control id), and `message_sha1`,
+`message_head`, `opener_type` and `message_text` empty, because nothing was typed. It counts
+for pacing like every action typed in these apps, against `facebook_friend_requests_per_day`
+in `config.md`, and against nothing else. It has its own accept gate: denominator is
+`FRIEND` rows aged 14 days, numerator is accepts. An accepted request turns the row into a
+deliverable: the J arm or the control DM goes into the accepted thread and lands in Chats,
+past the spam filter, and only then is it a `SENT` row and a cold first touch against the
+Facebook 10, on the day it is typed. A request pending 14 days is `NO_CHANNEL` on Facebook
+unless another channel is open. Stop on the friend request warning exactly like the message
+warning. A `FRIEND` row is never a delivered message and is a denominator nowhere except its
+own accept gate.
+
+**Open profile messages and InMails are `SENT` rows (added 2026-09-12).** A LinkedIn message
+sent to an open profile, or by InMail, is a delivered first touch: `stage` `SENT`, `variant`
+`<tier>-li-O1` (open profile) or `<tier>-li-I1` (InMail), counted against the LinkedIn daily
+cap of 15 and never against the 80, in health check 1b's delivered denominator and never in
+1a's acceptance denominator. Message one for these rows is the control four part DM shape
+from `templates/messages.md` (not the invitation note), because it is a delivered message
+with room to carry the specific, the bridge, the what we do line and the question; it
+carries the P1 or P2 line like every control message and the batch entry names which. The
+three LinkedIn lanes share the one cap of 15: `CONNECT` rows plus `O1` rows plus `I1` rows on
+a day never exceed 15. InMail is further capped by `inmail_credits_per_month` in `config.md`
+(2 a day and 5 in the calendar month until Zalo writes the number). An InMail also carries a
+subject line, which is not one of the four parts and is not linted: the business name or
+the first part's fact, no pitch, no link.
+
+The lint gap, stated so nobody discovers it at the keyboard: `scripts/note-lint.py` reads
+the variant family off the last two characters of the id and knows `P1`, `P2`, `N1`, `J1`
+and `J2` only, so an `O1` or `I1` id fails it today with "unrecognised variant family". Until
+the lint is taught the two ids (add `O1` and `I1` to `FAMILIES` as the pitch family with a
+test case each; not done in the 2026-09-12 config job because the lint was outside its
+files), a note for one of these lanes is linted in `notes.json` under the phrasing id its
+text carries, `<tier>-li-P1` or `<tier>-li-P2`, so every control check runs on the exact text
+about to be typed, and the batch entry carries both ids, the lint id and the lane id. The
+`sent-log.csv` `variant` and the pipeline `angle` carry the lane id. The text linted and the
+text sent are the same string, checked by sha1 in the batch as usual, and the lint holds a
+LinkedIn text to 300 characters, which these messages respect like the note does.
+
 **LinkedIn is a two gate funnel and each gate gets its own denominator (2026-09-12).** The
 skill previously said CONNECT rows were "excluded from every send count and every reply
 rate" while `learnings.md` rule 5 said "on LinkedIn a send is the connection note". Both
@@ -221,12 +265,15 @@ cannot be true, and the disagreement made five days of numbers unreadable. The r
 - **Gate 1, acceptance.** Denominator is CONNECT rows that have reached 14 days old.
   Numerator is acceptances. This is the LinkedIn number that matters first, and it is the
   one the copy on the note is actually competing for.
-- **Gate 2, reply.** Denominator is accepted invitations that received the acceptance
-  follow up. Numerator is human replies. This is the only LinkedIn number comparable to a
-  Facebook or Instagram reply rate.
+- **Gate 2, reply.** Denominator is delivered LinkedIn messages: accepted invitations that
+  received the acceptance follow up, plus open profile messages and InMails (added
+  2026-09-12, delivered on send). Numerator is human replies. This is the only LinkedIn
+  number comparable to a Facebook or Instagram reply rate.
 
 A CONNECT row is never counted as a delivered message, and an accepted invitation with the
-follow up sent is. Report both gates side by side, always with their denominators, and
+follow up sent is; so is an open profile message or an InMail, which is delivered on send
+and skips gate 1 entirely (it sits in gate 2's denominator and in check 1b, never in gate
+1). Report both gates side by side, always with their denominators, and
 never blend them into one "reply rate". An invitation younger than 14 days belongs in
 neither denominator: it is pending, not failed.
 
@@ -242,8 +289,9 @@ so nothing counts a prospect twice:
   evidence and are counted nowhere.
 
 So a J prospect is 3 rows, 1 counted send, 1 cold first touch against the cap, and 3 pacing
-gaps. The permitted `stage` values in this file are `CONNECT`, `SENT`, `SENT_CONT`, `BUMP1`
-and `BUMP2`, and only `SENT` is ever a denominator.
+gaps. The permitted `stage` values in this file are `CONNECT`, `FRIEND`, `SENT`,
+`SENT_CONT`, `BUMP1` and `BUMP2`, and only `SENT` is ever a denominator (a `FRIEND` row is the
+denominator of its own accept gate and of nothing else).
 
 **Count DISTINCT prospects, not rows.** Sends on a channel or a variant are the number of
 distinct `prospect_id` values among its `SENT` rows. `SENT_CONT` makes a continuation
@@ -286,10 +334,15 @@ report. Run the health checks. Then state, in the first lines of output:
 - the mode (approval on or off),
 - **one line per ACTIVE channel**, because since 2026-09-12 each channel has its own ramp:
   the channel, its ramp week, its ramp ceiling, its cap, any hold on it, and today's quota
-  after what already went out today. Show the arithmetic, do not just show the answer:
-  `LinkedIn: ramp week 1, ceiling 10, cap 15, no hold, 3 sent today, 7 left. Invitations 22
-  of 80 in the last 7 days.` and `Facebook: ramp week 1, ceiling 10, cap 10, no hold, 0 sent
-  today, 10 left.`
+  after what already went out today; on LinkedIn the three lane numbers (invitations, open
+  profile messages, InMail) and on Facebook the friend request number beside the cold
+  quota. Show the arithmetic, do not just show the answer:
+  `LinkedIn: ramp week 1, cap 15 across three lanes, invitations held at 10, 3 invitations
+  and 1 open profile message sent today: invitations 7 left, open profile and InMail 4 left
+  (15 minus the 10 invitations planned minus 1 sent), InMail at most 2 today and 5 this
+  month while the credit count is unknown. Invitations 22 of 80 in the last 7 days.` and
+  `Facebook: ramp week 1, ceiling 10, cap 10, no hold, 0 sent today, 10 left. Friend
+  requests 10 a day, 0 sent today, 10 left.`
 - the day's total, as the SUM of those per channel numbers, and the inactive channels named
   as inactive so a missing rail is never silent,
 - any tripped health check, and which channel it halts.
@@ -366,6 +419,16 @@ For each `FOUND` row:
   Without them, a pending invitation carries no information and zero acceptances cannot be
   diagnosed.
 
+- **Friend request pending on Facebook (added 2026-09-12).** Check whether it was accepted.
+  Accepted with nothing said means the message one this row was assigned (the J arm's
+  setup, punchline and ask, or the control DM) goes INTO TODAY'S BATCH under today's
+  approval, typed into the accepted thread; on the day it is typed it is a `SENT` row and a
+  cold first touch against the Facebook 10. Accepted with anything said, one word or one
+  emoji, is REPLIED and the thread is Zalo's. Still pending after 14 days means set
+  `NO_CHANNEL` unless another active channel is open, in which case switch the channel and
+  redraft. Record `friend_request: pending|accepted YYYY-MM-DD` in `notes` so the accept
+  gate reads by send date.
+
 - **A Facebook `J` row waiting on its next part.** The joke arm is three messages. If the
   setup went out and the punchline did not, the punchline goes INTO TODAY'S BATCH FILE,
   under today's approval, ahead of any new first touch on that channel. If both went out and
@@ -438,19 +501,45 @@ screenshots, one quoted owner search, Indeed never opened):
    evidence means demote the tier or pull the row; never write around a fact that
    stopped being true.
 3. Resolve the owner with one quoted search for maps rail rows. Ambiguous means hold.
-4. Pick the channel: LinkedIn when the owner profile exists (the send is a connection
-   request carrying the note, because the Message button is a paid Sales Navigator
-   prompt), then the owner's PERSONAL Facebook profile (never the business page; a page
-   is not a channel, Zalo 2026-09-09), then Instagram.
+4. Pick the channel: LinkedIn when the owner profile exists, then the owner's PERSONAL
+   Facebook profile (never the business page; a page is not a channel, Zalo 2026-09-09),
+   then Instagram.
+   **On LinkedIn, check for an open profile before defaulting to the connection request
+   (added 2026-09-12).** On most profiles the Message button opens a paid Sales Navigator
+   prompt and the send is a connection request carrying the note. But a LinkedIn Premium
+   member who has turned on Open Profile can be messaged free by anyone with no connection
+   request, no accept and no wait, and the message lands in their main inbox. The check is
+   one click during research: open the profile while not connected and see whether the
+   Message button opens a free composer or an upsell (on mobile the button reads InMail but
+   charges no credit). A free composer means the row is an open profile send, variant
+   `<tier>-li-O1`, which skips the accept gate entirely and gets the control four part
+   message one rather than the invitation note (the sent-log section above has the counting
+   rules). Record `open_profile: yes|no` in the pipeline `notes` for EVERY LinkedIn row
+   touched, open or not, so the share of open profiles in this ICP is measured on every
+   row; between 5 and 40 percent of a general B2B list are open (Evaboot live export,
+   2025-11-25, 40 of 100), and for HVAC and plumbing owner operators expect the low end and
+   zero on some batches. A closed profile in tier A takes the InMail lane first
+   (`<tier>-li-I1`, inside the credit cap). While the ramp hold is on, an invitation goes to
+   tier D only (`config.md`, the LinkedIn ramp hold): a tier A or C row with a closed
+   profile takes InMail or Facebook, and if neither is open it is held in the research
+   ledger with the reason `tier reserved for delivered lanes` rather than invited.
    No channel on any active platform means `NO_CHANNEL` in the pipeline and take the next
    row.
-   **Facebook is a real rail from 2026-09-15, not the occasional one off it has been.** It
+   **Facebook is a real rail from 2026-09-13, not the occasional one off it has been.** It
    has its own ramp and its own quota, so a session works BOTH channels to their own
    numbers rather than spending the day on LinkedIn and getting to Facebook if there is
    time. Every Facebook row costs an owner personal profile resolution first, because the
    seed file carries 1,481 business page URLs and zero owner personal URLs: budget it per
    Step 2F of `hunting-playbook.md`, and a row whose personal profile cannot be verified
    has no Facebook channel. A business page URL in a batch entry is a bug, not a fallback.
+   A resolved Facebook owner takes ONE of the two Facebook lanes on a given day, and the
+   batch entry says which: the cold DM (message one now, a `SENT` row against the 10) or
+   the friend request (a `FRIEND` row now, against `facebook_friend_requests_per_day`; the J
+   arm or the control DM goes into the thread after the accept, per Step 2b). Friend
+   requests are listed in the batch file under Facebook with a status line each and no
+   `notes.json` entry, because there is nothing to lint, and they wait for Zalo's go like
+   every other action. Miami rows go first on Facebook, for the delivery reason in
+   `config.md`.
 5. Write the finished message per `templates/messages.md`, every token filled. On the
    control the opener passes the paste test (if it could go to another company with the
    name swapped, it does not ship), the bridge clause ties it to the phones and the dare
@@ -459,15 +548,20 @@ screenshots, one quoted owner search, Indeed never opened):
    `templates/messages.md` before the batch file is written: read `templates/gold-notes.md` first, then `ALL PASS` from
    `scripts/note-lint.py` on the session's `notes.json`, then the humanizer pass (the
    skill at `~/dev/zalo-kabche-brand/.claude/skills/humanizer/SKILL.md`). The lint output
-   goes in the batch header. LinkedIn rows carry the 300
+   goes in the batch header. LinkedIn invitation rows carry the 300
    character invitation note and nothing else; the acceptance follow up is fixed copy,
-   so no second draft per row.
+   so no second draft per row. Open profile and InMail rows carry the control four part
+   message one instead, inside the same 300 characters the lint holds LinkedIn text to,
+   per the sent-log section.
 6. Append the row to the research ledger: id, seconds, page loads, outcome.
 
 Stop researching when every active channel has hit its own number, or at 45 minutes of
 research, whichever comes first, and say which. One 45 minute budget covers the whole
-session, not 45 minutes per channel, so a two rail day delivers fewer rows on both. Report
-the real number per channel.
+research session, not 45 minutes per channel. Since 2026-09-12 a day may run two sessions,
+a research and resolution session and a send session, each with its own 45 minutes
+(`hunting-playbook.md`, Speed defaults, rule 2); the send session types and paces only, and
+every row it sends was drafted, linted and, on LinkedIn, checked for an open profile in the
+research session. Report the real number per channel.
 
 Write `batch-YYYY-MM-DD.md` from `templates/batch.md`, grouped by channel, tier order
 inside each channel, bumps last within each channel.
@@ -480,8 +574,9 @@ tomorrow.
 **Outside approval mode**, send down the list, and after every single send:
 
 1. Append the row to `sent-log.csv`.
-2. Update the pipeline row: stage `SENT`, `last_touch` today, `next_due` today plus 3,
-   `touches` incremented.
+2. Update the pipeline row for a MESSAGE: stage `SENT`, `last_touch` today, `next_due`
+   today plus 3, `touches` incremented. A `CONNECT` or `FRIEND` row is not a message: the
+   pipeline row stays at `FOUND` with the pending request in `notes`, per Step 2b.
 3. Update the batch entry's status line to `SENT YYYY-MM-DD HH:MM ET`.
 4. Wait a randomized 2 to 5 minutes before the next one:
 
@@ -502,10 +597,12 @@ table, any learning, any objection heard verbatim.
 These protect accounts that cannot be replaced. A restricted LinkedIn account ends this
 rail; there is no second profile and no workaround.
 
-**Per channel daily caps.** LinkedIn 15 cold first touches a day and 80 connection requests
-a week. Instagram 10 a day. Facebook Messenger 10 a day. **35 a day maximum** with all three
-live, and there is no configuration that produces more. Adding a channel is the only way to
-raise the ceiling.
+**Per channel daily caps.** LinkedIn 15 cold first touches a day across three lanes
+(invitations, open profile messages, InMail) and 80 connection requests a week (invitations
+only). Instagram 10 a day. Facebook Messenger 10 a day, plus a friend request number of its
+own (`facebook_friend_requests_per_day` in `config.md`, 10 in week 1) that is not a cold
+first touch. **35 a day maximum** with all three live, and there is no configuration that
+produces more cold first touches. Adding a channel is the only way to raise the ceiling.
 
 **A LinkedIn connection request IS a cold first touch and consumes a daily slot**
 (2026-09-12). It is also the denominator for the 80 per week limit, so it is counted twice,
@@ -513,6 +610,9 @@ against two different budgets, and BOTH bind. Before this was written down the p
 an invitation counts against the week and "not the 15 DMs per day", which would have let a
 week 3 session send 15 follow ups plus the whole weekly invitation remainder in one
 afternoon. There is no day on which LinkedIn actions exceed that channel's daily number.
+An open profile message or an InMail is a cold first touch against the same 15 and never
+against the 80; it has no accept gate, so the ramp hold, which binds invitations, does not
+reduce it (`config.md`, arithmetic step 6).
 
 **The ramp, one per channel (restructured 2026-09-12).** Each ACTIVE channel carries its
 own `ramp_start_date`, `ramp_week` and `daily_cold_ceiling` in `config.md`. Week 1 is 10
@@ -521,7 +621,9 @@ cap. Week 3 and after is that channel's cap. A channel advances only if ITS week
 warnings AND it has a measured delivery number: on LinkedIn, 20 CONNECT notes aged 14 days
 so there is an acceptance rate; on Facebook and Instagram, 20 delivered owner DMs aged 7
 days so there is a reply rate. Zero warnings is a safety condition, not a funnel condition,
-and it is not enough on its own.
+and it is not enough on its own. On LinkedIn the ramp ceiling and its hold bind
+INVITATIONS; the open profile and InMail lanes run inside the channel cap of 15 minus the
+day's invitations (`config.md`, arithmetic step 6).
 
 **A start date in the FUTURE means no ramp and no sends on that channel until that date**
 (added 2026-09-12). `config.md` already says a missing or placeholder
@@ -529,7 +631,7 @@ and it is not enough on its own.
 arrived yet is the same state, and it is the normal way a channel is opened ahead of time.
 The channel's quota is zero until the date, whatever its `ramp_week` and
 `daily_cold_ceiling` fields say, and the session header prints the date it is waiting for:
-`Facebook: not yet started, waiting for 2026-09-15, quota 0`. A channel whose Active column
+`<channel>: not yet started, waiting for YYYY-MM-DD, quota 0`. A channel whose Active column
 says yes and whose start date is in the future is CORRECTLY configured, not a contradiction,
 and it is not held back by a prose line somebody has to remember to read.
 
@@ -544,8 +646,10 @@ raise it past the cap in the channel table. Today's number per channel is: zero 
 channel's `ramp_start_date` is missing, a placeholder, or a date still in the future,
 otherwise the cap, reduced by an active hold, capped again by that channel's ramp ceiling,
 then on LinkedIn also capped by what is left of 80 invitations in the last 7 days, then
-minus what already went out today. State that arithmetic per channel in the session header,
-including the date a not yet started channel is waiting for.
+minus what already went out today. On LinkedIn that result is the INVITATION number; the
+open profile and InMail lanes then fill to the channel cap of 15 minus that number, never
+touched by the 80, per `config.md` arithmetic step 6. State that arithmetic per channel in
+the session header, including the date a not yet started channel is waiting for.
 
 **A cold first touch is one prospect, not one typed message.** The three part joke sequence
 of the `J` arm is ONE first touch against the daily cap and three typed messages against
@@ -571,7 +675,10 @@ suggest a second profile to raise the ceiling.
 **Stop on warning.** At any captcha, "slow down", "you are sending too fast", restriction
 notice or unusual login prompt: **stop that channel for the rest of the day immediately.**
 Those five are the whole trigger list, and they are the same five in `config.md` and
-`templates/batch.md`. Then, in the same session:
+`templates/batch.md`. A friend request block on Facebook (Meta blocks friend requests for
+"a lot" in a short time, for unanswered ones and for ones marked unwelcome, and says the
+block ends within a few days) is a restriction notice inside those five, not a sixth
+trigger. Then, in the same session:
 
 1. Write the event to the warning events block in `config.md`, `YYYY-MM-DD HH:MM ET |
    channel | what the screen said`.
@@ -594,8 +701,10 @@ Astra maintains and reads before computing any quota:
 
 A hold whose `until` date has passed is removed by Astra and reported as lifted. Zalo is
 the only one who lifts a hold early. **Today's quota is the per channel cap, reduced by any
-active hold, then capped again by THAT CHANNEL's ramp ceiling.** State that arithmetic per
-channel in the session header so a halved channel is visible rather than silently applied.
+active hold, then capped again by THAT CHANNEL's ramp ceiling** (on LinkedIn that is the
+invitation number; the delivered lanes fill to 15 per `config.md` step 6). State that
+arithmetic per channel in the session header so a halved channel is visible rather than
+silently applied.
 
 **Honor every opt out instantly and permanently.** DEAD is DEAD, on every channel, forever.
 
@@ -648,6 +757,14 @@ control, and neither touches tier A, B or C while the accept gate has no number.
   replies at day 7. It is the one sanctioned exception to the specificity law, scoped to
   this arm, and it carries no demo claim at all.
 
+**A third arm beside those two: `FRIEND`, the Facebook friend request first (Zalo's written
+yes, 2026-09-12).** Not a copy arm: a friend request with no note, then the J arm or the
+control DM into the accepted thread. Its numbers (`facebook_friend_requests_per_day`, its
+ramp, its accept gate) live in the Facebook section of `config.md`, its rows are `FRIEND`
+rows in `sent-log.csv`, and it is judged on ACCEPTANCE at 14 days first, then on replies at
+day 7 on the messages it delivered. The approval does not tier lock it; the batch entry
+names the tier and the message the accepted thread gets.
+
 **Neither arm sends anything until Zalo has read its copy**: the six joke openers and the
 two no pitch notes, both in `templates/gold-notes.md`. That is a precondition on the arm,
 separate from the per batch approval, and it holds even if `approval_mode` is ever off. The
@@ -691,12 +808,12 @@ approached again.
 
 | Check | Trigger | Most likely cause, in order | What Astra does | Halts |
 | --- | --- | --- | --- | --- |
-| 1a. Nobody is accepting (LinkedIn) | 20 CONNECT notes have reached 14 days old, zero accepted | the profile gives no reason to accept; these owners do not use LinkedIn; the note | stop new LinkedIn invitations, report the acceptance count with its denominator plus the `last_activity` and `viewed_us` distributions from Step 2b, name the first cause to check | LinkedIn |
-| 1b. Nobody is replying | 30 DELIVERED messages across at least 2 tiers, zero replies of any kind. A delivered message is a `SENT` row: a Facebook or Instagram DM to a personal profile, or a LinkedIn acceptance follow up. `CONNECT` and `SENT_CONT` rows are not delivered messages and never count here | messages are not landing (IG Requests folder, FB Message Requests); the sending profile has no credibility; the evidence is not sharp; the copy | stop new batches, report the counts by tier and channel, name the first cause to check | the session |
+| 1a. Nobody is accepting (LinkedIn) | 20 CONNECT notes have reached 14 days old, zero accepted. Open profile and InMail `SENT` rows are not in this denominator; they have no accept gate | the profile gives no reason to accept; these owners do not use LinkedIn; the note | stop new LinkedIn invitations, report the acceptance count with its denominator plus the `last_activity` and `viewed_us` distributions from Step 2b, name the first cause to check | LinkedIn invitations (the open profile and InMail lanes have no accept gate and keep running) |
+| 1b. Nobody is replying | 30 DELIVERED messages across at least 2 tiers, zero replies of any kind. A delivered message is a `SENT` row: a Facebook or Instagram DM to a personal profile, a LinkedIn acceptance follow up, a LinkedIn open profile message or an InMail. `CONNECT`, `FRIEND` and `SENT_CONT` rows are not delivered messages and never count here | messages are not landing (IG Requests folder, FB Message Requests); the sending profile has no credibility; the evidence is not sharp; the copy | stop new batches, report the counts by tier and channel, name the first cause to check | the session |
 | 2. One channel is dead | 15 DELIVERED messages (`SENT` rows) on a channel, zero replies, while another channel is replying | delivery on that channel, not the copy | stop that channel, keep the others, report | that channel |
 | 3. Replies are not reaching Zalo | 3 rows at `REPLIED` for more than 2 days with no stage movement | the report is not being read, or he is blocked | lead the report with them, say how long each has waited | nothing |
 | 4. Evidence is going stale | 3 rows in one session pulled for dead evidence | the seed list has aged | report it, name the date range of the stale rows, ask for a refresh of `prospects.csv` | nothing |
-| 5. Two weeks, nothing | On EVERY active channel, EITHER 14 days have passed since that channel's FIRST DELIVERED message, OR that channel has been Active for 14 days and has delivered NOTHING at all (a channel that cannot deliver is evidence FOR this check, never a reason to hold it back). AND at least 20 delivered messages have reached day 7 across all channels together. AND zero replies of any kind. "Delivered" is check 1b's definition exactly: a `SENT` row, so a Facebook or Instagram DM to a personal profile or a LinkedIn acceptance follow up. `CONNECT` and `SENT_CONT` rows never count, and LinkedIn acceptance is check 1a's business, not this one | something structural: account standing, delivery, or market fit | stop the cold track entirely and say so plainly. Do not keep generating batches | the cold track |
+| 5. Two weeks, nothing | On EVERY active channel, EITHER 14 days have passed since that channel's FIRST DELIVERED message, OR that channel has been Active for 14 days and has delivered NOTHING at all (a channel that cannot deliver is evidence FOR this check, never a reason to hold it back). AND at least 20 delivered messages have reached day 7 across all channels together. AND zero replies of any kind. "Delivered" is check 1b's definition exactly: a `SENT` row, so a Facebook or Instagram DM to a personal profile, a LinkedIn acceptance follow up, a LinkedIn open profile message or an InMail. `CONNECT`, `FRIEND` and `SENT_CONT` rows never count, and LinkedIn acceptance is check 1a's business, not this one | something structural: account standing, delivery, or market fit | stop the cold track entirely and say so plainly. Do not keep generating batches | the cold track |
 
 A warning event is not a health check; it stops a channel immediately and unconditionally,
 per the sending rules.
@@ -706,7 +823,8 @@ per the sending rules.
 the same misread checks 1a and 1b were fixed to stop making: a pending invitation is not a
 delivered message. Sending began 2026-09-08, so on 2026-09-22 the old wording fires on a
 delivered set of one Facebook message plus whatever the Facebook joke arm has managed since
-it opens on 2026-09-15, none of it 7 days old yet, and it would read 37 unaccepted LinkedIn
+it opened on 2026-09-13 (its start date moved forward later on 2026-09-12), a few days of it
+7 days old and nowhere near 20, and it would read 37 unaccepted LinkedIn
 invitations as two weeks of failed sending and halt the whole cold track on Facebook's day 7.
 
 The floor is **20 delivered messages aged 7 days** because that is the number this skill
@@ -785,8 +903,8 @@ to claim, and filling the price fields in `call-one-pager.md` before the first b
 
 - `SKILL.md`, this file. The lane, the loop, the sending rules, the numbers.
 - `hunting-playbook.md`, the browser procedure and its speed defaults: one homepage load,
-  seed evidence trusted for 7 days, one quoted owner search, 3 loads and 4 minutes per
-  prospect, 40 minutes per session, the research ledger.
+  seed evidence trusted for 7 days, one quoted owner search, 4 loads and 5 minutes per
+  prospect, 45 minutes per session and up to two sessions a day, the research ledger.
 - `call-one-pager.md`, Zalo's call sheet. Prices are fields, not numbers.
 - `RUNBOOK.md`, how M or Zalo starts a session, and how to verify Codex sees this skill.
 - `templates/messages.md`, the copy contract and every message shape.
