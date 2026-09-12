@@ -159,9 +159,9 @@ a date. A ramp field never fails open to the cap.
 **A start date in the FUTURE is the same state: no ramp and no sends until that date**
 (added 2026-09-12). The week and ceiling fields are filled in ahead of the date on purpose,
 so reading them without reading the date yields a quota for a channel that has not opened:
-on 2026-09-13 a Facebook block carrying `facebook_ramp_start_date: 2026-09-15`,
-`facebook_ramp_week: 1` and `facebook_daily_cold_ceiling: 10` must compute "Facebook: not
-yet started, waiting for 2026-09-15, quota 0", never "Facebook: 10 left". Week 1 is the 7
+the day before a start date, a channel block carrying `<channel>_ramp_start_date: <tomorrow>`,
+`<channel>_ramp_week: 1` and `<channel>_daily_cold_ceiling: 10` must compute "<channel>: not
+yet started, waiting for YYYY-MM-DD, quota 0", never "<channel>: 10 left". Week 1 is the 7
 days FROM the start date, so it cannot have begun before it.
 
 The result can never be above the channel's cap in the table, whatever the ramp says. The

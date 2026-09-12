@@ -245,17 +245,14 @@ a day never exceed 15. InMail is further capped by `inmail_credits_per_month` in
 subject line, which is not one of the four parts and is not linted: the business name or
 the first part's fact, no pitch, no link.
 
-The lint gap, stated so nobody discovers it at the keyboard: `scripts/note-lint.py` reads
-the variant family off the last two characters of the id and knows `P1`, `P2`, `N1`, `J1`
-and `J2` only, so an `O1` or `I1` id fails it today with "unrecognised variant family". Until
-the lint is taught the two ids (add `O1` and `I1` to `FAMILIES` as the pitch family with a
-test case each; not done in the 2026-09-12 config job because the lint was outside its
-files), a note for one of these lanes is linted in `notes.json` under the phrasing id its
-text carries, `<tier>-li-P1` or `<tier>-li-P2`, so every control check runs on the exact text
-about to be typed, and the batch entry carries both ids, the lint id and the lane id. The
-`sent-log.csv` `variant` and the pipeline `angle` carry the lane id. The text linted and the
-text sent are the same string, checked by sha1 in the batch as usual, and the lint holds a
-LinkedIn text to 300 characters, which these messages respect like the note does.
+The lint knows the two lane ids (closed 2026-09-12, the same day the gap was written):
+`scripts/note-lint.py` maps `O1` and `I1` to the pitch family, so a note for either lane is
+linted in `notes.json` under its OWN id, `<tier>-li-O1` or `<tier>-li-I1`, and every control
+check runs on the exact text about to be typed. Two things differ from the invitation note:
+the lint holds an `O1` or `I1` text to 420 characters (the Facebook control shape, because
+these are DMs, not the 300 character note), and it refuses either id on any channel but
+linkedin. The `sent-log.csv` `variant` and the pipeline `angle` carry the same lane id. The
+text linted and the text sent are the same string, checked by sha1 in the batch as usual.
 
 **LinkedIn is a two gate funnel and each gate gets its own denominator (2026-09-12).** The
 skill previously said CONNECT rows were "excluded from every send count and every reply
@@ -551,8 +548,9 @@ screenshots, one quoted owner search, Indeed never opened):
    goes in the batch header. LinkedIn invitation rows carry the 300
    character invitation note and nothing else; the acceptance follow up is fixed copy,
    so no second draft per row. Open profile and InMail rows carry the control four part
-   message one instead, inside the same 300 characters the lint holds LinkedIn text to,
-   per the sent-log section.
+   message one instead, inside the 420 character DM limit the lint applies to `O1` and
+   `I1` (the Facebook control shape, not the 300 character invitation note), per the
+   sent-log section.
 6. Append the row to the research ledger: id, seconds, page loads, outcome.
 
 Stop researching when every active channel has hit its own number, or at 45 minutes of
@@ -762,8 +760,9 @@ yes, 2026-09-12).** Not a copy arm: a friend request with no note, then the J ar
 control DM into the accepted thread. Its numbers (`facebook_friend_requests_per_day`, its
 ramp, its accept gate) live in the Facebook section of `config.md`, its rows are `FRIEND`
 rows in `sent-log.csv`, and it is judged on ACCEPTANCE at 14 days first, then on replies at
-day 7 on the messages it delivered. The approval does not tier lock it; the batch entry
-names the tier and the message the accepted thread gets.
+day 7 on the messages it delivered. The batch entry names the tier and the message the
+accepted thread gets; while the arm's accept gate has no 14 day number it is tier D only,
+per the tier rule for friend requests in `config.md`.
 
 **Neither arm sends anything until Zalo has read its copy**: the six joke openers and the
 two no pitch notes, both in `templates/gold-notes.md`. That is a precondition on the arm,
@@ -913,8 +912,10 @@ to claim, and filling the price fields in `call-one-pager.md` before the first b
 - `templates/config.md`, `templates/proof.md`, `templates/learnings.md`, seeded once.
 - `templates/gold-notes.md`, the approved notes to write toward; read before drafting.
 - `scripts/note-lint.py`, the deterministic gate on a session's `notes.json`; `ALL PASS`
-  or the batch does not ship. It knows three variant families: `P1`/`P2` (the control),
-  `N1` (the no pitch LinkedIn arm) and `J1`/`J2` (the Facebook joke arm), and applies the
+  or the batch does not ship. It knows three variant families: `P1`/`P2` (the control,
+  which also covers the LinkedIn delivered lane ids `O1` and `I1` at a 420 character DM
+  limit, linkedin only), `N1` (the no pitch LinkedIn arm) and `J1`/`J2` (the Facebook joke
+  arm), and applies the
   dare and fixed line checks only where they belong. It also holds the arms to their own
   channel (`N1` LinkedIn only, `J` Facebook only), the `N1` note to 120 to 240 characters,
   and the joke arm to 4 rows per joke per day, and it accepts the `sent_parts` plus

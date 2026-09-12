@@ -263,7 +263,8 @@ without searching.
    **First, the open profile check, one click.** Open the profile while not connected and
    click Message. A free composer means the owner is an Open Profile Premium member: the
    row is an open profile send, variant `<tier>-li-O1`, the control four part message one
-   inside 300 characters, delivered on send with no accept gate. An InMail credit prompt
+   inside the 420 character DM limit the lint applies to `O1` and `I1` (not the 300
+   character note), delivered on send with no accept gate. An InMail credit prompt
    or a Sales Navigator upsell means the profile is closed: close it and move on. Either
    way record `open_profile: yes|no` in the pipeline notes; measured 2026-09-08, every
    owner profile opened was closed, and the share in this ICP is being measured on every

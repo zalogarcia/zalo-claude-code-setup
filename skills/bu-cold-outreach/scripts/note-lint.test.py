@@ -151,6 +151,21 @@ N1_B = ("Hi Rachel, Google has the office closed Sundays and your site's promisi
 case("N1 note A passes", li(N1_A, "D-li-N1"), True)
 case("N1 note B passes", li(N1_B, "D-li-N1", entry=2), True)
 case("the reserved C-li-N1 id lints the same way", li(N1_A, "C-li-N1"), True)
+
+# ------------------------------------------ the LinkedIn delivered lanes, O1 and I1 (2026-09-12)
+# An open profile message or an InMail is a DM, so it carries the Facebook control shape and
+# the 420 limit, not the 300 character invitation note cap, and it exists on LinkedIn only.
+DM_O1 = ("Hi Mike, Dana's July review says she left two messages before anyone called her back. "
+         "Missed calls are the one thing an HVAC shop can't see on its own dashboard.\n\n"
+         "I trained a demo AI setter on your website: it answers calls and texts in about five "
+         "seconds, 24/7, and books the job straight into your calendar. Want to try and break "
+         "it? Call it, text it, throw it your weirdest customer.")
+case("an O1 open profile DM under 420 passes on linkedin", li(DM_O1, "D-li-O1"), True)
+case("an I1 InMail under 420 passes on linkedin", li(DM_O1, "A-li-I1"), True)
+case("the same text as a P1 invitation note fails the 300 cap",
+     li(DM_O1, "D-li-P1"), False, "over the linkedin limit 300")
+case("an O1 id on facebook fails the lane lock",
+     fb(DM_O1, "D-fb-O1"), False, "the O1 lane is linkedin only")
 case("an N1 note carrying the dare fails",
      li("Hi Mike, Dana's review from July says she waited. That's the call this catches. "
         "Want to try and break it?", "D-li-N1"), False, "the dare is in an N1 note")

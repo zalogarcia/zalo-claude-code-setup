@@ -47,7 +47,12 @@ BANNED = [
 DARE = "want to try and break it?"
 P1_LINE = "trained a demo ai setter on your website"
 P2_LINE = "built a quick demo off your website"
-LIMITS = {"linkedin": 300, "facebook": 420, "instagram": 420}
+LIMITS = {"linkedin": 300, "linkedin_dm": 420, "facebook": 420, "instagram": 420}
+# The two LinkedIn lanes that deliver on send (open profile message O1, InMail I1, added
+# 2026-09-12) are DMs, not invitation notes: they carry the Facebook control shape and its
+# 420 limit, and they exist on LinkedIn only.
+DM_LANES = {"O1": "linkedin_dm", "I1": "linkedin_dm"}
+LANE_CHANNEL = {"O1": ("linkedin", "an open profile message"), "I1": ("linkedin", "an InMail")}
 LINK = re.compile(r"(?i)https?://|\bwww\.")
 # Figure dash, en dash, em dash, horizontal bar, written as escapes so this file is
 # itself free of the characters it bans.
@@ -86,7 +91,7 @@ J_PARTS = ("setup", "punchline", "ask")
 # jokes against a Facebook ceiling of 10 makes this a cap, not a ban, and before it was a
 # number in the lint it was prose only: 10 rows running two jokes five times each passed.
 J_ROW_CAP = 4
-FAMILIES = {"P1": "pitch", "P2": "pitch", "N1": "nopitch", "J1": "joke", "J2": "joke"}
+FAMILIES = {"P1": "pitch", "P2": "pitch", "N1": "nopitch", "J1": "joke", "J2": "joke", "O1": "pitch", "I1": "pitch"}
 # Both test arms are one channel each, by design: N1 measures the LinkedIn accept gate and
 # the J arm is a Facebook personal profile opener. A family on the wrong channel is not a
 # variant of the arm, it is a different experiment nobody approved.
@@ -114,11 +119,12 @@ def shape(text):
     return " ".join(toks[:3])
 
 
-def common(text, ch, low):
+def common(text, ch, low, limit_key=None):
     """The checks every family gets, whatever it is."""
     reasons = []
+    key = limit_key or ch
     if DASH.search(text): reasons.append("em or en dash")
-    if len(text) > LIMITS.get(ch, 300): reasons.append(f"{len(text)} chars over the {ch} limit {LIMITS.get(ch, 300)}")
+    if len(text) > LIMITS.get(key, 300): reasons.append(f"{len(text)} chars over the {key} limit {LIMITS.get(key, 300)}")
     for b in BANNED:
         if b in low: reasons.append(f"banned phrase: {b!r}")
     if "!" in text: reasons.append("exclamation mark")
@@ -216,10 +222,14 @@ def check(note):
     text = note["text"]; ch = note.get("channel", "linkedin").lower(); var = note.get("variant", "")
     low = text.lower()
     fam = family(var)
-    reasons = common(text, ch, low)
+    lane = (var or "")[-2:].upper()
+    reasons = common(text, ch, low, DM_LANES.get(lane) if ch == "linkedin" else None)
     if fam is None:
-        reasons.append(f"unrecognised variant family in {var!r}: expected P1, P2, N1, J1 or J2")
+        reasons.append(f"unrecognised variant family in {var!r}: expected P1, P2, N1, J1, J2, O1 or I1")
         fam = "pitch"
+    lane_ch, lane_label = LANE_CHANNEL.get(lane, (None, None))
+    if lane_ch and ch != lane_ch:
+        reasons.append(f"{lane_label} on {ch}: the {lane} lane is {lane_ch} only")
     want_ch, label, art = ARM_CHANNEL.get(fam, (None, None, None))
     if want_ch and ch != want_ch:
         reasons.append(f"{art} {label} note on {ch}: the {label} arm is {want_ch} only")

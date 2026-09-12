@@ -27,8 +27,8 @@ batch when a claimed send is absent. That is a larger change than the finding as
 and it gives the lint a new input, so it wants its own test fixtures for a missing row, a
 stage mismatch and a row from the wrong prospect.
 
-**Priority.** Low until the J arm has actually sent something. Facebook opens 2026-09-15
-and `sent-log.csv` holds 0 J rows, so today the marker is proven at the lint layer only.
+**Priority.** Low until the J arm has actually sent something. Facebook opened 2026-09-13 (moved from 09-15 on
+2026-09-12) and `sent-log.csv` holds 0 J rows, so today the marker is proven at the lint layer only.
 
 ## 2. Health check 5 has no executable form (opened 2026-09-12)
 
@@ -42,5 +42,5 @@ reasoning across channels is where it went wrong the first time.
 ## 3. No `.claude/VERIFY.md` in `~/.claude` (opened 2026-09-12)
 
 Flagged by the audit. This repo has no deploy surface, so the proof signal for a skill
-change is its own test suite (`scripts/note-lint.test.py`, 76 cases) plus
+change is its own test suite (`scripts/note-lint.test.py`, 80 cases) plus
 `codex-sync.py all`. If that stops being true, write the manifest.
