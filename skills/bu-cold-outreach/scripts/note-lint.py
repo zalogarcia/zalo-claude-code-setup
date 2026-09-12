@@ -3,10 +3,13 @@
 messages that sound like texting a friend").
 
 Input: a JSON file, a list of objects: {"entry": 3, "channel": "linkedin"|"facebook"|
-"instagram", "variant": "C-li-P1", "text": "...", "part": "setup"|"punchline"|"ask"}.
+"instagram", "variant": "C-li-P1", "text": "...", "part": "setup"|"punchline"|"ask",
+"sent_parts": ["setup"], "joke_setup": "..."}.
 `part` is required on the joke arm (J1, J2) and ignored everywhere else: the batch
 diversity check keys on the variant family, not on the presence of that field, so a
 stray `part` on a control note cannot drop it out of the count.
+`sent_parts` and `joke_setup` are the continuation marker, joke arm only, and a note
+outside that arm carrying either is a bug and fails. See check_joke_sequences.
 Output: one line per note, PASS or FAIL with every reason, then the batch level
 checks. Exit 1 if anything failed. Facts are not checked here; the humanizer pass
 and the approval do that. This catches the machine tells that slipped through
@@ -22,6 +25,10 @@ are not applied to another:
           note ends on the fixed permission question.
   J1, J2  the Facebook trade joke opener. Three parts per prospect, each an approved
           fixed string, no digits, no pitch, no dare.
+
+The two test arms are channel locked, so the channel is checked against the family: an N1
+note only lints on linkedin and a J note only lints on facebook (added 2026-09-12 after the
+audit found a J triple on linkedin and an N1 on facebook both linting clean).
 
 Tests: python3 ~/.claude/skills/bu-cold-outreach/scripts/note-lint.test.py
 """
@@ -75,7 +82,18 @@ J_ASKS = {
                      r"something about the calls that come in after you close\?$"),
 }
 J_PARTS = ("setup", "punchline", "ask")
+# No joke goes to more than this many rows in one day (templates/messages.md). Six approved
+# jokes against a Facebook ceiling of 10 makes this a cap, not a ban, and before it was a
+# number in the lint it was prose only: 10 rows running two jokes five times each passed.
+J_ROW_CAP = 4
 FAMILIES = {"P1": "pitch", "P2": "pitch", "N1": "nopitch", "J1": "joke", "J2": "joke"}
+# Both test arms are one channel each, by design: N1 measures the LinkedIn accept gate and
+# the J arm is a Facebook personal profile opener. A family on the wrong channel is not a
+# variant of the arm, it is a different experiment nobody approved.
+ARM_CHANNEL = {"nopitch": ("linkedin", "N1", "an"), "joke": ("facebook", "J", "a")}
+# messages.md: the N1 note is 3 to 5 sentences and 120 to 240 characters. The band is part of
+# the arm, because the thing being measured is a SHORT no pitch card.
+N1_BAND = (120, 240)
 
 
 def family(variant):
@@ -138,17 +156,42 @@ def check_nopitch(text, low):
     if "24/7" in low: reasons.append("24/7 in an N1 note: the pitch belongs in the follow up")
     if not low.rstrip().endswith(N1_CLOSER): reasons.append(f"an N1 note ends on {N1_CLOSER!r}")
     if low.count("review") > 1: reasons.append("'review' more than once")
+    if not N1_BAND[0] <= len(text) <= N1_BAND[1]:
+        reasons.append(f"{len(text)} chars, the N1 band is {N1_BAND[0]} to {N1_BAND[1]}")
     sents = sentences(text)
     if not 3 <= len(sents) <= 5: reasons.append(f"{len(sents)} sentences, want 3 to 5")
     if re.search(r"\b\d+-month-old\b", low): reasons.append("N-month-old time reference")
     return reasons
 
 
-def check_joke(text, low, var, part):
+def sent_prefix(note):
+    """Read and validate the continuation marker. Returns (parts already sent, reasons).
+
+    `sent_parts` is an assertion about what already left the keyboard on an earlier day, so
+    it has to be a PREFIX of setup, punchline, ask in that order: there is no state in which
+    a punchline went out and its setup did not. An all three marker leaves nothing to send.
+    """
+    raw = note.get("sent_parts")
+    if raw is None:
+        return [], []
+    if not isinstance(raw, list) or not all(isinstance(p, str) for p in raw):
+        return [], [f"sent_parts must be a list of part names, got {raw!r}"]
+    if list(raw) != list(J_PARTS[:len(raw)]):
+        return [], [f"sent_parts must be a prefix of {list(J_PARTS)} in order, got {raw}"]
+    if len(raw) >= len(J_PARTS):
+        return list(raw), ["sent_parts says all three parts went out, so nothing is left to send"]
+    return list(raw), []
+
+
+def check_joke(text, low, var, part, note=None):
     """J1 and J2: fixed copy, three parts, no fact and no offer by design."""
+    note = note or {}
     reasons = []
+    js = note.get("joke_setup")
+    if js is not None and str(js).strip() not in [s for s, _ in APPROVED_JOKES]:
+        reasons.append("joke_setup is not one of the approved jokes in gold-notes.md")
     if part not in J_PARTS:
-        return [f"a joke note needs part setup, punchline or ask, got {part!r}"]
+        return reasons + [f"a joke note needs part setup, punchline or ask, got {part!r}"]
     if re.search(r"\d", text): reasons.append("a digit: the joke arm carries no numbers at all")
     if DARE in low: reasons.append("the dare is in a joke note")
     if P1_LINE in low or P2_LINE in low: reasons.append("a pitch line in a joke note")
@@ -177,35 +220,94 @@ def check(note):
     if fam is None:
         reasons.append(f"unrecognised variant family in {var!r}: expected P1, P2, N1, J1 or J2")
         fam = "pitch"
+    want_ch, label, art = ARM_CHANNEL.get(fam, (None, None, None))
+    if want_ch and ch != want_ch:
+        reasons.append(f"{art} {label} note on {ch}: the {label} arm is {want_ch} only")
+    if fam != "joke" and (note.get("sent_parts") is not None or note.get("joke_setup") is not None):
+        reasons.append("sent_parts or joke_setup on a note that is not a joke note")
     if fam == "pitch":
         reasons += check_pitch(text, low, var)
     elif fam == "nopitch":
         reasons += check_nopitch(text, low)
     elif fam == "joke":
-        reasons += check_joke(text, low, var, note.get("part"))
+        reasons += check_joke(text, low, var, note.get("part"), note)
     return reasons
 
 
 def check_joke_sequences(notes):
-    """A joke prospect is three parts that belong together: one setup, one punchline from
-    the SAME approved joke, and one ask in this row's phrasing."""
+    """A joke prospect is the sequence setup, punchline, ask, in that order, one note each,
+    the setup and punchline from the SAME approved joke and the ask in this row's phrasing.
+
+    A FRESH entry carries all three, unchanged from 2026-09-12. An entry whose earlier parts
+    already went out on an earlier day is a CONTINUATION: it declares what was delivered in
+    `sent_parts` and carries a contiguous run of what is left, starting at the next part.
+    That is how SKILL.md Step 2b finishes an interrupted sequence under today's approval.
+    Without the marker the lint demanded all three parts every session, which left exactly
+    two ways to ship a continuation: strand the row, so the arm's 20 send count drifts, or
+    pad the batch with text that already went out, which makes the lint stop checking the
+    messages that are about to be typed. Added 2026-09-12 after the audit of 184db72.
+
+    The marker is an assertion about `sent-log.csv`, not a fact this script can read, so a
+    continuation must also name its joke in `joke_setup`: without it a punchline arriving a
+    day after its setup could be paired with a different joke and nothing would notice.
+    """
     reasons = []
     groups = {}
     for n in notes:
         if family(n.get("variant", "")) == "joke":
             groups.setdefault(n.get("entry"), []).append(n)
+    setups_today = {}
     for entry, parts in sorted(groups.items(), key=lambda kv: str(kv[0])):
         got = [p.get("part") for p in parts]
-        missing = [p for p in J_PARTS if got.count(p) != 1]
-        if missing:
-            reasons.append(f"FAIL batch: joke entry {entry} needs exactly one setup, one punchline and one ask, got {got}")
+        markers = sorted({json.dumps(p.get("sent_parts")) for p in parts})
+        if len(markers) != 1:
+            reasons.append(f"FAIL batch: joke entry {entry} disagrees with itself about sent_parts: {', '.join(markers)}")
             continue
-        setup = next(p["text"].strip() for p in parts if p.get("part") == "setup")
-        punch = next(p["text"].strip() for p in parts if p.get("part") == "punchline")
-        if (setup, punch) not in APPROVED_JOKES:
+        sent, bad = sent_prefix(parts[0])
+        if bad:
+            reasons.append(f"FAIL batch: joke entry {entry}: " + "; ".join(bad))
+            continue
+        # WHICH parts are present is the law: the whole remainder on a fresh entry, a
+        # contiguous run from the next unsent part on a continuation, each exactly once. The
+        # ORDER the notes are listed in is NOT a law, because the send order is a sending
+        # rule (the batch runs in passes) and the 2026-09-12 fix must not fail a fresh entry
+        # the 2026-09-09 lint passed.
+        tail = list(J_PARTS[len(sent):])
+        want = set(tail) if not sent else set(tail[:len(got)])
+        dupes = sorted(x for x in set(got) if got.count(x) != 1)
+        if not got or dupes or set(got) != want:
+            if not sent:
+                reasons.append(f"FAIL batch: joke entry {entry} needs exactly one setup, one punchline and one ask, got {got}")
+            else:
+                reasons.append(f"FAIL batch: joke entry {entry} already sent {sent}, so it carries {tail} from {tail[0]!r} on, one note each, got {got}")
+            continue
+        declared = sorted({(p.get("joke_setup") or "").strip() for p in parts})
+        if len(declared) != 1:
+            reasons.append(f"FAIL batch: joke entry {entry} disagrees with itself about joke_setup: {declared}")
+            continue
+        named = declared[0]
+        setup = next((p["text"].strip() for p in parts if p.get("part") == "setup"), None)
+        if sent and not named:
+            reasons.append(f"FAIL batch: joke entry {entry} declares sent_parts {sent} and no joke_setup, so its punchline cannot be checked against its own setup")
+            continue
+        if setup is not None and named and named != setup:
+            reasons.append(f"FAIL batch: joke entry {entry} joke_setup does not match the setup in this batch")
+            continue
+        opener = setup if setup is not None else named
+        punch = next((p["text"].strip() for p in parts if p.get("part") == "punchline"), None)
+        if punch is not None and (opener, punch) not in APPROVED_JOKES:
             reasons.append(f"FAIL batch: joke entry {entry} pairs a setup with the wrong punchline")
         if len({p.get("variant") for p in parts}) != 1:
             reasons.append(f"FAIL batch: joke entry {entry} mixes variant ids across its parts")
+        # The repetition cap counts every ROW carrying this joke today, continuation included:
+        # a continuation types that joke's punchline at a stranger today exactly like a fresh
+        # row does, and counting only the setups left the whole continuation path uncapped
+        # (10 continuation rows on one joke passed clean, found in the re audit of this fix).
+        if opener:
+            setups_today[opener] = setups_today.get(opener, 0) + 1
+    for joke, n in sorted(setups_today.items()):
+        if n > J_ROW_CAP:
+            reasons.append(f"FAIL batch: the joke {joke!r} goes to {n} rows today, cap is {J_ROW_CAP} (templates/messages.md). Continuations count")
     return reasons
 
 
@@ -221,7 +323,10 @@ def main(path):
     for r in check_joke_sequences(notes):
         failed += 1; print(r)
     # Opener diversity is about how a first touch OPENS, so it reads the opener of each
-    # prospect: the whole note on the control and the N1 arm, the setup on the joke arm.
+    # prospect: the whole note on the control and the N1 arm, the setup on the joke arm. A
+    # joke CONTINUATION opened on an earlier day, so it has no opener today and is not in
+    # this population; what bounds a day of continuations is J_ROW_CAP above, which counts
+    # them. Fewer openers only ever lowers the cap below, so this can never loosen it.
     openers = [n for n in notes if family(n.get("variant", "")) != "joke" or n.get("part") == "setup"]
     shapes = {}
     for n in openers: shapes.setdefault(shape(n["text"]), []).append(n.get("entry"))

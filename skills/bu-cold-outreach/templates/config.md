@@ -42,6 +42,12 @@ A channel whose Active column says no gets no ramp and no sends. Opening it is Z
 setting Active to yes and giving it a start date in the ramp section, which buys it a
 week 1 of its own and takes nothing from the channels already running.
 
+**Active yes plus a start date in the FUTURE is a correctly configured channel, not a
+contradiction** (added 2026-09-12). That is how a channel is opened ahead of time: the
+Active flag says Zalo wants it, the start date says when it begins, and the quota
+arithmetic below returns zero for it until that date arrives. Nothing on that channel needs
+a prose line or an `active: no` to hold it back, and nobody has to remember to read one.
+
 ## Channel holds (Astra maintains)
 
 Written when a warning event escalates past the same day stop, and read before computing
@@ -88,6 +94,9 @@ facebook_ramp_week: 1
 facebook_daily_cold_ceiling: 10
 ```
 
+Write a real date here to open the channel. Until that date arrives Facebook's quota is
+zero and the session header says which date it is waiting for.
+
 Facebook's cap is 10, so its week 1 ceiling is already the cap: week 2 and week 3 raise
 nothing on this channel. The J arm in `templates/messages.md` types three messages per
 prospect, so 10 cold first touches is up to 30 typed messages, each taking the 2 to 5
@@ -123,6 +132,10 @@ delivered messages).
 
 Per channel, in this order:
 
+0. Read that channel's `<channel>_ramp_start_date`. If it is missing, still the literal
+   `YYYY-MM-DD`, unparseable, or a date LATER THAN TODAY, that channel's number is zero and
+   the rest of the arithmetic is not run for it. Print it as
+   `not yet started, waiting for YYYY-MM-DD, quota 0` in the session header.
 1. Start at that channel's daily cold cap from the channel table.
 2. Reduce it by an active hold on that channel.
 3. Cap it again by that channel's `daily_cold_ceiling`.
@@ -142,6 +155,14 @@ weekly remainder to go out in one afternoon.
 at 10 and say so in the session header. If its `<channel>_ramp_start_date` is missing or
 still the literal `YYYY-MM-DD`, that channel has no ramp and sends nothing until Zalo writes
 a date. A ramp field never fails open to the cap.
+
+**A start date in the FUTURE is the same state: no ramp and no sends until that date**
+(added 2026-09-12). The week and ceiling fields are filled in ahead of the date on purpose,
+so reading them without reading the date yields a quota for a channel that has not opened:
+on 2026-09-13 a Facebook block carrying `facebook_ramp_start_date: 2026-09-15`,
+`facebook_ramp_week: 1` and `facebook_daily_cold_ceiling: 10` must compute "Facebook: not
+yet started, waiting for 2026-09-15, quota 0", never "Facebook: 10 left". Week 1 is the 7
+days FROM the start date, so it cannot have begun before it.
 
 The result can never be above the channel's cap in the table, whatever the ramp says. The
 day's total is the sum of the per channel quotas, and nothing computes a total first and

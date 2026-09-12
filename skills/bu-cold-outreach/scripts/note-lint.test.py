@@ -5,6 +5,22 @@ Three jobs. One, the control family (P1, P2) still behaves exactly as it did on
 2026-09-09: the approved gold notes pass and the returned rounds fail. Two, the two
 arms added 2026-09-12 (N1, J1, J2) pass their own laws and fail the control's, which
 is the whole reason the families exist. Three, nothing can ship without a family.
+
+The block at the bottom is the audit of 184db72 (2026-09-12) and the re audit of that fix:
+the continuation marker, the joke row cap, the channel and family lock, and the N1 length
+band. It adds 32 cases. **25 of the 32 are not satisfied by the pre fix script** (17 fail its
+own assertion outright; 8 more reach the right exit code for the WRONG reason, because the
+old lint rejected every continuation, and their message assertion catches that). The other 7
+are regression guards that were green before the fix and have to stay green: "an ask alone
+with NO marker still fails", "joke parts listed out of send order in a fresh entry still
+pass", "a duplicated part in a fresh entry fails", "four rows each on two jokes is at the cap
+and passes", "the control still runs on facebook", "the control still runs on linkedin", "an
+N1 note inside the band still passes".
+
+Measure it, do not take the count on trust: copy this file next to
+`git show HEAD:skills/bu-cold-outreach/scripts/note-lint.py` in a scratch directory, run it,
+and read the failure list (34 failure lines over 23 distinct case names plus 11 message
+assertions at the time of writing).
 """
 import importlib.util, json, os, subprocess, sys, tempfile
 
@@ -45,10 +61,22 @@ def li(text, variant="C-li-P1", entry=1):
     return {"entry": entry, "channel": "linkedin", "variant": variant, "text": text}
 
 
-def fb(text, variant="D-fb-P1", entry=1, part=None):
+def fb(text, variant="D-fb-P1", entry=1, part=None, sent_parts=None, joke_setup=None):
     n = {"entry": entry, "channel": "facebook", "variant": variant, "text": text}
     if part: n["part"] = part
+    if sent_parts is not None: n["sent_parts"] = sent_parts
+    if joke_setup is not None: n["joke_setup"] = joke_setup
     return n
+
+
+def jrow(entry, joke_index=0, variant="D-fb-J1", name="Mike"):
+    """A whole fresh joke prospect: setup, punchline, ask, all three approved and paired."""
+    s, p = lint.APPROVED_JOKES[joke_index]
+    ask = (f"Alright {name}, real question and then I'll leave the jokes alone. Would you be "
+           "open to talking about the calls that come in after you close?")
+    return [fb(s, variant, entry=entry, part="setup"),
+            fb(p, variant, entry=entry, part="punchline"),
+            fb(ask, variant, entry=entry, part="ask")]
 
 
 # ---------------------------------------------------------------- the control, P1 and P2
@@ -248,6 +276,200 @@ out = batch_case("a stray part field on control notes cannot dodge the diversity
                  same_ask, 1)
 if "open the same way" not in out:
     FAILURES.append(f"part field dodge: the diversity check was skipped:\n{out}")
+
+# ------------------------------------------------------- the audit of 184db72, 2026-09-12
+# 1. The continuation marker. A sequence interrupted by the daily cap or by a session ending
+# is finished in a LATER batch under that day's approval (SKILL.md Step 2b). Before the
+# marker the lint demanded all three parts every session, so the only ways to ship a
+# continuation were to strand the row or to pad the batch with text that already went out.
+CONT_SETUP, CONT_PUNCH = lint.APPROVED_JOKES[0]
+
+out = batch_case("a continuation carrying only the ask passes",
+                 [fb(ASK1, "D-fb-J1", entry=11, part="ask",
+                     sent_parts=["setup", "punchline"], joke_setup=CONT_SETUP)], 0)
+if "ALL PASS" not in out:
+    FAILURES.append(f"ask only continuation: expected ALL PASS, got:\n{out}")
+
+out = batch_case("a continuation carrying only the punchline passes",
+                 [fb(CONT_PUNCH, "D-fb-J1", entry=11, part="punchline",
+                     sent_parts=["setup"], joke_setup=CONT_SETUP)], 0)
+if "ALL PASS" not in out:
+    FAILURES.append(f"punchline only continuation: expected ALL PASS, got:\n{out}")
+
+out = batch_case("a continuation carrying the punchline and the ask passes",
+                 [fb(CONT_PUNCH, "D-fb-J1", entry=11, part="punchline",
+                     sent_parts=["setup"], joke_setup=CONT_SETUP),
+                  fb(ASK1, "D-fb-J1", entry=11, part="ask",
+                     sent_parts=["setup"], joke_setup=CONT_SETUP)], 0)
+if "ALL PASS" not in out:
+    FAILURES.append(f"punchline plus ask continuation: expected ALL PASS, got:\n{out}")
+
+out = batch_case("an ask alone with NO marker still fails",
+                 [fb(ASK1, "D-fb-J1", entry=11, part="ask")], 1)
+if "needs exactly one setup" not in out:
+    FAILURES.append(f"unmarked ask only: wrong message:\n{out}")
+
+out = batch_case("a continuation that skips the punchline fails",
+                 [fb(ASK1, "D-fb-J1", entry=11, part="ask",
+                     sent_parts=["setup"], joke_setup=CONT_SETUP)], 1)
+if "from 'punchline' on" not in out:
+    FAILURES.append(f"skipped punchline: wrong message:\n{out}")
+
+out = batch_case("a continuation punchline from a different joke fails",
+                 [fb(lint.APPROVED_JOKES[3][1], "D-fb-J1", entry=11, part="punchline",
+                     sent_parts=["setup"], joke_setup=CONT_SETUP)], 1)
+if "wrong punchline" not in out:
+    FAILURES.append(f"cross joke continuation: wrong message:\n{out}")
+
+out = batch_case("a continuation with no joke_setup fails",
+                 [fb(CONT_PUNCH, "D-fb-J1", entry=11, part="punchline",
+                     sent_parts=["setup"])], 1)
+if "no joke_setup" not in out:
+    FAILURES.append(f"continuation without joke_setup: wrong message:\n{out}")
+
+out = batch_case("sent_parts that is not a prefix of the sequence fails",
+                 [fb(ASK1, "D-fb-J1", entry=11, part="ask",
+                     sent_parts=["punchline"], joke_setup=CONT_SETUP)], 1)
+if "must be a prefix" not in out:
+    FAILURES.append(f"non prefix marker: wrong message:\n{out}")
+
+out = batch_case("a marker claiming all three parts went out fails",
+                 [fb(ASK1, "D-fb-J1", entry=11, part="ask",
+                     sent_parts=["setup", "punchline", "ask"], joke_setup=CONT_SETUP)], 1)
+if "nothing is left to send" not in out:
+    FAILURES.append(f"exhausted marker: wrong message:\n{out}")
+
+out = batch_case("two notes of one entry disagreeing about sent_parts fails",
+                 [fb(CONT_PUNCH, "D-fb-J1", entry=11, part="punchline",
+                     sent_parts=["setup"], joke_setup=CONT_SETUP),
+                  fb(ASK1, "D-fb-J1", entry=11, part="ask",
+                     sent_parts=["setup", "punchline"], joke_setup=CONT_SETUP)], 1)
+if "disagrees with itself about sent_parts" not in out:
+    FAILURES.append(f"inconsistent marker: wrong message:\n{out}")
+
+out = batch_case("a fresh entry whose joke_setup contradicts its own setup fails",
+                 [fb(CONT_SETUP, "D-fb-J1", entry=11, part="setup",
+                     joke_setup=lint.APPROVED_JOKES[3][0]),
+                  fb(CONT_PUNCH, "D-fb-J1", entry=11, part="punchline",
+                     joke_setup=lint.APPROVED_JOKES[3][0]),
+                  fb(ASK1, "D-fb-J1", entry=11, part="ask",
+                     joke_setup=lint.APPROVED_JOKES[3][0])], 1)
+if "does not match the setup in this batch" not in out:
+    FAILURES.append(f"contradictory joke_setup: wrong message:\n{out}")
+
+# Regression guard, green before the fix and after it: the ORDER the notes are listed in is
+# not a law, only which parts are present. The send order is a sending rule (the batch runs
+# in passes), and the first cut of this fix failed 5 of the 6 orderings of a valid triple.
+out = batch_case("joke parts listed out of send order in a fresh entry still pass",
+                 [fb(CONT_PUNCH, "D-fb-J1", entry=11, part="punchline"),
+                  fb(CONT_SETUP, "D-fb-J1", entry=11, part="setup"),
+                  fb(ASK1, "D-fb-J1", entry=11, part="ask")], 0)
+if "ALL PASS" not in out:
+    FAILURES.append(f"out of order parts: expected ALL PASS, got:\n{out}")
+
+out = batch_case("a duplicated part in a fresh entry fails",
+                 [fb(CONT_SETUP, "D-fb-J1", entry=11, part="setup"),
+                  fb(CONT_PUNCH, "D-fb-J1", entry=11, part="punchline"),
+                  fb(CONT_PUNCH, "D-fb-J1", entry=11, part="punchline"),
+                  fb(ASK1, "D-fb-J1", entry=11, part="ask")], 1)
+if "needs exactly one setup" not in out:
+    FAILURES.append(f"duplicated part: wrong message:\n{out}")
+
+out = batch_case("a continuation listing its two parts out of order still passes",
+                 [fb(ASK1, "D-fb-J1", entry=11, part="ask",
+                     sent_parts=["setup"], joke_setup=CONT_SETUP),
+                  fb(CONT_PUNCH, "D-fb-J1", entry=11, part="punchline",
+                     sent_parts=["setup"], joke_setup=CONT_SETUP)], 0)
+if "ALL PASS" not in out:
+    FAILURES.append(f"out of order continuation: expected ALL PASS, got:\n{out}")
+
+case("joke_setup naming a joke nobody approved fails",
+     fb(ASK1, "D-fb-J1", part="ask", sent_parts=["setup", "punchline"],
+        joke_setup="Why did the HVAC guy cross the road?"),
+     False, "joke_setup is not one of the approved jokes")
+case("a continuation marker on a control note fails",
+     dict(li(GOLD_LI[0][0], "C-li-P1"), sent_parts=["setup"]),
+     False, "not a joke note")
+case("a joke_setup on an N1 note fails",
+     dict(li(N1_A, "D-li-N1"), joke_setup=lint.APPROVED_JOKES[0][0]),
+     False, "not a joke note")
+
+# 2. The joke row cap. "No joke goes to more than 4 rows in one day" was prose only: the
+# generic opener cap permits 5 of 10 identical, so 10 rows on two jokes passed clean.
+cap_ok = (jrow(1, 0, name="Al") + jrow(2, 0, name="Bo") + jrow(3, 0, name="Cy")
+          + jrow(4, 0, name="Di") + jrow(5, 3, name="Ed") + jrow(6, 3, name="Fi")
+          + jrow(7, 3, name="Gus") + jrow(8, 3, name="Hal"))
+out = batch_case("four rows each on two jokes is at the cap and passes", cap_ok, 0)
+if "ALL PASS" not in out:
+    FAILURES.append(f"joke cap boundary: expected ALL PASS, got:\n{out}")
+
+cap_trip = cap_ok + jrow(9, 0, name="Ira") + jrow(10, 3, name="Jo")
+out = batch_case("five rows on one joke trips the joke row cap", cap_trip, 1)
+if "cap is 4" not in out:
+    FAILURES.append(f"joke row cap: wrong message:\n{out}")
+
+# A continuation types that joke's punchline at a stranger today exactly like a fresh row
+# does, so it counts against the cap. Counting only setups left the whole continuation path
+# uncapped: 10 continuation rows on one joke passed clean (re audit of this fix, 2026-09-12).
+cont_row = [fb(CONT_PUNCH, "D-fb-J1", entry=9, part="punchline",
+               sent_parts=["setup"], joke_setup=CONT_SETUP)]
+out = batch_case("a continuation is the fifth row on its joke and trips the cap",
+                 cap_ok + cont_row, 1)
+if "cap is 4" not in out:
+    FAILURES.append(f"continuation not counted against the cap:\n{out}")
+
+ten_conts = []
+for i, n in enumerate(["Al", "Bo", "Cy", "Di", "Ed", "Fi", "Gus", "Hal", "Ira", "Jo"]):
+    ask = (f"Alright {n}, real question and then I'll leave the jokes alone. Would you be "
+           "open to talking about the calls that come in after you close?")
+    ten_conts += [fb(CONT_PUNCH, "D-fb-J1", entry=20 + i, part="punchline",
+                     sent_parts=["setup"], joke_setup=CONT_SETUP),
+                  fb(ask, "D-fb-J1", entry=20 + i, part="ask",
+                     sent_parts=["setup"], joke_setup=CONT_SETUP)]
+out = batch_case("ten continuations on one joke trip the cap", ten_conts, 1)
+if "cap is 4" not in out:
+    FAILURES.append(f"ten continuations on one joke: wrong message:\n{out}")
+
+out = batch_case("three continuations on one joke are under the cap and pass",
+                 ten_conts[:6], 0)
+if "ALL PASS" not in out:
+    FAILURES.append(f"three continuations: expected ALL PASS, got:\n{out}")
+
+out = batch_case("a fresh row plus three continuations of the same joke is at the cap",
+                 jrow(30, 0, name="Ken") + ten_conts[:6], 0)
+if "ALL PASS" not in out:
+    FAILURES.append(f"fresh plus three continuations: expected ALL PASS, got:\n{out}")
+
+# 3. Channel and family lock. Both test arms are one channel each.
+case("an N1 note on facebook fails", fb(N1_A, "D-fb-N1"),
+     False, "the N1 arm is linkedin only")
+case("a joke setup on linkedin fails",
+     {"entry": 1, "channel": "linkedin", "variant": "D-li-J1", "part": "setup",
+      "text": CONT_SETUP}, False, "the J arm is facebook only")
+case("a joke ask on linkedin fails",
+     {"entry": 1, "channel": "linkedin", "variant": "D-li-J1", "part": "ask",
+      "text": ASK1}, False, "the J arm is facebook only")
+case("the control still runs on facebook", fb(GOLD_FB[0][0], "D-fb-P1"), True)
+case("the control still runs on linkedin", li(GOLD_LI[0][0], "C-li-P1"), True)
+
+out = batch_case("a J triple on linkedin fails the batch",
+                 [{"entry": 1, "channel": "linkedin", "variant": "D-li-J1",
+                   "part": p, "text": t} for p, t in
+                  [("setup", CONT_SETUP), ("punchline", CONT_PUNCH), ("ask", ASK1)]], 1)
+if "the J arm is facebook only" not in out:
+    FAILURES.append(f"J on linkedin batch: wrong message:\n{out}")
+
+# 4. The N1 length band, 120 to 240 per templates/messages.md.
+LONG_N1 = ("Hi Mike, Dana's review from July says she left two messages before anyone called "
+           "her back, and her neighbour had the same wait the same week on a Sunday night in "
+           "the middle of a heat wave. That's the call this catches every time. Mind if I ask "
+           "you something about it?")
+case("an N1 note over the band fails, under the 300 character channel limit",
+     li(LONG_N1, "D-li-N1"), False, "the N1 band is 120 to 240")
+case("an N1 note under the band fails",
+     li("Hi Mike, Dana waited two days. That's the call. Mind if I ask you something about "
+        "it?", "D-li-N1"), False, "the N1 band is 120 to 240")
+case("an N1 note inside the band still passes", li(N1_A, "D-li-N1"), True)
 
 print(f"{COUNT} cases")
 if FAILURES:

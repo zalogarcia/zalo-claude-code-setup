@@ -14,11 +14,14 @@ nothing counts as sent unless it has a row there.**
 
 **Mode:** approval_mode on, nothing sends until Zalo says go for this batch
 **LinkedIn:** ramp week [N], ceiling [n], cap 15, hold [none], sent today [n], left [n]. Invitations [n] of 80 in the last 7 days
-**Facebook:** ramp week [N], ceiling [n], cap 10, hold [none], sent today [n], left [n]
+**Facebook:** ramp week [N], ceiling [n], cap 10, hold [none], sent today [n], left [n] (or, before the start date: not yet started, waiting for [YYYY-MM-DD], quota 0)
 **Instagram:** inactive, no ramp (or: ramp week [N], ceiling [n], cap 10, left [n])
 **Total today:** [n], the sum of the per channel numbers above, never a number divided up
 **Drafted:** [n] cold first touches, [n] bumps
 **Test arms in this batch:** [n] `D-li-N1`, [n] `D-fb-J1`, [n] `D-fb-J2`, [n] control
+**Joke repeats:** [joke]: [n] rows, [joke]: [n] rows. Cap is 4 rows per joke per day, and a continuation row counts exactly like a fresh one
+**Joke continuations:** [n] rows finishing a sequence started on an earlier day. These consume no cold first touch slot (it was spent when their setup went out) but they do count for pacing and for the joke cap
+**Typed messages today:** [n] total across all channels, at a 2 to 5 minute gap each. Continuations are typed first, then as many new first touches as the session can fit at the full gap
 **Owner resolution:** [n] Facebook rows resolved to a verified personal profile, [n] held
 **Health checks:** all clear (or: CHECK [n] TRIPPED, see the report)
 
@@ -107,6 +110,32 @@ remaining sends are cancelled, and the thread goes to Zalo.
 
 ```
 [Send 2, the punchline.]
+```
+
+```
+[Send 3, the J1 ask, only if nothing came back.]
+```
+
+**Status:** DRAFT
+
+### 4c. [Owner Name], [Company], tier D, test arm `D-fb-J1`, CONTINUATION
+
+**Open:** https://www.facebook.com/... (the same thread the setup went to)
+**Prospect id:** [id] · **Metro:** [metro] · **Variant:** D-fb-J1
+**Opener type:** trade joke, continuation
+**Already sent:** setup on [YYYY-MM-DD HH:MM ET], `sent-log.csv` row [the SENT row id or its timestamp]
+**Joke this thread carries:** [the approved setup text, verbatim]
+**Reply check:** nothing came back as of [HH:MM ET] today, so the sequence continues
+
+The setup went out under an earlier day's approval and the sequence was interrupted by the
+cap or by the session ending. What is left goes here, under TODAY's approval, ahead of any
+new first touch on this channel. In `notes.json` every note of this entry carries
+`"sent_parts": ["setup"]` (or `["setup", "punchline"]`) and `"joke_setup"` set to the
+approved setup text above, or the lint fails the batch. Never re type an already sent
+message into this file to make the lint pass.
+
+```
+[Send 2, the punchline of THAT joke.]
 ```
 
 ```

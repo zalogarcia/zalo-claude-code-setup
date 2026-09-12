@@ -374,6 +374,37 @@ For each `FOUND` row:
   exactly like a new row does. **If anything came back at any point, including one word or one emoji, the row
   is REPLIED, the remaining parts are never sent, and the thread is Zalo's.** A laugh is a
   reply, so on this arm Zalo is usually the one who asks the question.
+
+  **How a continuation is written so the lint accepts it** (added 2026-09-12). A
+  continuation entry carries only the parts that still have to be typed, and every one of
+  its notes in `notes.json` carries two extra fields:
+
+  ```json
+  { "entry": 11, "channel": "facebook", "variant": "D-fb-J1", "part": "punchline",
+    "text": "Everything leaks eventually.",
+    "sent_parts": ["setup"], "joke_setup": "Why don't ducts keep secrets?" }
+  ```
+
+  `sent_parts` is what already went out, in send order, read off `sent-log.csv`: `["setup"]`
+  or `["setup", "punchline"]` and nothing else. `joke_setup` is the approved setup text this
+  thread is carrying, which is how the punchline still gets checked against its own setup a
+  day later. The parts in the batch have to be the contiguous run that follows `sent_parts`,
+  so an ask cannot jump a punchline that never went out. The batch entry quotes the
+  `sent-log.csv` rows it is claiming, because the marker is an assertion the lint cannot
+  verify by itself. Never pad the batch with text that already went out just to get a pass:
+  a batch file is the list of messages about to be typed, and a lint reading yesterday's
+  sends is a lint checking nothing.
+
+  **What a continuation costs (added 2026-09-12).** It does NOT consume a cold first touch
+  slot: that slot was spent on the day its setup went out, and a cold first touch is one
+  prospect, not one typed message. It DOES count for pacing like every message typed in these
+  apps, and it counts against the joke repetition cap, because it types that joke at a
+  stranger today exactly like a fresh row does. So the brake on a continuation heavy day is
+  the pacing gap, not the cap: six interrupted rows plus a full 10 row day is 42 typed
+  Facebook messages at 2 to 5 minutes each, which no session can hold. **Continuations are
+  typed FIRST, then as many new first touches as the session can fit at the full gap, and
+  the batch header states the typed message total for the day, not just the first touch
+  count.** Send fewer new rows and report the real number; never compress the gap.
 - **Pulled for stale evidence.** Re confirm per the hunting playbook. Live again means
   redraft. Still dead means demote the tier and open on a side note, or set `NO_CHANNEL`.
 - **Tier B created by Zalo.** Draft the tier B opener from the answering service fact in
@@ -492,6 +523,16 @@ so there is an acceptance rate; on Facebook and Instagram, 20 delivered owner DM
 days so there is a reply rate. Zero warnings is a safety condition, not a funnel condition,
 and it is not enough on its own.
 
+**A start date in the FUTURE means no ramp and no sends on that channel until that date**
+(added 2026-09-12). `config.md` already says a missing or placeholder
+`<channel>_ramp_start_date` gives that channel no ramp and no sends; a date that has not
+arrived yet is the same state, and it is the normal way a channel is opened ahead of time.
+The channel's quota is zero until the date, whatever its `ramp_week` and
+`daily_cold_ceiling` fields say, and the session header prints the date it is waiting for:
+`Facebook: not yet started, waiting for 2026-09-15, quota 0`. A channel whose Active column
+says yes and whose start date is in the future is CORRECTLY configured, not a contradiction,
+and it is not held back by a prose line somebody has to remember to read.
+
 Before this there was ONE shared ramp for all three channels, so opening a second channel
 either could not happen or silently halved the first. Now: opening Facebook costs LinkedIn
 nothing, and a warning that resets Facebook leaves LinkedIn where it was. The one exception
@@ -499,10 +540,12 @@ is two warning events on two different channels inside 7 days, which resets ever
 to week 1 and 10 a day, because that pattern is about how we are sending.
 
 **The caps still bind absolutely.** The ramp can only ever lower a channel's number, never
-raise it past the cap in the channel table. Today's number per channel is: the cap, reduced
-by an active hold, capped again by that channel's ramp ceiling, then on LinkedIn also
-capped by what is left of 80 invitations in the last 7 days, then minus what already went
-out today. State that arithmetic per channel in the session header.
+raise it past the cap in the channel table. Today's number per channel is: zero if that
+channel's `ramp_start_date` is missing, a placeholder, or a date still in the future,
+otherwise the cap, reduced by an active hold, capped again by that channel's ramp ceiling,
+then on LinkedIn also capped by what is left of 80 invitations in the last 7 days, then
+minus what already went out today. State that arithmetic per channel in the session header,
+including the date a not yet started channel is waiting for.
 
 **A cold first touch is one prospect, not one typed message.** The three part joke sequence
 of the `J` arm is ONE first touch against the daily cap and three typed messages against
@@ -653,10 +696,46 @@ approached again.
 | 2. One channel is dead | 15 DELIVERED messages (`SENT` rows) on a channel, zero replies, while another channel is replying | delivery on that channel, not the copy | stop that channel, keep the others, report | that channel |
 | 3. Replies are not reaching Zalo | 3 rows at `REPLIED` for more than 2 days with no stage movement | the report is not being read, or he is blocked | lead the report with them, say how long each has waited | nothing |
 | 4. Evidence is going stale | 3 rows in one session pulled for dead evidence | the seed list has aged | report it, name the date range of the stale rows, ask for a refresh of `prospects.csv` | nothing |
-| 5. Two weeks, nothing | 14 days of sending, zero replies on every channel | something structural: account standing, delivery, or market fit | stop the cold track entirely and say so plainly. Do not keep generating batches | the cold track |
+| 5. Two weeks, nothing | On EVERY active channel, EITHER 14 days have passed since that channel's FIRST DELIVERED message, OR that channel has been Active for 14 days and has delivered NOTHING at all (a channel that cannot deliver is evidence FOR this check, never a reason to hold it back). AND at least 20 delivered messages have reached day 7 across all channels together. AND zero replies of any kind. "Delivered" is check 1b's definition exactly: a `SENT` row, so a Facebook or Instagram DM to a personal profile or a LinkedIn acceptance follow up. `CONNECT` and `SENT_CONT` rows never count, and LinkedIn acceptance is check 1a's business, not this one | something structural: account standing, delivery, or market fit | stop the cold track entirely and say so plainly. Do not keep generating batches | the cold track |
 
 A warning event is not a health check; it stops a channel immediately and unconditionally,
 per the sending rules.
+
+**Why check 5 is written in delivered messages and not in calendar days** (restated
+2026-09-12). It used to read "14 days of sending, zero replies on every channel", which is
+the same misread checks 1a and 1b were fixed to stop making: a pending invitation is not a
+delivered message. Sending began 2026-09-08, so on 2026-09-22 the old wording fires on a
+delivered set of one Facebook message plus whatever the Facebook joke arm has managed since
+it opens on 2026-09-15, none of it 7 days old yet, and it would read 37 unaccepted LinkedIn
+invitations as two weeks of failed sending and halt the whole cold track on Facebook's day 7.
+
+The floor is **20 delivered messages aged 7 days** because that is the number this skill
+already uses everywhere a rate gets read: "no verdict on a variant under 20 sends", the per
+arm size of 20 against 20, and the ramp's own measured delivery gate of 20 delivered owner
+DMs aged day 7. Under that floor there is no reply rate to be zero, only a count.
+
+**A channel that has delivered nothing SATISFIES its half of the trigger, it does not
+disable the check** (corrected in the re audit of this fix, 2026-09-12). The first cut read
+"14 days since that channel's first delivered message" and nothing else, which made the
+check unreachable in exactly the state it exists to catch: on this account LinkedIn is
+`Active: yes` with 37 invitations and zero acceptances, so it has no delivered message and no
+14 day clock, and a literal reading let 400 unanswered Facebook messages pile up over five
+months without check 5 ever firing. A channel that has been open for two weeks and delivered
+nothing is the strongest structural evidence there is. Same trap in the other direction:
+opening a third channel must not push the halt out by another 14 days, which the OR branch
+also prevents, because a channel that has just opened and delivered nothing yet has not been
+Active for 14 days and so cannot satisfy either branch until it either delivers or goes two
+weeks dry.
+
+**Still say the denominator out loud.** When check 5 does not fire, the report says which
+conjunct is missing and its number, per channel: "check 5 not met: 14 delivered aged 7 days,
+floor is 20" is a different fact from "check 5 clear", and only one of them is ever true.
+
+The floor of 20 also makes check 5 the SLOW net, not the first one. Check 1b halts the
+session at 30 delivered across 2 tiers with no age requirement, so in any fast sending week
+1b trips first and stops the bleeding; check 5 is what catches the slow, quiet version that
+1b's counter never reaches, and it escalates the same evidence from a session halt to a cold
+track halt.
 
 ## The report shape
 
@@ -718,8 +797,13 @@ to claim, and filling the price fields in `call-one-pager.md` before the first b
 - `scripts/note-lint.py`, the deterministic gate on a session's `notes.json`; `ALL PASS`
   or the batch does not ship. It knows three variant families: `P1`/`P2` (the control),
   `N1` (the no pitch LinkedIn arm) and `J1`/`J2` (the Facebook joke arm), and applies the
-  dare and fixed line checks only where they belong.
+  dare and fixed line checks only where they belong. It also holds the arms to their own
+  channel (`N1` LinkedIn only, `J` Facebook only), the `N1` note to 120 to 240 characters,
+  and the joke arm to 4 rows per joke per day, and it accepts the `sent_parts` plus
+  `joke_setup` continuation marker so an interrupted joke sequence can be finished in a
+  later batch without padding it with messages that already went out.
 - `scripts/note-lint.test.py`, the lint's own suite: `python3 scripts/note-lint.test.py`.
   Run it after any change to the lint; a change that does not keep it green does not ship.
-- `scripts/fixtures/new-families.json`, one lintable note per test arm, so the arms can be
-  checked without a live batch.
+- `scripts/fixtures/new-families.json`, one lintable note per test arm plus one joke
+  CONTINUATION entry carrying the `sent_parts` and `joke_setup` marker, so every arm shape
+  can be checked without a live batch.

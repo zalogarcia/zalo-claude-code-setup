@@ -205,6 +205,11 @@ hours gap, "she called at 9 pm"), because those are facts read off a screen; wha
 here is what is banned everywhere, a number about a RESULT. The specific is still researched exactly as hard; this
 arm removes the pitch, not the work.
 
+**The 120 to 240 character band is enforced by the lint, not just written here** (2026-09-12).
+The arm measures a SHORT no pitch card, so a 267 character N1 is a different artifact even
+though it sits inside LinkedIn's 300 character limit. The arm is LinkedIn only in the lint
+too: an `N1` id on facebook or instagram fails.
+
 Variant id `<tier>-li-N1`. **Live today: `D-li-N1` only.** `C-li-N1` is registered in the
 scoreboard and is NOT sendable: tier C stays on the control while the accept gate has no
 number, and it opens only when Zalo says so or when the gate is measured. Tier A and B keep
@@ -266,7 +271,8 @@ layers, in this order, every session:
 1. **Read `templates/gold-notes.md` first**, before drafting a single note. That is the
    register. Draft toward it.
 2. **Run the lint.** Write the drafts to `evidence/YYYY-MM-DD/session-N/notes.json`
-   (a list of `{"entry", "channel", "variant", "text"}`) and run
+   (a list of `{"entry", "channel", "variant", "text"}`, plus `"part"` on joke notes and
+   `"sent_parts"` with `"joke_setup"` on a joke continuation) and run
    `python3 ~/.claude/skills/bu-cold-outreach/scripts/note-lint.py <that file>`. It is
    deterministic: contractions, banned phrases, links, unfilled tokens, length, dashes,
    sentence count, and opener diversity across the batch, plus the laws of the note's own
@@ -278,6 +284,27 @@ layers, in this order, every session:
    `ALL PASS` is required; a FAIL is a rewrite, never a send. Paste the lint output
    into the batch session header. The lint was built from the three returned rounds of
    2026-09-09 and fails every one of them.
+
+   Four more laws it enforces, added 2026-09-12 after the audit of `184db72`: each arm is
+   held to its own channel, so an `N1` note only passes on linkedin and a `J` note only on
+   facebook; an `N1` note is 120 to 240 characters, the band written below; no joke opens
+   more than 4 rows in one day; and a joke sequence interrupted on an earlier day is
+   finished with the continuation marker rather than by re typing what already went out.
+
+   **The continuation marker.** A joke entry whose setup, or setup and punchline, already
+   went out carries only what is left, and every one of its notes carries
+   `"sent_parts"` (what was delivered, in send order, read off `sent-log.csv`: `["setup"]`
+   or `["setup", "punchline"]`) and `"joke_setup"` (the approved setup text that thread is
+   carrying, so the punchline is still checked against its own setup a day later). The parts
+   in the batch have to be the contiguous run following `sent_parts`, so an ask cannot jump a
+   punchline that never went out. The order the notes are LISTED in does not matter; which
+   parts are present does. The marker is an assertion about `sent-log.csv` that the lint
+   cannot verify by itself, so the batch entry cites the rows it is claiming. Padding a
+   batch with already sent text to get a pass is the one thing this must never become: the
+   lint would then be reading yesterday's sends instead of today's drafts.
+
+   A continuation row counts against the joke repetition cap and against pacing, and it does
+   NOT consume a cold first touch slot: that slot was spent the day its setup went out.
 3. **The humanizer pass**, below, for what a regex cannot see.
 
 **The humanizer pass.**
@@ -369,10 +396,16 @@ copy.
 
 **Vary the joke across the batch, inside what six approved jokes allow.** Three per trade
 against a Facebook ceiling of 10 means a single trade day cannot give every row a different
-joke, so the rule is a cap, not a ban: **no joke goes to more than 4 rows in one day**, mix
-the two trades wherever the batch allows it, and rotate which joke leads. Zalo approving
-more jokes is what raises the variety; until then, state the repeat count in the batch
-header rather than pretending it is zero.
+joke, so the rule is a cap, not a ban: **no joke goes to more than 4 rows in one day**,
+enforced in `scripts/note-lint.py` since 2026-09-12 because as prose it was not enforced at
+all (the generic opener cap permits 5 of 10 identical, so 10 rows running two jokes five
+times each linted clean). **A row is a row whether it is fresh or a continuation**: a
+continuation types that joke's punchline at a stranger today exactly like a fresh row does,
+so it counts. Counting only today's setups left the whole continuation path uncapped, and 10
+continuation rows carrying one identical punchline and ask passed clean (found in the re
+audit of this fix). Mix the two trades wherever the batch allows it, and rotate which joke
+leads. Zalo approving more jokes is what raises the variety; until then, state the repeat
+count in the batch header rather than pretending it is zero.
 
 **The setup carries no greeting and no name.** Not "Hey Mike, why don't ducts keep
 secrets?" The name arrives in the ask. A name in front of a joke makes it read as a sales
