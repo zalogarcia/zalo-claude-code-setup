@@ -92,7 +92,8 @@ A row is READY TO WRITE only when all four are true:
 
 1. The sniper evidence is confirmed still live today (tier A and C), or the tier B fact is
    in the row from Zalo's mystery call, or the tier D side note is confirmed on screen.
-2. An owner name is known, or the row is honestly workable without one (see Step 2e).
+2. An owner name is known. A row with no name anywhere is a HOLD (Step 2f and Step 2E,
+   2026-09-13); it has no door on either live channel.
 3. A DM channel is open on LinkedIn, Facebook or Instagram, with the exact profile URL
    recorded.
 4. The prospect id does not already exist in `pipeline.csv` at a stage other than `FOUND`.
@@ -201,11 +202,56 @@ The personal profile is the better channel; see Step 3.
 **2e. Instagram bio and pinned posts.** Small trades often name the owner in the bio or
 run the account personally.
 
-**2f. No name anywhere.** The row is still workable but weaker. Use it only when the batch
-is short, and open with the business rather than a person: "Hey, whoever handles the
-phones at [Company]". Prefer named rows every time. Never guess a name, never use a name
-from a review written BY a customer, and never use a first name that appears only in a
-Google review as if it were the owner's.
+**2f. No name anywhere: HOLD (2026-09-13).** This used to say the row was workable but
+weaker, opening with "whoever handles the phones at [Company]". It is not workable on
+either live channel: Facebook needs a verified personal profile (2F.5) and LinkedIn needs
+the owner's own profile (Step 3.1), so a nameless row has no door. Hold it and write the
+reason, per Step 2E. Never guess a name, never use a name from a review written BY a
+customer, and never use a first name that appears only in a Google review as if it were the
+owner's.
+
+## Step 2E, route a NAMED row by whether it has a fact (2026-09-13)
+
+A name and a timed reachability fact are two different scarcities, and after 2026-09-13
+they are stocked very differently. Measured that day: the offline resolver read every row
+it could reach and the named pool went 110 to **320**, while the evidence miner covered
+186 of 186 named rows and found a qualifying fact on **14, 7.5 percent**. Google's review
+surfaces are closed to a logged out client (six endpoints tested and recorded in
+`~/dev/bu-cold-outreach/tools/evidence-miner/README.md`), so the miner could only read the
+reviews a business republishes on its own site, and conditional on that text existing at
+all the yield was 9.0 percent. **More offline pages will not fix it.**
+
+So a named row without a fact is NOT a hold. Route it:
+
+- **Name AND a qualifying fact** goes to a lane whose message carries the specific: the
+  control four part DM, an open profile message, an InMail, or the `N1` note (tier D only while the invitation hold is on, so `D-li-N1`; `C-li-N1` is
+  registered but NOT sendable per `templates/messages.md`, and the lint will not stop you
+  because it reads family and channel, never tier). `N1` removes
+  the PITCH, not the work: `templates/messages.md` says its specific is still researched
+  exactly as hard, so it needs the fact like the control does.
+- **Name, NO fact, TIER D ONLY** goes to the **J arm on Facebook**, and only there. The
+  joke opener carries no fact about the business by design, which is exactly why the budget
+  line above gives a J arm row no evidence load. It still needs 2F.4, the owner's personal
+  profile, which is browser work. **The tier is not optional:** the J arm is Facebook only
+  and tier D only, 20 sends (`templates/messages.md` "Test arm J", and `SKILL.md` on the two
+  measured arms), and the invitation tier rule reserves A and C for the lanes that deliver
+  on send. A tier A or C row must never be drafted as `A-fb-J1` or `C-fb-J1`; the lint does
+  not catch it because it checks channel and family, not tier, so this rule is the only
+  guard.
+- **A tier A or C row is not factless just because the evidence miner found nothing.**
+  Their fact is their own seed evidence, which is a different artifact: tier A's hiring post
+  for the phones, tier B's mystery call result, tier C's live ad. The miner only looks for a
+  timed reachability quote in reviews, which those tiers do not need. Confirm the seed
+  evidence is still live per Step 1 and route the row to the control DM, an open profile
+  message or an InMail. If the seed evidence is DEAD, Step 1 demotes the row to tier D
+  first, and only then does the bullet above apply.
+- **No name** is a hold, and after 2026-09-13 it is a hold nothing offline can lift.
+
+The consequence for a session's budget: the loads that used to hunt names are free now, and
+the fact is the thing worth spending them on. A Google reviews read in the logged in browser
+is the one source that can produce a fact the offline rail cannot, so a row that has a name
+and is destined for a LinkedIn lane earns that reserve load. A row destined for the J arm
+does not.
 
 ## Step 2F, resolve the owner's PERSONAL Facebook profile (the Facebook rail, 2026-09-12)
 
@@ -222,8 +268,18 @@ instead. Over the budget means hold the row and write the reason; never guess a 
 
 The ladder, cheapest first, stopping at the first hit:
 
-**2F.0. The pre resolved candidate file, read it BEFORE you load anything.**
-`research/owner-candidates-<date>.csv` (first written 2026-09-13, keyed by `prospect_id`)
+**2F.0. The pre resolved candidate files, read them BEFORE you load anything.** There are
+two: `research/owner-candidates-<date>.csv` for the name (below) and
+`research/evidence-candidates-<date>.csv` for the fact (14 qualifying quotes as of
+2026-09-13, each with `evidence_quote`, `evidence_url`, `evidence_shape` and
+`evidence_confidence`). A row appearing in BOTH is draft ready and should be worked first;
+Step 2E says where a row with only one of them goes. Two handling rules for the evidence
+file: only 4 of the 14 quotes carry a date the page actually shows, so a note built on an
+undated one says "a review on your site" and never invents "Jennifer's review from June";
+and a quote flagged `dash_in_quote` contains an em dash, so it is rewritten rather than
+pasted verbatim or the note lint rejects it.
+
+The owner file in detail: `research/owner-candidates-<date>.csv` (first written 2026-09-13, keyed by `prospect_id`)
 holds names mined offline from company websites, each with `owner_evidence_url` and a
 verbatim `owner_evidence_quote`, plus `owner_confidence` high or medium. A row with a
 candidate costs you a VERIFICATION, not a hunt: open the evidence URL, confirm the sentence
