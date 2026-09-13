@@ -216,11 +216,26 @@ Facebook rail, and budgeting for it is what stops the rail from quietly becoming
 page rail.
 
 **Budget: 5 page loads and 6 minutes for the row, of which this step gets 3 loads and about
-4 minutes.** A J arm row needs no evidence load, because the joke opener carries no fact
+4 minutes, or ONE load and about 1 minute when 2F.0 hands you a candidate.** A J arm row needs no evidence load, because the joke opener carries no fact
 about the business, so the budget that would have bought the specific buys the owner here
 instead. Over the budget means hold the row and write the reason; never guess a profile.
 
 The ladder, cheapest first, stopping at the first hit:
+
+**2F.0. The pre resolved candidate file, read it BEFORE you load anything.**
+`research/owner-candidates-<date>.csv` (first written 2026-09-13, keyed by `prospect_id`)
+holds names mined offline from company websites, each with `owner_evidence_url` and a
+verbatim `owner_evidence_quote`, plus `owner_confidence` high or medium. A row with a
+candidate costs you a VERIFICATION, not a hunt: open the evidence URL, confirm the sentence
+still says it, and go straight to 2F.4 with the name. A row carrying a `no_owner_reason`
+instead was already searched and came back empty, so do NOT re spend the budget on it;
+skip to the next row and note the reason. Two rules, because a candidate is evidence and
+not truth: where a candidate CONTRADICTS the seed `owner_name`, the website wins only if
+its quote is about the business itself and dated no older than the seed, otherwise hold
+the row and write both names; and a `medium` candidate is a first name only, so it needs
+2F.3 to become a person. Measured on the 2026-09-13 seed: rows that already carried a name
+drafted at 29.4 percent against 4.3 percent for rows without one, on identical page loads,
+which is why this step is first.
 
 **2F.1. The name you already have.** `prospects.csv` fills `owner_name` for many linkedin
 rail rows, and Step 0's homepage load often names him outright. A name in hand turns this
@@ -269,6 +284,21 @@ without searching.
    way record `open_profile: yes|no` in the pipeline notes; measured 2026-09-08, every
    owner profile opened was closed, and the share in this ICP is being measured on every
    row from now on.
+
+   **Check the flagged rows FIRST (2026-09-13).** The Apify export we already paid for
+   carries a top level `openProfile` boolean, and it is the WRONG field: it reads false on
+   1,345 of 1,345 profiles, including Joe Borter, whom a live session confirmed the same
+   morning as having a free composer. One falsification is enough, so the click stays
+   mandatory and `openProfile` is never read as a negative. What the export IS good for is
+   ORDER: Open Profile is a Premium feature, so `premium` is a necessary condition, and the
+   rows carrying `premium` true AND `composeOptionType` PREMIUM_INMAIL are 18 of our 110
+   owner rows. Check those 18 before the other 92: same information, about 9 minutes of
+   clicking instead of 55. The flags joined to 110 of 110 owner rows with zero unmatched,
+   so this costs nothing to apply. It is a prioritisation hypothesis with one positive
+   data point, and checking the 18 first is itself the test: after 18 rows the hit rate
+   inside the flagged set is measured. Our owners are 23.6 percent Premium against 52.0
+   percent across the whole harvest, which is independent reason to expect the low end of
+   the 5 to 40 percent open share.
    **Second, InMail for a closed tier A profile, then tier C, A first** (`<tier>-li-I1`),
    inside `inmail_credits_per_month` in `config.md`, delivered on send.
    **Third, the connection request carrying the message as its note** (300 character
