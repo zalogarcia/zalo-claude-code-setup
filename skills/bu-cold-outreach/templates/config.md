@@ -30,6 +30,11 @@ and that are older than about 6 months with a real photo and a bio that says wha
 | Channel | Active | Account | Daily cold cap | Other cap |
 | --- | --- | --- | --- | --- |
 | LinkedIn | yes | Zalo Kabche | 15 | 80 connection requests per week |
+
+Channel ordering is not fixed by this template. When two channels are open and the session
+ceiling has to be split, the working folder's config names which one takes the research
+budget first. On the live account since 2026-09-14 that is Facebook, with LinkedIn demoted
+to its deliver on send lanes on a measured accept gate of 0 of 37.
 | Facebook Messenger | yes | Zalo Kabche | 10 | |
 | Instagram | no | Zalo Kabche | 10 | |
 
