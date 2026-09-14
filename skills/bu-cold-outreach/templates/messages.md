@@ -37,6 +37,70 @@ no attachment, no calendar ask.
 Length: LinkedIn up to about 90 words, Facebook and Instagram up to about 60. If it needs
 scrolling on a phone it does not get read.
 
+## The offer law: sell the outcome, never the category (2026-09-14)
+
+Source: `research/ai-agents-sales-2026-09-12.md`, the one finding all four voices in the
+sweep agree on (buyers, sellers, vendors and creators), and the only one the vendors acted
+on with their own names. Rosie's headline is "Never miss another call". My AI Front Desk
+renamed itself Frontdesk. Jobber calls its product Receptionist. The seller quote is the
+whole law: "the second you lead with AI, half of them go straight to so I could just do
+that myself in ChatGPT for free." A cold caller who opens with "AI receptionist" reports it
+"drops you into the same bucket as every other reseller who called them last week".
+
+**The law is the FRAME, not the vocabulary, and this distinction is the whole thing.** The
+product we are selling is an answered call and a booked job. The technology is the
+mechanism, named once, in passing, because it is true. What is forbidden is the technology
+as the PRODUCT CATEGORY.
+
+| Forbidden, the tech as the product | What it is instead |
+| --- | --- |
+| "I help businesses with AI receptionists." | "Your phone gets answered after 5 and the job lands on your calendar." |
+| "We build AI agents for home service." | "It picks up when nobody can and books the job." |
+| "Our AI solution for HVAC." | "The calls you miss get answered and the job gets booked." |
+| "AI-powered voice automation." | "It answers in about five seconds and books the job." |
+
+**Zalo's P1 and P2 lines already obey this and do not change.** "I trained a demo AI setter
+on your website that takes those calls 24/7 and books the job" names the mechanism once and
+then spends the rest of the sentence on the outcome. That is the shape that works. He wrote
+and approved that line on 2026-09-08 and it is not reopened by this law; a reading of the
+research that banned the words "AI setter" would have failed every note he has ever
+approved, which would make the law wrong, not the copy.
+
+**Mechanical form.** `scripts/note-lint.py` carries both halves:
+
+- `TECH_AS_CATEGORY` is in `BANNED`, so "ai receptionist", "ai agent", "ai assistant",
+  "voice ai", "artificial intelligence", "our ai", "i help businesses" and the rest fail
+  any note in any family, on any channel. They are matched on WORD BOUNDARIES, plurals
+  included: "our ai" is inside "your air" and this is an HVAC skill, so a substring match
+  failed a note that quoted the prospect's own air conditioning (2026-09-14 QA pass).
+- Every note that carries an offer has to name BOTH halves of the outcome: an answered call
+  ("answers", "picks up", "takes those calls") and a booked job ("books the job"). The
+  fixed line is only the head of its sentence and the tail is drafted per row, so the
+  outcome can drift out of a note that still matches `P1_LINE`. It cannot now.
+
+## The position law: after hours and overflow, never replacement (2026-09-14)
+
+Same source, the second of its ten findings. **We are never replacing the person who
+answers the phone at 9 a.m.** The sweep's phrasing: "they will not fire their receptionist
+for your voice agent", and two years of one seller's failed local outreach ended on the
+sentence "I already have someone at the front desk". It is the single most reported
+objection in the whole sweep and it ends the replacement pitch every time it is tried.
+
+What we sell instead, in the owner's own terms: the calls that fall through. After hours,
+lunch, both lines busy, the tech on a roof, the Sunday emergency. A live human path is part
+of the product, not a concession: the buyer notes name "no instant path to a person" as a
+top refusal reason.
+
+**Tier B is not an exception to this and must not be read as one.** Tier B replaces a third
+party ANSWERING SERVICE, which is a vendor taking messages for a hundred companies at $200
+to $1,000 a month, not the person at the front desk. The sweep's strongest buyer segment is
+exactly that: "2 to 5 plumber teams paying $600 to $1,000 to Smith or Ruby for messages
+only". Replacing that service is the highest willingness sale in the ICP. Replacing his
+receptionist is the sale that does not exist.
+
+The pre written objection turn for the wall itself is under "The front desk wall, the
+objection that ends the pitch" in Zalo's rail at the bottom of this file.
+
 ## The specificity law (2026-09-09)
 
 The opener has to prove, in one clause, that a person looked at this business and not at
@@ -92,6 +156,49 @@ the thing that does this", and the owner stops reading. Shapes, by opener type:
 
 The bridge is a plain sentence, under 60 characters, no cleverness. It is the line that
 makes the demo claim follow from the research instead of sitting next to it.
+
+**The arithmetic bridge (added 2026-09-14).** The bridge has one more shape available to
+it, and the research says it is the strongest one there is. From
+`research/ai-agents-sales-2026-09-12.md`, finding 3: the close is the owner's own math,
+missed calls a week times ticket times close rate, which sellers report he does in his head
+in about four seconds, and five creators converge on it independently. So where the fact
+supports it, the bridge hands him the arithmetic instead of only naming who is on the
+phone. That also answers the 2026-09-11 register lesson, that a mechanical bridge ("That's
+a customer calling for an update") reads as a form: a number he can check against his own
+week does not.
+
+| Opener type | Arithmetic bridge |
+| --- | --- |
+| Hours gap, both ends visible | "Closed at 5 and open at 8 is fifteen hours a day that phone's on somebody." |
+| Hours gap plus a closed day | "That's every evening plus the whole of Sunday." |
+| Review naming how many times | "That's two calls you already know about, and she's the one who wrote it down." |
+| Multi location, one number | "Three areas, one line, and they don't take turns." |
+| Ad running plus posted hours | "The ad runs past 5 and the office doesn't." |
+
+**The hard constraint, and it is the one that makes this safe (2026-09-12, Astra's
+correction of M).** A bridge may only do arithmetic that is INSIDE what the review or the
+posted hours actually show. Closed at 5 and open at 8 is fifteen hours because the profile
+says both numbers. "Two messages" is two because the reviewer wrote it. What the bridge may
+never do is invent the number that is not on the screen: how many calls he misses, what a
+job is worth, what a percentage of them close, what it would earn him. Those are HIS
+numbers, he is the only one who has them, and the sweep is explicit that the close works
+because he does the multiplication himself.
+
+So: the arithmetic bridge hands him the SHAPE of his own math. The full missed call math
+and "one recovered job pays for the year" belong on the call, in `call-one-pager.md`, where
+he is the one supplying the ticket and the close rate. Never in message one.
+
+`scripts/note-lint.py` enforces the half it can see without reading the fact: a rate of
+calls or jobs per day, week, month or year, a "pays for itself" claim, and a money amount or
+a percentage **in the same sentence as a result** (his calls, jobs, leads, installs,
+bookings, revenue, voicemail, what he is missing or losing) all fail any note in any family.
+
+The sentence scoping is the part that matters. Quoting HIS OWN advertised price is approved
+opener type 3 above ("Your $79 tune up ad is running right now, and Google says you close at
+5"), and two notes carrying one went out on 2026-09-10. A flat ban on the dollar sign failed
+both, which is the false positive class this lint exists to prevent (2026-09-14 QA pass). His
+promo price is a fact on a screen; "$400 a month of calls in voicemail" is a claim about his
+results. Worked examples of the allowed shape are in `templates/gold-notes.md`.
 
 The test before the note is written: **could this clause be pasted into another company's
 DM with only the name swapped?** If yes, it is not the opener. Find one of the five above
@@ -446,6 +553,60 @@ row costs an owner resolution in the browser before it can be sent at all. Budge
 per Step 2F of `hunting-playbook.md` or the arm will quietly become a business page arm,
 which the rules forbid.
 
+## The Facebook group post, G1 (channel NOT STARTED, added 2026-09-14)
+
+**Nothing on this channel ships until Zalo opens it in `config.md` and says go. It has no
+start date on purpose.** The copy contract is written now so the channel is ready, not
+because it is running. See the Facebook groups section of `config.md` for the cap, the ramp
+and the two gates, and the Facebook groups section of `SKILL.md` for the motion.
+
+This is a different motion from everything else in this file. It is a POST in a local
+business, contractor or trade Facebook group, not a message to one person. Nobody is
+addressed by name. There is no "your website" to have trained a demo on, because a room of
+strangers has no website, and claiming one would be the one lie this rail cannot afford.
+What carries it is the outcome opener, the dare, and a number he can call right now.
+
+**The four parts of a group post.**
+
+1. **The outcome opener, in his metro.** "Be the only HVAC company in Miami whose phone
+   gets answered after 5 pm." Not "I built an AI receptionist", per the offer law above.
+2. **One line on what it does.** Answers in about five seconds, day or night, books the job
+   into the calendar. One line, not a feature list.
+3. **The dare, the same one the DMs use.** "Want to try and break it?"
+4. **The demo number.** The actual phone number, in the post. **No link on the first post**
+   (per the sweep: the link is what the group admins remove and what the owner does not
+   click). The agent on the other end is the pitch.
+
+**Two approved posts, in the register of everything else in this file:**
+
+> Be the only HVAC company in Miami whose phone gets answered after 5 pm. Mine picks up in
+> about five seconds, day or night, and books the job into the calendar. It's sitting there
+> right now: [demo number]. Want to try and break it?
+
+> Plumbers in Tampa, your phone rings at 9 on a Friday night and it's going to voicemail.
+> Mine answers in five seconds and books the job into the calendar. Want to try and break
+> it? Call it or text it: [demo number].
+
+**Vary the copy across groups.** Identical copy in five groups reads as spam to admins and
+to the same owners who are in three of those groups. The lint's opener diversity cap applies
+to G1 posts exactly as it does to notes: more than half the posts in a batch opening the
+same way fails the batch. The sweep's own warning is sharper than ours: the copy four
+creators teach is already being repeated word for word between them, which is the
+saturation signal.
+
+**What the lint holds a G1 post to** (`scripts/note-lint.py`, family `group`, channel
+`facebook_groups` or its short code `fbg`, variant id `<metro>-fg-G1`): 600 characters, a
+contraction, the dare, a demo number that parses as a phone number, both halves of the
+outcome, no link, no P1 or P2 line, no tech as a product category, 2 to 6 sentences, and no
+opener that addresses a PERSON. Addressing the room is fine and is the normal shape:
+"Hey everyone,", "Hey HVAC owners,", "Contractors," and "Plumbers in Tampa," all pass;
+"Hi Mike,", "Hi Mike.", "Hey Mike and Dana," and a bare "Mike," fail. A G1 post on any other
+channel fails, and any other family on `facebook_groups` fails.
+
+**The first post is not a pitch and the second touch is a DM, not a comment.** A person who
+calls the demo number is the agent's job to book. A person who comments goes to Zalo, in
+DM, like every other reply: Astra records it and stops.
+
 ## Tier A, the job post (strongest willingness signal that exists)
 
 He is hiring a CSR, dispatcher or front desk person right now. He is in buying mode today
@@ -606,13 +767,50 @@ The demo is built AFTER the reply, never before. That is what keeps message one 
 - Test it before it goes anywhere, with one question only that business could answer. A
   generic answer means regenerate once, then Free Form. A generic demo never gets sent.
 
+## The front desk wall, the objection that ends the pitch (added 2026-09-14)
+
+**"I already have someone at the front desk."** Per
+`research/ai-agents-sales-2026-09-12.md` this is the single most reported objection in the
+sweep, and it is the one that ends the replacement pitch every time it is tried: one seller
+spent two years on local outreach that died on this sentence. It is not a price objection
+and it is not skepticism about the tech. He has heard "replace your receptionist" and he is
+telling you no.
+
+**The shape is agree first, then narrow.** Every trades facing creator in the sweep
+converges on it independently, which is why it is corroborated rather than one person's
+claim. Do not argue with the premise, do not explain that the bot is cheaper than her, and
+do not mention her cost at all.
+
+> I'd still have your person on the phone during the day. This only catches the calls that
+> fall through: after hours, lunch, and when both lines are going at once.
+
+Three things that turn make it work, all of them from the buyer notes:
+
+1. **Agree.** His receptionist stays. Say it in the first clause, before anything else.
+2. **Narrow to the gap he already knows about.** After hours, lunch, both lines busy. Never
+   a new problem he has to be convinced of.
+3. **Leave the human path in.** It transfers to a person, it says it is automated in its
+   first breath. "No instant path to a person" and "a human name that hides that it is a
+   bot" are the top two refusal reasons in the buyer notes; a turn that does not mention the
+   human path wins the objection and loses the sale later.
+
+Variants of the same wall, same shape:
+
+- **"We pride ourselves on a personal touch."** Same turn, the version two creators use
+  verbatim: "I'd still have your person on the phone during the day, this only catches the
+  calls that fall through."
+- **"My wife answers the phone."** Same turn. Then the only question worth asking: "What
+  happens to the ones that come in while she's at the school run?"
+- **"I answer it myself."** Same turn, aimed at him: "You'd still get the ones you want.
+  This is for the ones that come in when you're under a house."
+
 ## Objections, short forms
 
 - "I do not trust AI." Try the demo and try to break it. If you hate it, no hard feelings.
 - "I already have an agency." Most clients did. This is the lead response layer, not the
   marketing.
-- "We already have a receptionist." This catches what she cannot: after hours, lunch, both
-  lines busy. She gets booked jobs instead of voicemails.
+- "We already have a receptionist." The front desk wall, above. Agree first, then narrow:
+  she stays on the phone during the day, this only catches the calls that fall through.
 - "We use an answering service." That is the replacement sale. Ask what it costs a month
   and how many of those messages became booked jobs.
 - "Is this a bot messaging me?" No, this is me typing. I do use AI to do the research so

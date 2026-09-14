@@ -42,5 +42,48 @@ reasoning across channels is where it went wrong the first time.
 ## 3. No `.claude/VERIFY.md` in `~/.claude` (opened 2026-09-12)
 
 Flagged by the audit. This repo has no deploy surface, so the proof signal for a skill
-change is its own test suite (`scripts/note-lint.test.py`, 80 cases) plus
+change is its own test suite (`scripts/note-lint.test.py`, 202 cases as of 2026-09-14) plus
 `codex-sync.py all`. If that stops being true, write the manifest.
+
+## 4. The lint cannot see the fact a bridge is doing arithmetic on (opened 2026-09-14)
+
+**What it is.** The arithmetic bridge (`templates/messages.md`) is legal only INSIDE what
+the review or the posted hours already show: "closed at 5 and open at 8 is fifteen hours"
+is arithmetic on two numbers that are on the screen. `scripts/note-lint.py` never loads the
+screen, so it cannot confirm that fifteen is the right answer, or that the profile says 5
+and 8 at all. A note claiming "that's twenty hours a day" on the same fact passes.
+
+**What contains it today.** The lint catches the four shapes that are unsupported whatever
+the fact was: a money amount, a percentage, an invented rate of calls per time window, and
+an ROI claim. Those are the failure modes the research warns about and the ones a drafter
+reaches for. Beyond that it is the same thing that already contains every other fact in a
+note: the specificity law's paste test, the humanizer pass, and Zalo's batch approval. A
+wrong bridge number is a wrong fact, and facts were never this script's job (see its
+docstring, "Facts are not checked here").
+
+**What would close it.** Carry the opener's source facts as structured fields on the note
+object (`hours_open`, `hours_close`, `review_count_claimed`) and have the lint recompute the
+arithmetic. That is a much larger change to the batch pipeline than the bridge law needed,
+and it would only cover the two shapes that are computable.
+
+**Priority.** Low. Nothing on the arithmetic bridge has shipped yet; the first batch written
+under it is the one after 2026-09-14.
+
+## 5. The Facebook groups channel is specified but unproven (opened 2026-09-14)
+
+**What it is.** `G1`, the group post family, is specified end to end: copy contract, lint
+laws, cap, ramp, log row, batch section, report line, learnings table, two gates. Zero posts
+have been made and the channel is `Active: no`
+with `facebook_groups_ramp_start_date: NOT STARTED`. Every claim about it is therefore a
+model of the rules, not an observation of them. In particular: nobody has confirmed that a
+group post carrying a phone number survives a real group's admin, the demo number does not
+exist in `config.md` yet, and the interrupt gate has never been run.
+
+**What contains it today.** The channel cannot start by accident: `NOT STARTED` is
+unparseable as a date, so step 0 of the quota arithmetic returns zero, and `Active: no` in
+the channel table is a second lock. No G1 note can even be drafted without a real phone
+number, because the lint requires one and bans unfilled tokens.
+
+**What would close it.** Zalo opening the channel, running the interrupt gate, and 20 posts
+with their calls per post recorded. Until then the honest statement about this channel is
+"specified, never run".

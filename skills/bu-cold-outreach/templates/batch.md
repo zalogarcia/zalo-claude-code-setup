@@ -163,6 +163,27 @@ message into this file to make the lint pass.
 
 ---
 
+## Facebook groups (NOT STARTED, added 2026-09-14)
+
+**This section stays empty until Zalo opens the channel in `config.md` and the demo
+interrupt gate has been run.** A batch carrying group posts while
+`facebook_groups_ramp_start_date` says `NOT STARTED` is a bug, not a draft.
+
+### 6. [Group name], [metro]
+
+**Open:** https://www.facebook.com/groups/...
+**Group:** [name] · **Members:** [n] · **Metro:** [metro] · **Variant:** [metro]-fg-G1
+**Admin rules read:** [the group's own promo rule, in one line, or "no promo rule posted"]
+**Demo number in the post:** [the number]
+
+```
+[Post]
+```
+
+**Status:** DRAFT
+
+---
+
 ## Status values
 
 | Value | Meaning |
@@ -176,6 +197,8 @@ message into this file to make the lint pass.
 | `HELD, channel stopped` | a warning event stopped that channel for the day |
 | `PULLED, evidence stale` | the ad stopped or the job post came down before sending; row goes back to FOUND |
 | `PULLED, [reason]` | anything else that stopped it, with the reason in plain words |
+| `POSTED YYYY-MM-DD HH:MM ET` | a Facebook group post went up; a `GROUP_POST` row exists in `sent-log.csv`. Never a delivered message and never a cold first touch |
+| `REMOVED BY ADMIN` | the post was taken down. Record it, do not repost in that group, and log it as a warning event if the account itself was actioned |
 
 ## Rules while sending
 

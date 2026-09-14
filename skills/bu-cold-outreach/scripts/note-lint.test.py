@@ -486,6 +486,396 @@ case("an N1 note under the band fails",
         "it?", "D-li-N1"), False, "the N1 band is 120 to 240")
 case("an N1 note inside the band still passes", li(N1_A, "D-li-N1"), True)
 
+
+# ============================================================== the offer law (2026-09-14)
+# From research/ai-agents-sales-2026-09-12.md: what is SOLD is the outcome, an answered call
+# and a booked job, never the technology as a product category. The first block is the
+# conflict guard and it is the reason this section exists at all: Zalo wrote and approved
+# P1_LINE himself on 2026-09-08 and it contains the words "AI setter", so a law written at
+# the level of VOCABULARY would fail every note he has ever approved. The law is the FRAME.
+
+
+def grp(text, variant="MIA-fg-G1", entry=1, channel="facebook_groups"):
+    return {"entry": entry, "channel": channel, "variant": variant, "text": text}
+
+
+case("the owner approved P1 line survives the offer law",
+     li(GOLD_LI[0][0], "C-li-P1"), True)
+case("the owner approved P2 line survives the offer law",
+     li(GOLD_LI[3][0], "D-li-P2"), True)
+case("the approved Facebook control survives the offer law",
+     fb(GOLD_FB[0][0], "D-fb-P1"), True)
+
+TECH_OPENER = ("Hi Mike, Dana's review from July says she waited two days. That's the call "
+               "this catches. I help businesses with AI receptionists. I trained a demo AI "
+               "setter on your website that takes those calls 24/7 and books the job. Want "
+               "to try and break it?")
+case("the tech as a product category fails in the opener",
+     li(TECH_OPENER, "D-li-P1"), False, "the tech as a product category")
+case("the reason names the frame and not the word",
+     li(TECH_OPENER, "D-li-P1"), False, "Sell the outcome")
+case("we build AI agents fails",
+     fb("Hey Mike, saw Dana's review from July. That's the call this catches.\n\nWe build AI "
+        "agents for home service. I trained a demo AI setter on your website. It answers "
+        "your calls and texts in about five seconds, 24/7, and books the job straight into "
+        "your calendar. Want to try and break it?", "D-fb-P1"),
+     False, "'ai agent'")
+case("our AI solution fails",
+     fb("Hey Mike, saw Dana's review from July. That's the call this catches.\n\nOur AI "
+        "solution is the thing here. I trained a demo AI setter on your website that picks "
+        "up and books the job. Want to try and break it?", "D-fb-P1"),
+     False, "the tech as a product category")
+case("voice AI fails",
+     li("Hi Mike, Dana's review from July says she waited two days. That's voice AI's whole "
+        "job. I trained a demo AI setter on your website that takes those calls 24/7 and "
+        "books the job. Want to try and break it?", "D-li-P1"),
+     False, "'voice ai'")
+case("artificial intelligence fails",
+     li("Hi Mike, Dana's review from July says she waited two days. That's artificial "
+        "intelligence for you. I trained a demo AI setter on your website that takes those "
+        "calls 24/7 and books the job. Want to try and break it?", "D-li-P1"),
+     False, "'artificial intelligence'")
+case("the offer law reaches the N1 arm too",
+     li("Hi Mike, your AI receptionist question. That's the call this catches every single "
+        "week at your shop. Mind if I ask you something about it?", "D-li-N1"),
+     False, "the tech as a product category")
+case("the offer law reaches the joke arm too",
+     fb("Alright Mike, real question and then I'll leave the AI receptionist jokes alone. "
+        "Would you be open to talking about the calls that come in after you close?",
+        "D-fb-J1", part="ask"), False, "the tech as a product category")
+
+# The positive half. P1_LINE and P2_LINE are fixed HEADS and their tails are drafted per row,
+# so a note can carry the approved head and still stop selling an outcome.
+case("a pitch note whose tail drops the booked job fails",
+     li("Hi Mike, Dana's review from July says she waited two days. That's the call this "
+        "catches. I trained a demo AI setter on your website that picks up 24/7. Want to "
+        "try and break it?", "D-li-P1"), False, "no booked job in the offer")
+case("a pitch note whose tail drops the answered call fails",
+     li("Hi Mike, Dana's review from July says she waited two days. That's the call this "
+        "catches. I trained a demo AI setter on your website and it books the job. Want to "
+        "try and break it?", "D-li-P1"), False, "no answered call in the offer")
+# Every note Zalo has approved already carries both halves, which is what makes the positive
+# check a law about his own copy rather than a new constraint on it.
+for i, (text, var) in enumerate(GOLD_LI + GOLD_FB):
+    COUNT += 1
+    low = text.lower()
+    if not any(a in low for a in lint.OUTCOME_ANSWER) or not lint.OUTCOME_BOOK_RE.search(text):
+        FAILURES.append(f"gold note {i + 1} does not name both halves of the outcome: {text[:60]!r}")
+
+# ------------------------------------------------- the arithmetic bridge guard (2026-09-14)
+# The bridge may hand him the SHAPE of his own math, inside what the hours or the review
+# already show. It may never assert a number about his results. The lint cannot read the
+# fact, so it catches an invented rate and an ROI claim outright, and a money amount or a
+# percentage only when it shares a sentence with a result.
+case("a money amount in a bridge fails",
+     li("Hi Mike, Google has you closed at 5. That's $400 a month of calls landing in "
+        "voicemail. I trained a demo AI setter on your website that takes those calls 24/7 "
+        "and books the job. Want to try and break it?", "D-li-P1"),
+     False, "a money amount")
+case("a percentage in a bridge fails",
+     li("Hi Mike, Google has you closed at 5. That's 30% of your calls dying there. I "
+        "trained a demo AI setter on your website that takes those calls 24/7 and books the "
+        "job. Want to try and break it?", "D-li-P1"), False, "a percentage")
+case("a missed call rate we invented for him fails",
+     li("Hi Mike, Google has you closed at 5. That's 12 calls a week going to voicemail. I "
+        "trained a demo AI setter on your website that takes those calls 24/7 and books the "
+        "job. Want to try and break it?", "D-li-P1"), False, "a rate we made up for him")
+case("an ROI claim in message one fails",
+     li("Hi Mike, Google has you closed at 5. One recovered job pays for the year. I "
+        "trained a demo AI setter on your website that takes those calls 24/7 and books the "
+        "job. Want to try and break it?", "D-li-P1"), False, "an ROI claim")
+case("hours arithmetic inside the posted hours passes",
+     li("Hi Mike, Google has the office closed at 5 and open at 8. So that's fifteen hours a "
+        "day the phone's on somebody. I trained a demo AI setter on your website that takes "
+        "those calls 24/7 and books the job. Want to try and break it?", "D-li-P1"), True)
+case("counting what the review itself says passes",
+     li("Hi Mike, Dana's review from July says she left two messages before anyone called "
+        "back. That's two calls you already know about. I trained a demo AI setter on your "
+        "website that takes those calls 24/7 and books the job. Want to try and break it?",
+        "D-li-P1"), True)
+case("24/7 is not a result claim", li(GOLD_LI[0][0], "C-li-P1"), True)
+case("five seconds is not a result claim", fb(GOLD_FB[0][0], "D-fb-P1"), True)
+
+# ------------------------------------------- G1, the Facebook group post (channel NOT STARTED)
+G1_A = ("Be the only HVAC company in Miami whose phone gets answered after 5 pm. Mine picks "
+        "up in about five seconds, day or night, and books the job into the calendar. It's "
+        "sitting there right now: 305 555 0142. Want to try and break it?")
+G1_B = ("Plumbers in Tampa, your phone rings at 9 on a Friday night and it's going to "
+        "voicemail. Mine answers in five seconds and books the job into the calendar. Want "
+        "to try and break it? Call it or text it: 813 555 0117.")
+case("group post A passes", grp(G1_A), True)
+case("group post B passes", grp(G1_B, entry=2), True)
+case("a group post on facebook fails the channel lock",
+     grp(G1_A, channel="facebook"), False, "the G1 arm is facebook_groups only")
+case("a control DM on facebook_groups fails the reverse lock",
+     grp(GOLD_FB[0][0], variant="D-fb-P1"), False, "takes G1 posts only")
+case("a group post with no demo number fails",
+     grp(G1_A.replace("305 555 0142", "the number in my bio")), False, "no demo number")
+case("a group post carrying the per prospect demo claim fails",
+     grp("Every HVAC shop in Miami loses the 6 pm call. I trained a demo AI setter on your "
+         "website that picks up and books the job. It's live at 305 555 0142. Want to try "
+         "and break it?"), False, "there is no 'your website' in a group")
+case("a group post addressed to one person by name fails",
+     grp("Hey Mike, your phone's going to voicemail after 5. Mine picks up in five seconds "
+         "and books the job into the calendar. Try it at 305 555 0142. Want to try and "
+         "break it?"), False, "not addressed to one person by name")
+case("a group post addressed to the room passes",
+     grp("Hey HVAC owners, your phone's going to voicemail after 5. Mine picks up in five "
+         "seconds and books the job into the calendar. It's live at 305 555 0142. Want to "
+         "try and break it?"), True)
+case("a group post with a link fails",
+     grp(G1_A + " https://blackumbrella.app"), False, "a link")
+case("a group post with no dare fails",
+     grp(G1_A.replace("Want to try and break it?", "Give it a go.")), False, "the dare is missing")
+case("a group post that never names the booked job fails",
+     grp("Be the only HVAC company in Miami whose phone gets answered after 5 pm. Mine picks "
+         "up in about five seconds, day or night. It's sitting there right now: 305 555 "
+         "0142. Want to try and break it?"), False, "no booked job in the offer")
+case("a group post selling the tech as a category fails",
+     grp("Miami HVAC owners, I've got an AI receptionist that picks up after 5 and books the "
+         "job into the calendar. It's live at 305 555 0142. Want to try and break it?"),
+     False, "the tech as a product category")
+case("a group post over the 600 character limit fails",
+     grp(G1_A + " " + G1_B + " " + G1_A), False, "over the facebook_groups limit 600")
+case("a group post with no contraction fails",
+     grp("Be the only HVAC company in Miami whose phone gets answered after 5 pm. Mine picks "
+         "up in about five seconds, day or night, and books the job into the calendar. The "
+         "number is 305 555 0142. Want to try and break it?"), False, "no contraction")
+
+# Identical copy across groups is the saturation failure the sweep names by hand (one
+# creator's post copied word for word by another). The opener diversity cap already bounds
+# it, and the group family is in that population by design.
+out = batch_case("five identical group posts fail the diversity cap",
+                 [grp(G1_A, entry=i) for i in range(1, 6)], 1)
+if "notes open the same way" not in out:
+    FAILURES.append(f"identical group posts: wrong message:\n{out}")
+out = batch_case("a mixed batch of two distinct group posts passes",
+                 [grp(G1_A, entry=1), grp(G1_B, entry=2)], 0)
+if "ALL PASS" not in out:
+    FAILURES.append(f"two distinct group posts: expected ALL PASS, got:\n{out}")
+
+case("an unknown family still fails and the message lists G1",
+     li(GOLD_LI[0][0], "C-li-Z9"), False, "O1, I1 or G1")
+
+
+# ================================================ the 2026-09-14 QA pass, one case per finding
+# Every case below is a defect the QA audit reproduced against the live corpus, not a
+# hypothetical. The two HIGH ones are false positives against copy that ALREADY WENT OUT,
+# which is the failure class this lint exists to prevent, so they are guarded first.
+
+# HIGH 1. Quoting HIS OWN advertised price is approved opener type 3, and two notes carrying
+# one were sent on 2026-09-10. A flat ban on "$" failed both. Real text, from sent-log.csv.
+SENT_0910_MAGGIE = ("Hi Maggie, saw your $83-off drain cleaning offer plus a free camera "
+                    "inspection; Google lists a 5pm close. So somebody's got to handle the "
+                    "evening calls. I trained a demo AI setter on your website that takes "
+                    "those calls 24/7 and books the job. Want to try and break it?")
+SENT_0910_GEORGE = ("Hi George, your $50 referral offer runs through Sept 30, but Google "
+                    "lists a 6pm close. That's a reason to catch calls after 6. I built a "
+                    "quick demo off your website: it picks up when nobody can, day or night, "
+                    "and books the job. Want to try and break it?")
+case("a sent note quoting his own $83 promo still passes", li(SENT_0910_MAGGIE, "C-li-P1"), True)
+case("a sent note quoting his own $50 promo still passes", li(SENT_0910_GEORGE, "C-li-P2"), True)
+case("the specificity law's own $79 tune up example passes",
+     li("Hi Mike, your $79 tune up ad's running right now, and Google says you close at 5. "
+        "So that ad money keeps ringing after hours. I trained a demo AI setter on your "
+        "website that takes those calls 24/7 and books the job. Want to try and break it?",
+        "C-li-P1"), True)
+case("a 0% interest ad quoted from his own page passes",
+     li("Hi Mike, your 0% Interest For 60 Months ad's running and Google says you close at "
+        "5. So that ad money keeps ringing after hours. I trained a demo AI setter on your "
+        "website that takes those calls 24/7 and books the job. Want to try and break it?",
+        "C-li-P1"), True)
+
+BRIDGE = ("Hi Mike, Google has you closed at 5. %s I trained a demo AI setter on your "
+          "website that takes those calls 24/7 and books the job. Want to try and break it?")
+case("a money amount NEXT TO a result still fails",
+     li(BRIDGE % "That's $400 a month of calls landing in voicemail.", "D-li-P1"),
+     False, "a money amount next to a result")
+case("8k of installs fails", li(BRIDGE % "That's 8k of installs sitting in voicemail.",
+     "D-li-P1"), False, "a money amount next to a result")
+case("eight grand a month of jobs fails",
+     li(BRIDGE % "That's eight grand a month of jobs in voicemail.", "D-li-P1"),
+     False, "a money amount next to a result")
+
+# HIGH 2. "our ai" is inside "your air", and this is an HVAC skill: prospects.csv carries
+# 3,016 businesses with "Air" in the name. Word boundaries, not substrings.
+case("a note quoting 'your air conditioning' passes",
+     li("Hi Dana, Marcus's review says your air conditioning tech was out there past 10 on a "
+        "Sunday. So somebody's picking up at 10 at night. I trained a demo AI setter on your "
+        "website that takes those calls 24/7 and books the job. Want to try and break it?",
+        "D-li-P1"), True)
+case("a note naming 'your Air Texas' line passes",
+     li("Hi Charles, Google has your Air Texas line closing at 7 weekdays. So somebody's "
+        "still getting those calls. I trained a demo AI setter on your website that takes "
+        "those calls 24/7 and books the job. Want to try and break it?", "D-li-P1"), True)
+case("'we do air conditioning too' is not the tech as a category",
+     fb("Hey Mike, saw Dana's review from July. That's the call this catches.\n\nWe do air "
+        "conditioning work ourselves, so I know the phones. I trained a demo AI setter on "
+        "your website. It answers your calls and texts in about five seconds, 24/7, and "
+        "books the job straight into your calendar. Want to try and break it?", "D-fb-P1"),
+     True)
+case("'Our AI does the rest' still fails",
+     li(BRIDGE % "Our AI does the rest.", "D-li-P1"), False, "'our ai'")
+case("the plural 'AI agents' still fails",
+     li(BRIDGE % "We build AI agents for home service.", "D-li-P1"), False, "'ai agent'")
+case("the plural 'AI receptionists' still fails",
+     li(BRIDGE % "I sell AI receptionists.", "D-li-P1"), False, "the tech as a product category")
+
+# MEDIUM 3. The invented rate has to survive the register the skill teaches, which spells
+# numbers out, and the "hundreds OF calls" and one adjective shapes.
+for bad in ["So that's about thirty calls a month you're missing.",
+            "So that's hundreds of calls a week going to voicemail.",
+            "So that's dozens of jobs every month sitting in voicemail.",
+            "So that's 30 missed calls a month right there.",
+            "So that's 40 calls a week."]:
+    case(f"invented rate fails: {bad[:34]}", li(BRIDGE % bad, "D-li-P1"),
+         False, "a rate we made up for him")
+case("arithmetic on the posted hours still passes",
+     li(BRIDGE % "So that's fifteen hours a day where that phone's on somebody.", "D-li-P1"), True)
+case("counting what the review says still passes",
+     li(BRIDGE % "That's two calls you already know about, and she's the one who wrote it "
+        "down.", "D-li-P1"), True)
+
+# MEDIUM 4. The group greeting rule: the room is not a person.
+GPOST = ("%s your phone's going to voicemail after 5. Mine picks up in five seconds and "
+         "books the job into the calendar. It's live at 305 555 0142. Want to try and break "
+         "it?")
+for head in ["Hey everyone,", "Hey folks,", "Hi all,", "Hey HVAC owners,", "Contractors,"]:
+    case(f"a group post addressed to the room passes: {head}", grp(GPOST % head), True)
+for head in ["Hi Mike,", "Hi Mike.", "Hey Mike and Dana,", "Mike,"]:
+    case(f"a group post addressed to a person fails: {head}", grp(GPOST % head),
+         False, "not addressed to one person by name")
+
+# MEDIUM 6. The whole file diversity cap is diluted by the other channels, so it also runs
+# per channel: five identical group posts inside a normal LinkedIn batch used to pass.
+MIXED = [grp(G1_A, entry=i) for i in range(1, 6)] + [
+    li(t, v, entry=10 + i) for i, (t, v) in enumerate(GOLD_LI)]
+out = batch_case("five identical group posts inside a LinkedIn batch fail per channel", MIXED, 1)
+if "on facebook_groups" not in out:
+    FAILURES.append(f"mixed batch: expected a per channel diversity failure, got:\n{out}")
+out = batch_case("a mixed batch with distinct group posts passes",
+                 [grp(G1_A, entry=1), grp(G1_B, entry=2)] +
+                 [li(t, v, entry=10 + i) for i, (t, v) in enumerate(GOLD_LI)], 0)
+if "ALL PASS" not in out:
+    FAILURES.append(f"mixed batch, distinct posts: expected ALL PASS, got:\n{out}")
+
+# LOW. Channel aliases: sent-log.csv writes the short codes, and an unknown channel used to
+# take LinkedIn's 300 silently.
+case("the short channel code 'li' is the linkedin channel",
+     {"entry": 1, "channel": "li", "variant": "C-li-P1", "text": GOLD_LI[0][0]}, True)
+case("the short channel code 'fb' is the facebook channel and gets its 420",
+     {"entry": 1, "channel": "fb", "variant": "D-fb-P1", "text": GOLD_FB[0][0]}, True)
+case("an unrecognised channel fails instead of silently taking 300",
+     {"entry": 1, "channel": "whatsapp", "variant": "C-li-P1", "text": GOLD_LI[0][0]},
+     False, "unrecognised channel")
+
+# LOW. The booking half of the outcome is a shape, not a fixed string list.
+for tail in ["books it straight into your calendar", "gets the job on your calendar",
+             "books you the job"]:
+    case(f"the booked job reads as booked: {tail}",
+         li("Hi Mike, Dana waited two days. That's the call this catches. I trained a demo "
+            "AI setter on your website. It answers your calls and " + tail + ". Want to try "
+            "and break it?", "D-li-P1"), True)
+
+# LOW. The outcome check reads the OFFER, not the whole note: the fact clause used to satisfy
+# it while the pitch itself was pure product speak.
+case("a fact clause cannot satisfy the outcome check for the offer",
+     li("Hi Dana, Dana's review says nobody answers the phone after 5 and she books the job "
+        "elsewhere. So that's a lost customer. I trained a demo AI setter on your website, "
+        "the same stack the big franchises run. Want to try and break it?", "D-li-P1"),
+     False, "no answered call in the offer")
+
+
+# ============================================ the 2026-09-14 QA pass, round two
+# Round one's fixes introduced their own gaps, and a mutation run found three mechanisms
+# with ZERO coverage: emptying ROOM_WORDS, cutting RESULT_NOUN down to "calls" and dropping
+# the second name from BARE_NAME all left the suite green. These cases close that.
+
+# ROOM_WORDS: addressing the room is the normal shape for a group post, and it has to be
+# the ALLOWLIST doing the work, not the shape of the string.
+for head in ["Hey everyone,", "Hey folks,", "Hi all,", "Hi guys,", "Hey team,",
+             "Alright,", "Okay,", "Look,", "Honestly,", "Hey Tampa,", "Hey Miami,",
+             "Plumbers,", "Contractors,", "Morning,"]:
+    case(f"the room is not a person: {head}", grp(GPOST % head), True)
+for head in ["Hi Dana,", "Hey Dana and Mike,", "Dana,", "Dana and Mike,", "Morning Dana,",
+             "Hello Dana."]:
+    case(f"a person is a person: {head}", grp(GPOST % head),
+         False, "not addressed to one person by name")
+
+# RESULT_NOUN: one case per noun class, because the sentence scoping is only as good as
+# this list and a mutation cutting it to "calls" survived the suite.
+for noun, claim in [("callers", "Thirty percent of your callers hang up before anyone picks up."),
+                    ("business", "That turns into $30,000 of business a year for you."),
+                    ("work", "That's $25,000 of work you never see."),
+                    ("appointments", "Those are $8,000 of appointments going to the next guy."),
+                    ("table", "You're leaving $40,000 on the table every year."),
+                    ("door", "Roughly 12k a month walks past your front door."),
+                    ("clients", "That's 40% of your clients calling somebody else."),
+                    ("voicemail", "That's $8,000 of installs sitting in voicemail.")]:
+    case(f"an invented result claim on {noun!r} fails", li(BRIDGE % claim, "D-li-P1"),
+         False, "next to a result")
+case("a spelled out percentage is still a percentage",
+     li(BRIDGE % "Thirty percent of your callers give up.", "D-li-P1"),
+     False, "a percentage next to a result")
+
+# F-6: the group post's offer is everything after its opener, so a quoted review in the
+# opener cannot satisfy the outcome check. Same bug that was fixed for the pitch family.
+case("a review quoted in a group post opener cannot satisfy the offer",
+     grp("Plumbers in Tampa, the Google review says nobody answers the phone after 5 and she "
+         "books the job somewhere else. Mine is a front desk that never sleeps. It's at 813 "
+         "555 0117. Want to try and break it?", "TPA-fg-G1"),
+     False, "no answered call in the offer")
+
+# F-5: linkedin_dm is the limit the O1 and I1 lanes borrow, not a channel a note may declare.
+# Declaring it bought a 420 character invitation note.
+LONG_INVITE = ("Hi Mike, Dana's review from July says she left two messages before anyone "
+               "called her back and the same thing happened to her neighbour that week on a "
+               "Sunday night. That's the call this catches every time. I trained a demo AI "
+               "setter on your website that takes those calls 24/7 and books the job. Want "
+               "to try and break it? Call it, text it, throw it your weirdest customer.")
+case("an invitation note over 300 fails on linkedin",
+     li(LONG_INVITE, "C-li-P1"), False, "over the linkedin limit 300")
+case("declaring the internal linkedin_dm limit as a channel fails",
+     {"entry": 1, "channel": "linkedin_dm", "variant": "C-li-P1", "text": LONG_INVITE},
+     False, "unrecognised channel")
+
+# F-8: the answered half has to match the passive, which is how the offer law's own
+# replacement column phrases it.
+case("'your phone gets answered' reads as the answered call",
+     li("Hi Mike, Dana waited two days. That's the call this catches. I trained a demo AI "
+        "setter on your website: your phone gets answered after 5 and it books the job. "
+        "Want to try and break it?", "D-li-P1"), True)
+case("'schedules the job' reads as the booked job",
+     li("Hi Mike, Dana waited two days. That's the call this catches. I trained a demo AI "
+        "setter on your website that answers the phone and schedules the job. Want to try "
+        "and break it?", "D-li-P1"), True)
+
+# F-4: BANNED is the list common() reads, so appending to it has to work. A plain phrase
+# gets substring matching; a tech phrase gets word boundaries.
+COUNT += 1
+if "ai receptionist" not in lint.BANNED or "leverage" not in lint.BANNED:
+    FAILURES.append("BANNED no longer carries both halves of the ban list")
+COUNT += 1
+if lint.TECH_SET != set(lint.TECH_AS_CATEGORY):
+    FAILURES.append("TECH_SET has drifted from TECH_AS_CATEGORY")
+
+# F-7: the diversity buckets and check() have to normalise the channel the same way, or an
+# omitted channel key splits one population in two and hides a saturation.
+# Four byte identical LinkedIn openers, two of them with the `channel` key omitted, beside
+# five distinct Facebook openers. The whole file cap is 5 and 4 is under it, so only the per
+# channel pass can see this; when the omitted key bucketed separately it split 4 into 2 and
+# 2 and the saturation disappeared entirely.
+NOCH = [{"entry": i, "variant": "C-li-P1", "text": GOLD_LI[0][0]} for i in (1, 2)]
+WITHCH = [li(GOLD_LI[0][0], "C-li-P1", entry=i) for i in (3, 4)]
+OTHER = [fb(t, "D-fb-" + v[-2:], entry=20 + i) for i, (t, v) in enumerate(GOLD_LI[1:])]
+out = batch_case("an omitted channel key does not split the diversity population",
+                 NOCH + WITHCH + OTHER, 1)
+if "on linkedin" not in out:
+    FAILURES.append(f"omitted channel key: expected the linkedin population to fail, got:\n{out}")
+COUNT += 1
+if lint.note_channel({}) != "linkedin" or lint.note_channel({"channel": "LI"}) != "linkedin":
+    FAILURES.append("note_channel does not normalise a missing or upper case channel")
+
 print(f"{COUNT} cases")
 if FAILURES:
     print(f"{len(FAILURES)} FAILURE(S):")

@@ -41,6 +41,7 @@ many threads are sitting unanswered and for how long.)
 - Cold first touches sent, per channel against that channel's own number: LinkedIn [n] of [n], Facebook [n] of [n], Instagram [inactive or n of n]. Total [n], which is the sum
 - Test arms: [n] `D-li-N1` of 20, [n] `D-fb-J1` of 20, [n] `D-fb-J2` of 20, and the control counts beside them
 - Bumps sent: [n] ([n] first bumps, [n] takeaways)
+- Facebook group posts: [n of its own number, or "channel NOT STARTED"] · calls to the demo number since the last session: [n] · removed by an admin: [n]. Posts are not cold first touches and are not in the totals above
 - New rows worked: [n] found, [n] owner resolved, [n] NO_CHANNEL, [n] pulled on stale evidence
 - Replies read: [n] · marked DEAD: [n]
 - Mode: [approval on, nothing sent, [n] drafts waiting] or [approval off, sent within caps]

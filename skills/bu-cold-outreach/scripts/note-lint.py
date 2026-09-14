@@ -15,9 +15,9 @@ checks. Exit 1 if anything failed. Facts are not checked here; the humanizer pas
 and the approval do that. This catches the machine tells that slipped through
 three times on 2026-09-09.
 
-Three variant families, split out 2026-09-12 when the two test arms were added. The
-family is read off the end of the variant id, and the laws that belong to one family
-are not applied to another:
+Four variant families. Three were split out 2026-09-12 when the test arms were added, the
+fourth 2026-09-14 with the Facebook groups channel. The family is read off the end of the
+variant id, and the laws that belong to one family are not applied to another:
 
   P1, P2  the control. The four part message one. Dare required, fixed "what we do"
           line required, bridge required. Unchanged from 2026-09-09.
@@ -25,17 +25,44 @@ are not applied to another:
           note ends on the fixed permission question.
   J1, J2  the Facebook trade joke opener. Three parts per prospect, each an approved
           fixed string, no digits, no pitch, no dare.
+  G1      the Facebook group post. Nobody addressed by name, no per prospect demo
+          claim, the dare and the demo number required. Channel NOT STARTED.
 
-The two test arms are channel locked, so the channel is checked against the family: an N1
-note only lints on linkedin and a J note only lints on facebook (added 2026-09-12 after the
-audit found a J triple on linkedin and an N1 on facebook both linting clean).
+Three families are channel locked, so the channel is checked against the family: an N1 note
+only lints on linkedin, a J note only on facebook (both added 2026-09-12 after the audit
+found a J triple on linkedin and an N1 on facebook linting clean), and a G1 post only on
+facebook_groups.
+
+The offer law runs across ALL of them (added 2026-09-14): the tech as a product category is
+banned everywhere, and every family that carries an offer has to name the outcome.
 
 Tests: python3 ~/.claude/skills/bu-cold-outreach/scripts/note-lint.test.py
 """
 import json, re, sys
 
 CONTRACTION = re.compile(r"(?i)\b\w+'s\s+(picking|running|live|on|not|going|been|still|already|just|coming|landing|doing|sitting|open|closed|out|in|at|the|a|an)\b|\b(that's|it's|you're|they're|we're|i'm|i've|you've|we've|there's|here's|what's|who's|somebody's|someone's|nobody's|ad's|isn't|aren't|wasn't|weren't|don't|doesn't|didn't|can't|won't|wouldn't|couldn't|shouldn't|i'll|you'll|we'll|he's|she's|let's|you'd|i'd|we'd)\b")
-BANNED = [
+# The offer law, added 2026-09-14 from research/ai-agents-sales-2026-09-12.md. The thing
+# being SOLD is the outcome, an answered call and a booked job, never the technology as a
+# product category. All four voices in that sweep agree (buyers, sellers, vendors, creators)
+# and the vendors renamed themselves to match: Rosie leads with "Never miss another call",
+# My AI Front Desk became Frontdesk, Jobber calls it Receptionist. The seller quote is the
+# whole rule: "the second you lead with AI, half of them go straight to so I could just do
+# that myself in ChatGPT for free", and a cold caller reports "AI receptionist" in the opener
+# "drops you into the same bucket as every other reseller who called them last week".
+#
+# The law is the FRAME, not the vocabulary. P1_LINE names the mechanism once and then
+# describes the outcome, which is the shape that works, and it is Zalo's own approved copy
+# from 2026-09-08. So what is banned is the tech as a PRODUCT CATEGORY ("we build AI agents
+# for home service", "our AI solution"), never the word that appears inside his fixed line.
+TECH_AS_CATEGORY = [
+    "ai receptionist", "ai agent", "ai assistant", "ai employee", "ai chatbot", "ai bot",
+    "ai automation", "ai technology", "ai tool", "ai software", "ai platform", "ai system",
+    "ai service", "voice ai", "ai voice", "ai-powered", "ai powered", "ai solution",
+    "artificial intelligence", "i help businesses", "we help businesses",
+    "i help companies", "we help companies", "i build ai", "we build ai", "we do ai",
+    "our ai", "automation agency", "ai agency", "ai agencies", "ai receptionists",
+]
+BANNED_PLAIN = [
     "that is a person", "that is you", "that is your", "that is someone", "that is somebody",
     "caught my eye", "i noticed", "i came across", "hope you", "i hope", "reach out to you",
     "leverage", "streamline", "seamless", "solution", "cutting-edge", "game changer",
@@ -44,10 +71,32 @@ BANNED = [
     "i would love", "i'd love to", "let me know if", "feel free", "don't hesitate",
     "website: answers",
 ]
+BANNED = BANNED_PLAIN + TECH_AS_CATEGORY
+TECH_SET = set(TECH_AS_CATEGORY)
+# The tech phrases are matched on WORD BOUNDARIES, not as bare substrings, and in an HVAC
+# skill that is not a nicety: "our ai" is inside "your air", "we do ai" is inside "we do air
+# conditioning", and `prospects.csv` carries 3,016 businesses with "Air" in the name. The
+# 2026-09-14 QA pass caught a plain substring version failing a note that quoted the
+# prospect's own air conditioning. The plain list above keeps substring matching, unchanged.
+# The trailing `s?` is what makes the plural forms fire: "we build AI agents" is the shape a
+# drafter actually writes, and a bare \b after "agent" refuses to match it.
+TECH_RE = {p: re.compile(r"\b" + re.escape(p) + r"s?\b") for p in TECH_AS_CATEGORY}
 DARE = "want to try and break it?"
 P1_LINE = "trained a demo ai setter on your website"
 P2_LINE = "built a quick demo off your website"
-LIMITS = {"linkedin": 300, "linkedin_dm": 420, "facebook": 420, "instagram": 420}
+LIMITS = {"linkedin": 300, "linkedin_dm": 420, "facebook": 420, "instagram": 420,
+          "facebook_groups": 600}
+# `sent-log.csv` writes the short channel codes and the batch files have used both, so a note
+# arriving as "fb" used to fall through to the 300 character LinkedIn default in silence. The
+# aliases make the two vocabularies one, and an unrecognised channel now fails instead of
+# quietly taking a limit that belongs to another channel (2026-09-14 QA pass).
+CHANNEL_ALIASES = {"li": "linkedin", "fb": "facebook", "ig": "instagram",
+                   "fbg": "facebook_groups", "facebook messenger": "facebook",
+                   "facebook_messenger": "facebook"}
+# The channels a note may declare. `linkedin_dm` is in LIMITS but is NOT one of them: it is
+# the limit the O1 and I1 lanes borrow, and a note declaring it would buy a 420 character
+# invitation note (2026-09-14 QA pass, second round).
+CHANNELS = {"linkedin", "facebook", "instagram", "facebook_groups"}
 # The two LinkedIn lanes that deliver on send (open profile message O1, InMail I1, added
 # 2026-09-12) are DMs, not invitation notes: they carry the Facebook control shape and its
 # 420 limit, and they exist on LinkedIn only.
@@ -57,6 +106,71 @@ LINK = re.compile(r"(?i)https?://|\bwww\.")
 # Figure dash, en dash, em dash, horizontal bar, written as escapes so this file is
 # itself free of the characters it bans.
 DASH = re.compile("[\u2012\u2013\u2014\u2015]")
+
+# The bridge may hand the owner the SHAPE of his own arithmetic, but only inside what the
+# review or the posted hours already show (messages.md, the arithmetic bridge). What it may
+# never do is assert a number about HIS results: the sweep's close is the owner's own math
+# done in his head, not ours done for him, and this skill's oldest law is that Astra's
+# messages carry no numbers about results at all. The lint cannot read the fact behind a
+# bridge, so it catches an invented rate and an ROI claim outright, and a money amount or a
+# percentage only when it shares a SENTENCE with a result. It is a gate, not a proof: a
+# claim split across two sentences gets through. See OPEN-GAPS.md #4 for why that residue
+# is deliberate (closing it reintroduces the false positive on his own quoted promo price).
+# A number in a note is not automatically a claim about his results. Quoting his OWN
+# advertised price is approved opener type 3 ("Your $79 tune up ad is running right now, and
+# Google says you close at 5") and two notes that already went out on 2026-09-10 quote an
+# "$83-off drain cleaning offer" and a "$50 referral offer". A flat ban on "$" failed both,
+# which is the exact false positive class this lint exists to avoid (found by the 2026-09-14
+# QA pass). So money and percentages are only a claim when they sit in the same SENTENCE as
+# a result: his calls, his jobs, his revenue, what he is missing or losing.
+NUMWORD = (r"(?:\d+|a\s+few|dozens?|hundreds?|thousands?|two|three|four|five|six|seven|eight|"
+           r"nine|ten|eleven|twelve|fifteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety)")
+MONEY = re.compile(r"(?i)\$\s*\d|\b\d+(?:\.\d+)?\s*k\b|\b" + NUMWORD + r"\s*(?:dollars|bucks|grand)\b")
+PERCENT = re.compile(r"(?i)\b\d+(?:\.\d+)?\s*%|\b(?:\d+(?:\.\d+)?|" + NUMWORD[4:-1] + r")\s*percent\b")
+RESULT_NOUN = re.compile(r"(?i)\b(?:calls?|callers?|jobs?|leads?|customers?|clients?|installs?|"
+                         r"bookings?|appointments?|estimates?|sales|deals?|revenue|business|work|"
+                         r"voicemail|missing|missed|lost|losing|worth|ticket|table|door)\b")
+SENTENCE_CLAIMS = [
+    (MONEY, "a money amount next to a result: message one carries no numbers about results"),
+    (PERCENT, "a percentage next to a result: message one carries no numbers about results"),
+]
+RESULT_CLAIMS = [
+    # Spelled out numbers, "hundreds OF calls" and one adjective between the count and the
+    # noun all had to be added: the house register spells numbers out ("fifteen hours a day",
+    # "two calls"), so the digits only version banned the shape nobody writes and passed the
+    # shape the drafter actually reaches for.
+    (re.compile(r"(?i)\b" + NUMWORD + r"\s+(?:of\s+)?(?:\w+\s+)?(?:calls?|jobs?|leads?|customers?)\b"
+                r"[^.?!]{0,30}\b(?:an?|per|every)\s+(?:day|week|month|year)\b"),
+     "a rate we made up for him: the missed call math is HIS to do, on the call"),
+    (re.compile(r"(?i)\bpays? for (?:itself|the year|the month|it)\b"),
+     "an ROI claim: that is the close on the call, not message one"),
+]
+
+
+def result_claims(text):
+    """Every shape that asserts a number about HIS results, whatever fact it hangs on."""
+    reasons = []
+    for sent in sentences(text):
+        if not RESULT_NOUN.search(sent):
+            continue
+        for pattern, why in SENTENCE_CLAIMS:
+            if pattern.search(sent): reasons.append(why)
+    for pattern, why in RESULT_CLAIMS:
+        if pattern.search(text): reasons.append(why)
+    return reasons
+
+# The positive half of the offer law. A pitch note has to say what he GETS, in outcome
+# words, not just that a demo exists: the fixed line alone is a mechanism sentence, and its
+# tail is drafted per row, so the outcome can drift out of it while P1_LINE still matches.
+# "catches" is deliberately NOT in this list. It is the bridge word ("that's the call this
+# catches"), so counting it as the offer let a note that never says what the thing DOES pass
+# on the strength of its own bridge clause.
+OUTCOME_ANSWER = ["answers", "answer ", "answered", "picks up", "pick up", "picking up",
+                  "takes those calls", "takes the calls", "takes your calls", "gets the phone"]
+OUTCOME_BOOK_RE = re.compile(
+    r"(?i)\bbooks?\s+(?:the\s+job|the\s+appointment|jobs|it|them|you|him|her)\b"
+    r"|\bgets?\s+(?:the\s+job|it)\s+(?:on|into|in|booked)\b|\bon\s+(?:your|the)\s+calendar\b"
+    r"|\bschedul\w+\s+(?:the\s+)?(?:job|appointment|work)\b|\bbooks?\s+the\s+work\b")
 
 # The N1 arm exists to measure a note with NO offer in it, so an offer in any wording is
 # the one thing it cannot carry. The two exact pitch lines are not enough: a paraphrase
@@ -91,14 +205,29 @@ J_PARTS = ("setup", "punchline", "ask")
 # jokes against a Facebook ceiling of 10 makes this a cap, not a ban, and before it was a
 # number in the lint it was prose only: 10 rows running two jokes five times each passed.
 J_ROW_CAP = 4
-FAMILIES = {"P1": "pitch", "P2": "pitch", "N1": "nopitch", "J1": "joke", "J2": "joke", "O1": "pitch", "I1": "pitch"}
+FAMILIES = {"P1": "pitch", "P2": "pitch", "N1": "nopitch", "J1": "joke", "J2": "joke",
+            "O1": "pitch", "I1": "pitch", "G1": "group"}
+# G1, the Facebook group post (added 2026-09-14, channel NOT STARTED, see config.md). It is
+# a post in a local business or trade group, not a DM: nobody is addressed by name, there is
+# no "your website" to have trained a demo on, and what carries it is the outcome opener plus
+# the dare plus the demo number. It lints so that the offer law is mechanical on this channel
+# from its first draft rather than prose only, and nothing on it ships until Zalo opens the
+# channel and the demo agent passes the interrupt gate in SKILL.md.
+DEMO_NUMBER = re.compile(r"\b(?:\+?1[ .\-]?)?\(?\d{3}\)?[ .\-]?\d{3}[ .\-]?\d{4}\b")
 # Both test arms are one channel each, by design: N1 measures the LinkedIn accept gate and
 # the J arm is a Facebook personal profile opener. A family on the wrong channel is not a
 # variant of the arm, it is a different experiment nobody approved.
-ARM_CHANNEL = {"nopitch": ("linkedin", "N1", "an"), "joke": ("facebook", "J", "a")}
+ARM_CHANNEL = {"nopitch": ("linkedin", "N1", "an"), "joke": ("facebook", "J", "a"),
+               "group": ("facebook_groups", "G1", "a")}
 # messages.md: the N1 note is 3 to 5 sentences and 120 to 240 characters. The band is part of
 # the arm, because the thing being measured is a SHORT no pitch card.
 N1_BAND = (120, 240)
+
+
+def note_channel(note):
+    """One normalisation, used by check() AND by the diversity buckets. They disagreed."""
+    raw = (note.get("channel") or "linkedin").lower()
+    return CHANNEL_ALIASES.get(raw, raw)
 
 
 def family(variant):
@@ -126,7 +255,13 @@ def common(text, ch, low, limit_key=None):
     if DASH.search(text): reasons.append("em or en dash")
     if len(text) > LIMITS.get(key, 300): reasons.append(f"{len(text)} chars over the {key} limit {LIMITS.get(key, 300)}")
     for b in BANNED:
-        if b in low: reasons.append(f"banned phrase: {b!r}")
+        if b in TECH_SET:
+            if TECH_RE[b].search(low):
+                reasons.append(f"the tech as a product category: {b!r}. Sell the outcome, "
+                               "the call answered and the job booked")
+        elif b in low:
+            reasons.append(f"banned phrase: {b!r}")
+    reasons += result_claims(text)
     if "!" in text: reasons.append("exclamation mark")
     if LINK.search(text): reasons.append("a link: message one never carries one")
     if "[" in text or "]" in text: reasons.append("an unfilled token")
@@ -147,7 +282,31 @@ def check_pitch(text, low, var):
     pitch_idx = next((i for i, s in enumerate(sents) if P1_LINE in s.lower() or P2_LINE in s.lower()), None)
     if pitch_idx is None: reasons.append("no pitch sentence")
     elif pitch_idx < 2: reasons.append("no bridge: the pitch follows the fact with nothing in between")
+    reasons += outcome_missing(" ".join(sents[pitch_idx:]) if pitch_idx is not None else text)
     if re.search(r"\b\d+-month-old\b", low): reasons.append("N-month-old time reference")
+    return reasons
+
+
+def outcome_missing(text):
+    """The offer law's positive half: the note names what he gets, answered and booked.
+
+    P1_LINE and P2_LINE are the fixed heads of their sentences and the TAIL is drafted per
+    row ("that takes those calls 24/7 and books the job", "it picks up when nobody can, day
+    or night, and books the job"), so a row can carry the approved head and still drift into
+    describing a product. Both halves are in every note Zalo has approved.
+
+    Read the OFFER, not the whole note. A bag of words over the whole text was satisfied by
+    the fact clause: a note whose opener quoted a review saying "nobody answers the phone and
+    she books the job elsewhere" passed with a pitch that was pure product speak
+    (2026-09-14 QA pass). The caller passes the offer half; a family with no pitch sentence
+    to anchor on passes the whole text, which is the old behaviour.
+    """
+    low = text.lower()
+    reasons = []
+    if not any(a in low for a in OUTCOME_ANSWER):
+        reasons.append("no answered call in the offer: say it answers, picks up or takes the calls")
+    if not OUTCOME_BOOK_RE.search(text):
+        reasons.append("no booked job in the offer: the outcome sold is the job on the calendar")
     return reasons
 
 
@@ -167,6 +326,61 @@ def check_nopitch(text, low):
     sents = sentences(text)
     if not 3 <= len(sents) <= 5: reasons.append(f"{len(sents)} sentences, want 3 to 5")
     if re.search(r"\b\d+-month-old\b", low): reasons.append("N-month-old time reference")
+    return reasons
+
+
+# Words that address the ROOM. The first cut of the rule keyed on capitalisation under
+# (?i), which made it "greeting plus one word plus comma": it rejected "Hey everyone," and
+# "Hi all," and passed "Hi Mike." and "Mike, your phone" (2026-09-14 QA pass).
+ROOM_WORDS = {
+    # the room
+    "everyone", "everybody", "folks", "all", "guys", "team", "owners", "y'all", "yall",
+    "anyone", "anybody", "contractors", "plumbers", "techs", "neighbors", "neighbours",
+    "there", "friends", "crew",
+    # sentence adverbs and openers that address nobody
+    "alright", "allright", "okay", "ok", "look", "listen", "so", "honestly", "right",
+    "well", "anyway", "quick", "real", "serious", "genuine", "update", "psa", "morning",
+    "afternoon", "evening", "first", "second", "also", "meanwhile", "anyways",
+    # the metros in play, per config.md "Metros in play"
+    "phoenix", "dallas", "worth", "houston", "tampa", "orlando", "miami", "atlanta",
+    "vegas", "antonio", "austin", "charlotte", "jacksonville",
+}
+GREETED = re.compile(r"^\s*(?:Hi|Hey|Hello|Yo|Morning|Afternoon|Evening)\s+([A-Za-z']+)"
+                     r"(?:\s+and\s+([A-Za-z']+))?\s*[,.!]")
+BARE_NAME = re.compile(r"^\s*([A-Z][a-z]+)(?:\s+and\s+([A-Z][a-z]+))?\s*,")
+
+
+def addressed_by_name(text):
+    """True when a post opens by addressing a PERSON rather than the room."""
+    m = GREETED.match(text) or BARE_NAME.match(text)
+    if not m:
+        return False
+    return any(w and w[:1].isupper() and w.lower() not in ROOM_WORDS for w in m.groups())
+
+
+def check_group(text, low):
+    """G1: the Facebook group post. Outcome opener, one line on what it does, the dare, the
+    demo number, and nothing else. No link on the first post (common already blocks one).
+
+    Two laws are specific to this channel. It carries no per prospect demo claim, because a
+    post has no "your website" to have been trained on and saying so in a room of strangers
+    is the one lie this rail cannot afford. And it carries the demo NUMBER, because without
+    a number the owner can call and try to break, the post is an ad; the number is the whole
+    mechanic the sweep found four creators, five vendor home pages and the buyers' own
+    "let me call it" checklist agreeing on.
+    """
+    reasons = []
+    if not CONTRACTION.search(text): reasons.append("no contraction: reads as machine written")
+    if DARE not in low: reasons.append("the dare is missing")
+    if P1_LINE in low or P2_LINE in low:
+        reasons.append("a per prospect demo claim in a group post: there is no 'your website' in a group")
+    if addressed_by_name(text):
+        reasons.append("a group post is not addressed to one person by name")
+    if not DEMO_NUMBER.search(text):
+        reasons.append("no demo number: the post is the dare plus a number he can call")
+    sents = sentences(text)
+    reasons += outcome_missing(" ".join(sents[1:]) if len(sents) > 1 else text)
+    if not 2 <= len(sents) <= 6: reasons.append(f"{len(sents)} sentences, want 2 to 6")
     return reasons
 
 
@@ -219,13 +433,16 @@ def check_joke(text, low, var, part, note=None):
 
 
 def check(note):
-    text = note["text"]; ch = note.get("channel", "linkedin").lower(); var = note.get("variant", "")
+    text = note["text"]; raw_ch = (note.get("channel") or "linkedin").lower()
+    ch = note_channel(note); var = note.get("variant", "")
     low = text.lower()
     fam = family(var)
     lane = (var or "")[-2:].upper()
     reasons = common(text, ch, low, DM_LANES.get(lane) if ch == "linkedin" else None)
+    if ch not in CHANNELS:
+        reasons.append(f"unrecognised channel {raw_ch!r}: expected one of {sorted(CHANNELS)}")
     if fam is None:
-        reasons.append(f"unrecognised variant family in {var!r}: expected P1, P2, N1, J1, J2, O1 or I1")
+        reasons.append(f"unrecognised variant family in {var!r}: expected P1, P2, N1, J1, J2, O1, I1 or G1")
         fam = "pitch"
     lane_ch, lane_label = LANE_CHANNEL.get(lane, (None, None))
     if lane_ch and ch != lane_ch:
@@ -233,6 +450,10 @@ def check(note):
     want_ch, label, art = ARM_CHANNEL.get(fam, (None, None, None))
     if want_ch and ch != want_ch:
         reasons.append(f"{art} {label} note on {ch}: the {label} arm is {want_ch} only")
+    # The lock runs both ways on facebook_groups. It is a posting channel, not an inbox:
+    # a DM shape there would be a per prospect message typed into a room of strangers.
+    if ch == "facebook_groups" and fam != "group":
+        reasons.append(f"a {fam} note on facebook_groups: that channel takes G1 posts only")
     if fam != "joke" and (note.get("sent_parts") is not None or note.get("joke_setup") is not None):
         reasons.append("sent_parts or joke_setup on a note that is not a joke note")
     if fam == "pitch":
@@ -241,6 +462,8 @@ def check(note):
         reasons += check_nopitch(text, low)
     elif fam == "joke":
         reasons += check_joke(text, low, var, note.get("part"), note)
+    elif fam == "group":
+        reasons += check_group(text, low)
     return reasons
 
 
@@ -321,6 +544,17 @@ def check_joke_sequences(notes):
     return reasons
 
 
+def diversity_failures(openers, label=None):
+    """How many notes may open the same way: half the population, floor 2."""
+    shapes = {}
+    for n in openers: shapes.setdefault(shape(n["text"]), []).append(n.get("entry"))
+    cap = max(2, -(-len(openers) // 2))
+    where = f" on {label}" if label else ""
+    out = [f"FAIL batch: {len(ents)} notes open the same way ({s!r}){where}: entries {ents}; cap is {cap}"
+           for s, ents in shapes.items() if len(ents) > cap]
+    return out, shapes
+
+
 def main(path):
     notes = json.load(open(path))
     failed = 0
@@ -338,12 +572,23 @@ def main(path):
     # this population; what bounds a day of continuations is J_ROW_CAP above, which counts
     # them. Fewer openers only ever lowers the cap below, so this can never loosen it.
     openers = [n for n in notes if family(n.get("variant", "")) != "joke" or n.get("part") == "setup"]
-    shapes = {}
-    for n in openers: shapes.setdefault(shape(n["text"]), []).append(n.get("entry"))
-    cap = max(2, -(-len(openers) // 2))
-    for s, ents in shapes.items():
-        if len(ents) > cap:
-            failed += 1; print(f"FAIL batch: {len(ents)} notes open the same way ({s!r}): entries {ents}; cap is {cap}")
+    over, shapes = diversity_failures(openers)
+    for line in over:
+        failed += 1; print(line)
+    # The cap also runs PER CHANNEL, because the whole file cap is diluted by the other
+    # channels: five byte identical group posts in a batch that also carries ten LinkedIn
+    # notes passed a cap of eight, which is exactly the saturation failure the groups channel
+    # is warned about (2026-09-14 QA pass). Only shapes the whole file check did not already
+    # name are reported, so nothing is printed twice.
+    named = {line.split("(")[1].split(")")[0] for line in over}
+    per_ch = {}
+    for n in openers: per_ch.setdefault(note_channel(n), []).append(n)
+    for chan, group in sorted(per_ch.items(), key=lambda kv: str(kv[0])):
+        if len(per_ch) < 2: break
+        more, _ = diversity_failures(group, label=str(chan))
+        for line in more:
+            if line.split("(")[1].split(")")[0] in named: continue
+            failed += 1; print(line)
     print(f"{'ALL PASS' if not failed else str(failed) + ' FAILURE(S)'}: {len(notes)} notes, {len(openers)} openers, {len(shapes)} opener shapes")
     sys.exit(1 if failed else 0)
 

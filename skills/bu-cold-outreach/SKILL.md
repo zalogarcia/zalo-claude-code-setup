@@ -287,8 +287,15 @@ so nothing counts a prospect twice:
 
 So a J prospect is 3 rows, 1 counted send, 1 cold first touch against the cap, and 3 pacing
 gaps. The permitted `stage` values in this file are `CONNECT`, `FRIEND`, `SENT`,
-`SENT_CONT`, `BUMP1` and `BUMP2`, and only `SENT` is ever a denominator (a `FRIEND` row is the
-denominator of its own accept gate and of nothing else).
+`SENT_CONT`, `BUMP1`, `BUMP2` and `GROUP_POST`, and only `SENT` is ever a denominator (a
+`FRIEND` row is the denominator of its own accept gate and of nothing else, and a
+`GROUP_POST` row of its own calls per post read and of nothing else).
+
+**`GROUP_POST` is the Facebook groups row (added 2026-09-14, channel NOT STARTED).** A post
+in a group is not a message to a person: `prospect_id` is empty, `profile_url` is the
+group's URL, `channel` is `fbg`, `variant` is the `<metro>-fg-G1` id. It is never a
+delivered message, never a cold first touch, and never in a reply rate. It counts for
+pacing like anything else typed in the app. Full shape in `config.md`.
 
 **Count DISTINCT prospects, not rows.** Sends on a channel or a variant are the number of
 distinct `prospect_id` values among its `SENT` rows. `SENT_CONT` makes a continuation
@@ -590,6 +597,47 @@ block comes from the research ledger, not from memory. Update `learnings.md` in 
 step: the variant scoreboard from `sent-log.csv`, the source
 table, any learning, any objection heard verbatim.
 
+## What the evidence says does not work (added 2026-09-14)
+
+**Read this before proposing a channel, and do not reopen one of these without NEW
+evidence.** Source: `research/ai-agents-sales-2026-09-12.md` in the working folder, built
+from 62,062 words of tagged notes across 22 transcripts and 597 fetched pages. The point of
+this block is that a future session, M included, should not arrive in three weeks with
+"what about cold email" as though it were an untried idea. It was tried, by other people,
+at volume, and measured.
+
+**The measured failures. All of these are DATA, not somebody's opinion.**
+
+| What was tried | What it produced | Type |
+| --- | --- | --- |
+| Cold email at scale | 1,097 sends, 11 replies, 1 positive, **0 paid, 0 attributable signups**, domain matched | DATA |
+| Cold email at volume | 450 emails a day, nothing | CLAIM, the sender's own report against interest |
+| Instagram cold DMs to trades | hundreds of DMs, 1 to 2% reply, **0 closes over 4 to 5 weeks** | CLAIM, the sender's own measurement |
+| Cold SMS to businesses | not available at all: prior express consent plus A2P 10DLC brand and campaign registration. No seller in the sweep cold texts owners | DATA, carrier policy |
+| Pitching in r/HVAC, r/Plumbing, r/Roofing | openly hostile, vendors identified by post history ("You know we can see your post history right?") | DATA |
+| Marketplaces (Upwork, Fiverr) | price the BUILD at $10 to $100, not the outcome. Not a client channel for this offer | DATA |
+
+The sweep's own summary of it: **the only measured client acquisition numbers in 62,000
+words of notes are failures.** Every success number in the sweep is a claim, and 18 of the
+22 creator videos end in a course, community, affiliate or done for you CTA.
+
+**What actually produced the first paid work, in the seller communities.** A referral, a
+warm contact, or a subcontract from an agency that already had the client. Named
+independently by three seller threads, and it is the top ranked channel for speed in the
+memo's own table. The member who closed $1,500 in five days did it that way, after 450 cold
+emails a day had produced nothing. For us that means Delta Agents clients, CMAA students and
+past Black Umbrella clients are a faster rail than any cold channel in this skill, and the
+cold rail exists because it scales past a finite network, not because it is better.
+
+**What this block does NOT say.** It does not say cold outreach is dead: the Facebook and
+LinkedIn rails in this skill are running on their own measured gates, and the sweep's own
+ranking puts Facebook groups and the after hours proof call above every channel in the table
+above. It says these specific channels were measured to zero, and that reopening one needs a
+number, not an argument. Instagram is the one with a nuance: it stays in `config.md`'s
+channel table at `Active: no`, and turning it on is Zalo's call. This block does not make
+that call for him; it makes sure the 1 to 2% reply to zero closes is the first thing anyone
+proposing it sees.
+
 ## Sending rules, non negotiable
 
 These protect accounts that cannot be replaced. A restricted LinkedIn account ends this
@@ -681,9 +729,12 @@ trigger. Then, in the same session:
 1. Write the event to the warning events block in `config.md`, `YYYY-MM-DD HH:MM ET |
    channel | what the screen said`.
 2. Mirror it into `learnings.md` with the action taken.
-3. Reset THAT channel's `ramp_week` to 1 and its `daily_cold_ceiling` to 10. The other
+3. Reset THAT channel's `ramp_week` to 1 and its `daily_cold_ceiling` to 10, **or to that
+   channel's own week 1 number if that is lower**: Facebook groups' week 1 is 5, so a flat
+   reset to 10 would DOUBLE its volume as the response to a warning. The other
    channels keep their own ramps, unless this is the second warning on a second channel
-   inside 7 days, in which case every channel goes back to week 1 and 10 a day.
+   inside 7 days, in which case every channel goes back to week 1 and 10 a day (again, or
+   its own lower week 1 number).
 4. Continue on the other channels only if they are clean.
 5. Report it, prominently, in the session report.
 
@@ -712,6 +763,44 @@ fabricated referrals, no invented mutual connections, no pretending to be a cust
 **Quality floor.** If the metro cannot produce enough researched prospects to fill the
 quota, send fewer. Never pad a batch with an unresearched row.
 
+## The Facebook groups channel (NOT STARTED, added 2026-09-14)
+
+**This channel is `Active: no` with no start date and it does not run. Zalo opens it or it
+stays closed.** It is written down now because the research named it the fastest channel
+with evidence behind it after the warm network, and a channel nobody has specified cannot be
+opened on a Tuesday afternoon without inventing its rules on the spot.
+
+**The motion.** A post from Zalo's real personal Facebook profile into local business,
+contractor and trade groups in the metros: the outcome opener, one line on what it does, the
+dare, and the demo number. No link on the first post. The agent on the other end takes the
+call and books the 15 minute call, which is the whole mechanic.
+
+**It is not a DM rail and must not be counted as one.** A post is not a message to a person:
+it costs no DM slot, it is not a cold first touch, it never enters a reply rate, and health
+checks 1b, 2 and 5 do not see it. Its rows are `GROUP_POST` in `sent-log.csv` per
+`config.md`. The one number it produces is calls to the demo number per post.
+
+**Cap and ramp.** 5 posts a day in week 1, 10 from week 2, 10 is the cap. Posted BY A
+PERSON, never automated, never scheduled through a tool. Full arithmetic and the log row
+shape are in the Facebook groups section of `config.md`; the copy contract and the two
+approved posts are in `templates/messages.md`; the lint holds a `<metro>-fg-G1` post to its
+own laws on channel `facebook_groups`.
+
+**Two gates before post one, both Zalo's, and the second one is the important one.** His
+explicit go, and then: **he calls the demo number himself and interrupts it three times mid
+sentence. If it ploughs on past a second, the play waits.** The buyers in the research state
+this as their own purchase test ("cut across the bot mid sentence, see if it stops or ploughs
+on"), and a group post hands that test to a room of strangers who will run it unsupervised
+and post the result in the same thread.
+
+**The evidence grade, honestly.** The MECHANIC is corroborated: four creators, two vendors
+putting the number on their landing page, and the buyers' own "let me call it" checklist. The
+VOLUME numbers are one creator's CLAIM (77 calls, 35 booked, about 15 closes from one post),
+his video ends in a done for you pitch, and a second creator already repeats his copy word
+for word, which reads as saturation rather than corroboration. **None of those numbers is a
+target here.** The cadence is a cost we choose; the first read is calls per post, and if 20
+posts produce near zero, the channel stops.
+
 ## The message system, in short
 
 Full copy is in `templates/messages.md`. The shape that cannot change:
@@ -720,6 +809,30 @@ Full copy is in `templates/messages.md`. The shape that cannot change:
 why him (the specific thing you noticed about his business), what we do in his language
 (answers calls and texts in about five seconds, 24/7, books the job into the calendar),
 and a question he can answer in four words. No pitch, no link, no meeting ask.
+
+**Sell the outcome, never the technology as a category (the offer law, 2026-09-14).** The
+product is an answered call and a booked job. The mechanism gets named once, in passing,
+inside Zalo's own P1 or P2 line, and never becomes the thing being sold: "I help businesses
+with AI receptionists" is the shape that fails. `P1_LINE` and `P2_LINE` already obey this
+and do not change. Mechanical: `TECH_AS_CATEGORY` in the lint's `BANNED`, plus a positive
+check that both halves of the outcome are named. Full law in `templates/messages.md`.
+
+**After hours and overflow, never replacement (the position law, 2026-09-14).** We are not
+replacing the person who answers at 9 a.m., on any channel, in any message. "I already have
+someone at the front desk" is the most reported objection in the whole research sweep and it
+ends the replacement pitch every time. Tier B is not an exception: it replaces a third party
+ANSWERING SERVICE, which is a different thing and the highest willingness sale in the ICP.
+The agree then narrow turn for the wall is written out in `templates/messages.md`.
+
+**The bridge may hand him his own arithmetic, inside what the fact shows (2026-09-14).**
+The research says the close is the owner's own missed call math, done in his head in about
+four seconds. So a bridge can add up two posted times or count what a review itself says.
+It can never invent his numbers: no money, no percentage, no calls per week, no "pays for
+the year". The lint fails an invented rate and an ROI claim outright, and a money amount or
+a percentage when it sits in the same SENTENCE as a result, which is what lets it keep
+passing his own quoted promo price ("your $79 tune up ad is running right now"). It is a
+gate, not a proof: a claim split across two sentences still gets through, and that residue
+is named in `OPEN-GAPS.md` #4. Worked examples in `templates/gold-notes.md`.
 
 **State facts you read, never claim research effort.** The one exception is the demo:
 message one DOES say a demo has been trained on his website and offers to send it (Zalo's
@@ -812,7 +925,7 @@ approached again.
 | 2. One channel is dead | 15 DELIVERED messages (`SENT` rows) on a channel, zero replies, while another channel is replying | delivery on that channel, not the copy | stop that channel, keep the others, report | that channel |
 | 3. Replies are not reaching Zalo | 3 rows at `REPLIED` for more than 2 days with no stage movement | the report is not being read, or he is blocked | lead the report with them, say how long each has waited | nothing |
 | 4. Evidence is going stale | 3 rows in one session pulled for dead evidence | the seed list has aged | report it, name the date range of the stale rows, ask for a refresh of `prospects.csv` | nothing |
-| 5. Two weeks, nothing | On EVERY active channel, EITHER 14 days have passed since that channel's FIRST DELIVERED message, OR that channel has been Active for 14 days and has delivered NOTHING at all (a channel that cannot deliver is evidence FOR this check, never a reason to hold it back). AND at least 20 delivered messages have reached day 7 across all channels together. AND zero replies of any kind. "Delivered" is check 1b's definition exactly: a `SENT` row, so a Facebook or Instagram DM to a personal profile, a LinkedIn acceptance follow up, a LinkedIn open profile message or an InMail. `CONNECT`, `FRIEND` and `SENT_CONT` rows never count, and LinkedIn acceptance is check 1a's business, not this one | something structural: account standing, delivery, or market fit | stop the cold track entirely and say so plainly. Do not keep generating batches | the cold track |
+| 5. Two weeks, nothing | On EVERY active DELIVERING channel, EITHER 14 days have passed since that channel's FIRST DELIVERED message, OR that channel has been Active for 14 days and has delivered NOTHING at all (a channel that cannot deliver is evidence FOR this check, never a reason to hold it back). A POSTING channel (Facebook groups) is never in this population at all: it has no inbox and no delivered message by construction, so counting it would push the halt out by 14 days every time it opened, which is the trap the OR branch exists to prevent. AND at least 20 delivered messages have reached day 7 across all channels together. AND zero replies of any kind. "Delivered" is check 1b's definition exactly: a `SENT` row, so a Facebook or Instagram DM to a personal profile, a LinkedIn acceptance follow up, a LinkedIn open profile message or an InMail. `CONNECT`, `FRIEND` and `SENT_CONT` rows never count, and LinkedIn acceptance is check 1a's business, not this one | something structural: account standing, delivery, or market fit | stop the cold track entirely and say so plainly. Do not keep generating batches | the cold track |
 
 A warning event is not a health check; it stops a channel immediately and unconditionally,
 per the sending rules.
@@ -912,17 +1025,30 @@ to claim, and filling the price fields in `call-one-pager.md` before the first b
 - `templates/config.md`, `templates/proof.md`, `templates/learnings.md`, seeded once.
 - `templates/gold-notes.md`, the approved notes to write toward; read before drafting.
 - `scripts/note-lint.py`, the deterministic gate on a session's `notes.json`; `ALL PASS`
-  or the batch does not ship. It knows three variant families: `P1`/`P2` (the control,
+  or the batch does not ship. It knows four variant families: `P1`/`P2` (the control,
   which also covers the LinkedIn delivered lane ids `O1` and `I1` at a 420 character DM
-  limit, linkedin only), `N1` (the no pitch LinkedIn arm) and `J1`/`J2` (the Facebook joke
-  arm), and applies the
-  dare and fixed line checks only where they belong. It also holds the arms to their own
-  channel (`N1` LinkedIn only, `J` Facebook only), the `N1` note to 120 to 240 characters,
+  limit, linkedin only), `N1` (the no pitch LinkedIn arm), `J1`/`J2` (the Facebook joke
+  arm) and `G1` (the Facebook group post, channel `facebook_groups`, NOT STARTED), and
+  applies the dare and fixed line checks only where they belong. It also holds the arms to
+  their own channel (`N1` LinkedIn only, `J` Facebook only, `G1` facebook_groups only and
+  that channel takes nothing else), the `N1` note to 120 to 240 characters,
   and the joke arm to 4 rows per joke per day, and it accepts the `sent_parts` plus
   `joke_setup` continuation marker so an interrupted joke sequence can be finished in a
   later batch without padding it with messages that already went out.
+  **Since 2026-09-14 it also carries the offer law and the arithmetic bridge guard, across
+  every family:** `TECH_AS_CATEGORY` is in `BANNED`, so the tech as a product category
+  ("ai receptionist", "ai agent", "voice ai", "our ai", "i help businesses") fails any note
+  anywhere, matched on word boundaries so "your air" is not "our ai"; a note that carries an
+  offer has to name both halves of the outcome, the answered call and the booked job, read
+  from the OFFER sentences rather than the whole note; and an invented rate of calls per
+  week, an ROI claim, or a money amount or percentage in the same sentence as a result all
+  fail, because the bridge may only do arithmetic inside what the review or the posted hours
+  already show. Quoting his own advertised price is a fact, not a claim, and still passes.
+  It also normalises the short channel codes (`li`, `fb`, `ig`, `fbg`) and FAILS an
+  unrecognised channel rather than silently giving it LinkedIn's 300 character limit.
 - `scripts/note-lint.test.py`, the lint's own suite: `python3 scripts/note-lint.test.py`.
   Run it after any change to the lint; a change that does not keep it green does not ship.
+  202 cases as of 2026-09-14.
 - `scripts/fixtures/new-families.json`, one lintable note per test arm plus one joke
-  CONTINUATION entry carrying the `sent_parts` and `joke_setup` marker, so every arm shape
-  can be checked without a live batch.
+  CONTINUATION entry carrying the `sent_parts` and `joke_setup` marker and the two G1 group
+  posts, so every arm shape can be checked without a live batch.

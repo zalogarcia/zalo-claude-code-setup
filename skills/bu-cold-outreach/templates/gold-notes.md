@@ -58,6 +58,49 @@ reviewer named once, no adjectives, no exclamation marks, no colon lists.
 > seconds, 24/7, and books the job straight into your calendar. Want to try and break
 > it? Call it, text it, throw it your weirdest customer.
 
+## The arithmetic bridge, worked (added 2026-09-14)
+
+The bridge law in `messages.md` gained a second shape: where the fact supports it, the
+bridge hands him his own arithmetic instead of only naming who is on the phone. The research
+finding behind it is that the close is the owner's own math and he does it in his head in
+about four seconds. The constraint is that the arithmetic stays INSIDE what the review or
+the posted hours already show. Same register as everything above.
+
+**From posted hours, both ends visible.** Google shows the close and the open, so the gap is
+arithmetic on two numbers that are on the screen.
+
+> Hi Eric, Google has the office closed at 5 and open again at 8. So that's fifteen hours a
+> day where that phone's on somebody. I trained a demo AI setter on your website that takes
+> those calls 24/7 and books the job. Want to try and break it?
+
+**From a review that counts itself.** She wrote "two messages", so two is hers, not ours.
+
+> Hi Mike, Dana's review from July says she left two messages before anyone called her back.
+> That's two calls you already know about, and she's the one who wrote it down. I built a
+> quick demo off your website: it picks up when nobody can, day or night, and books the job.
+> Want to try and break it?
+
+**From a closed day plus an evening.** Both facts are on the profile; the bridge just adds
+them up.
+
+> Hi Charles, Google has Air Texas closing at 7 weekdays, noon Saturday, Sunday closed. So
+> that's every evening plus the whole of Sunday landing on somebody's cell. I trained a demo
+> AI setter on your website that takes those calls 24/7 and books the job. Want to try and
+> break it?
+
+**What these would look like if the constraint were dropped, and why each is returned:**
+
+- "That's about 30 calls a month you're missing." Returned: we do not know how many calls he
+  gets. The lint fails it as a rate we made up for him.
+- "That's $8,000 of installs sitting in voicemail." Returned: his ticket is his number. The
+  lint fails it as a money amount.
+- "One recovered job pays for the year." Returned: true on the call, where he supplies the
+  ticket. In message one it is an ROI claim with no denominator, and the lint fails it.
+
+The test: **point at the screen the number came from.** Fifteen hours is the difference
+between two posted times. Two calls is what the reviewer typed. If the number is not on a
+screen you loaded, it is not in the note.
+
 ## Test arm N1, the LinkedIn note with no pitch (drafted 2026-09-12, awaiting Zalo's read)
 
 Three beats and a question: the specific, the bridge, and the ask for permission. No demo

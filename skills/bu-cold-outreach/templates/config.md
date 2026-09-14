@@ -30,18 +30,24 @@ and that are older than about 6 months with a real photo and a bio that says wha
 | Channel | Active | Account | Daily cold cap | Other cap |
 | --- | --- | --- | --- | --- |
 | LinkedIn | yes | Zalo Kabche | 15 | 80 connection requests per week |
+| Facebook Messenger | yes | Zalo Kabche | 10 | |
+| Instagram | no | Zalo Kabche | 10 | |
+| Facebook groups | no | Zalo Kabche | 10 posts (not DMs) | week 1 is 5, see its own ramp below |
 
 Channel ordering is not fixed by this template. When two channels are open and the session
 ceiling has to be split, the working folder's config names which one takes the research
 budget first. On the live account since 2026-09-14 that is Facebook, with LinkedIn demoted
 to its deliver on send lanes on a measured accept gate of 0 of 37.
-| Facebook Messenger | yes | Zalo Kabche | 10 | |
-| Instagram | no | Zalo Kabche | 10 | |
 
-Maximum cold volume is the sum of the caps of the ACTIVE channels, and 35 a day if all
-three ever run at their caps. There is no configuration that produces more. Adding a
-channel is the only way to raise the ceiling, and no hold, mode or ramp week ever raises a
-cap above the number in this table.
+Maximum cold volume is the sum of the caps of the ACTIVE DM channels, and 35 a day if
+LinkedIn, Facebook Messenger and Instagram ever run at their caps. There is no
+configuration that produces more. Adding a channel is the only way to raise the ceiling,
+and no hold, mode or ramp week ever raises a cap above the number in this table.
+
+**Facebook groups is a posting channel and is not in that sum** (added 2026-09-14). A post
+in a group is not a message to a person, so it consumes no DM slot, is not a cold first
+touch, and never appears in a reply rate denominator. It has its own cap, its own ramp and
+its own log rows, all below. It is `Active: no` and NOT STARTED.
 
 A channel whose Active column says no gets no ramp and no sends. Opening it is Zalo
 setting Active to yes and giving it a start date in the ramp section, which buys it a
@@ -52,6 +58,25 @@ contradiction** (added 2026-09-12). That is how a channel is opened ahead of tim
 Active flag says Zalo wants it, the start date says when it begins, and the quota
 arithmetic below returns zero for it until that date arrives. Nothing on that channel needs
 a prose line or an `active: no` to hold it back, and nobody has to remember to read one.
+
+## What the evidence says about channels, before you propose one (added 2026-09-14)
+
+Read this before opening a channel or proposing one. The full block with the numbers and
+the sources is under "What the evidence says does not work" in `SKILL.md`. The short
+version, all of it measured:
+
+- **Cold email: 1,097 sends, 11 replies, 1 positive, 0 paid, 0 attributable signups.** Also
+  450 a day to nothing. There is no cold email rail in this skill and this is why.
+- **Instagram cold DMs to trades: hundreds of DMs, 1 to 2% reply, 0 closes over 4 to 5
+  weeks.** Instagram stays in the channel table at `Active: no`; turning it on is Zalo's
+  call and this block does not make it for him. What the block says is that the research
+  budget goes to Facebook first, and that anyone proposing Instagram should see that number
+  before they argue for it.
+- **Cold SMS is not available at all.** Prior express consent plus A2P 10DLC registration;
+  it is a policy violation on every US A2P route, not a volume question.
+- **Mass automated DMs of any kind.** Detected, and the accounts are not replaceable.
+
+Reopening one of these needs NEW evidence, a number, not a new idea.
 
 ## Channel holds (Astra maintains)
 
@@ -112,6 +137,57 @@ minute pacing gap. Send fewer and report the real number rather than compress th
 Inactive by default. No ramp until Zalo activates it in the channel table and writes
 `instagram_ramp_start_date` here.
 
+### Facebook groups (NOT STARTED, added 2026-09-14)
+
+```
+facebook_groups_ramp_start_date: NOT STARTED
+facebook_groups_ramp_week: 1
+facebook_groups_daily_cold_ceiling: 5
+```
+
+The ceiling field carries the same `_daily_cold_ceiling` name as every other channel on
+purpose, even though a post is not a cold first touch: step 3 of the quota arithmetic reads
+that exact name, and a field called anything else is an ABSENT field, which the rule two
+sections down turns into week 1 at 10. Naming it `facebook_groups_daily_ceiling` would have
+opened this channel at double its week 1 number through the one path `config.md` says never
+happens, "a ramp field never fails open to the cap" (found by the 2026-09-14 QA pass).
+
+`NOT STARTED` is not a parseable date, so step 0 of the quota arithmetic returns zero for
+this channel and the session header says so. That is deliberate and it is the same
+mechanism that holds any unopened channel: nothing needs to remember a prose rule.
+
+**Its own ladder, which is not the DM ladder.** Week 1 is 5 posts a day, week 2 onward is
+10, and 10 is the cap. Posts are made BY A PERSON, never automated and never scheduled
+through a tool: the sweep's own gotcha column names automation detection and admin removals
+as what kills this channel first.
+
+**Two gates before post one, both of them Zalo's.**
+
+1. **His explicit go.** The channel does not open because a session decided the evidence is
+   good. He sets `Active: yes` in the channel table and writes a real date above.
+2. **The demo interrupt gate.** Zalo calls the demo number himself and interrupts it three
+   times mid sentence. If it ploughs on past a second, the play waits and the number does
+   not go in a post. This is not optional politeness: "call it and cut across the bot mid
+   sentence, see if it stops or ploughs on" is the buyers' own stated test in the research,
+   and the whole channel is built on strangers running exactly that test unsupervised.
+
+**The evidence grade, stated honestly because the volume numbers are the weak part.** The
+MECHANIC is corroborated: four creators put the demo number in the post, two vendors put it
+on their landing page, and the buyers' own checklist is "let me call it". The VOLUME numbers
+are one creator's CLAIM (77 calls, 35 booked and about 15 closes from one post; 10 posts a
+day yielding 5 to 10 booked calls a day), his video ends in a done for you program pitch,
+and a second creator is already repeating his copy word for word, which is the saturation
+signal rather than corroboration. **Those numbers are not targets and are not in this file
+as targets.** The read that matters for the first 20 posts is calls to the demo number per
+post. The cadence of 5 a day ramping to 10 is a cost we choose, not an outcome we expect.
+
+**Its rows in `sent-log.csv`.** `stage` `GROUP_POST`, `channel` `fbg`, `profile_url` the
+group's URL, `prospect_id` empty (a post has no prospect), `variant` the `<metro>-fg-G1` id,
+`message_sha1`, `message_head` and `message_text` the post as it was typed. A `GROUP_POST`
+row is never a delivered message, never a cold first touch, and is a denominator only for
+its own read: calls to the demo number per post. It counts for pacing like anything else
+typed in the app. Health checks 1b, 2 and 5 never see it.
+
 ### The ladder every channel climbs, separately
 
 | Ramp week | Cold first touches per day | Condition to advance |
@@ -119,6 +195,10 @@ Inactive by default. No ramp until Zalo activates it in the channel table and wr
 | 1 | 10 | none |
 | 2 | 20, and never above that channel's own cap | zero warnings, captchas or restrictions ON THAT CHANNEL in its week 1 AND that channel has a measured delivery number |
 | 3 and after | that channel's cap (LinkedIn 15, Facebook 10, Instagram 10) | zero warnings on that channel in its week 2 AND replies read and reported daily |
+
+**This ladder is the DM ladder.** Facebook groups climbs its own, 5 then 10, in its own
+section above, because a post has no delivery rate to gate on and its risk is admin removal
+rather than account restriction.
 
 **Zero warnings is a safety condition, not a funnel condition, and it is not enough on its
 own.** A channel does not advance while it has no measured delivery rate. The measured
@@ -157,9 +237,12 @@ weekly remainder to go out in one afternoon.
 
 **A missing, placeholder or unreadable ramp field is week 1, not the cap.** If a channel's
 `ramp_week` or `daily_cold_ceiling` is absent or unparseable, treat that channel as week 1
-at 10 and say so in the session header. If its `<channel>_ramp_start_date` is missing or
+at 10, **or at that channel's own week 1 number when that is lower**, and say so in the
+session header. The carve out is not decoration: Facebook groups' week 1 is 5 and its cap is
+also 10, so a flat "week 1 at 10" would open it at double its week 1 through exactly the
+path the guarantee below denies (2026-09-14 QA pass, second round). If its `<channel>_ramp_start_date` is missing or
 still the literal `YYYY-MM-DD`, that channel has no ramp and sends nothing until Zalo writes
-a date. A ramp field never fails open to the cap.
+a date. A ramp field never fails open above that channel's own week 1 number.
 
 **A start date in the FUTURE is the same state: no ramp and no sends until that date**
 (added 2026-09-12). The week and ceiling fields are filled in ahead of the date on purpose,
@@ -178,13 +261,15 @@ is ONE cold first touch against the cap and three typed messages against the pac
 
 ### Warning events reset the channel they happened on
 
-Astra sets THAT channel's `ramp_week` to 1 and its `daily_cold_ceiling` to 10, writes the
+Astra sets THAT channel's `ramp_week` to 1 and its `daily_cold_ceiling` to 10, **or to that
+channel's own week 1 number when that is lower** (Facebook groups' week 1 is 5; a flat reset
+to 10 would double its posting volume as the response to a warning), writes the
 event into `learnings.md`, and reports it. The other channels keep their ramps, because a
 captcha on one platform is evidence about one account's standing on that platform, and the
 channel holds block above is already per channel.
 
 **The exception:** two warning events on two different channels inside 7 days resets EVERY
-channel to week 1 and 10 a day. That pattern is about how we are sending, not about one
+channel to week 1 and 10 a day, or to its own lower week 1 number where it has one. That pattern is about how we are sending, not about one
 platform, and it is the one case where a channel that has done nothing wrong still pays.
 
 Zalo is the only one who can advance a week early.

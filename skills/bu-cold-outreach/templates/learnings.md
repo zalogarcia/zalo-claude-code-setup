@@ -108,6 +108,19 @@ Judgment rules:
    prospect, one send, one cold first touch against the daily cap, however many messages it
    took. Counting the parts is how the 2026-09-08 Geo entry briefly read as two prospects.
 
+### Facebook group posts (channel NOT STARTED)
+
+The one number this channel produces is **calls to the demo number per post**, which is not
+a reply rate and does not belong in the variant scoreboard above. One row per post.
+
+| Date | Group | Metro | Variant | Calls to the demo number | Booked by the agent | Removed by admin |
+| --- | --- | --- | --- | --- | --- | --- |
+| | | | | | | |
+
+No verdict under 20 posts: report counts, not rates. The creator numbers behind this play
+(77 calls and about 15 closes from one post) are a CLAIM from a video that ends in a done
+for you pitch, and they are not the target this table is read against.
+
 ## Source performance
 
 Which rails and signals actually produce repliers. Shift hunting time toward what converts.
