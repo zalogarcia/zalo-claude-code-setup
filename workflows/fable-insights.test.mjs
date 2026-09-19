@@ -598,7 +598,45 @@ console.log("fable-insights.js");
   check("a script error blocks completeness even with facets in hand", out.coverage.complete === false && out.facets.length === 1);
 }
 
-// 16. The manifest agent runs the script; it does not scan the corpus itself.
+// 16. A manifest relay that dropped records is loud. The selected array is the
+//     last thing in the chain that still travels through an agent's output
+//     budget, and the script publishes how many it drew, so the two must agree.
+{
+  const agentFn = async (prompt, opts) => {
+    if (opts.label.startsWith("manifest"))
+      return manifestOf([session("aaaaaaaa-1"), session("bbbbbbbb-2")], {
+        substantive_count: 10,
+        sampling: {
+          method: "stratified",
+          population: 10,
+          selected: 8,
+          coverage_pct: 80,
+          seed: "s",
+          strata: [],
+          bias_statement: "STRATIFIED SAMPLE, NOT A CENSUS: 8 of 10.",
+        },
+      });
+    if (opts.label.startsWith("analyze:")) return { ...FACET };
+    return null;
+  };
+  const { promise, logs } = runWorkflow({ agentFn, args: { days: 7 } });
+  const out = await promise;
+  check("a short relay is detected", out.manifest_counts.relay_ok === false);
+  check("the relay gap is quantified", out.manifest_counts.relay_expected === 8 && out.manifest_counts.relay_received === 2);
+  check("a short relay is logged loudly", logs.some((l) => l.startsWith("MANIFEST RELAY TRUNCATED")), logs.join(" | ").slice(0, 200));
+  check("a short relay makes the run partial", out.partial_run === true);
+}
+{
+  const agentFn = async (prompt, opts) => {
+    if (opts.label.startsWith("manifest")) return manifestOf([session("aaaaaaaa-1")]);
+    if (opts.label.startsWith("analyze:")) return { ...FACET };
+    return null;
+  };
+  const out = await runWorkflow({ agentFn, args: { days: 7 } }).promise;
+  check("a complete relay is not flagged", out.manifest_counts.relay_ok === true && out.coverage.complete === true);
+}
+
+// 17. The manifest agent runs the script; it does not scan the corpus itself.
 {
   const agentFn = async (prompt, opts) => {
     if (opts.label.startsWith("manifest")) return manifestOf([session("aaaaaaaa-1")], { trivial_count: 2, stub_target_count: 2 });

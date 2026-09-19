@@ -527,6 +527,14 @@ const reconciliation = {
   ok: Number(manifest.candidate_total) === Number(manifest.accounted_total),
   folded_exclusions: excluded.filter(isFoldedExclusion),
   script_error: manifest.script_error || "",
+  // The one output budget left in the chain: the manifest agent relays up to
+  // `cap` selected records. The script says how many it drew, so a relay that
+  // silently dropped some is catchable by comparing the two.
+  relay_ok:
+    !Number.isFinite(Number(sampling.selected)) ||
+    Number(sampling.selected) === selected.length,
+  relay_expected: Number(sampling.selected),
+  relay_received: selected.length,
 };
 if (!reconciliation.ok) {
   log(
@@ -536,6 +544,11 @@ if (!reconciliation.ok) {
 if (reconciliation.folded_exclusions.length) {
   log(
     `MANIFEST FOLD DETECTED: ${reconciliation.folded_exclusions.length} excluded record(s) stand in for a group instead of naming one session: ${reconciliation.folded_exclusions.map((e) => e.id).join(", ")}. Trivial and excluded counts are understated by whatever those records cover.`,
+  );
+}
+if (!reconciliation.relay_ok) {
+  log(
+    `MANIFEST RELAY TRUNCATED: the script drew ${reconciliation.relay_expected} sessions but only ${reconciliation.relay_received} records arrived. The missing ones are in the manifest file and were NOT analysed; every count below is a floor.`,
   );
 }
 if (reconciliation.script_error) {
@@ -770,6 +783,7 @@ coverage.complete =
   // 2026-09-19, which reproduced a "complete" run holding zero facets).
   reconciliation.candidate_total > 0 &&
   !reconciliation.script_error &&
+  reconciliation.relay_ok &&
   !reconciliation.folded_exclusions.length &&
   failed.length === 0 &&
   lostStubs === 0 &&
@@ -805,6 +819,9 @@ const manifest_counts = {
   candidate_total: reconciliation.candidate_total,
   accounted_total: reconciliation.accounted_total,
   reconciliation_ok: reconciliation.ok,
+  relay_ok: reconciliation.relay_ok,
+  relay_expected: reconciliation.relay_expected,
+  relay_received: reconciliation.relay_received,
   folded_exclusions: reconciliation.folded_exclusions,
   substantive: Number(manifest.substantive_count) || 0,
   trivial: Number(manifest.trivial_count) || 0,
