@@ -18,6 +18,11 @@ export const meta = {
       title: "Stubs",
       detail: "batched gist extraction for trivial sessions (batches of 9)",
     },
+    {
+      title: "Verify",
+      detail:
+        "one fable agent audits the opus fan-out's aggregate output for saturation, empty facets and invented taxonomy slugs",
+    },
   ],
 };
 
@@ -309,14 +314,15 @@ let manifest = await agent(manifestPrompt, {
   label: "manifest",
   phase: "Manifest",
   schema: MANIFEST_SCHEMA,
+  model: "opus",
 });
 if (!manifest) {
-  log("Manifest agent failed on primary model — re-dispatching on opus");
+  log("Manifest agent failed on opus — re-dispatching on fable");
   manifest = await agent(manifestPrompt, {
     label: "manifest:retry",
     phase: "Manifest",
     schema: MANIFEST_SCHEMA,
-    model: "opus",
+    model: "fable",
   });
 }
 if (!manifest) {
@@ -406,18 +412,17 @@ const facets = await pipeline(toAnalyze, async (s) => {
     label: `analyze:${String(s.project || "").replace("dev-", "")}:${String(s.id).slice(0, 8)}`,
     phase: "Analyze",
     schema: FACET_SCHEMA,
+    model: "opus",
   };
-  let analyzedBy = "fable";
+  let analyzedBy = "opus";
   let r = await agent(promptFor(s), opts);
   if (!r) {
-    analyzedBy = "opus-fallback";
-    log(
-      `${String(s.id).slice(0, 8)} failed on primary model — re-dispatching on opus`,
-    );
+    analyzedBy = "fable-fallback";
+    log(`${String(s.id).slice(0, 8)} failed on opus — re-dispatching on fable`);
     r = await agent(promptFor(s), {
       ...opts,
       label: `retry:${String(s.id).slice(0, 8)}`,
-      model: "opus",
+      model: "fable",
     });
   }
   return r
@@ -455,6 +460,7 @@ const stubResults = chunks.length
             label: `stubs:batch${i + 1}`,
             phase: "Stubs",
             schema: STUB_SCHEMA,
+            model: "opus",
           }),
       ),
     )
@@ -502,10 +508,126 @@ log(
   "Synthesis: follow ~/.claude/workflows/fable-insights-synthesis.md (artifact names, baseline comparison, mechanization + demotion bias)",
 );
 
+// ---- Verify -------------------------------------------------------------------
+// The ONLY fable stage. Every fan-out above runs on opus (half the token price,
+// no measured quality loss on high-volume work); fable is spent once, here, as a
+// cross-model second opinion on the aggregate. Per ~/.claude/CLAUDE.md the model
+// that verifies should differ from the model that authored.
+//
+// It exists because the 2026-09-19 harness sweep measured THIS workflow's own
+// judge as saturated: verification_quality answered ground_truth on 56/60, 35/37
+// and 103/108 sessions, 32 of 140 facets came back empty, and analysts invented
+// four schema fields nothing validates. A judge nobody checks goes dark quietly.
+phase("Verify");
+const cleanFacets = facets.filter(Boolean).filter((f) => !f.failed);
+const verifyPayload = {
+  counts: manifest_counts,
+  facet_count: cleanFacets.length,
+  stub_count: stubs.length,
+  failed_count: failed.length,
+  verification_quality: cleanFacets.map((f) => f.verification_quality || null),
+  outcomes: cleanFacets.map((f) => f.outcome || null),
+  friction_types: cleanFacets.flatMap((f) =>
+    Array.isArray(f.friction) ? f.friction.map((x) => x && x.type) : [],
+  ),
+  empty_fields: cleanFacets.map((f) => ({
+    session_id: f.session_id,
+    empty: Object.keys(f).filter((k) => {
+      const v = f[k];
+      return (
+        v === null ||
+        v === undefined ||
+        v === "" ||
+        (Array.isArray(v) && v.length === 0)
+      );
+    }),
+  })),
+};
+
+const PINNED_FRICTION_TYPES = [
+  "claude_bug",
+  "overclaimed_verification",
+  "tooling_breakage",
+  "usage_limit",
+  "wrong_approach",
+  "environment",
+  "user_change_of_mind",
+  "hook_by_design",
+  "post_delivery_defect",
+  "other",
+];
+
+const VERIFY_SCHEMA = {
+  type: "object",
+  required: ["trustworthy", "saturated_fields", "invented_slugs", "verdict"],
+  properties: {
+    trustworthy: {
+      type: "boolean",
+      description:
+        "false if this week's output cannot be relied on for decisions, whatever the reason",
+    },
+    saturated_fields: {
+      type: "array",
+      items: { type: "string" },
+      description:
+        "Enum fields where one value dominates so heavily the field carries no information this week",
+    },
+    invented_slugs: {
+      type: "array",
+      items: { type: "string" },
+      description: "friction types outside the pinned taxonomy",
+    },
+    empty_facet_sessions: { type: "array", items: { type: "string" } },
+    verdict: {
+      type: "string",
+      description:
+        "Two or three sentences a human reads first, leading with whatever is wrong",
+    },
+  },
+};
+
+const verification = await agent(
+  `You are the LAST stage of a weekly self-audit. Every analysis above was produced by opus agents. You are fable, and you are here as a cross-model second opinion on their AGGREGATE output. You are not re-analysing sessions and you have no transcript access.
+
+Judge whether this week's output is trustworthy enough to make decisions from.
+
+## The specific failure you exist to catch
+On 2026-09-19 a sweep measured this workflow's own judge as saturated: verification_quality answered "ground_truth" on 56 of 60, 35 of 37 and 103 of 108 sessions. A field that always returns the same value is not evidence, it is a stuck needle, and it had been read as a quality signal for weeks.
+
+So: for every enum field below, state whether its distribution carries information or whether one value has swallowed it. Do not be polite about it.
+
+## Also check
+- Friction types outside the pinned taxonomy: ${PINNED_FRICTION_TYPES.join(", ")}. Anything else is an invented slug and it breaks week-over-week deltas.
+- Facets with empty required fields. An empty facet is a failed analysis that did not report itself as failed.
+- Counts that do not reconcile: analysed plus skipped versus substantive, stubs missing, anything dropped silently.
+
+## The data
+${JSON.stringify(verifyPayload).slice(0, 60000)}
+
+Lead your verdict with whatever is WRONG. If the week is clean, say so in one sentence and do not pad it. A verdict that flatters the input is worse than no verdict, because the whole point of this stage is that the previous stage cannot audit itself.`,
+  {
+    label: "verify:aggregate",
+    phase: "Verify",
+    schema: VERIFY_SCHEMA,
+    model: "fable",
+  },
+);
+
+if (verification && verification.trustworthy === false) {
+  log(`⚠️  Verify: NOT trustworthy — ${verification.verdict || "no verdict"}`);
+} else if (verification) {
+  log(`Verify: ${verification.verdict || "no verdict"}`);
+} else {
+  log(
+    "⚠️  Verify: the fable verifier returned nothing. Treat this week's output as UNVERIFIED, not as clean.",
+  );
+}
+
 return {
   facets: facets.filter(Boolean),
   stubs,
   failed,
   manifest_counts,
+  verification: verification || { unavailable: true },
   synthesis_protocol: "~/.claude/workflows/fable-insights-synthesis.md",
 };
