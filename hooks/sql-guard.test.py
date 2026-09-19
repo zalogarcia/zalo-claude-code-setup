@@ -181,6 +181,16 @@ def main():
         ("TRIM(both ... FROM ...)", "SELECT trim(both ' ' FROM slug) FROM tenants"),
         ("set-returning function", "SELECT * FROM unnest(ARRAY[1,2]) AS n"),
         ("schema-qualified table", "SELECT id FROM public.tenants"),
+        # added 2026-09-19 by the QA pass on v3: every one of these was blocked
+        # by a real hook, three of them by v3's new bare-column scan.
+        ("AT TIME ZONE", "SELECT created_at AT TIME ZONE 'UTC' FROM tenants"),
+        ("ISNULL", "SELECT id FROM tenants WHERE slug ISNULL"),
+        ("COLLATE a quoted identifier", 'SELECT id FROM tenants ORDER BY slug COLLATE "C"'),
+        ("double-quoted identifier", 'SELECT "slug" FROM tenants'),
+        ("FOR UPDATE SKIP LOCKED", "SELECT id FROM tenants WHERE slug = 'x' FOR UPDATE SKIP LOCKED"),
+        ("FOR NO KEY UPDATE NOWAIT", "SELECT id FROM tenants FOR NO KEY UPDATE NOWAIT"),
+        ("a non-public schema is out of the snapshot's scope", "SELECT id FROM auth.users"),
+        ("a pg_* catalog view outside the old allowlist", "SELECT rolname FROM pg_roles"),
     ]
     ok = True
     for label, q in alias_cases:
@@ -188,7 +198,7 @@ def main():
         if v != ALLOW:
             check(f"5: alias/keyword shape allowed — {label}", False, err[:160])
             ok = False
-    check("5: every CTE/VALUES/DISTINCT-FROM/EXTRACT shape is allowed (13 cases)", ok)
+    check("5: every CTE/VALUES/DISTINCT-FROM/EXTRACT/locking shape is allowed (21 cases)", ok)
 
     # --------------------------------------- P1.1 — column validation (new) --
     e = Env({"delta-agents": REF}); e.primed()

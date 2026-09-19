@@ -77,7 +77,9 @@ current_date current_time current_timestamp localtime localtimestamp now
 count sum avg min max coalesce nullif greatest least abs round length lower upper
 explain analyze verbose costs settings buffers format begin commit rollback savepoint
 table tablesample repeatable window partition over range groups preceding following
-unbounded current filter within of share no wait skip locked for
+unbounded current filter within of share no wait skip locked for nowait ties key
+at zone local isnull notnull epoch century millennium quarter dow doy
+day hour minute second millisecond microsecond week month year decade timezone
 text integer int int2 int4 int8 bigint smallint numeric decimal real float
 double precision boolean bool date timestamp timestamptz time timetz interval
 uuid json jsonb varchar character char bytea serial bigserial inet cidr macaddr
@@ -96,6 +98,7 @@ def strip_sql(q: str) -> str:
     """
     return re.sub(
         r"'(?:[^']|'')*'"  # standard string literal ('' = escaped quote)
+        r'|"(?:[^"]|"")*"'  # double-quoted identifier / COLLATE "C" (QA 2026-09-19)
         r"|\$([A-Za-z_][A-Za-z0-9_]*|)\$.*?\$\1\$"  # dollar-quoted body, tag may have digits or be empty
         r"|--[^\n]*"  # line comment
         r"|/\*.*?\*/",  # block comment
@@ -109,14 +112,19 @@ def strip_sql(q: str) -> str:
 
 
 def neutralize_from_operators(s: str) -> str:
-    """Blank the FROM keyword where it is an OPERATOR, not a clause: IS [NOT]
-    DISTINCT FROM, and the FROM inside EXTRACT/SUBSTRING/TRIM/OVERLAY/POSITION.
+    """Blank keywords that look like a clause but are not: the FROM of IS [NOT]
+    DISTINCT FROM and of EXTRACT/SUBSTRING/TRIM/OVERLAY/POSITION, and the UPDATE
+    of the FOR UPDATE row-locking clause.
 
     Without this, `WHERE slug IS DISTINCT FROM created_at` and
     `trim(both ' ' FROM slug)` read "created_at"/"slug" as tables and block a
     perfectly legal query (the suite's alias/keyword group, 4 of its 13 cases).
     """
     s = re.sub(r"\bis\s+(?:not\s+)?distinct\s+from\b", " <> ", s)
+    # FOR UPDATE / FOR SHARE is a row-locking clause; without this the UPDATE
+    # pattern reads "SELECT ... FOR UPDATE SKIP LOCKED" as UPDATE of a table
+    # named "skip" (QA 2026-09-19: 237 of 2370 real-schema queries, v2 and v3).
+    s = re.sub(r"\bfor\s+(?:no\s+key\s+|key\s+)?(?:update|share)\b", " ", s)
     s = re.sub(
         r"\b(extract|substring|substr|trim|overlay|position)\s*\(([^()]*?)\bfrom\b",
         lambda m: f"{m.group(1)}({m.group(2)} ", s)
@@ -306,7 +314,13 @@ def extract_tables(stripped: str):
     refs -= {"lateral", "only"}  # belt-and-braces: never validate SQL keywords
     out = set()
     for r in refs:
-        name = r.split(".")[-1]
+        parts = r.split(".")
+        name = parts[-1]
+        # The snapshot covers the `public` schema only, so auth.users /
+        # storage.objects / cron.job are not absences — they are out of scope,
+        # and "refresh the snapshot" could never resolve them (QA 2026-09-19).
+        if len(parts) > 1 and parts[-2] not in ("public", ""):
+            continue
         if name and name not in ctes:
             out.add(name)
     return out
@@ -477,8 +491,9 @@ def main() -> None:
     marker, migfile = session_paths(data.get("session_id"))
 
     if re.search(
-        r"\b(information_schema|pg_catalog|pg_policies|pg_class|pg_indexes|"
-        r"pg_tables|pg_attribute|pg_proc|pg_namespace|pg_constraint)\b",
+        # any pg_* relation, not a fixed list — pg_stat_activity, pg_roles,
+        # pg_extension and pg_trigger were all missing from it (QA 2026-09-19)
+        r"\b(information_schema|pg_[a-z_]+)\b",
         stripped, re.I,
     ):
         # Schema was consulted — satisfies the check for the rest of the session.
