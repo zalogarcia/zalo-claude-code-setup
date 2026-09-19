@@ -539,7 +539,14 @@ if (reconciliation.folded_exclusions.length) {
   );
 }
 if (reconciliation.script_error) {
-  log(`MANIFEST SCRIPT ERROR: ${reconciliation.script_error}`);
+  log(
+    `MANIFEST SCRIPT ERROR: ${reconciliation.script_error}. This run analysed whatever the script managed to return; it is not a week.`,
+  );
+}
+if (reconciliation.candidate_total === 0) {
+  log(
+    "EMPTY SCAN: the manifest reports zero candidate transcripts. That is a broken scan, not a quiet week, and nothing below is coverage.",
+  );
 }
 
 // ---- Phase 2: Stubs (before the expensive wave) ----------------------------------
@@ -757,6 +764,12 @@ const coverage = {
 };
 coverage.complete =
   reconciliation.ok &&
+  // A scan that found nothing, or a script that errored, is not a complete
+  // week: pct(0, 0) is 100 and an empty population is not a census, so both
+  // have to be excluded explicitly (found by the independent verifier,
+  // 2026-09-19, which reproduced a "complete" run holding zero facets).
+  reconciliation.candidate_total > 0 &&
+  !reconciliation.script_error &&
   !reconciliation.folded_exclusions.length &&
   failed.length === 0 &&
   lostStubs === 0 &&

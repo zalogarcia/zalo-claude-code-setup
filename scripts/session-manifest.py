@@ -42,11 +42,21 @@ def iso_day(ts):
     return datetime.fromtimestamp(ts, tz=timezone.utc).astimezone().strftime("%Y-%m-%d")
 
 
+def kind_of(text):
+    """A job-kind signature: the opening of the first typed message, digits
+    masked and whitespace collapsed. Two scheduled runs of the same job share
+    it; two different jobs in the same lane do not."""
+    t = re.sub(r"\d+", "#", (text or "").lower())
+    t = re.sub(r"\s+", " ", t).strip()
+    return t[:48]
+
+
 def scan_file(path, now_ts):
     """One pass over a transcript. Returns the metadata the manifest needs."""
     lines = 0
     user_msgs = 0
     typed_msgs = 0
+    first_msg = ""
     first_day = None
     last_day = None
     repos = {}
@@ -98,6 +108,8 @@ def scan_file(path, now_ts):
                 if head.startswith("Caveat:"):
                     continue
                 typed_msgs += 1
+                if not first_msg:
+                    first_msg = head
     except OSError:
         return None
 
@@ -119,6 +131,7 @@ def scan_file(path, now_ts):
         "bytes": size,
         "user_msgs": user_msgs,
         "typed_msgs": typed_msgs,
+        "first_msg_kind": kind_of(first_msg),
         "repos_touched": [name for name, _ in top_repos],
         "primary_repo": top_repos[0][0] if top_repos else "",
         "in_progress": (now_ts - mtime) < 180,
@@ -160,6 +173,22 @@ def select(substantive, cap, seed, census_share):
     unequal-probability sample instead of being read off a biased head.
     """
     ordered = sorted(substantive, key=rank_key, reverse=True)
+    if not ordered:
+        # Not a census. A census of nothing reads downstream as a complete week.
+        return [], {
+            "method": "empty",
+            "cap": cap,
+            "population": 0,
+            "selected": 0,
+            "coverage_pct": 0.0,
+            "seed": seed,
+            "strata": [],
+            "bias_statement": (
+                "EMPTY SCAN: no substantive session was found in the window. "
+                "This is not a clean week, it is a scan that found nothing, and "
+                "nothing downstream should read it as coverage."
+            ),
+        }
     if len(ordered) <= cap:
         return ordered, {
             "method": "census",
@@ -248,10 +277,13 @@ def cluster_trivial(trivial, seed):
     """
     groups = {}
     for s in trivial:
-        # Same lane AND same size shape. 239 devi-watch poller transcripts are
-        # all 19 lines; grouping on the lane alone would also swallow the short
-        # human chats that share the bridge's own directory.
-        key = "%s ~%d0 lines" % (s["transcript_dir"], s["lines"] // 10)
+        # Same lane, same size shape AND the same opening message. Lane plus
+        # size alone put 112 mail-watch triage runs in one group with 3 reply
+        # drafts and 2 unrelated jobs, and two representatives cannot represent
+        # five kinds of job (found by the independent verifier, 2026-09-19).
+        key = "%s ~%d0 lines | %s" % (
+            s["transcript_dir"], s["lines"] // 10, s.get("first_msg_kind", ""),
+        )
         groups.setdefault(key, []).append(s)
     to_gist = []
     clusters = []
@@ -261,6 +293,7 @@ def cluster_trivial(trivial, seed):
             to_gist.extend(reps)
             clusters.append({
                 "group": name,
+                "kind": members[0].get("first_msg_kind", ""),
                 "count": len(members),
                 "represented_by": [r["id"] for r in reps],
                 "member_ids": [m["id"] for m in members],
@@ -388,7 +421,7 @@ def main():
         "not_selected_ids": not_selected_ids,
         "stub_target_count": len(stub_targets),
         "trivial_clusters": [
-            {k: c[k] for k in ("group", "count", "represented_by")}
+            {k: c[k] for k in ("group", "kind", "count", "represented_by")}
             for c in clusters
         ],
         "sampling": sampling,

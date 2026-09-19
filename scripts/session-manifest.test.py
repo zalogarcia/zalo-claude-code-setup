@@ -35,7 +35,8 @@ def check(name, cond, detail=""):
         print("  FAIL %s%s" % (name, " :: %s" % detail if detail else ""))
 
 
-def write_session(root, group, sid, user_msgs, extra_lines=0, repo="delta-agents"):
+def write_session(root, group, sid, user_msgs, extra_lines=0, repo="delta-agents",
+                  opening="do the thing"):
     d = os.path.join(root, group)
     os.makedirs(d, exist_ok=True)
     p = os.path.join(d, "%s.jsonl" % sid)
@@ -44,7 +45,7 @@ def write_session(root, group, sid, user_msgs, extra_lines=0, repo="delta-agents
     for i in range(user_msgs):
         rows.append(json.dumps({
             "type": "user", "timestamp": "2026-09-16T10:0%d:00.000Z" % (i % 10),
-            "message": {"content": [{"type": "text", "text": "do the thing in /Users/zalo/dev/%s" % repo}]},
+            "message": {"content": [{"type": "text", "text": "%s in /Users/zalo/dev/%s" % (opening, repo)}]},
         }))
     for i in range(extra_lines):
         rows.append(json.dumps({
@@ -153,6 +154,42 @@ with tempfile.TemporaryDirectory() as tmp:
           s5["accounted_total"] == s5["candidate_total"] == 35)
     check("the excluded session is not analysed",
           own not in [x["id"] for x in s5["selected"]])
+
+# --- a lane holding two different jobs is not one cluster -------------------
+with tempfile.TemporaryDirectory() as tmp:
+    root = os.path.join(tmp, "projects")
+    for i in range(22):
+        write_session(root, "-Users-zalo-dev", "4000%04d-0000-4000-8000-000000000000" % i,
+                      user_msgs=1, opening="you triage inbound email for a solo business owner")
+    for i in range(3):
+        write_session(root, "-Users-zalo-dev", "5000%04d-0000-4000-8000-000000000000" % i,
+                      user_msgs=1, opening="you are drafting a reply email on behalf of zalo")
+    out = os.path.join(tmp, "manifest.json")
+    s6 = run(root, out, days=7, cap=80)
+    kinds = [c["kind"] for c in s6["trivial_clusters"]]
+    check("the big repeated job is clustered",
+          any(c["count"] == 22 for c in s6["trivial_clusters"]),
+          json.dumps(s6["trivial_clusters"]))
+    check("a different job in the same lane and size band is NOT swallowed by it",
+          len(s6["trivial_clusters"]) == 1 and s6["stub_target_count"] == 2 + 3,
+          "%d clusters, %d stub targets" % (len(s6["trivial_clusters"]), s6["stub_target_count"]))
+    check("the cluster names the job kind its representatives stand for",
+          kinds and "triage inbound email" in kinds[0], json.dumps(kinds))
+    check("nothing is lost by clustering",
+          s6["accounted_total"] == s6["candidate_total"] == 25)
+
+# --- an empty scan is not a census -----------------------------------------
+with tempfile.TemporaryDirectory() as tmp:
+    root = os.path.join(tmp, "projects")
+    os.makedirs(os.path.join(root, "-Users-zalo-dev"))
+    out = os.path.join(tmp, "manifest.json")
+    s7 = run(root, out, days=7, cap=80)
+    check("an empty scan reports zero candidates", s7["candidate_total"] == 0)
+    check("an empty scan does NOT call itself a census",
+          s7["sampling"]["method"] == "empty", s7["sampling"]["method"])
+    check("an empty scan says so where a human reads it",
+          s7["sampling"]["bias_statement"].startswith("EMPTY SCAN"),
+          s7["sampling"]["bias_statement"][:60])
 
 print("\n%d passed, %d failed" % (passed, failed))
 sys.exit(0 if failed == 0 else 1)

@@ -537,7 +537,68 @@ console.log("fable-insights.js");
   check("abort is not reported as coverage", out.coverage.complete === false && out.partial_run === true);
 }
 
-// 15. The manifest agent runs the script; it does not scan the corpus itself.
+// 15. A scan that found nothing, and a script that errored, are NOT complete
+//     runs. (Found by the independent verifier, 2026-09-19: pct(0,0) is 100 and
+//     an empty population used to call itself a census, so a broken scan
+//     returned coverage.complete true with zero facets.)
+{
+  const empty = {
+    ...manifestOf([]),
+    candidate_total: 0,
+    accounted_total: 0,
+    substantive_count: 0,
+    trivial_count: 0,
+    stub_target_count: 0,
+    sampling: {
+      method: "empty",
+      population: 0,
+      selected: 0,
+      coverage_pct: 0,
+      seed: "2026-09-19",
+      strata: [],
+      bias_statement: "EMPTY SCAN: no substantive session was found in the window.",
+    },
+  };
+  const agentFn = async (prompt, opts) =>
+    opts.label.startsWith("manifest") ? empty : null;
+  const { promise, logs } = runWorkflow({ agentFn, args: { days: 7 } });
+  const out = await promise;
+  check("a zero-candidate scan is not a complete run", out.coverage.complete === false, JSON.stringify(out.coverage));
+  check("a zero-candidate scan is flagged partial", out.partial_run === true);
+  check("an empty scan is logged loudly", logs.some((l) => l.startsWith("EMPTY SCAN:")), logs.join(" | ").slice(0, 200));
+  check("an empty scan returns no facets", out.facets.length === 0);
+}
+{
+  const broken = {
+    ...manifestOf([]),
+    candidate_total: 0,
+    accounted_total: 0,
+    substantive_count: 0,
+    trivial_count: 0,
+    stub_target_count: 0,
+    script_error: "PermissionError: [Errno 13] Permission denied: '/Users/zalo/.claude/projects'",
+  };
+  const agentFn = async (prompt, opts) =>
+    opts.label.startsWith("manifest") ? broken : null;
+  const { promise, logs } = runWorkflow({ agentFn, args: { days: 7 } });
+  const out = await promise;
+  check("a failed scan script is not a complete run", out.coverage.complete === false);
+  check("a failed scan script is flagged partial", out.partial_run === true);
+  check("the script error is logged loudly", logs.some((l) => l.startsWith("MANIFEST SCRIPT ERROR:")), logs.join(" | ").slice(0, 200));
+}
+{
+  // A script error on a run that DID scan sessions still blocks completeness.
+  const agentFn = async (prompt, opts) => {
+    if (opts.label.startsWith("manifest"))
+      return manifestOf([session("aaaaaaaa-1")], { script_error: "selected count disagrees with sampling.selected" });
+    if (opts.label.startsWith("analyze:")) return { ...FACET };
+    return null;
+  };
+  const out = await runWorkflow({ agentFn, args: { days: 7 } }).promise;
+  check("a script error blocks completeness even with facets in hand", out.coverage.complete === false && out.facets.length === 1);
+}
+
+// 16. The manifest agent runs the script; it does not scan the corpus itself.
 {
   const agentFn = async (prompt, opts) => {
     if (opts.label.startsWith("manifest")) return manifestOf([session("aaaaaaaa-1")], { trivial_count: 2, stub_target_count: 2 });
