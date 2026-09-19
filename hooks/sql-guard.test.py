@@ -311,6 +311,10 @@ def main():
                                                                 "query": "SELECT id FROM tenants"})),
         ("empty query", dict(session="s7", tool_input={"project_id": REF, "query": "   "})),
         ("cwd is null", dict(session="s7", cwd="")),
+        # added 2026-09-19: a non-string cwd crashed the hook with TypeError
+        # (exit 1) — the same class as the two AttributeErrors above, which the
+        # original 11 cases did not cover.
+        ("cwd is a list", dict(session="s7", cwd=["/x"])),
     ]
     ok = True
     for label, kw in bad:
@@ -323,7 +327,7 @@ def main():
         if v != ALLOW:
             check(f"16: malformed — {label}", False, f"blocked: {err[:160]}")
             ok = False
-    check("16: every malformed payload exits 0 and allows (11 cases)", ok)
+    check("16: every malformed payload exits 0 and allows (12 cases)", ok)
 
     # a snapshot in an unreadable/garbage format must not block anything
     e = Env({"delta-agents": "# not a snapshot at all\n\njust prose, no tables\n"})
