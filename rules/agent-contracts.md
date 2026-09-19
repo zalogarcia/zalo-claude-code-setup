@@ -7,12 +7,43 @@ Completion markers and return contract for `~/.claude/agents/`. Skills/orchestra
 | Agent                 | Markers                                                                                                                |
 | --------------------- | ---------------------------------------------------------------------------------------------------------------------- |
 | `frontend-specialist` | `## IMPLEMENTATION COMPLETE` / `## IMPLEMENTATION DONE_WITH_CONCERNS` / `## BLOCKED`                                   |
-| `qa-agent`            | `## VERIFICATION PASSED` / `## ISSUES FOUND` / `## BLOCKED`                                                            |
+| `qa-agent`            | `## VERIFICATION PASSED` / `## ISSUES FOUND` / `## BLOCKED` (verdict mapping below)                                    |
 | `safe-planner`        | `## PLAN READY` / `## NEEDS DECISION` / `## BLOCKED`                                                                   |
 | `brainstorm`          | `## EXPLORATION COMPLETE`                                                                                              |
 | `live-test`           | `## UI VERIFIED` / `## UI ISSUES FOUND` / `## BLOCKED`                                                                 |
 | `bug-fix`             | `## ROOT CAUSE FOUND — CONFIDENCE 10/10` / `## INVESTIGATION INCOMPLETE — CONFIDENCE <N>/10` (N ∈ 1..9) / `## BLOCKED` |
 | `outcomes-grader`     | `## OUTCOMES PASSED` / `## OUTCOMES UNMET` / `## BLOCKED`                                                              |
+
+### qa-agent verdict mapping
+
+`~/.claude/agents/qa-agent.md` gives the agent a THREE value verdict (PASS / PASS WITH CONCERNS / FAIL) and the registry gives it two non blocked markers. The marker is therefore chosen by the **verdict**, not by the finding count:
+
+| `Assessment:` in the body | Marker to emit           | Orchestrator route         |
+| ------------------------- | ------------------------ | -------------------------- |
+| `PASS`                    | `## VERIFICATION PASSED` | clean, proceed             |
+| `PASS WITH CONCERNS`      | `## ISSUES FOUND`        | the concerns branch, below |
+| `FAIL`                    | `## ISSUES FOUND`        | the concerns branch, below |
+
+There is deliberately **no third marker**. `## VERIFICATION PASSED WITH CONCERNS` contains `## VERIFICATION PASSED` as a prefix, so any consumer not updated for it, and any regex anchored with `\b`, reads it as a clean pass: a new marker's failure mode would be silent and identical to the bug it was meant to fix. `## ISSUES FOUND` is already handled by every consumer, and when a consumer is out of date its failure mode is conservative (a concerned pass gets the findings branch, which is more scrutiny, never less).
+
+**Two mandated fields.** A pass class marker (`## VERIFICATION PASSED`) requires BOTH of these in the body:
+
+- an `Assessment:` line carrying exactly one of `PASS` / `PASS WITH CONCERNS` / `FAIL`, and
+- an evidence line carrying a command **and its result**: `**Commands run:**` (qa-agent's own field name for the template's Verification field) or `**Verification:**`. A value of "none" or "n/a" does not satisfy it.
+
+A return missing either is treated as **not passing**. Route it as `## ISSUES FOUND` with the concern "contract fields missing", or re dispatch that one agent ONCE with the field names quoted.
+
+**Status takes precedence over the marker too.** A pass marker whose `**Status:**` says `DONE_WITH_CONCERNS` routes as `## ISSUES FOUND` (above). One whose Status says `NEEDS_CONTEXT` or `BLOCKED` is also not a pass, but it goes to THAT status's own branch in the Status Code Body Protocol below (supply the context and re dispatch; Tiered Decision Protocol), not to the concerns branch.
+
+**The consequence.** A check with no defined consequence is a check nobody fixes. On a concerned verdict the orchestrator does exactly ONE of these, chosen by reading the concern, and does **not** re dispatch the same audit for the same concern (the verdict is already in):
+
+1. The concern names a **finding**: fix CRITICAL and HIGH, defer MEDIUM and LOW. This is what the `## ISSUES FOUND` branch already does.
+2. The concern names a **check that did not run** (a mock stood in for the real system, a coverage claim with no measured denominator, a surface not live verified): run that one check now. If it cannot be run, cap the run's terminal claim at the `CODE-COMPLETE, NOT LIVE-VERIFIED` status in `~/.claude/rules/gates.md` Part 2 and list the unproven surface FIRST in Remaining Issues.
+3. The concern is an **observation** only (per DONE_WITH_CONCERNS below): say it to the user in the report and proceed.
+
+**Mechanism, not just text.** `~/.claude/hooks/qa-verdict-guard.py` (PostToolUse on `Agent|Task`) parses the returned body and injects this routing when a `## VERIFICATION PASSED` return contradicts its own verdict line or is missing a mandated field. Contract text alone decays; the hook does not. Tests: `python3 ~/.claude/hooks/qa-verdict-guard.test.py`. The hook nudges, it does not block: the audit already ran, and blocking a returned verdict throws it away.
+
+**Basis** (2026-09-19 harness sweep, complete 30 day population of 57 pass class subagent returns from 3,308 transcripts). Of the 47 carrying `## VERIFICATION PASSED`: **21** said `Assessment: PASS WITH CONCERNS`, **17** said `**Status:** DONE_WITH_CONCERNS`, **1** said `Assessment: FAIL`. Every one of them routed as a clean pass.
 
 ## Marker Rules
 
@@ -59,6 +90,8 @@ After the H2 marker, the agent's body must signal one of four states (adapted fr
 
 **Concerns / Blockers:** [if any]
 ```
+
+`qa-agent` emits the `**Verification:**` field under its own name, `**Commands run:**` (see its Output format). Either name satisfies the field; consumers and `qa-verdict-guard.py` accept both.
 
 ## Mandatory Dispatch Boilerplate
 

@@ -406,6 +406,8 @@ If ANY criterion fails → sequential dispatch.
 | Browser verification             | `live-test`                                | `## UI VERIFIED` / `UI ISSUES FOUND` / `BLOCKED`                |
 | Complex planning                 | `safe-planner`                             | `## PLAN READY` / `NEEDS DECISION` / `BLOCKED`                  |
 
+Note: a `qa-agent` return carrying `## VERIFICATION PASSED` whose body says `Assessment: PASS WITH CONCERNS` or `FAIL` is NOT a clean pass. It routes as `## ISSUES FOUND`, per `~/.claude/rules/agent-contracts.md` "qa-agent verdict mapping"; the collect loop in Phase 3 implements it.
+
 Note: For bug fixing, dispatch `general-purpose` (model: "opus") with explicit instructions to diagnose AND fix. The `bug-fix` agent type only diagnoses (emits `ROOT CAUSE FOUND`), it does not ship code.
 
 ### Return Contract
@@ -1301,8 +1303,39 @@ LOOP:
   partition_files = []  # paths to findings files from partitions that emitted ISSUES FOUND
 
   FOR each returned qa-agent:
-    IF ## VERIFICATION PASSED → continue
+    IF ## VERIFICATION PASSED → READ THE BODY BEFORE ACCEPTING IT.
+       A pass marker is not a pass on its own (measured 2026-09-19: 24 of 47
+       pass-marker returns contradicted themselves or were missing a mandated
+       field). Treat it as ## ISSUES FOUND if ANY of these hold:
+         - its `Assessment:` line says PASS WITH CONCERNS or FAIL
+         - its `**Status:**` line says DONE_WITH_CONCERNS
+           (a pass marker whose Status says NEEDS_CONTEXT or BLOCKED is also not
+           a pass, but it goes to THAT status's own branch below, not here)
+         - the marker line carries a tail (e.g. "WITH CONCERNS"): that marker is
+           not in the registry and must never be read as a clean pass
+         - it has no `Assessment:` line, or no `**Commands run:**` /
+           `**Verification:**` line carrying a command and its result. Re-dispatch
+           that partition ONCE with the field names quoted (counts against
+           MAX_AGENT_RETRIES); if it comes back the same, treat as ## ISSUES FOUND.
+       Otherwise → continue.
+       (`~/.claude/hooks/qa-verdict-guard.py` injects this same routing at the
+       moment the agent returns; it nudges, it does not block, so this branch is
+       still yours to execute.)
     IF ## ISSUES FOUND → all_passed = false; partition_files.append(its findings path)
+       If this return was re-labeled by the rule above, its CONCERN is the
+       payload (a findings file, if it wrote one, may list nothing): apply the
+       consequence in
+       `~/.claude/rules/agent-contracts.md` "qa-agent verdict mapping" (fix the
+       finding / run the one check that did not run, else cap the terminal status
+       at CODE-COMPLETE, NOT LIVE-VERIFIED with the unproven surface listed first
+       in Remaining Issues / record the observation in the report and proceed).
+       Do NOT re-dispatch the same audit for the same concern.
+       Track these in concern_only = [each re-labeled return + its concern text],
+       REGARDLESS of whether it also wrote a findings file. The partition prompt
+       tells every qa-agent to write one, so a concerned return that obeys writes
+       a file saying "No findings": keying the terminal branch on file existence
+       would miss the common case. Append its path to partition_files only if
+       that file lists at least one bug.
     IF ## BLOCKED → Tiered Decision Protocol, re-dispatch that partition only
     IF ## NEEDS_CONTEXT → supply, re-dispatch that partition only (max MAX_AGENT_RETRIES)
     IF no marker → treat as BLOCKED, re-dispatch that partition with marker reminder
@@ -1320,6 +1353,22 @@ LOOP:
   # FOUND but didn't write its file), re-dispatch the offending partition ONCE
   # with explicit reminder of the file path + structured format. If still
   # missing after retry, log "qa_findings_parse_failure" and BREAK with current state.
+  # EXCEPT for a return re-labeled ISSUES FOUND by the concerned-verdict rule
+  # above: its concern IS the payload and it may legitimately have no bug to
+  # write, so re-dispatching it burns a retry re-deriving a verdict already given.
+
+  # ── Step 3b: concerned verdicts are TERMINAL for this loop ──
+  # Without this branch the run re-dispatches every partition until
+  # MAX_QA_ITERATIONS: the fix step finds no bug to fix and falls through to
+  # `GOTO LOOP` in Step 5. Re-auditing cannot clear a concern, because the agent
+  # has no way to know the orchestrator ran the missing check.
+  IF concern_only is non-empty AND issues is empty (no partition reported an
+     actual bug, only concerns):
+    Apply the consequence for each entry in concern_only (see the ## ISSUES FOUND
+    branch above), record each concern verbatim in .autopilot/deferred_issues.md
+    and in state.json under `qa_concerns`, apply any terminal-status cap it
+    implies, and BREAK. Do NOT GOTO LOOP.
+    Terminal status for the run is "passed with concerns", never "clean".
 
   # ── Step 4: Stall detection ──
   current_issues = normalize each issue to (file, first_8_words_of_description)
@@ -1339,7 +1388,12 @@ LOOP:
 
   Append medium_low to .autopilot/deferred_issues.md (do NOT fix)
 
-  IF no critical_high bugs: GOTO LOOP (QA may find new issues next pass)
+  IF no critical_high bugs:
+    IF issues is empty → BREAK, do not re-dispatch. An iteration that produced
+       zero bugs cannot produce different bugs on a re-run of the same code;
+       the concern-only case already broke out above, and a findings file that
+       lists nothing is the same state as no findings file.
+    ELSE GOTO LOOP (only MEDIUM/LOW were found; QA may find new issues next pass)
 
   # Update bug_tracker
   FOR each bug in critical_high:

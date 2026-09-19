@@ -54,6 +54,21 @@ LOOP:
         the agent's `fable` frontmatter pin — one dispatch per iteration is
         low-volume). Wait for
         ## VERIFICATION PASSED / ## ISSUES FOUND / ## BLOCKED (prior behavior).
+        A `## VERIFICATION PASSED` is NOT clean if its body says
+        `Assessment: PASS WITH CONCERNS` or `FAIL`, or
+        `**Status:** DONE_WITH_CONCERNS`, or if it is missing its `Assessment:`
+        line or its `**Commands run:**` / `**Verification:**` line. Treat those
+        as ## ISSUES FOUND and apply the consequence in
+        `~/.claude/rules/agent-contracts.md` "qa-agent verdict mapping". Never
+        break the loop as clean on a concerned verdict, and never GOTO LOOP on
+        one either: re-auditing cannot clear a concern, because the agent has no
+        way to know you ran the missing check. Once the consequence is applied,
+        BREAK with Final state = "passed with concerns" (Step 3). Only a
+        concern that produced an actual BUG goes through the Fix step and back
+        around the loop. A pass marker whose `**Status:**` says NEEDS_CONTEXT or
+        BLOCKED is not a pass either, and goes to that status's own handling
+        (supply what is missing and re-dispatch; do not re-dispatch the same
+        agent unchanged after a BLOCKED).
 
   IF iteration >= MAX_ITERATIONS:
     BREAK — report unfixed bugs to user
@@ -86,7 +101,7 @@ The audit step delegates to `~/.claude/workflows/qa-audit.js` — fan-out across
 - **Iterations run:** count
 - **Bugs found and fixed:** file, line, what was wrong (one bullet each)
 - **Bugs skipped:** any that were too risky or ambiguous
-- **Final state:** clean / remaining issues with severity
+- **Final state:** clean / remaining issues with severity / **passed with concerns** (name the concern verbatim and which of the three actions in `~/.claude/rules/agent-contracts.md` "qa-agent verdict mapping" you took). Never report a concerned verdict as "QA passed".
 
 ## Verification Gate Function (per iteration)
 

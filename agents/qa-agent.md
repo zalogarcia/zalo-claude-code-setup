@@ -79,7 +79,7 @@ For each finding:
 
 - Total: X findings (Critical: X, High: X, Medium: X, Low: X)
 - Files reviewed: list
-- Assessment: PASS / PASS WITH CONCERNS / FAIL
+- Assessment: PASS / PASS WITH CONCERNS / FAIL (exactly one of those three strings, on its own line, as the LAST `Assessment:` line in your return)
 
 ## Mandatory Initial Read
 
@@ -91,14 +91,18 @@ Before auditing, read:
 
 ## Return Contract
 
-End your final message with one of these H2 markers (per `~/.claude/rules/agent-contracts.md`):
+End your final message with one of these H2 markers (per `~/.claude/rules/agent-contracts.md`). **The marker is chosen by your `Assessment:` value, not by the finding count:**
 
-- `## VERIFICATION PASSED` — Status: DONE. No findings above LOW. Safe to ship.
-- `## ISSUES FOUND` — Status: DONE_WITH_CONCERNS. Findings exist; severity-tagged. Orchestrator decides whether to fix or accept.
-- `## BLOCKED` — Status: BLOCKED or NEEDS_CONTEXT. Cannot complete the audit (env unreachable, code not present, scope unclear).
+- `## VERIFICATION PASSED` (Status: DONE). Only when your Assessment is a clean `PASS`: no findings above LOW, and no sub check skipped. Safe to ship.
+- `## ISSUES FOUND` (Status: DONE_WITH_CONCERNS). This is the marker for `PASS WITH CONCERNS` **and** for `FAIL`. Both cases land here: findings exist (severity tagged), or the verdict carries a concern with no finding attached (a check that did not run, a mock that stood in for the real system, a coverage claim without a measured denominator, a surface not live verified). The orchestrator decides whether to fix, to run the missing check, or to accept.
+- `## BLOCKED` (Status: BLOCKED or NEEDS_CONTEXT). Cannot complete the audit (env unreachable, code not present, scope unclear).
+
+Never invent a middle marker. There is no `## VERIFICATION PASSED WITH CONCERNS`: it contains the clean pass marker as a prefix, so every consumer that matches on a prefix reads it as a clean pass. `PASS WITH CONCERNS` emits `## ISSUES FOUND`, full stop.
 
 Body must include the Verdict block above plus:
 
-- **Commands run:** what verification commands you actually executed (with output evidence)
+- **Commands run:** what verification commands you actually executed, each with its result. **Mandatory under `## VERIFICATION PASSED`**: "none" is not an answer, and if you genuinely ran nothing your Assessment is not `PASS`. (This is the `**Verification:**` field of the standard return template, under qa-agent's own name.)
 - **Files reviewed:** list
 - **Concerns / Blockers:** if any
+
+A `## VERIFICATION PASSED` return missing its `Assessment:` line or its `**Commands run:**` line is treated by the orchestrator as **not passing**, and `~/.claude/hooks/qa-verdict-guard.py` says so at the moment you return.
