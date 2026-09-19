@@ -1,34 +1,35 @@
 export const meta = {
   name: "fable-insights",
   description:
-    "Weekly self-audit: one deep-analysis agent per substantive Claude Code session (last N days), batched gist extraction for trivial sessions, manifest built at run time by an agent (workflow scripts have no filesystem access).",
+    "Weekly self-audit: a deterministic script builds the manifest and draws a stratified sample, one deep-analysis agent per sampled session, clustered gist extraction for trivial sessions, and a cross-model Verify stage over the aggregate.",
   whenToUse:
-    "Weekly self-audit of Claude Code sessions; args {days} (default 7), {exclude_session_id} (REQUIRED — the invoking conversation's own session id, the UUID segment of your scratchpad path; only that transcript is skipped. Open sessions from other terminals ARE analyzed, marked in_progress)",
+    "Weekly self-audit of Claude Code sessions; args {days} (default 7), {cap} (default 80), {exclude_session_id} (REQUIRED, the invoking conversation's own session id, the UUID segment of your scratchpad path; only that transcript is skipped. Open sessions from other terminals ARE analyzed, marked in_progress)",
   phases: [
     {
       title: "Manifest",
       detail:
-        "one agent builds the session work-list from ~/.claude/projects at run time",
-    },
-    {
-      title: "Analyze",
-      detail: "one deep-analysis agent per substantive session (facets)",
+        "one agent runs scripts/session-manifest.py, which scans the transcripts, classifies them and draws the stratified sample",
     },
     {
       title: "Stubs",
-      detail: "batched gist extraction for trivial sessions (batches of 9)",
+      detail:
+        "clustered gist extraction for trivial sessions, read from the manifest file by index range",
+    },
+    {
+      title: "Analyze",
+      detail: "one deep-analysis agent per sampled substantive session (facets)",
     },
     {
       title: "Verify",
       detail:
-        "one fable agent audits the opus fan-out's aggregate output for saturation, empty facets and invented taxonomy slugs",
+        "one fable agent audits the opus fan-out's aggregate output for saturation, empty facets, invented taxonomy slugs and sampling honesty",
     },
   ],
 };
 
 // ---- args guard ---------------------------------------------------------------
 // KNOWN BUG: background-launched workflows can receive `args` as undefined or as
-// a JSON string — never assume an object.
+// a JSON string, so never assume an object.
 let parsedArgs = args;
 if (typeof parsedArgs === "string") {
   try {
@@ -37,75 +38,183 @@ if (typeof parsedArgs === "string") {
     parsedArgs = null;
   }
 }
-const days =
-  (parsedArgs && typeof parsedArgs === "object" && Number(parsedArgs.days)) ||
-  7;
-// Session id of the audit's OWN conversation (the invoker derives it from its
-// scratchpad path). Only this transcript is excluded from analysis — open
-// sessions belonging to OTHER terminals are analyzed with in_progress: true.
-// (2026-07-19: the old lsof drop-all-open rule silently excluded the week's
-// highest-friction session — a 31MB still-open live-test session.)
+const argOf = (k) =>
+  parsedArgs && typeof parsedArgs === "object" ? parsedArgs[k] : undefined;
+const days = Number(argOf("days")) || 7;
+const cap = Number(argOf("cap")) || 80;
+// Session id of the audit's OWN conversation. Only this transcript is excluded;
+// open sessions belonging to OTHER terminals are analyzed with in_progress true.
+// (2026-07-19: the old drop-all-open rule silently excluded the week's
+// highest-friction session, a 31MB still-open live-test transcript.)
 const excludeSessionId =
-  (parsedArgs &&
-    typeof parsedArgs === "object" &&
-    typeof parsedArgs.exclude_session_id === "string" &&
-    parsedArgs.exclude_session_id) ||
-  "";
+  typeof argOf("exclude_session_id") === "string"
+    ? argOf("exclude_session_id")
+    : "";
 
-const ANALYZE_CAP = 80;
+const PRIMARY_MODEL = "opus";
+const FALLBACK_MODEL = "fable";
 const STUB_BATCH_SIZE = 9;
+const STUB_RESCUE_SIZE = 3;
+const MANIFEST_SCRIPT = "~/.claude/scripts/session-manifest.py";
+
+// Taxonomy version. Bumped whenever the friction enum changes, because a
+// week-over-week delta computed across a taxonomy change is not a delta.
+// v1 (2026-07-19 to 2026-09-19): the ten pinned types.
+// v2 (2026-09-19): ten types added after 113 of 567 frictions (19.9%) landed in
+// `other` in the v1 week. They draw mass mostly out of `other`, and some out of
+// `environment` and `wrong_approach`, so v1 and v2 weeks are comparable only on
+// the `other` RATE and on types unchanged between them.
+const TAXONOMY_VERSION = 2;
+
+const FRICTION_TYPES = [
+  "claude_bug",
+  "overclaimed_verification",
+  "tooling_breakage",
+  "usage_limit",
+  "wrong_approach",
+  "environment",
+  "user_change_of_mind",
+  "hook_by_design",
+  "post_delivery_defect",
+  "schema_guess",
+  "shell_or_edit_mechanics",
+  "gate_or_test_defect",
+  "stale_fact_inherited",
+  "self_inflicted_regression",
+  "harness_limitation",
+  "concurrency_collision",
+  "unverified_number",
+  "owner_visible_side_effect",
+  "preexisting_product_defect",
+  "other",
+];
+
+const FRICTION_GUIDE = `claude_bug = the harness or model misbehaved.
+overclaimed_verification = a done/fixed/shipped claim with no fresh evidence behind it.
+tooling_breakage = a tool, CLI or vendor API failed on its own terms.
+usage_limit = a Claude or Codex limit wall.
+wrong_approach = Claude chose a path that had to be abandoned.
+environment = a machine, network or credential fact outside the repo bit the run.
+user_change_of_mind = the user changed the target; not Claude's cost.
+hook_by_design = a guard hook fired exactly as designed; a designed tax, not friction.
+post_delivery_defect = a defect found while validating work an EARLIER session or autonomous run delivered as done; charge it to the producing pipeline.
+schema_guess = a table, column, field or endpoint name written from memory or pattern instead of read from the live schema or snapshot; the Postgres 42703 / 42P01 class.
+shell_or_edit_mechanics = the tool call itself was malformed and cost a retry: shell quoting, a non-unique edit anchor, a heredoc, an unquoted glob, a cwd reset, a wrong flag. No logic implication.
+gate_or_test_defect = the verification instrument was wrong or lied: a cached replay green, a scenario set with a blind spot, an over-fitted or stale assertion, harness drift against main.
+stale_fact_inherited = a fact from a brief, a memory file, a doc, a prior report or another engine was wrong and steered the run.
+self_inflicted_regression = a defect Claude introduced while doing THIS session's work, usually caught by its own QA or gate.
+harness_limitation = a missing primitive in Claude Code itself (no wait-on-subagent, the 600s Bash ceiling, a tool that cannot observe what it is asked to observe). Not avoidable by better behavior.
+concurrency_collision = two workers, lanes or worktrees on one repo, row, branch or scratch path: rebases, overwrites, duplicate dispatch.
+unverified_number = a figure, rate or cost was stated to the user or written into a brief before it was measured, and later corrected.
+owner_visible_side_effect = the owner saw, heard or was paged by something the run did without forewarning: real alerts, a visible browser, mutated owner data, unrequested scope.
+preexisting_product_defect = a defect in the user's own product or rig, found mid-task, that this session did not cause.
+other = none of the above. If you reach for this, the detail must say what category is missing.`;
 
 // ---- schemas ------------------------------------------------------------------
 const SESSION_ITEM_SCHEMA = {
   type: "object",
-  required: ["id", "path", "start", "user_msgs", "lines", "project"],
+  required: ["id", "path", "transcript_dir", "start", "last_activity", "lines"],
   properties: {
-    id: { type: "string", description: "transcript basename without .jsonl" },
-    path: {
+    id: { type: "string" },
+    path: { type: "string" },
+    transcript_dir: {
       type: "string",
-      description: "absolute path to the .jsonl transcript",
+      description: "provenance only: the projects/ directory slug",
     },
-    start: {
+    start: { type: "string", description: "YYYY-MM-DD of the first timestamp" },
+    last_activity: {
       type: "string",
-      description: "YYYY-MM-DD of the first timestamp in the file",
+      description: "YYYY-MM-DD of the last timestamp; the window's clock",
     },
-    user_msgs: { type: "integer" },
     lines: { type: "integer" },
-    project: {
-      type: "string",
-      description:
-        'directory slug with "-Users-zalo-" prefix stripped; "home" for the bare -Users-zalo dir',
-    },
-    in_progress: {
+    bytes: { type: "integer" },
+    user_msgs: { type: "integer" },
+    typed_msgs: { type: "integer" },
+    repos_touched: { type: "array", items: { type: "string" } },
+    primary_repo: { type: "string" },
+    in_progress: { type: "boolean" },
+    carried_over: {
       type: "boolean",
-      description:
-        "true if the transcript was open (lsof) or modified in the last 3 minutes at manifest time — analyzed as a snapshot; re-faceted next run",
+      description: "started before window_start, still active inside it",
     },
   },
 };
 
 const MANIFEST_SCHEMA = {
   type: "object",
-  required: ["generated_on", "substantive", "trivial", "excluded"],
+  required: [
+    "generated_on",
+    "window_start",
+    "window_end",
+    "manifest_path",
+    "candidate_total",
+    "accounted_total",
+    "substantive_count",
+    "trivial_count",
+    "selected",
+    "stub_target_count",
+    "sampling",
+  ],
   properties: {
-    generated_on: {
+    generated_on: { type: "string" },
+    window_start: { type: "string" },
+    window_end: { type: "string" },
+    manifest_path: {
       type: "string",
-      description: "today, YYYY-MM-DD, stamped via date +%F",
+      description: "absolute path to the full unabridged manifest JSON on disk",
     },
-    substantive: { type: "array", items: SESSION_ITEM_SCHEMA },
-    trivial: { type: "array", items: SESSION_ITEM_SCHEMA },
+    candidate_total: {
+      type: "integer",
+      description: "every .jsonl the scan saw, before any classification",
+    },
+    accounted_total: {
+      type: "integer",
+      description:
+        "substantive + trivial + excluded, read back OFF THE FILE. It must equal candidate_total or the run is partial.",
+    },
+    substantive_count: { type: "integer" },
+    trivial_count: { type: "integer" },
+    selected: { type: "array", items: SESSION_ITEM_SCHEMA },
+    not_selected_ids: { type: "array", items: { type: "string" } },
+    stub_target_count: { type: "integer" },
+    trivial_clusters: {
+      type: "array",
+      items: {
+        type: "object",
+        required: ["group", "count", "represented_by"],
+        properties: {
+          group: { type: "string" },
+          count: { type: "integer" },
+          represented_by: { type: "array", items: { type: "string" } },
+        },
+      },
+      description:
+        "Machine lanes gisted by representatives and counted in full. Never a fold: the member ids are in the manifest file.",
+    },
+    sampling: {
+      type: "object",
+      required: ["method", "population", "selected", "bias_statement"],
+      properties: {
+        method: { type: "string" },
+        population: { type: "integer" },
+        selected: { type: "integer" },
+        coverage_pct: { type: "number" },
+        seed: { type: "string" },
+        strata: { type: "array", items: { type: "object" } },
+        bias_statement: { type: "string" },
+      },
+    },
     excluded: {
       type: "array",
       items: {
         type: "object",
         required: ["id", "reason"],
-        properties: {
-          id: { type: "string" },
-          reason: { type: "string" },
-        },
+        properties: { id: { type: "string" }, reason: { type: "string" } },
       },
-      description:
-        "Every candidate dropped from analysis, with why (e.g. own-session). NO silent truncation — the synthesis report must show this list.",
+    },
+    script_error: {
+      type: "string",
+      description: "stderr if the script failed; empty string otherwise",
     },
   },
 };
@@ -119,7 +228,9 @@ const FACET_SCHEMA = {
     "satisfaction",
     "session_type",
     "friction",
-    "verification_quality",
+    "done_claims",
+    "done_claims_with_fresh_evidence",
+    "verification_evidence",
     "brief_summary",
     "validates_prior_work",
     "deferred_verification",
@@ -128,7 +239,7 @@ const FACET_SCHEMA = {
     goal: {
       type: "string",
       description:
-        "The underlying goal — what the user really wanted, not the surface request",
+        "The underlying goal, what the user really wanted, not the surface request",
     },
     outcome: {
       enum: [
@@ -143,7 +254,7 @@ const FACET_SCHEMA = {
     outcome_evidence: {
       type: "string",
       description:
-        "Concrete evidence for the outcome verdict (deploy confirmed, tests green, user reaction, etc.)",
+        "Concrete evidence for the outcome verdict (deploy confirmed, tests green, user reaction)",
     },
     satisfaction: {
       enum: [
@@ -157,8 +268,7 @@ const FACET_SCHEMA = {
     },
     satisfaction_evidence: {
       type: "string",
-      description:
-        "Verbatim user reactions that support the satisfaction verdict",
+      description: "Verbatim user reactions supporting the satisfaction verdict",
     },
     session_type: {
       enum: [
@@ -182,20 +292,9 @@ const FACET_SCHEMA = {
         required: ["type", "detail", "root_cause", "avoidable"],
         properties: {
           type: {
-            enum: [
-              "claude_bug",
-              "overclaimed_verification",
-              "tooling_breakage",
-              "usage_limit",
-              "wrong_approach",
-              "environment",
-              "user_change_of_mind",
-              "hook_by_design",
-              "post_delivery_defect",
-              "other",
-            ],
+            enum: FRICTION_TYPES,
             description:
-              "Pinned taxonomy (2026-07-19: analysts were inventing singleton types, breaking week-over-week deltas). Use 'other' + detail rather than a new slug. 'hook_by_design' = a guard hook (sql-guard / git-guard / agent-model-guard) firing exactly as designed — a designed tax, not real friction. 'post_delivery_defect' = a defect discovered while live-testing/validating work an EARLIER session (or an autonomous run) delivered as done — charge it to the producing pipeline, not this session.",
+              "Pinned taxonomy v2. Never invent a slug. Reach for 'other' only when the detail can say which category is missing.",
           },
           detail: { type: "string" },
           root_cause: { type: "string" },
@@ -207,41 +306,44 @@ const FACET_SCHEMA = {
         },
       },
     },
-    verification_quality: {
-      enum: ["ground_truth", "partial", "claimed_only", "none_needed"],
+    // verification_quality is NOT asked for. It is DERIVED from these two counts
+    // in the workflow. 2026-09-19: as a judged enum it answered ground_truth on
+    // 79 of 80 sessions while those same 80 rows logged 17 overclaimed
+    // verification frictions, 17 of 17 of them inside ground_truth rows. A field
+    // that contradicts its own row is not a measurement.
+    done_claims: {
+      type: "integer",
       description:
-        "Did Claude prove its done-claims with fresh evidence (live checks, test output) or just assert?",
+        "COUNT the times this session asserted work was done / fixed / shipped / verified / complete. Not a judgement, a count. 0 if the session never claimed completion.",
+    },
+    done_claims_with_fresh_evidence: {
+      type: "integer",
+      description:
+        "Of those, how many were accompanied IN THE SAME TURN by a command and its output, a live check, a screenshot or a run id that actually proves the claim. A green typecheck does not prove a behavior claim. Must be <= done_claims.",
+    },
+    verification_evidence: {
+      type: "string",
+      description:
+        "Quote the proof for one evidenced claim, or quote the unevidenced claim if there were none. This is what makes the two counts checkable.",
     },
     validates_prior_work: {
       type: "string",
       description:
-        "If this session live-tests/debugs/validates something an earlier session or autonomous run delivered as done, name that artifact/run (e.g. 'autopilot GHL-replacement branch, 4 phases'); empty string otherwise. Synthesis pairs this with the producing session to compute defects-per-autonomous-delivery.",
+        "If this session live-tests, debugs or validates something an earlier session or autonomous run delivered as done, name that artifact or run; empty string otherwise.",
     },
     deferred_verification: {
       type: "boolean",
       description:
-        "true if this session claimed work complete/done while its behavior-level verification was deferred (live tests skipped, ACs replaced by on-disk proxies, 'COMPLETE' with live checks left to a later run)",
+        "true if this session claimed work complete while its behavior-level verification was deferred (live tests skipped, ACs replaced by on-disk proxies, COMPLETE with live checks left for later)",
     },
-    wasted_cycles: {
-      type: "string",
-      description:
-        "What burned time unnecessarily, if anything; empty string if nothing",
-    },
-    standout: {
-      type: "string",
-      description:
-        "Most impressive thing Claude did this session; empty string if nothing notable",
-    },
-    notable_quote: {
-      type: "string",
-      description:
-        "One short verbatim user quote that captures the session; empty string if none",
-    },
+    wasted_cycles: { type: "string" },
+    standout: { type: "string" },
+    notable_quote: { type: "string" },
     user_interruptions: { type: "integer" },
     brief_summary: {
       type: "string",
       description:
-        "One-two sentences: what the user wanted and whether they got it",
+        "One or two sentences: what the user wanted and whether they got it",
     },
   },
 };
@@ -257,16 +359,14 @@ const STUB_SCHEMA = {
         required: ["session_id", "gist", "category"],
         properties: {
           session_id: { type: "string" },
-          gist: {
-            type: "string",
-            description: "One sentence: what the user wanted and what happened",
-          },
+          gist: { type: "string" },
           category: {
             enum: [
               "aborted",
               "slash_command_only",
               "quick_question",
               "quick_task",
+              "machine_lane",
               "other",
             ],
           },
@@ -276,91 +376,268 @@ const STUB_SCHEMA = {
   },
 };
 
+// ---- helpers -------------------------------------------------------------------
+function classifyError(err) {
+  const m = String((err && err.message) || err || "").toLowerCase();
+  if (!m) return "empty_return";
+  if (m.includes("usage limit") || m.includes("rate_limit")) return "usage_limit";
+  if (m.includes("inaccessible") || m.includes("model_not_found"))
+    return "model_inaccessible";
+  if (m.includes("overloaded") || m.includes("529")) return "overloaded";
+  if (m.includes("timeout") || m.includes("timed out")) return "timeout";
+  return "unknown:" + m.slice(0, 80);
+}
+
+async function tryAgent(prompt, opts) {
+  // Returns {result, error_class}. A thrown error and a null return are both
+  // failures; only the thrown one carries a class worth recording.
+  try {
+    const r = await agent(prompt, opts);
+    return { result: r, error_class: r ? null : "empty_return" };
+  } catch (e) {
+    return { result: null, error_class: classifyError(e) };
+  }
+}
+
+const UUIDISH = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+function isFoldedExclusion(e) {
+  // The 2026-09-19 shape: one excluded record whose id was
+  // "dev-.../* (232 transcripts)" and whose reason explained the output limit.
+  const id = String((e && e.id) || "");
+  const reason = String((e && e.reason) || "").toLowerCase();
+  if (!UUIDISH.test(id) && /[*(),\s]/.test(id)) return true;
+  return /aggregat|truncat|output-token|output token|exceeded|folded/.test(reason);
+}
+
+function deriveVerificationQuality(f) {
+  // Mechanical, from two counts, with the contradiction made impossible.
+  const claims = Number.isFinite(f.done_claims) ? Math.max(0, f.done_claims) : 0;
+  let evidenced = Number.isFinite(f.done_claims_with_fresh_evidence)
+    ? Math.max(0, f.done_claims_with_fresh_evidence)
+    : 0;
+  const notes = [];
+  if (evidenced > claims) {
+    notes.push("evidenced>claims, clamped");
+    evidenced = claims;
+  }
+  const overclaims = (Array.isArray(f.friction) ? f.friction : []).filter(
+    (x) => x && x.type === "overclaimed_verification",
+  ).length;
+  let quality;
+  if (claims === 0) quality = "none_needed";
+  else if (evidenced === 0) quality = "claimed_only";
+  else if (evidenced >= claims) quality = "ground_truth";
+  else quality = "partial";
+  if (overclaims > 0 && quality === "ground_truth") {
+    // The row logs an unevidenced done-claim in its own friction list, so
+    // "every claim was evidenced" is provably false. Repair it and count it.
+    quality = evidenced > 0 ? "partial" : "claimed_only";
+    notes.push(
+      `repaired: ${overclaims} overclaimed_verification friction(s) contradict ground_truth`,
+    );
+  }
+  return {
+    verification_quality: quality,
+    verification_quality_derived_from: {
+      done_claims: claims,
+      evidenced,
+      overclaim_frictions: overclaims,
+    },
+    verification_quality_repaired: notes.length ? notes.join("; ") : "",
+  };
+}
+
 // ---- Phase 1: Manifest ----------------------------------------------------------
-// Workflow scripts cannot touch the filesystem — one agent builds the work-list.
-const manifestPrompt = `Build a manifest of Claude Code session transcripts from the last ${days} days. Run these exact bash steps (adjust nothing except where noted) and return ONLY via the structured output tool.
+// Workflow scripts cannot touch the filesystem, so ONE agent runs the scan
+// script and relays its summary. The scan itself is deterministic Python: on
+// 2026-09-19 an agent doing this scan in its own output had to fold 232 trivial
+// sessions into a single record to fit its output limit, and the week's trivial
+// count read 141 instead of 373.
+const manifestPrompt = `Build the weekly session manifest by RUNNING ONE SCRIPT. Do not scan the transcripts yourself and do not reimplement any of this in bash.
 
-STEP 1 — candidate files (note: -maxdepth 2 and the subagents exclusion are both required):
-find "$HOME/.claude/projects" -maxdepth 2 -type f -name '*.jsonl' -mtime -${days} ! -path '*/subagents/*'
+STEP 1 - run exactly this (one Bash call):
 
-STEP 2 — exclusions and in-progress marking. Open sessions are ANALYZED, not dropped (2026-07-19: dropping all open transcripts silently excluded the week's highest-friction session — a 31MB live-test session open in another terminal).
-2a. Exclude ONLY the audit's own conversation${excludeSessionId ? `: drop any candidate whose basename is "${excludeSessionId}.jsonl", and record it in the excluded list as {id: "${excludeSessionId}", reason: "own-session"}` : ` — no exclude_session_id was provided this run, so exclude nothing here (record nothing)`}.
-2b. Detect open/live transcripts (do NOT drop them):
-lsof +D "$HOME/.claude/projects" 2>/dev/null | grep -o '/[^ ]*\\.jsonl' | sort -u
-Every candidate that command prints (plus any candidate modified in the last 3 minutes: find "$HOME/.claude/projects" -maxdepth 2 -type f -name '*.jsonl' -mmin -3) gets in_progress: true in its manifest entry. Its analysis is a snapshot — the next weekly run re-analyzes it. All other candidates get in_progress: false.
+python3 ${MANIFEST_SCRIPT} --days ${days} --cap ${cap}${excludeSessionId ? ` --exclude ${excludeSessionId}` : ""} --summary-out /tmp/fable-insights-summary.json
 
-STEP 3 — per remaining file "$f", compute:
-- id: basename without the .jsonl extension
-- path: the absolute path
-- lines: wc -l < "$f"
-- user_msgs (real typed user messages — excludes tool_results, meta, and subagent sidechain traffic):
-jq -r 'select(.type=="user" and ((.isMeta // false)|not) and ((.isSidechain // false)|not)) | .message.content | if type=="string" then "m" elif type=="array" then (if (map(select(.type=="text")) | length) > 0 then "m" else empty end) else empty end' "$f" | wc -l
-- start (YYYY-MM-DD of the first timestamp):
-head -20 "$f" | jq -r '.timestamp // empty' | head -1 | cut -c1-10
-(if empty, fall back to the file mtime date: stat -f '%Sm' -t '%Y-%m-%d' "$f")
-- project: basename of the parent directory. Strip the leading "-Users-zalo-" prefix (e.g. "-Users-zalo-dev-delta-agents" -> "dev-delta-agents"). If the directory basename is exactly "-Users-zalo", use "home".
+It scans ~/.claude/projects, computes per-session metadata, classifies substantive vs trivial, clusters machine lanes, draws the stratified sample and writes the full unabridged manifest to disk. It prints ONE line of JSON and takes a few seconds.
 
-Run Step 3 as SEPARATE simple Bash calls per file (one jq/wc/head/stat invocation at a time). Do NOT use while-read loops, process substitution, command substitution, xargs -I, or any compound shell construct — keep each call auditable and permission-friendly. Many small calls are fine; a typical week is under ~100 files.
+STEP 2 - if the command exits non-zero, return the structured output with script_error set to the last 500 characters of stderr and every count set to 0. Do NOT improvise a replacement scan.
 
-STEP 4 — classify:
-substantive = user_msgs >= 3 OR lines >= 100. Everything else is trivial.
+STEP 3 - read the summary back:
 
-STEP 5 — stamp generated_on with: date +%F
+cat /tmp/fable-insights-summary.json
 
-Return the full manifest via structured output: { generated_on, substantive: [...], trivial: [...], excluded: [...] } with every surviving candidate accounted for in exactly one of substantive/trivial, and every dropped candidate listed in excluded with its reason. Do NOT read transcript contents beyond the commands above — this is a metadata pass only.`;
+STEP 4 - return that JSON through the structured output tool, field for field, VERBATIM. Do not re-order, re-compute, summarise, round, or drop any field, including not_selected_ids. You are a relay for this stage, not an analyst. The only field you add is script_error (empty string when the script succeeded).
+
+Sanity check before you return: accounted_total must equal candidate_total, and the selected array must hold exactly sampling.selected records. If they disagree, return them as they are anyway and put one sentence about the disagreement in script_error. Never make the numbers agree by editing them.`;
 
 phase("Manifest");
-let manifest = await agent(manifestPrompt, {
-  label: "manifest",
-  phase: "Manifest",
-  schema: MANIFEST_SCHEMA,
-  model: "opus",
-});
-if (!manifest) {
-  log("Manifest agent failed on opus — re-dispatching on fable");
-  manifest = await agent(manifestPrompt, {
-    label: "manifest:retry",
+let manifestAttempts = [];
+let manifest = null;
+for (const model of [PRIMARY_MODEL, FALLBACK_MODEL]) {
+  const got = await tryAgent(manifestPrompt, {
+    label: model === PRIMARY_MODEL ? "manifest" : "manifest:retry",
     phase: "Manifest",
     schema: MANIFEST_SCHEMA,
-    model: "fable",
+    model,
   });
+  manifestAttempts.push({ model, error_class: got.error_class });
+  if (got.result) {
+    manifest = got.result;
+    break;
+  }
+  log(`Manifest agent failed on ${model} (${got.error_class})`);
 }
+
 if (!manifest) {
   return {
-    error: "manifest agent failed twice — no work-list, aborting run",
+    error: "manifest agent failed twice, no work-list, aborting run",
+    error_attempts: manifestAttempts,
     facets: [],
     stubs: [],
     failed: [],
     manifest_counts: null,
+    coverage: {
+      complete: false,
+      facet_coverage_pct: 0,
+      stub_coverage_pct: 0,
+      true_coverage_pct: 0,
+      sample_coverage_pct: 0,
+    },
+    partial_run: true,
+    taxonomy_version: TAXONOMY_VERSION,
   };
 }
 
-const substantive = Array.isArray(manifest.substantive)
-  ? manifest.substantive
-  : [];
-const trivial = Array.isArray(manifest.trivial) ? manifest.trivial : [];
-log(
-  `Manifest (${manifest.generated_on || "undated"}): ${substantive.length} substantive + ${trivial.length} trivial sessions in the last ${days} days`,
-);
+const selected = Array.isArray(manifest.selected) ? manifest.selected : [];
+const sampling = manifest.sampling || { method: "unknown", bias_statement: "" };
+const excluded = Array.isArray(manifest.excluded) ? manifest.excluded : [];
+const stubTargetCount = Number(manifest.stub_target_count) || 0;
+const manifestPath = manifest.manifest_path || "";
 
-// ---- cap safety (no silent caps) ------------------------------------------------
-let toAnalyze = substantive;
-if (substantive.length > ANALYZE_CAP) {
+log(
+  `Manifest (${manifest.generated_on || "undated"}, ${manifest.window_start} to ${manifest.window_end}): ${manifest.candidate_total} candidates, ${manifest.substantive_count} substantive, ${manifest.trivial_count} trivial`,
+);
+log(`SAMPLING: ${sampling.bias_statement || "no bias statement returned"}`);
+
+// ---- reconciliation: a count that does not add up is said out loud -------------
+const reconciliation = {
+  candidate_total: Number(manifest.candidate_total) || 0,
+  accounted_total: Number(manifest.accounted_total) || 0,
+  ok: Number(manifest.candidate_total) === Number(manifest.accounted_total),
+  folded_exclusions: excluded.filter(isFoldedExclusion),
+  script_error: manifest.script_error || "",
+};
+if (!reconciliation.ok) {
   log(
-    `TRUNCATION: ${substantive.length} substantive sessions exceed the cap of ${ANALYZE_CAP} — analyzing the ${ANALYZE_CAP} largest by lines, skipping ${substantive.length - ANALYZE_CAP}`,
+    `MANIFEST RECONCILIATION FAILED: ${reconciliation.candidate_total} candidates scanned but ${reconciliation.accounted_total} accounted for. ${reconciliation.candidate_total - reconciliation.accounted_total} sessions are unexplained. Every count below is a floor, not a total.`,
   );
-  toAnalyze = [...substantive]
-    .sort((a, b) => (b.lines || 0) - (a.lines || 0))
-    .slice(0, ANALYZE_CAP);
+}
+if (reconciliation.folded_exclusions.length) {
+  log(
+    `MANIFEST FOLD DETECTED: ${reconciliation.folded_exclusions.length} excluded record(s) stand in for a group instead of naming one session: ${reconciliation.folded_exclusions.map((e) => e.id).join(", ")}. Trivial and excluded counts are understated by whatever those records cover.`,
+  );
+}
+if (reconciliation.script_error) {
+  log(`MANIFEST SCRIPT ERROR: ${reconciliation.script_error}`);
 }
 
-// ---- Phase 2: Analyze -------------------------------------------------------------
+// ---- Phase 2: Stubs (before the expensive wave) ----------------------------------
+// Stubs run first because they are cheap and because their failures change what
+// the coverage line means for the whole run. The batch agents read the manifest
+// file themselves: no trivial-session record ever passes through an agent's
+// output budget.
+const stubPrompt = (from, to, sizeNote) =>
+  `Gist a slice of trivial Claude Code sessions.
+
+STEP 1 - read the slice from the manifest file (one Bash call):
+
+python3 -c "import json;d=json.load(open('${manifestPath}'));print(json.dumps(d['stub_targets'][${from}:${to}]))"
+
+That prints ${sizeNote} records, each with an id and a path.
+
+STEP 2 - for EACH record, extract the user side of the transcript:
+
+jq -r 'select(.type=="user") | .message.content | if type=="string" then . elif type=="array" then (map(select(.type=="text") | .text) | join("\\n")) else empty end' '<path>' | head -c 3000
+
+STEP 3 - return one entry per record: session_id, a one-sentence gist (what the user wanted and what happened, or "aborted before any real request"), and a category (aborted / slash_command_only / quick_question / quick_task / machine_lane / other). Entries containing "<command-name>" are slash-command invocations. A transcript that is one machine-generated poll or scratch run with no human turn is machine_lane.
+
+Return ONLY via structured output, with all ${sizeNote} accounted for.`;
+
+phase("Stubs");
+const batches = [];
+for (let i = 0; i < stubTargetCount; i += STUB_BATCH_SIZE)
+  batches.push([i, Math.min(i + STUB_BATCH_SIZE, stubTargetCount)]);
+
+const stubBatchResults = batches.length
+  ? await parallel(
+      batches.map(([from, to], i) => async () => {
+        const opts = {
+          label: `stubs:batch${i + 1}`,
+          phase: "Stubs",
+          schema: STUB_SCHEMA,
+          model: PRIMARY_MODEL,
+        };
+        const note = `${to - from} session`;
+        let got = await tryAgent(stubPrompt(from, to, note), opts);
+        if (!got.result) {
+          got = await tryAgent(stubPrompt(from, to, note), {
+            ...opts,
+            label: `stubs:batch${i + 1}:retry`,
+            model: FALLBACK_MODEL,
+          });
+        }
+        return { range: [from, to], result: got.result, error_class: got.error_class };
+      }),
+    )
+  : [];
+
+const stubs = [];
+const stubFailures = [];
+for (const b of stubBatchResults.filter(Boolean)) {
+  if (b.result && Array.isArray(b.result.sessions)) stubs.push(...b.result.sessions);
+  else stubFailures.push({ range: b.range, error_class: b.error_class });
+}
+
+// Rescue pass: a dead batch takes 9 sessions down with it. 2026-08-28: all 5
+// batches died and 43 of 43 trivial sessions vanished from the weekly record.
+if (stubFailures.length) {
+  log(
+    `${stubFailures.length}/${batches.length} stub batches failed; running the small-batch rescue pass`,
+  );
+  const rescueRanges = [];
+  for (const f of stubFailures) {
+    for (let i = f.range[0]; i < f.range[1]; i += STUB_RESCUE_SIZE)
+      rescueRanges.push([i, Math.min(i + STUB_RESCUE_SIZE, f.range[1])]);
+  }
+  const rescued = await parallel(
+    rescueRanges.map(([from, to], i) => async () => {
+      const got = await tryAgent(stubPrompt(from, to, `${to - from} session`), {
+        label: `stubs:rescue${i + 1}`,
+        phase: "Stubs",
+        schema: STUB_SCHEMA,
+        model: PRIMARY_MODEL,
+      });
+      return got.result;
+    }),
+  );
+  for (const r of rescued.filter(Boolean))
+    if (Array.isArray(r.sessions)) stubs.push(...r.sessions);
+}
+
+const stubsMissing = Math.max(0, stubTargetCount - stubs.length);
+if (stubsMissing)
+  log(
+    `${stubsMissing}/${stubTargetCount} trivial sessions have no gist after the rescue pass; they are counted in failed, not dropped`,
+  );
+
+// ---- Phase 3: Analyze -------------------------------------------------------------
 const promptFor = (
   s,
 ) => `You are one analyst in a fleet producing a deep usage-insights report on Claude Code sessions. Analyze exactly ONE session transcript and return a structured facet.
 
 TRANSCRIPT: ${s.path}
-Project: ${s.project} | Started: ${s.start} | ~${s.user_msgs} user messages | ${s.lines} JSONL lines.
+Repos touched: ${(s.repos_touched || []).join(", ") || "none detected"} | Last activity: ${s.last_activity} | ${s.user_msgs} user messages | ${s.lines} JSONL lines | ${s.bytes} bytes${s.carried_over ? " | STARTED BEFORE THIS WINDOW (" + s.start + ")" : ""}${s.in_progress ? " | STILL OPEN: analyze it as a snapshot" : ""}.
 
 CRITICAL: the file may be tens of MB. NEVER Read or cat the whole file. Extract slices with these exact bash commands (you may lower the byte caps, never raise them):
 
@@ -384,125 +661,161 @@ grep -c '"is_error":true' '${s.path}' ; grep -o 'Request interrupted[^"]*' '${s.
 Optionally sample error payloads:
 jq -r 'select(.type=="user") | .message.content | if type=="array" then (map(select(.type=="tool_result" and .is_error==true) | (.content | if type=="string" then . else (map(.text? // "") | join(" ")) end))[]) else empty end' '${s.path}' 2>/dev/null | head -c 4000
 
-Notes on the format: entries with "<command-name>" or "local-command" in user content are slash-command invocations, not typed prompts. "Caveat:" blocks are harness boilerplate. isSidechain=true traffic is subagent internals — already filtered out above.
+Notes on the format: entries with "<command-name>" or "local-command" in user content are slash-command invocations, not typed prompts. "Caveat:" blocks are harness boilerplate. isSidechain=true traffic is subagent internals, already filtered out above.
 
-Context: the user is a solo operator running production SaaS (delta-agents = voice-AI platform), marketing sites (operatorbase-website, copymyaiagency), a course app (90-day-cmaa-game-app), and video/content production (black-umbrella, home sessions). They delegate whole build-test-deploy workflows and demand ground-truth verification.
+Context: the user is a solo operator running production SaaS (delta-agents = voice-AI platform), marketing sites (operatorbase-website, copymyaiagency), a course app (90-day-cmaa-game-app), and video/content production (black-umbrella, home sessions). Most work is delegated to background workers, so a transcript with ONE user message and hours of tool calls is normal and is not a shallow session. They demand ground-truth verification.
 
-ANALYZE DEEPLY — this is a Fable-tier pass, expected to beat a shallow facet extraction:
+ANALYZE DEEPLY:
 - Underlying goal: what did they actually want (read between requests)?
-- Outcome + concrete evidence. Do not credit "done" claims Claude never proved.
+- Outcome plus concrete evidence. Do not credit "done" claims Claude never proved.
 - Satisfaction: judge from verbatim reactions ("perfect", "much better", "no", "wrong", silence then topic change). Quote them.
-- EVERY friction instance: what went wrong, root cause, and whether Claude could have avoided it upfront. Use ONLY the pinned type taxonomy (claude_bug / overclaimed_verification / tooling_breakage / usage_limit / wrong_approach / environment / user_change_of_mind / hook_by_design / post_delivery_defect / other) — never invent a new slug; if none fits, use 'other' and explain in detail. A guard hook (sql-guard / git-guard / agent-model-guard) blocking or holding as designed is 'hook_by_design', NOT environment friction. A defect found while live-testing work an EARLIER session or autonomous run had delivered as done is 'post_delivery_defect' — it charges the producing pipeline, not this session's Claude.
-- Verification quality: did Claude ground-truth its claims (live checks, fresh test output, probes) or assert "should work"?
-- validates_prior_work: if this session's real job is live-testing/debugging/validating something an earlier session or autonomous run (autopilot, workflow) delivered as done, name that artifact/run; else empty string.
-- deferred_verification: true if THIS session claimed completion while behavior-level verification was deferred (live tests skipped, "COMPLETE" on on-disk proxies, live checks left "for later"). A green typecheck/build/unit-test run does NOT make a behavior claim live-verified.
-- Wasted cycles: repeated attempts, blind alleys, re-derived environment quirks.
-- Standout: the single most impressive thing, if any.
-- One short verbatim user quote that captures the session, if any exists.
+- EVERY friction instance: what went wrong, root cause, whether Claude could have avoided it upfront. Use ONLY this taxonomy (version ${TAXONOMY_VERSION}):
+${FRICTION_GUIDE}
+- done_claims and done_claims_with_fresh_evidence are COUNTS, not a verdict. Count every assertion that work is done, fixed, shipped, verified or complete. Then count how many of those had, in the same turn, a command and its output, a live check, a screenshot or a run id that actually proves that claim. A green typecheck or unit-test run does NOT prove a behavior claim. If the session logs an overclaimed_verification friction, the second count MUST be lower than the first; a run that claims every claim was evidenced while also logging an overclaim is contradicting itself and the workflow will repair it against you.
+- verification_evidence: quote the proof for one evidenced claim, or quote the unevidenced claim when there were none.
+- validates_prior_work: if this session's real job is live-testing, debugging or validating something an earlier session or autonomous run delivered as done, name that artifact or run; else empty string.
+- deferred_verification: true if THIS session claimed completion while behavior-level verification was deferred.
+- Wasted cycles, standout, one short verbatim user quote, if any exist.
+
+Do NOT return a project or repo field: those are attached mechanically from the manifest.
 
 Return ONLY via the structured output tool.`;
 
 phase("Analyze");
 log(
-  `Analyzing ${toAnalyze.length} substantive sessions + ${trivial.length} stubs`,
+  `Analyzing ${selected.length} sampled substantive sessions (of ${manifest.substantive_count}) plus ${stubTargetCount} stub targets`,
 );
 
-const facets = await pipeline(toAnalyze, async (s) => {
-  const opts = {
-    label: `analyze:${String(s.project || "").replace("dev-", "")}:${String(s.id).slice(0, 8)}`,
-    phase: "Analyze",
-    schema: FACET_SCHEMA,
-    model: "opus",
+const facets = await pipeline(selected, async (s) => {
+  const base = {
+    session_id: s.id,
+    transcript_dir: s.transcript_dir,
+    repos_touched: s.repos_touched || [],
+    primary_repo: s.primary_repo || "",
+    date: s.last_activity,
+    started_on: s.start,
+    carried_over: Boolean(s.carried_over),
+    in_progress: Boolean(s.in_progress),
+    bytes: s.bytes,
   };
-  let analyzedBy = "opus";
-  let r = await agent(promptFor(s), opts);
-  if (!r) {
-    analyzedBy = "fable-fallback";
-    log(`${String(s.id).slice(0, 8)} failed on opus — re-dispatching on fable`);
-    r = await agent(promptFor(s), {
-      ...opts,
-      label: `retry:${String(s.id).slice(0, 8)}`,
-      model: "fable",
+  const attempts = [];
+  for (const model of [PRIMARY_MODEL, FALLBACK_MODEL]) {
+    const got = await tryAgent(promptFor(s), {
+      label:
+        model === PRIMARY_MODEL
+          ? `analyze:${String(s.primary_repo || s.transcript_dir || "").replace("dev-", "")}:${String(s.id).slice(0, 8)}`
+          : `retry:${String(s.id).slice(0, 8)}`,
+      phase: "Analyze",
+      schema: FACET_SCHEMA,
+      model,
     });
+    attempts.push({ model, error_class: got.error_class });
+    if (got.result)
+      return {
+        ...got.result,
+        ...base,
+        ...deriveVerificationQuality(got.result),
+        analyzed_by: model,
+      };
+    log(`${String(s.id).slice(0, 8)} failed on ${model} (${got.error_class})`);
   }
-  return r
-    ? {
-        ...r,
-        session_id: s.id,
-        project: s.project,
-        date: s.start,
-        analyzed_by: analyzedBy,
-      }
-    : { session_id: s.id, project: s.project, date: s.start, failed: true };
+  return {
+    ...base,
+    failed: true,
+    attempts,
+    error_class: attempts.map((a) => a.error_class).join(" then "),
+  };
 });
 
-// ---- Phase 3: Stubs ---------------------------------------------------------------
-const stubPrompt = (
-  batch,
-) => `Analyze ${batch.length} tiny Claude Code session transcripts (each under ~200 JSONL lines — safe to extract fully). For EACH, run:
-
-jq -r 'select(.type=="user") | .message.content | if type=="string" then . elif type=="array" then (map(select(.type=="text") | .text) | join("\\n")) else empty end' '<path>' | head -c 3000
-
-Sessions:
-${batch.map((s) => `- ${s.id} → ${s.path} (project: ${s.project}, ${s.start})`).join("\n")}
-
-For each session return: session_id, one-sentence gist (what the user wanted + what happened, or "aborted before any real request"), and category (aborted / slash_command_only / quick_question / quick_task / other). Entries containing "<command-name>" are slash-command invocations. Return ONLY via structured output, one entry per session, all ${batch.length} accounted for.`;
-
-phase("Stubs");
-const chunks = [];
-for (let i = 0; i < trivial.length; i += STUB_BATCH_SIZE)
-  chunks.push(trivial.slice(i, i + STUB_BATCH_SIZE));
-const stubResults = chunks.length
-  ? await parallel(
-      chunks.map(
-        (c, i) => () =>
-          agent(stubPrompt(c), {
-            label: `stubs:batch${i + 1}`,
-            phase: "Stubs",
-            schema: STUB_SCHEMA,
-            model: "opus",
-          }),
-      ),
-    )
-  : [];
-
-const stubs = stubResults
-  .filter(Boolean)
-  .flatMap((r) => (Array.isArray(r.sessions) ? r.sessions : []));
-// No-silent-caps guard: a dead stub-batch agent returns null and its sessions
-// would simply vanish from the weekly record. Reconcile returned session_ids
-// against the manifest and record the missing ones as failures.
-const stubIds = new Set(stubs.map((s) => s.session_id));
-const missingStubs = trivial.filter((s) => !stubIds.has(s.id)).map((s) => s.id);
-if (missingStubs.length) {
-  log(
-    `⚠️  ${missingStubs.length}/${trivial.length} trivial sessions missing from stub results (dead batch agent or omitted entry): ${missingStubs.join(", ")}`,
-  );
-}
+// ---- coverage: every denominator stated ------------------------------------------
+const cleanFacets = facets.filter(Boolean).filter((f) => !f.failed);
 const failed = facets
   .filter(Boolean)
   .filter((f) => f.failed)
-  .map((f) => f.session_id)
-  .concat(missingStubs);
+  .map((f) => f.session_id);
+const stubIds = new Set(stubs.map((s) => s.session_id));
+for (const f of stubFailures) failed.push(`stub-range-${f.range[0]}-${f.range[1]}`);
+const lostStubs = stubsMissing;
+
+const pct = (n, d) => (d > 0 ? Math.round((1000 * n) / d) / 10 : 100);
+const coverage = {
+  facet_coverage_pct: pct(cleanFacets.length, selected.length),
+  stub_coverage_pct: pct(stubs.length, stubTargetCount),
+  true_coverage_pct: pct(
+    cleanFacets.length + stubs.length,
+    selected.length + stubTargetCount,
+  ),
+  // The denominator that matters for any week-level claim: how much of the
+  // week's substantive population this run actually looked at.
+  sample_coverage_pct: pct(selected.length, Number(manifest.substantive_count) || 0),
+  analysed: cleanFacets.length,
+  analysis_denominator: selected.length,
+  stubs: stubs.length,
+  stub_denominator: stubTargetCount,
+  substantive_population: Number(manifest.substantive_count) || 0,
+  complete: false,
+};
+coverage.complete =
+  reconciliation.ok &&
+  !reconciliation.folded_exclusions.length &&
+  failed.length === 0 &&
+  lostStubs === 0 &&
+  coverage.facet_coverage_pct === 100 &&
+  coverage.stub_coverage_pct === 100 &&
+  sampling.method === "census";
+const partial_run = !coverage.complete;
+if (partial_run) {
+  log(
+    `PARTIAL RUN: ${coverage.analysed}/${coverage.analysis_denominator} facets, ${coverage.stubs}/${coverage.stub_denominator} stubs, sample covers ${coverage.sample_coverage_pct}% of ${coverage.substantive_population} substantive sessions. Nothing here is a week total without the sampling weights.`,
+  );
+}
+
+// verification_quality distribution and the repairs that had to be made
+const vqCounts = {};
+let vqRepaired = 0;
+for (const f of cleanFacets) {
+  const q = f.verification_quality || "unset";
+  vqCounts[q] = (vqCounts[q] || 0) + 1;
+  if (f.verification_quality_repaired) vqRepaired += 1;
+}
+if (vqRepaired)
+  log(
+    `verification_quality: ${vqRepaired} facet(s) claimed every done-claim was evidenced while logging an overclaimed_verification friction; repaired mechanically.`,
+  );
 
 const manifest_counts = {
   generated_on: manifest.generated_on || null,
+  window_start: manifest.window_start || null,
+  window_end: manifest.window_end || null,
   days,
-  substantive: substantive.length,
-  trivial: trivial.length,
-  analyzed: toAnalyze.length,
-  skipped_by_cap: substantive.length - toAnalyze.length,
-  stub_batches: chunks.length,
-  stubs_missing: missingStubs.length,
-  in_progress_snapshots: substantive
-    .concat(trivial)
-    .filter((s) => s.in_progress)
-    .map((s) => s.id),
-  excluded: Array.isArray(manifest.excluded) ? manifest.excluded : [],
+  cap,
+  candidate_total: reconciliation.candidate_total,
+  accounted_total: reconciliation.accounted_total,
+  reconciliation_ok: reconciliation.ok,
+  folded_exclusions: reconciliation.folded_exclusions,
+  substantive: Number(manifest.substantive_count) || 0,
+  trivial: Number(manifest.trivial_count) || 0,
+  analyzed: selected.length,
+  skipped_by_sampling: (Number(manifest.substantive_count) || 0) - selected.length,
+  skipped_ids: Array.isArray(manifest.not_selected_ids)
+    ? manifest.not_selected_ids
+    : [],
+  stub_targets: stubTargetCount,
+  stub_batches: batches.length,
+  stub_failures: stubFailures,
+  stubs_missing: lostStubs,
+  trivial_clusters: Array.isArray(manifest.trivial_clusters)
+    ? manifest.trivial_clusters
+    : [],
+  carried_over_ids: selected.filter((s) => s.carried_over).map((s) => s.id),
+  in_progress_snapshots: selected.filter((s) => s.in_progress).map((s) => s.id),
+  excluded,
+  manifest_path: manifestPath,
+  manifest_attempts: manifestAttempts,
 };
 
 log(
-  `Done: ${facets.filter(Boolean).filter((f) => !f.failed).length}/${toAnalyze.length} facets, ${stubs.length}/${trivial.length} stubs, ${failed.length} failed`,
+  `Done: ${cleanFacets.length}/${selected.length} facets, ${stubs.length}/${stubTargetCount} stubs, ${failed.length} failed`,
 );
 log(
   "Synthesis: follow ~/.claude/workflows/fable-insights-synthesis.md (artifact names, baseline comparison, mechanization + demotion bias)",
@@ -513,20 +826,29 @@ log(
 // no measured quality loss on high-volume work); fable is spent once, here, as a
 // cross-model second opinion on the aggregate. Per ~/.claude/CLAUDE.md the model
 // that verifies should differ from the model that authored.
-//
-// It exists because the 2026-09-19 harness sweep measured THIS workflow's own
-// judge as saturated: verification_quality answered ground_truth on 56/60, 35/37
-// and 103/108 sessions, 32 of 140 facets came back empty, and analysts invented
-// four schema fields nothing validates. A judge nobody checks goes dark quietly.
 phase("Verify");
-const cleanFacets = facets.filter(Boolean).filter((f) => !f.failed);
 const verifyPayload = {
   counts: manifest_counts,
+  coverage,
+  sampling,
+  partial_run,
   facet_count: cleanFacets.length,
   stub_count: stubs.length,
   failed_count: failed.length,
-  verification_quality: cleanFacets.map((f) => f.verification_quality || null),
+  taxonomy_version: TAXONOMY_VERSION,
+  verification_quality: vqCounts,
+  verification_quality_repaired: vqRepaired,
+  done_claim_totals: cleanFacets.reduce(
+    (a, f) => {
+      const d = f.verification_quality_derived_from || {};
+      a.claims += d.done_claims || 0;
+      a.evidenced += d.evidenced || 0;
+      return a;
+    },
+    { claims: 0, evidenced: 0 },
+  ),
   outcomes: cleanFacets.map((f) => f.outcome || null),
+  primary_repos: cleanFacets.map((f) => f.primary_repo || ""),
   friction_types: cleanFacets.flatMap((f) =>
     Array.isArray(f.friction) ? f.friction.map((x) => x && x.type) : [],
   ),
@@ -544,22 +866,15 @@ const verifyPayload = {
   })),
 };
 
-const PINNED_FRICTION_TYPES = [
-  "claude_bug",
-  "overclaimed_verification",
-  "tooling_breakage",
-  "usage_limit",
-  "wrong_approach",
-  "environment",
-  "user_change_of_mind",
-  "hook_by_design",
-  "post_delivery_defect",
-  "other",
-];
-
 const VERIFY_SCHEMA = {
   type: "object",
-  required: ["trustworthy", "saturated_fields", "invented_slugs", "verdict"],
+  required: [
+    "trustworthy",
+    "saturated_fields",
+    "invented_slugs",
+    "sampling_honest",
+    "verdict",
+  ],
   properties: {
     trustworthy: {
       type: "boolean",
@@ -577,7 +892,16 @@ const VERIFY_SCHEMA = {
       items: { type: "string" },
       description: "friction types outside the pinned taxonomy",
     },
+    sampling_honest: {
+      type: "boolean",
+      description:
+        "true only if the run states its own sampling bias and its counts reconcile",
+    },
     empty_facet_sessions: { type: "array", items: { type: "string" } },
+    other_bucket_pct: {
+      type: "number",
+      description: "share of frictions that landed in 'other', as a percentage",
+    },
     verdict: {
       type: "string",
       description:
@@ -586,40 +910,43 @@ const VERIFY_SCHEMA = {
   },
 };
 
-const verification = await agent(
-  `You are the LAST stage of a weekly self-audit. Every analysis above was produced by opus agents. You are fable, and you are here as a cross-model second opinion on their AGGREGATE output. You are not re-analysing sessions and you have no transcript access.
+const verifyPrompt = `You are the LAST stage of a weekly self-audit. Every analysis above was produced by opus agents. You are fable, and you are here as a cross-model second opinion on their AGGREGATE output. You are not re-analysing sessions and you have no transcript access.
 
 Judge whether this week's output is trustworthy enough to make decisions from.
 
-## The specific failure you exist to catch
-On 2026-09-19 a sweep measured this workflow's own judge as saturated: verification_quality answered "ground_truth" on 56 of 60, 35 of 37 and 103 of 108 sessions. A field that always returns the same value is not evidence, it is a stuck needle, and it had been read as a quality signal for weeks.
+## The specific failures you exist to catch
+On 2026-09-19 a sweep measured this workflow's own judge as saturated: verification_quality answered "ground_truth" on 79 of 80 sessions while those same rows logged 17 overclaimed_verification frictions, 17 of 17 of them inside ground_truth rows. It also took the 80 LONGEST sessions of 297 and reported them as if they were the week.
 
-So: for every enum field below, state whether its distribution carries information or whether one value has swallowed it. Do not be polite about it.
+Both have been changed: verification_quality is now DERIVED from two counts per facet and repaired when it contradicts the friction log, and selection is a stratified sample with a published bias statement. Your job is to check the new versions, not to assume they work.
 
-## Also check
-- Friction types outside the pinned taxonomy: ${PINNED_FRICTION_TYPES.join(", ")}. Anything else is an invented slug and it breaks week-over-week deltas.
+## Check all of these
+- Every enum field: does its distribution carry information, or has one value swallowed it? Say so bluntly. verification_quality is now derived, so saturation there means the COUNTS are saturated, which is a different and worse problem.
+- verification_quality_repaired above zero means analysts are still returning self-contradicting rows. Say how many.
+- Friction types outside the pinned taxonomy (version ${TAXONOMY_VERSION}): ${FRICTION_TYPES.join(", ")}. Anything else is an invented slug and it breaks week-over-week deltas.
+- other_bucket_pct: what share of frictions landed in "other"? Above 10% means the taxonomy is still missing a category; name what the residue looks like if you can tell.
+- sampling_honest: the run must state its own sampling bias (sampling.bias_statement) AND reconcile its counts (counts.reconciliation_ok true, counts.folded_exclusions empty). If a count does not add up or a record stands in for a group, say it in the first sentence.
 - Facets with empty required fields. An empty facet is a failed analysis that did not report itself as failed.
-- Counts that do not reconcile: analysed plus skipped versus substantive, stubs missing, anything dropped silently.
 
 ## The data
 ${JSON.stringify(verifyPayload).slice(0, 60000)}
 
-Lead your verdict with whatever is WRONG. If the week is clean, say so in one sentence and do not pad it. A verdict that flatters the input is worse than no verdict, because the whole point of this stage is that the previous stage cannot audit itself.`,
-  {
-    label: "verify:aggregate",
-    phase: "Verify",
-    schema: VERIFY_SCHEMA,
-    model: "fable",
-  },
-);
+Lead your verdict with whatever is WRONG. If the week is clean, say so in one sentence and do not pad it. A verdict that flatters the input is worse than no verdict, because the whole point of this stage is that the previous stage cannot audit itself.`;
+
+const verifyGot = await tryAgent(verifyPrompt, {
+  label: "verify:aggregate",
+  phase: "Verify",
+  schema: VERIFY_SCHEMA,
+  model: FALLBACK_MODEL,
+});
+const verification = verifyGot.result;
 
 if (verification && verification.trustworthy === false) {
-  log(`⚠️  Verify: NOT trustworthy — ${verification.verdict || "no verdict"}`);
+  log(`Verify: NOT trustworthy. ${verification.verdict || "no verdict"}`);
 } else if (verification) {
   log(`Verify: ${verification.verdict || "no verdict"}`);
 } else {
   log(
-    "⚠️  Verify: the fable verifier returned nothing. Treat this week's output as UNVERIFIED, not as clean.",
+    `Verify: the fable verifier returned nothing (${verifyGot.error_class}). Treat this week's output as UNVERIFIED, not as clean.`,
   );
 }
 
@@ -627,7 +954,12 @@ return {
   facets: facets.filter(Boolean),
   stubs,
   failed,
+  coverage,
+  partial_run,
+  sampling,
+  taxonomy_version: TAXONOMY_VERSION,
   manifest_counts,
-  verification: verification || { unavailable: true },
+  manifest_path: manifestPath,
+  verification: verification || { unavailable: true, error_class: verifyGot.error_class },
   synthesis_protocol: "~/.claude/workflows/fable-insights-synthesis.md",
 };
