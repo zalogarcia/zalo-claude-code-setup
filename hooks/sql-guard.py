@@ -30,7 +30,10 @@ change below is a test it asserts:
      (so a column of another table, or one named only in a drift note, always
      passes), and only when attribution is unambiguous — a qualified
      alias.column whose alias resolves to a snapshot table, or a bare name in
-     a paren-free single-table CTE-free query.
+     a query matching SIMPLE_SELECT, a closed grammar covering exactly
+     `select a, b from t [where a = 'x'] [limit n]`. The grammar replaced a
+     token blacklist after two QA passes found four false-positive classes in
+     the blacklist in one hour; a whitelist of shapes cannot drift that way.
   7. apply_migration on PostToolUse prints a "snapshot now stale" note and
      re-arms the once-per-session hold, citing the migration.
   8. Malformed payloads ALWAYS exit 0. A top-level JSON list, a non-string
@@ -79,12 +82,29 @@ explain analyze verbose costs settings buffers format begin commit rollback save
 table tablesample repeatable window partition over range groups preceding following
 unbounded current filter within of share no wait skip locked for nowait ties key
 at zone local isnull notnull epoch century millennium quarter dow doy
+ctid xmin xmax cmin cmax tableoid
 day hour minute second millisecond microsecond week month year decade timezone
 text integer int int2 int4 int8 bigint smallint numeric decimal real float
 double precision boolean bool date timestamp timestamptz time timetz interval
 uuid json jsonb varchar character char bytea serial bigserial inet cidr macaddr
 money xml tsvector tsquery point line lseg box path polygon circle citext vector
 """.split())
+
+
+# The ONLY query shape the bare-column scan will look at:
+#   select [distinct] a, b from [public.]t [where a = 'x' and b > 3] [limit 5] [;]
+# Literals are already collapsed to '' by strip_sql. No functions, casts,
+# aliases, joins, commas after the table, subqueries, CTEs, ORDER BY, GROUP BY,
+# locking clauses or operator keywords can appear: any of them and the query
+# simply does not match, so nothing in it is validated as a column.
+_NAME = r"[a-z_]\w*"
+_PRED = (rf"{_NAME}\s*(?:=|<>|!=|<=|>=|<|>)\s*(?:''|\d+(?:\.\d+)?)")
+SIMPLE_SELECT = re.compile(
+    rf"^select\s+(?:distinct\s+)?(?P<cols>{_NAME}(?:\s*,\s*{_NAME})*)"
+    rf"\s+from\s+(?P<tbl>[a-z_][\w.]*)"
+    rf"(?:\s+where\s+(?P<pred>{_PRED}(?:\s+(?:and|or)\s+{_PRED})*))?"
+    rf"(?:\s+limit\s+\d+)?\s*;?\s*$"
+)
 
 
 def strip_sql(q: str) -> str:
@@ -363,26 +383,31 @@ def validate_columns(stripped: str, known, columns, tokens):
             continue
         offenders.append((col, tbl))
 
-    # bare: only in a paren-free, CTE-free, single-table query. Anything more
-    # complex (derived tables, VALUES aliases, function calls, window specs)
-    # is not confidently attributable, so it is not attributed at all.
-    tables = extract_tables(stripped)
-    if not offenders and not ctes and "(" not in s and len(tables) == 1:
-        tbl = next(iter(tables))
-        if tbl in known:
-            for m in re.finditer(r"[a-z_]\w*", s):
-                name = m.group(0)
-                before = s[:m.start()]
-                after = s[m.end():]
-                if before.endswith(".") or before.endswith("::"):
-                    continue
-                if re.search(r"\bas\s*$", before):
-                    continue
-                if re.match(r"\s*[.(]", after):
-                    continue
-                if name in SQL_NOISE or name in amap or name in tokens:
-                    continue
-                offenders.append((name, tbl))
+    # bare: ONLY when the whole query matches SIMPLE_SELECT — a closed grammar
+    # (see its definition) that a query must match end to end to be scanned.
+    #
+    # This is deliberately a whitelist of query SHAPES, not a blacklist of
+    # tokens. The blacklist version shipped on 2026-09-19 and two independent
+    # QA passes found four distinct false-positive classes in it within the
+    # hour: `AT TIME ZONE`/`ISNULL`/`COLLATE "C"` (unknown keywords), the alias
+    # of a JOINed non-public table read as a column of the public one, the
+    # second alias of a comma join, and the `E` of an E'...' escape string.
+    # Each fix was another token or shape added to the blacklist, which is the
+    # signature of an unbounded surface. A grammar cannot drift that way: a
+    # query either matches these few productions or is never scanned at all.
+    if not offenders and not ctes:
+        m = SIMPLE_SELECT.match(s.strip())
+        if m:
+            tbl = m.group("tbl").split(".")[-1]
+            schema = m.group("tbl").split(".")[-2] if "." in m.group("tbl") else ""
+            if tbl in known and schema in ("", "public"):
+                names = [n.strip() for n in m.group("cols").split(",")]
+                names += re.findall(r"(?:^|\band\b|\bor\b)\s*([a-z_]\w*)\s*(?:=|<|>|!)",
+                                    m.group("pred") or "")
+                for name in names:
+                    if name in SQL_NOISE or name in amap or name in tokens or name == tbl:
+                        continue
+                    offenders.append((name, tbl))
 
     seen, out = set(), []
     for name, tbl in offenders:

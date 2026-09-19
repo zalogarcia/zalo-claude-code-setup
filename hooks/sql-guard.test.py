@@ -191,6 +191,13 @@ def main():
         ("FOR NO KEY UPDATE NOWAIT", "SELECT id FROM tenants FOR NO KEY UPDATE NOWAIT"),
         ("a non-public schema is out of the snapshot's scope", "SELECT id FROM auth.users"),
         ("a pg_* catalog view outside the old allowlist", "SELECT rolname FROM pg_roles"),
+        # added 2026-09-19 by the SECOND QA pass: the token-blacklist bare-column
+        # scan flagged every one of these; it was replaced by a closed grammar.
+        ("alias of a JOINed non-public table",
+         "SELECT t.slug, u.email FROM tenants t JOIN auth.users u ON u.id = t.id"),
+        ("comma join", "SELECT a.slug FROM tenants a, tenants b WHERE a.id = b.id"),
+        ("E'...' escape string", "SELECT id FROM tenants WHERE slug LIKE E'%x%' LIMIT 5"),
+        ("system column", "SELECT ctid, id FROM tenants LIMIT 1"),
     ]
     ok = True
     for label, q in alias_cases:
@@ -198,7 +205,7 @@ def main():
         if v != ALLOW:
             check(f"5: alias/keyword shape allowed — {label}", False, err[:160])
             ok = False
-    check("5: every CTE/VALUES/DISTINCT-FROM/EXTRACT/locking shape is allowed (21 cases)", ok)
+    check("5: every CTE/VALUES/DISTINCT-FROM/EXTRACT/locking shape is allowed (25 cases)", ok)
 
     # --------------------------------------- P1.1 — column validation (new) --
     e = Env({"delta-agents": REF}); e.primed()
@@ -213,6 +220,9 @@ def main():
     v, _, err = e.run("SELECT bogus_col_xyz FROM tenants")
     check("6e: a bare guessed column is blocked in a single-table query",
           v == BLOCK and "bogus_col_xyz" in err)
+    v, _, err = e.run("SELECT id FROM tenants WHERE bogus_where_xyz = 'x'")
+    check("6f: a bare guessed column in a simple WHERE is blocked",
+          v == BLOCK and "bogus_where_xyz" in err)
 
     # cross-table names are NOT blocked (false-negative on purpose)
     v, _, _ = e.run("SELECT t.action_key FROM tenants t")
