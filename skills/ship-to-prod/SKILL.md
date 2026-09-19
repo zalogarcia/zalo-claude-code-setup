@@ -9,7 +9,7 @@ Ship the delta-agents repo (`/Users/zalo/dev/delta-agents`) to production ECS in
 
 - **Workflow name:** `Deploy to ECS` — triggers ONLY on `push` to `main`. Pushing any other branch deploys nothing.
 - **ECS cluster:** `delta-agents` (region `us-east-1`)
-- **Services / containers / task-def families:** `gateway`, `worker`, `embedding-worker`, `insights-worker`, `url-watch-worker`, `wa-bailey` — task-def families are `delta-agents-{service}` (see `.aws/task-definitions/*.json`)
+- **Services / containers / task-def families:** `gateway`, `worker`, `embedding-worker`, `insights-worker`, `url-watch-worker`, `wa-bailey`, `voice-bridge` (SEVEN, verified against deploy.yml 2026-09-13; a six-service list silently skips voice-bridge) — task-def families are `delta-agents-{service}` (see `.aws/task-definitions/*.json`)
 - **Image tag = full commit SHA:** `340829666011.dkr.ecr.us-east-1.amazonaws.com/delta-agents/{service}:{sha}`
 - **Path-filtered deploys:** the `detect-changes` job (dorny/paths-filter) only deploys services whose paths changed. `packages/**` fans out to ALL six. `apps/widget/**` rebuilds the gateway (it serves the widget bundle). An `--allow-empty` commit deploys NOTHING.
 - **Ordering:** worker deploys before gateway (`deploy-gateway` needs `deploy-worker`). Full run takes ~10-12 min. A `post-deploy-smoke` job runs last.
@@ -94,7 +94,7 @@ gh run view "$RUN_ID" --json conclusion,url --jq '"\(.conclusion) \(.url)"'
 **A green run is NOT proof your SHA is live.** A manually re-run OLDER deploy can overwrite a newer commit's services (hit live 2026-06-08). Ground truth is the image tag on each service's active task definition:
 
 ```bash
-for svc in gateway worker embedding-worker insights-worker url-watch-worker wa-bailey; do
+for svc in gateway worker embedding-worker insights-worker url-watch-worker wa-bailey voice-bridge; do
   td=$(aws ecs describe-services --cluster delta-agents --services "$svc" \
     --query 'services[0].taskDefinition' --output text)
   img=$(aws ecs describe-task-definition --task-definition "$td" \
@@ -126,7 +126,7 @@ One block, all evidence fresh from this session:
 ```
 Shipped: {SHA} ({subject line})
 Run: {conclusion} — {run URL}
-Image tags: gateway={tag} worker={tag} embedding-worker={tag} insights-worker={tag} url-watch-worker={tag} wa-bailey={tag}
+Image tags: gateway={tag} worker={tag} embedding-worker={tag} insights-worker={tag} url-watch-worker={tag} wa-bailey={tag} voice-bridge={tag}
 Smoke: GET https://api.operatorbase.app/health → HTTP {code}
 ```
 
