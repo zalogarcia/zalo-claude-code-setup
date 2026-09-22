@@ -46,7 +46,7 @@ session instruction says otherwise.
    date) and the ad (offer, active count, start date), pulled the day the tranche was
    built. Use it verbatim in the message and do not reopen the source while the tranche
    is under 7 days old (the date is in `SEED-REPORT.md`). Re confirmation is for older
-   tranches, FOUND redrafts and bumps, per Step 1.
+   tranches and FOUND redrafts (an accepted connection's one message included), per Step 1.
 4. **Never open Indeed.** It shows the bot a verification wall and burns minutes. Employer
    careers portals (prevueaps and the like) are fine when a re confirmation is actually
    due.
@@ -58,7 +58,7 @@ session instruction says otherwise.
    [metro]") for the hours and a review snippet, with the ad's own words from the seed's
    `meta_ads_offer` or one Ad Library load when that is thin; tier D, the same Google
    panel for a review quote about the phone or the hours gap. A services list from the
-   homepage is bump material, never the opener. In the reviews, look for the words that
+   homepage is side note material for Zalo, never the opener. In the reviews, look for the words that
    mark the right review (after hours, Saturday, Sunday, pm, called back, voicemail, no
    answer, never heard back, same day): a person handling a call outside office hours,
    or a reachability complaint. A speed compliment with no day or time in it is not the
@@ -113,7 +113,7 @@ One load, read through the accessibility tree. From it, in this order:
    so far: one load, under 30 seconds.
 2. **Residential confirmed.** Service call language: repair, emergency, same day,
    residential, home.
-3. **Bump material.** Whatever the homepage states that Step 4 would accept: on call
+3. **Side note material.** Whatever the homepage states that Step 4 would accept: on call
    24/7, one number for three trades, service areas, no chat widget in the tree. Record
    it verbatim, and know that none of it is the opener on its own: the opener comes from
    the evidence load (speed default 5) and has to pass the paste test.
@@ -130,7 +130,9 @@ evidence has to be current. Currency comes from the seed first and the browser s
 **When the tranche is under 7 days old, the seed IS the confirmation.** Take the role and
 its posted date, or the ad and its start date, straight from the row and write the message
 from them. Record "seed, tranche dated YYYY-MM-DD" as the confirmation in the batch entry.
-Re confirmation applies to older tranches, to rows at FOUND being redrafted, and to bumps.
+Re confirmation applies to older tranches and to rows at FOUND being redrafted, which
+includes the one message owed to an accepted connection or friend request. There are no
+bumps to re confirm for (retired 2026-09-22).
 The evidence load below happens on every tranche, because the opener needs what the seed
 row does not carry.
 
@@ -224,11 +226,10 @@ all the yield was 9.0 percent. **More offline pages will not fix it.**
 So a named row without a fact is NOT a hold. Route it:
 
 - **Name AND a qualifying fact** goes to a lane whose message carries the specific: the
-  control four part DM, an open profile message, an InMail, or the `N1` note (tier D only while the invitation hold is on, so `D-li-N1`; `C-li-N1` is
-  registered but NOT sendable per `templates/messages.md`, and the lint will not stop you
-  because it reads family and channel, never tier). `N1` removes
-  the PITCH, not the work: `templates/messages.md` says its specific is still researched
-  exactly as hard, so it needs the fact like the control does.
+  control DM (the four beats in one message), an open profile message, an InMail, or a
+  note-less connection request whose one message follows the accept (tier D only while the
+  invitation hold is on). The `N1` note was retired on 2026-09-22 with every connection
+  note.
 - **Name, NO fact, TIER D ONLY** goes to the **J arm on Facebook**, and only there. The
   joke opener carries no fact about the business by design, which is exactly why the budget
   line above gives a J arm row no evidence load. It still needs 2F.4, the owner's personal
@@ -333,9 +334,9 @@ without searching.
    2026-09-12 evening; the counting rules are in the sent-log section of `SKILL.md`):
    **First, the open profile check, one click.** Open the profile while not connected and
    click Message. A free composer means the owner is an Open Profile Premium member: the
-   row is an open profile send, variant `<tier>-li-O1`, the control four part message one
-   inside the 420 character DM limit the lint applies to `O1` and `I1` (not the 300
-   character note), delivered on send with no accept gate. An InMail credit prompt
+   row is an open profile send, variant `<tier>-li-O1`, the one message in the control
+   shape inside the 420 character limit the lint applies to every LinkedIn text, delivered
+   on send with no accept gate. An InMail credit prompt
    or a Sales Navigator upsell means the profile is closed: close it and move on. Either
    way record `open_profile: yes|no` in the pipeline notes; measured 2026-09-08, every
    owner profile opened was closed, and the share in this ICP is being measured on every
@@ -357,11 +358,12 @@ without searching.
    the 5 to 40 percent open share.
    **Second, InMail for a closed tier A profile, then tier C, A first** (`<tier>-li-I1`),
    inside `inmail_credits_per_month` in `config.md`, delivered on send.
-   **Third, the connection request carrying the message as its note** (300 character
-   limit), the default for every other closed profile, and tier D only while the ramp hold
-   in `config.md` is on: draft the invitation note per `templates/messages.md`, and the
-   full message one goes out only after the connection is accepted (Step 2b of the daily
-   loop picks that up). Open More, then Connect, then Add a note. A connection request
+   **Third, the connection request with NO note** (option A, Zalo 2026-09-22), the default
+   for every other closed profile, and tier D only while the ramp hold in `config.md` is
+   on. Open More, then Connect, then **Send without a note**; never Add a note. In
+   `notes.json` it is an entry with `"kind": "connect"` and an empty text, and the lint
+   fails any text. The one message goes out only after the connection is accepted (Step 2b
+   of the daily loop picks that up), drafted per `templates/messages.md`. A connection request
    counts against BOTH budgets, the 80 per week limit AND that day's LinkedIn cold first
    touch number (corrected 2026-09-12; this line used to say "not the 15 DMs per day",
    which left invitations with no daily brake at all). **Log it as a row in
@@ -378,8 +380,9 @@ without searching.
    Facebook channel for that row is closed: try LinkedIn or Instagram, else `NO_CHANNEL`.
    Never message the page as a fallback. A verified personal profile takes ONE of two
    Facebook lanes on a given day, and the batch entry says which: the cold DM now, or the
-   friend request first (`FRIEND` row, its own daily number in `config.md`, the message
-   into the accepted thread later; Zalo's written yes, 2026-09-12). Miami rows go first
+   friend request first (`FRIEND` row, its own daily number in `config.md`, the one
+   message into the accepted thread later; Zalo's written yes, 2026-09-12). Never both on
+   one prospect: a prospect who got the DM has had their one message. Miami rows go first
    on Facebook, for the delivery reason in `config.md`.
 3. **Instagram DM.** Use when the account is active, meaning it posted within the last
    month or so. DMs from non followers land in Requests, which many owners rarely check,
@@ -393,7 +396,8 @@ company page as a substitute for the owner.
 ## Step 4, grab one extra side note
 
 Every message carries one true specific. The tier evidence is one; this is the second, and
-it is what makes a bump possible later without repeating yourself. Under the speed
+it goes in the batch entry as the side note Zalo has in hand the moment a reply lands (it
+used to be bump material; there are no bumps since 2026-09-22). Under the speed
 defaults it is captured from the homepage load in Step 0; the list below is what to look
 for there. Reviews and hours cost extra loads and are only for a row with a load to
 spare. Take whichever is available and record it verbatim:

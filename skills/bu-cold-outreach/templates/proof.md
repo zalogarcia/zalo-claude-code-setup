@@ -7,8 +7,8 @@ a replied thread over and sends message two, he is quoting a written fact rather
 remembered one.
 
 The rule that does bind Astra: **no number, client name, timeframe or result appears in
-any message Astra writes or sends.** Message one is built on facts about the PROSPECT,
-which is what the four part message is for. Astra never adds a row here, and never softens
+any message Astra writes or sends.** The one message is built on facts about the
+PROSPECT, which is what its four beats are for. Astra never adds a row here, and never softens
 an empty field into a claim ("we have helped a lot of contractors", "clients typically
 see").
 
@@ -70,7 +70,7 @@ never_quotes:      the bot does not give prices over the phone, only genuinely f
 
 1. A number nobody gave us. If Zalo did not write it here, it does not exist.
 2. Work claimed before it was done, with one sanctioned exception: the demo line in
-   message one ("I went ahead and trained a demo AI setter on your website") is allowed
+   the one message ("I went ahead and trained a demo AI setter on your website") is allowed
    since 2026-09-08 because Zalo generates it in seconds on reply. No other claimed work.
 3. Invented urgency. No capped spots, no closing soon, no "before I move on to the next
    city" unless it is literally true and Zalo said so.

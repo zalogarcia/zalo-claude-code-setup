@@ -1,0 +1,13 @@
+prospect_id,source_rail,metro,business_name
+fx-fresh-fb,maps,Miami,Fixture fx-fresh-fb
+fx-accepted,maps,Miami,Fixture fx-accepted
+fx-friend,maps,Miami,Fixture fx-friend
+fx-connect-new,maps,Miami,Fixture fx-connect-new
+fx-sent-fb,maps,Miami,Fixture fx-sent-fb
+fx-sent-cross,maps,Miami,Fixture fx-sent-cross
+fx-noted-connect,maps,Miami,Fixture fx-noted-connect
+fx-cold,maps,Miami,Fixture fx-cold
+fx-replied,maps,Miami,Fixture fx-replied
+fx-dead,maps,Miami,Fixture fx-dead
+fx-not-in-pipeline,maps,Miami,Fixture fx-not-in-pipeline
+fx-prospects-only,maps,Miami,Fixture fx-prospects-only

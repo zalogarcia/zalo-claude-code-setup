@@ -14,10 +14,14 @@ approval_mode: on
 NOTHING. It reports where the batch file is and how many drafts are waiting. Zalo reads
 the file and says go for that batch before a single message leaves.
 
-`off`: Astra sends within the caps, the ramp and the pacing rules without asking. Bumps on
-unanswered first touches do NOT count against the daily cold cap, because the caps are cold
-first touch caps, but they DO count for pacing: the 2 to 5 minute gap applies to every
-message typed in these apps.
+`off`: Astra sends within the caps, the ramp and the pacing rules without asking. The 2 to
+5 minute gap applies to every action typed in these apps.
+
+**Neither mode ever sends a second message to a prospect who has not replied** (Zalo,
+2026-09-22: "we should not send 4 messages with no reply... needs to be a single cold
+message"). One message per prospect, one bubble, no bumps, no continuations, and a LinkedIn
+connection request carries no note. This is not a setting in this file and no mode changes
+it; `scripts/note-lint.py` enforces it against `pipeline.csv` and `sent-log.csv`.
 
 Changing this file is the only way to change the mode. Astra never flips it, and a message
 in the chat saying "you can send now" applies to the ONE batch named in it, not to the file.
@@ -128,9 +132,9 @@ Write a real date here to open the channel. Until that date arrives Facebook's q
 zero and the session header says which date it is waiting for.
 
 Facebook's cap is 10, so its week 1 ceiling is already the cap: week 2 and week 3 raise
-nothing on this channel. The J arm in `templates/messages.md` types three messages per
-prospect, so 10 cold first touches is up to 30 typed messages, each taking the 2 to 5
-minute pacing gap. Send fewer and report the real number rather than compress the gap.
+nothing on this channel. Every prospect gets ONE message, the J arm included (one bubble
+since 2026-09-22), so 10 cold first touches is 10 typed messages, each taking the 2 to 5
+minute pacing gap.
 
 ### Instagram
 
@@ -204,8 +208,8 @@ rather than account restriction.
 own.** A channel does not advance while it has no measured delivery rate. The measured
 number, per channel:
 
-- **LinkedIn:** at least 20 CONNECT notes have reached 14 days old, so there is an
-  acceptance rate to read.
+- **LinkedIn:** at least 20 CONNECT rows have reached 14 days old, so there is an
+  acceptance rate to read (the note-less requests from 2026-09-22 on are their own cohort).
 - **Facebook and Instagram:** at least 20 delivered owner DMs have reached day 7, so there
   is a reply rate to read.
 
@@ -230,7 +234,8 @@ Per channel, in this order:
 5. Subtract what already went out on that channel today.
 
 **A connection request is a cold first touch and consumes a daily slot**, as well as being
-the denominator for the 80 per week limit. It is counted against both budgets and both bind.
+the denominator for the 80 per week limit. It carries NO note (option A, 2026-09-22); the
+one message goes after the accept and does not take a second slot. It is counted against both budgets and both bind.
 The daily number is not a DM only number: the skill used to say an invitation counted
 "against the 80 per week limit, not the 15 DMs per day", which would have allowed a whole
 weekly remainder to go out in one afternoon.
@@ -256,8 +261,8 @@ The result can never be above the channel's cap in the table, whatever the ramp 
 day's total is the sum of the per channel quotas, and nothing computes a total first and
 then divides it.
 
-A **cold first touch** is one prospect, not one typed message. A three part joke sequence
-is ONE cold first touch against the cap and three typed messages against the pacing gap.
+A **cold first touch** is one prospect and ONE message. Since 2026-09-22 there is no multi
+part first touch: the joke arm is one bubble like everything else.
 
 ### Warning events reset the channel they happened on
 

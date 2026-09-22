@@ -1,44 +1,74 @@
 #!/usr/bin/env python3
 """Deterministic gate for cold DM notes (Zalo, 2026-09-09: "make sure we always get
-messages that sound like texting a friend").
+messages that sound like texting a friend"), and since 2026-09-22 the gate that holds every
+prospect to ONE message until that prospect replies (Zalo, 2026-09-22, about 17:05 ET: "we
+should not send 4 messages with no reply... needs to be a single cold message").
 
-Input: a JSON file, a list of objects: {"entry": 3, "channel": "linkedin"|"facebook"|
-"instagram", "variant": "C-li-P1", "text": "...", "part": "setup"|"punchline"|"ask",
-"sent_parts": ["setup"], "joke_setup": "..."}.
-`part` is required on the joke arm (J1, J2) and ignored everywhere else: the batch
-diversity check keys on the variant family, not on the presence of that field, so a
-stray `part` on a control note cannot drop it out of the count.
-`sent_parts` and `joke_setup` are the continuation marker, joke arm only, and a note
-outside that arm carrying either is a bug and fails. See check_joke_sequences.
-Output: one line per note, PASS or FAIL with every reason, then the batch level
-checks. Exit 1 if anything failed. Facts are not checked here; the humanizer pass
-and the approval do that. This catches the machine tells that slipped through
-three times on 2026-09-09.
+Input: a JSON file, a list of objects, one per ENTRY of the batch, one entry per prospect:
 
-Four variant families. Three were split out 2026-09-12 when the test arms were added, the
-fourth 2026-09-14 with the Facebook groups channel. The family is read off the end of the
-variant id, and the laws that belong to one family are not applied to another:
+  {"entry": 3, "prospect_id": "f4942f6285", "channel": "linkedin"|"facebook"|"instagram"|
+   "facebook_groups", "variant": "C-li-P1", "kind": "message"|"connect", "text": "..."}
 
-  P1, P2  the control. The four part message one. Dare required, fixed "what we do"
-          line required, bridge required. Unchanged from 2026-09-09.
-  N1      the LinkedIn note with no pitch. Dare and pitch line must be ABSENT, the
-          note ends on the fixed permission question.
-  J1, J2  the Facebook trade joke opener. Three parts per prospect, each an approved
-          fixed string, no digits, no pitch, no dare.
-  G1      the Facebook group post. Nobody addressed by name, no per prospect demo
-          claim, the dare and the demo number required. Channel NOT STARTED.
+`kind` defaults to "message", the one message that prospect will ever get from Astra unless
+they reply. "connect" is a LinkedIn connection request, and it carries NO note (Zalo chose
+option A, 2026-09-22, about 17:10 ET): its `text` must be empty, and the one message goes
+after the accept. Any other kind (a bump, a takeaway, a continuation) fails, and so does a
+`part`, `sent_parts` or `joke_setup` field, because those were the machinery of the multi
+part first touch and the bumps, retired 2026-09-22.
 
-Three families are channel locked, so the channel is checked against the family: an N1 note
-only lints on linkedin, a J note only on facebook (both added 2026-09-12 after the audit
-found a J triple on linkedin and an N1 on facebook linting clean), and a G1 post only on
-facebook_groups.
+Usage:
+  note-lint.py <notes.json>                  the SEND GATE. Finds pipeline.csv and
+                                             sent-log.csv by walking up from notes.json (the
+                                             working folder holds
+                                             evidence/YYYY-MM-DD/session-N/notes.json)
+  note-lint.py <notes.json> --folder <dir>   the same, with the working folder named
+  note-lint.py <notes.json> --no-history     copy checks only. Prints COPY PASS and exits 2,
+                                             never ALL PASS and never 0, because a batch
+                                             nobody checked against the log is not cleared
+                                             to send
+
+Output: one line per note, PASS or FAIL with every reason, then the batch level checks.
+Exit 0 only when every note passed AND the one message rule was checked against the working
+folder. Exit 1 if anything failed. Exit 2 when the copy passed with --no-history. Facts are
+not checked here; the humanizer pass and the approval do that.
+
+The one message rule, three refusals (templates/messages.md, SKILL.md "One message"):
+
+  1. A multi part first touch: two notes on one entry, or one prospect in two entries, or
+     a `part` field. A first touch is one message, one bubble.
+  2. A bump, a takeaway or a continuation, whatever it is called: any kind other than
+     message or connect, any `stage` other than SENT or CONNECT, and the follow up phrases
+     in BANNED ("last one from me", "following up", ...).
+  3. A second message to a prospect who has not replied, on ANY channel: the prospect
+     already has an outbound message in sent-log.csv (SENT, SENT_CONT, BUMP1, BUMP2, or a
+     CONNECT that carried a note), or its pipeline row is SENT or COLD or has touches. A
+     replied prospect is Zalo's thread and a DEAD one is never contacted, so both refuse
+     too. A FRIEND row and a CONNECT with no note are not messages and refuse nothing.
+
+Variant families. The family is read off the end of the variant id, and the laws that
+belong to one family are not applied to another:
+
+  P1, P2  the control. The four beat message one: the specific, the bridge, the fixed
+          "what we do" line, the dare. On LinkedIn it is the one message after the accept.
+  O1, I1  the LinkedIn open profile message and InMail: the control shape, LinkedIn only.
+  J1, J2  the Facebook trade joke opener, ONE message since 2026-09-22: an approved joke,
+          setup then punchline, then the fixed J1 or J2 ask, on one line. No digits, no
+          pitch, no dare.
+  G1      the Facebook group post. Nobody addressed by name, no per prospect demo claim,
+          the dare and the demo number required. Channel NOT STARTED. Not a message to a
+          person, so the one message history check does not apply to it.
+  N1      RETIRED 2026-09-22. It was the LinkedIn connection note with no pitch, and a
+          connection request no longer carries a note.
+
+Three families are channel locked: a J message only lints on facebook, an O1 or I1 only on
+linkedin, and a G1 post only on facebook_groups (which takes nothing else).
 
 The offer law runs across ALL of them (added 2026-09-14): the tech as a product category is
 banned everywhere, and every family that carries an offer has to name the outcome.
 
 Tests: python3 ~/.claude/skills/bu-cold-outreach/scripts/note-lint.test.py
 """
-import json, re, sys
+import argparse, csv, json, os, re, sys
 
 CONTRACTION = re.compile(r"(?i)\b\w+'s\s+(picking|running|live|on|not|going|been|still|already|just|coming|landing|doing|sitting|open|closed|out|in|at|the|a|an)\b|\b(that's|it's|you're|they're|we're|i'm|i've|you've|we've|there's|here's|what's|who's|somebody's|someone's|nobody's|ad's|isn't|aren't|wasn't|weren't|don't|doesn't|didn't|can't|won't|wouldn't|couldn't|shouldn't|i'll|you'll|we'll|he's|she's|let's|you'd|i'd|we'd)\b")
 # The offer law, added 2026-09-14 from research/ai-agents-sales-2026-09-12.md. The thing
@@ -70,6 +100,11 @@ BANNED_PLAIN = [
     "touching base", "circle back", "excited to", "passionate", "delighted", "kindly",
     "i would love", "i'd love to", "let me know if", "feel free", "don't hesitate",
     "website: answers",
+    # The follow up phrases (2026-09-22). A prospect gets ONE message until he replies, so a
+    # line that only makes sense as a second message is refused in any note on any channel,
+    # whatever the batch calls it. "Last one from me" was the takeaway bump, word for word.
+    "last one from me", "just following up", "following up on my", "bumping this",
+    "my last message", "in case you missed", "circling back",
 ]
 BANNED = BANNED_PLAIN + TECH_AS_CATEGORY
 TECH_SET = set(TECH_AS_CATEGORY)
@@ -84,8 +119,11 @@ TECH_RE = {p: re.compile(r"\b" + re.escape(p) + r"s?\b") for p in TECH_AS_CATEGO
 DARE = "want to try and break it?"
 P1_LINE = "trained a demo ai setter on your website"
 P2_LINE = "built a quick demo off your website"
-LIMITS = {"linkedin": 300, "linkedin_dm": 420, "facebook": 420, "instagram": 420,
-          "facebook_groups": 600}
+# LinkedIn was 300 while the message rode inside the connection request as its note. Since
+# 2026-09-22 a connection request carries no note (option A), so every LinkedIn text this
+# lint sees is a delivered message (the one message after the accept, an open profile
+# message or an InMail) and takes the 420 DM limit the O1 and I1 lanes already had.
+LIMITS = {"linkedin": 420, "facebook": 420, "instagram": 420, "facebook_groups": 600}
 # `sent-log.csv` writes the short channel codes and the batch files have used both, so a note
 # arriving as "fb" used to fall through to the 300 character LinkedIn default in silence. The
 # aliases make the two vocabularies one, and an unrecognised channel now fails instead of
@@ -93,14 +131,11 @@ LIMITS = {"linkedin": 300, "linkedin_dm": 420, "facebook": 420, "instagram": 420
 CHANNEL_ALIASES = {"li": "linkedin", "fb": "facebook", "ig": "instagram",
                    "fbg": "facebook_groups", "facebook messenger": "facebook",
                    "facebook_messenger": "facebook"}
-# The channels a note may declare. `linkedin_dm` is in LIMITS but is NOT one of them: it is
-# the limit the O1 and I1 lanes borrow, and a note declaring it would buy a 420 character
-# invitation note (2026-09-14 QA pass, second round).
+# The channels a note may declare. An invented channel name ("linkedin_dm" was one) fails
+# rather than buying itself a limit.
 CHANNELS = {"linkedin", "facebook", "instagram", "facebook_groups"}
 # The two LinkedIn lanes that deliver on send (open profile message O1, InMail I1, added
-# 2026-09-12) are DMs, not invitation notes: they carry the Facebook control shape and its
-# 420 limit, and they exist on LinkedIn only.
-DM_LANES = {"O1": "linkedin_dm", "I1": "linkedin_dm"}
+# 2026-09-12) carry the control shape and exist on LinkedIn only.
 LANE_CHANNEL = {"O1": ("linkedin", "an open profile message"), "I1": ("linkedin", "an InMail")}
 LINK = re.compile(r"(?i)https?://|\bwww\.")
 # Figure dash, en dash, em dash, horizontal bar, written as escapes so this file is
@@ -172,16 +207,6 @@ OUTCOME_BOOK_RE = re.compile(
     r"|\bgets?\s+(?:the\s+job|it)\s+(?:on|into|in|booked)\b|\bon\s+(?:your|the)\s+calendar\b"
     r"|\bschedul\w+\s+(?:the\s+)?(?:job|appointment|work)\b|\bbooks?\s+the\s+work\b")
 
-# The N1 arm exists to measure a note with NO offer in it, so an offer in any wording is
-# the one thing it cannot carry. The two exact pitch lines are not enough: a paraphrase
-# passes them and the arm quietly stops being the thing being measured.
-NOPITCH_CLAIMS = ["demo", "ai setter", "books the job", "book the job",
-                  "picks up when nobody", "answers your calls"]
-
-# The N1 arm's closer is fixed copy. The arm measures the accept gate, so the question
-# is not a per row rewrite: a drifting closer would destroy the measurement.
-N1_CLOSER = "mind if i ask you something about it?"
-
 # The J arm is fixed copy end to end, approved by Zalo in templates/gold-notes.md.
 # Adding a joke is a deliberate act: it lands here and in gold-notes.md, together.
 APPROVED_JOKES = [
@@ -194,19 +219,28 @@ APPROVED_JOKES = [
      "Clogs. He's seven and I'm still mad about it."),
     ("What do you call a plumber who works every Saturday?", "Drained."),
 ]
+# The asks are unchanged from 2026-09-12 so the J1 against J2 numbers stay comparable. What
+# changed on 2026-09-22 is that the joke and the ask are ONE message: until then the setup,
+# the punchline and the ask were three bubbles, and Zalo's screenshot of the Sandra Zurick
+# thread (three bubbles on 09-14 and a "Last one from me" bump on 09-22, zero replies) is
+# the reason the rule exists.
 J_ASKS = {
     "J1": re.compile(r"^Alright .{1,40}, real question and then I'll leave the jokes alone\. "
                      r"Would you be open to talking about the calls that come in after you close\?$"),
     "J2": re.compile(r"^Okay .{1,40}, that's my one joke of the day\. Mind if I ask you "
                      r"something about the calls that come in after you close\?$"),
 }
-J_PARTS = ("setup", "punchline", "ask")
 # No joke goes to more than this many rows in one day (templates/messages.md). Six approved
 # jokes against a Facebook ceiling of 10 makes this a cap, not a ban, and before it was a
 # number in the lint it was prose only: 10 rows running two jokes five times each passed.
 J_ROW_CAP = 4
-FAMILIES = {"P1": "pitch", "P2": "pitch", "N1": "nopitch", "J1": "joke", "J2": "joke",
+FAMILIES = {"P1": "pitch", "P2": "pitch", "N1": "retired", "J1": "joke", "J2": "joke",
             "O1": "pitch", "I1": "pitch", "G1": "group"}
+RETIRED = {
+    "N1": "N1 was retired 2026-09-22: it was the LinkedIn connection note with no pitch, and a "
+          "connection request carries NO note now (Zalo, option A). The one LinkedIn message "
+          "goes after the accept and it is the control, P1 or P2",
+}
 # G1, the Facebook group post (added 2026-09-14, channel NOT STARTED, see config.md). It is
 # a post in a local business or trade group, not a DM: nobody is addressed by name, there is
 # no "your website" to have trained a demo on, and what carries it is the outcome opener plus
@@ -214,14 +248,47 @@ FAMILIES = {"P1": "pitch", "P2": "pitch", "N1": "nopitch", "J1": "joke", "J2": "
 # from its first draft rather than prose only, and nothing on it ships until Zalo opens the
 # channel and the demo agent passes the interrupt gate in SKILL.md.
 DEMO_NUMBER = re.compile(r"\b(?:\+?1[ .\-]?)?\(?\d{3}\)?[ .\-]?\d{3}[ .\-]?\d{4}\b")
-# Both test arms are one channel each, by design: N1 measures the LinkedIn accept gate and
-# the J arm is a Facebook personal profile opener. A family on the wrong channel is not a
-# variant of the arm, it is a different experiment nobody approved.
-ARM_CHANNEL = {"nopitch": ("linkedin", "N1", "an"), "joke": ("facebook", "J", "a"),
-               "group": ("facebook_groups", "G1", "a")}
-# messages.md: the N1 note is 3 to 5 sentences and 120 to 240 characters. The band is part of
-# the arm, because the thing being measured is a SHORT no pitch card.
-N1_BAND = (120, 240)
+# The J arm is a Facebook personal profile opener and G1 is a group post. A family on the
+# wrong channel is not a variant of the arm, it is a different experiment nobody approved.
+ARM_CHANNEL = {"joke": ("facebook", "J", "a"), "group": ("facebook_groups", "G1", "a")}
+
+# ------------------------------------------------ the one message rule (Zalo, 2026-09-22)
+ONE_MESSAGE = "one message per prospect until they reply (Zalo, 2026-09-22)"
+# What a notes.json entry may be. "message" is the one message; "connect" is a LinkedIn
+# connection request, which carries NO note. There is no third kind: a bump, a takeaway and
+# a continuation are all a second message to a prospect who has not replied.
+KINDS = {"message", "connect"}
+# The fields of the retired machinery. A `part` was one bubble of a multi part first touch;
+# `sent_parts` and `joke_setup` let a later batch finish one. All three mean more than one
+# message, so all three fail on sight rather than being ignored.
+RETIRED_FIELDS = ("part", "sent_parts", "joke_setup")
+# If a note says which `sent-log.csv` stage it will be logged as, only these two are one
+# message. SENT_CONT, BUMP1 and BUMP2 are the retired second, third and fourth messages.
+NOTE_STAGES = {"SENT", "CONNECT"}
+# sent-log.csv stages that are a message typed at a person. A CONNECT row is one only when it
+# carried a note (every one before 2026-09-22 did), and a FRIEND row never is.
+MESSAGE_STAGES = {"SENT", "SENT_CONT", "BUMP1", "BUMP2"}
+# Pipeline stages. SENT and COLD mean the one message went out and nothing came back.
+# Everything from REPLIED on is Zalo's thread, and Astra types nothing into it.
+HAD_ITS_MESSAGE = {"SENT", "COLD"}
+# The sha1 of the empty string. A note-less CONNECT row logged with the hash of nothing is
+# still a request with no note, so this value reads as empty (2026-09-22 QA observation).
+EMPTY_SHA1 = "da39a3ee5e6b4b0d3255bfef95601890afd80709"
+# This skill's own directory. Its templates/ and scripts/fixtures/ hold a pipeline.csv too, so
+# a history check pointed at either would "pass" against an empty or a made up log.
+SKILL_DIR = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+ZALO_STAGES = {"REPLIED", "DEMO_SENT", "TESTED", "VSL_SENT", "CALL", "NO_SHOW",
+               "CALL_HELD", "CLOSED"}
+
+
+def note_kind(note):
+    return str(note.get("kind") or "message").strip().lower()
+
+
+def pid_of(value):
+    """Prospect ids are compared trimmed and lower case on both sides, so a drafter's "F4942F6285"
+    is the log's "f4942f6285" and cannot slip a second message past the history check."""
+    return str(value or "").strip().lower()
 
 
 def note_channel(note):
@@ -248,10 +315,10 @@ def shape(text):
     return " ".join(toks[:3])
 
 
-def common(text, ch, low, limit_key=None):
+def common(text, ch, low):
     """The checks every family gets, whatever it is."""
     reasons = []
-    key = limit_key or ch
+    key = ch
     if DASH.search(text): reasons.append("em or en dash")
     if len(text) > LIMITS.get(key, 300): reasons.append(f"{len(text)} chars over the {key} limit {LIMITS.get(key, 300)}")
     for b in BANNED:
@@ -310,25 +377,6 @@ def outcome_missing(text):
     return reasons
 
 
-def check_nopitch(text, low):
-    """N1: the note whose only job is the accept."""
-    reasons = []
-    if not CONTRACTION.search(text): reasons.append("no contraction: reads as machine written")
-    if DARE in low: reasons.append("the dare is in an N1 note: that is the control, not this arm")
-    if P1_LINE in low or P2_LINE in low: reasons.append("a pitch line in an N1 note")
-    for c in NOPITCH_CLAIMS:
-        if c in low: reasons.append(f"an offer in an N1 note: {c!r}. The pitch belongs in the follow up")
-    if "24/7" in low: reasons.append("24/7 in an N1 note: the pitch belongs in the follow up")
-    if not low.rstrip().endswith(N1_CLOSER): reasons.append(f"an N1 note ends on {N1_CLOSER!r}")
-    if low.count("review") > 1: reasons.append("'review' more than once")
-    if not N1_BAND[0] <= len(text) <= N1_BAND[1]:
-        reasons.append(f"{len(text)} chars, the N1 band is {N1_BAND[0]} to {N1_BAND[1]}")
-    sents = sentences(text)
-    if not 3 <= len(sents) <= 5: reasons.append(f"{len(sents)} sentences, want 3 to 5")
-    if re.search(r"\b\d+-month-old\b", low): reasons.append("N-month-old time reference")
-    return reasons
-
-
 # Words that address the ROOM. The first cut of the rule keyed on capitalisation under
 # (?i), which made it "greeting plus one word plus comma": it rejected "Hey everyone," and
 # "Hi all," and passed "Hi Mike." and "Mike, your phone" (2026-09-14 QA pass).
@@ -384,66 +432,96 @@ def check_group(text, low):
     return reasons
 
 
-def sent_prefix(note):
-    """Read and validate the continuation marker. Returns (parts already sent, reasons).
-
-    `sent_parts` is an assertion about what already left the keyboard on an earlier day, so
-    it has to be a PREFIX of setup, punchline, ask in that order: there is no state in which
-    a punchline went out and its setup did not. An all three marker leaves nothing to send.
-    """
-    raw = note.get("sent_parts")
-    if raw is None:
-        return [], []
-    if not isinstance(raw, list) or not all(isinstance(p, str) for p in raw):
-        return [], [f"sent_parts must be a list of part names, got {raw!r}"]
-    if list(raw) != list(J_PARTS[:len(raw)]):
-        return [], [f"sent_parts must be a prefix of {list(J_PARTS)} in order, got {raw}"]
-    if len(raw) >= len(J_PARTS):
-        return list(raw), ["sent_parts says all three parts went out, so nothing is left to send"]
-    return list(raw), []
+def joke_of(text):
+    """The approved joke a J message opens on, or None. Setup, one space, punchline, one
+    space, then the ask: one line, because Messenger sends on Enter and a line break would
+    leave as a second bubble."""
+    for setup, punch in APPROVED_JOKES:
+        m = re.match(re.escape(setup) + r" +" + re.escape(punch) + r"(?: +(.*))?$", text.strip())
+        if m:
+            return setup, m.group(1) or ""
+    return None
 
 
-def check_joke(text, low, var, part, note=None):
-    """J1 and J2: fixed copy, three parts, no fact and no offer by design."""
-    note = note or {}
+def check_joke(text, low, var):
+    """J1 and J2: ONE message since 2026-09-22. An approved joke, then the fixed ask, on one
+    line. No fact and no offer by design; the paste test is waived for this arm only."""
     reasons = []
-    js = note.get("joke_setup")
-    if js is not None and str(js).strip() not in [s for s, _ in APPROVED_JOKES]:
-        reasons.append("joke_setup is not one of the approved jokes in gold-notes.md")
-    if part not in J_PARTS:
-        return reasons + [f"a joke note needs part setup, punchline or ask, got {part!r}"]
+    if "\n" in text:
+        reasons.append("a line break in a joke message: Messenger sends on Enter, so it would "
+                       "leave as two bubbles. One line, one message")
     if re.search(r"\d", text): reasons.append("a digit: the joke arm carries no numbers at all")
     if DARE in low: reasons.append("the dare is in a joke note")
     if P1_LINE in low or P2_LINE in low: reasons.append("a pitch line in a joke note")
     if "24/7" in low: reasons.append("24/7 in a joke note")
-    if part == "setup":
-        if re.match(r"(?i)^\s*(hi|hey|hello|yo)\b", text):
-            reasons.append("a greeting in the joke setup: the name arrives in the ask")
-        if text.strip() not in [s for s, _ in APPROVED_JOKES]:
-            reasons.append("the setup is not one of the approved jokes in gold-notes.md")
-    elif part == "punchline":
-        if text.strip() not in [p for _, p in APPROVED_JOKES]:
-            reasons.append("the punchline is not one of the approved jokes in gold-notes.md")
-    elif part == "ask":
-        if not CONTRACTION.search(text): reasons.append("no contraction: reads as machine written")
-        pattern = J_ASKS.get(var[-2:].upper())
-        if pattern is None or not pattern.match(text.strip()):
-            reasons.append(f"the ask does not match the fixed {var[-2:].upper()} ask")
+    if re.match(r"(?i)^\s*(hi|hey|hello|yo)\b", text):
+        reasons.append("a greeting before the joke: the message opens on the joke and the name "
+                       "arrives in the ask")
+    if not CONTRACTION.search(text): reasons.append("no contraction: reads as machine written")
+    arm = (var or "")[-2:].upper()
+    found = joke_of(text)
+    if found is None:
+        reasons.append("not an approved joke from gold-notes.md, setup then punchline, at the "
+                       "start of the message")
+    else:
+        pattern = J_ASKS.get(arm)
+        if pattern is None or not pattern.match(found[1].strip()):
+            reasons.append(f"the joke is not followed by the fixed {arm} ask, in the same message")
+    return reasons
+
+
+def check_connect(note, ch):
+    """A LinkedIn connection request: NO note (Zalo, option A, 2026-09-22). The one message
+    goes after the accept, so the request itself carries nothing to lint but its emptiness."""
+    reasons = []
+    text = note.get("text") or ""
+    if text.strip():
+        reasons.append(f"a connection note ({len(text.strip())} chars): a LinkedIn connection "
+                       "request goes out with NO note (Zalo, option A, 2026-09-22). The one "
+                       "message goes after the accept, as its own entry")
+    if ch != "linkedin":
+        reasons.append(f"a connect entry on {ch}: connection requests are LinkedIn only (a "
+                       "Facebook friend request carries nothing and has no notes.json entry)")
+    if family(note.get("variant", "")) != "pitch" or (note.get("variant") or "")[-2:].upper() not in ("P1", "P2"):
+        reasons.append("a connect entry names the variant its accepted thread will carry, "
+                       f"<tier>-li-P1 or <tier>-li-P2, got {note.get('variant')!r}")
+    return reasons
+
+
+def one_message_fields(note):
+    """The per note half of the one message rule: nothing that is not the one message."""
+    reasons = []
+    kind = note_kind(note)
+    if kind not in KINDS:
+        reasons.append(f"kind {kind!r}: {ONE_MESSAGE}. Bumps, takeaways and continuations are "
+                       "retired; the only kinds are 'message' and 'connect'")
+    stage = note.get("stage")
+    if stage is not None and str(stage).strip().upper() not in NOTE_STAGES:
+        reasons.append(f"stage {stage!r}: {ONE_MESSAGE}. SENT_CONT, BUMP1 and BUMP2 are retired")
+    for f in RETIRED_FIELDS:
+        if note.get(f) is not None:
+            reasons.append(f"a {f!r} field: the first touch is one message, one bubble. The joke "
+                           "arm's parts and its continuation marker were retired 2026-09-22")
     return reasons
 
 
 def check(note):
-    text = note["text"]; raw_ch = (note.get("channel") or "linkedin").lower()
+    text = note.get("text") or ""; raw_ch = (note.get("channel") or "linkedin").lower()
     ch = note_channel(note); var = note.get("variant", "")
     low = text.lower()
     fam = family(var)
     lane = (var or "")[-2:].upper()
-    reasons = common(text, ch, low, DM_LANES.get(lane) if ch == "linkedin" else None)
+    reasons = one_message_fields(note)
     if ch not in CHANNELS:
         reasons.append(f"unrecognised channel {raw_ch!r}: expected one of {sorted(CHANNELS)}")
+    if note_kind(note) == "connect":
+        return reasons + check_connect(note, ch)
+    reasons += common(text, ch, low)
     if fam is None:
-        reasons.append(f"unrecognised variant family in {var!r}: expected P1, P2, N1, J1, J2, O1, I1 or G1")
+        reasons.append(f"unrecognised variant family in {var!r}: expected P1, P2, J1, J2, O1, I1 or G1")
         fam = "pitch"
+    if fam == "retired":
+        return reasons + [RETIRED.get(lane, f"{lane} is retired")]
     lane_ch, lane_label = LANE_CHANNEL.get(lane, (None, None))
     if lane_ch and ch != lane_ch:
         reasons.append(f"{lane_label} on {ch}: the {lane} lane is {lane_ch} only")
@@ -454,94 +532,160 @@ def check(note):
     # a DM shape there would be a per prospect message typed into a room of strangers.
     if ch == "facebook_groups" and fam != "group":
         reasons.append(f"a {fam} note on facebook_groups: that channel takes G1 posts only")
-    if fam != "joke" and (note.get("sent_parts") is not None or note.get("joke_setup") is not None):
-        reasons.append("sent_parts or joke_setup on a note that is not a joke note")
     if fam == "pitch":
         reasons += check_pitch(text, low, var)
-    elif fam == "nopitch":
-        reasons += check_nopitch(text, low)
     elif fam == "joke":
-        reasons += check_joke(text, low, var, note.get("part"), note)
+        reasons += check_joke(text, low, var)
     elif fam == "group":
         reasons += check_group(text, low)
     return reasons
 
 
-def check_joke_sequences(notes):
-    """A joke prospect is the sequence setup, punchline, ask, in that order, one note each,
-    the setup and punchline from the SAME approved joke and the ask in this row's phrasing.
-
-    A FRESH entry carries all three, unchanged from 2026-09-12. An entry whose earlier parts
-    already went out on an earlier day is a CONTINUATION: it declares what was delivered in
-    `sent_parts` and carries a contiguous run of what is left, starting at the next part.
-    That is how SKILL.md Step 2b finishes an interrupted sequence under today's approval.
-    Without the marker the lint demanded all three parts every session, which left exactly
-    two ways to ship a continuation: strand the row, so the arm's 20 send count drifts, or
-    pad the batch with text that already went out, which makes the lint stop checking the
-    messages that are about to be typed. Added 2026-09-12 after the audit of 184db72.
-
-    The marker is an assertion about `sent-log.csv`, not a fact this script can read, so a
-    continuation must also name its joke in `joke_setup`: without it a punchline arriving a
-    day after its setup could be paired with a different joke and nothing would notice.
-    """
-    reasons = []
-    groups = {}
+def joke_row_cap(notes):
+    """No approved joke goes to more than J_ROW_CAP rows in one batch."""
+    count = {}
     for n in notes:
-        if family(n.get("variant", "")) == "joke":
-            groups.setdefault(n.get("entry"), []).append(n)
-    setups_today = {}
-    for entry, parts in sorted(groups.items(), key=lambda kv: str(kv[0])):
-        got = [p.get("part") for p in parts]
-        markers = sorted({json.dumps(p.get("sent_parts")) for p in parts})
-        if len(markers) != 1:
-            reasons.append(f"FAIL batch: joke entry {entry} disagrees with itself about sent_parts: {', '.join(markers)}")
+        if family(n.get("variant", "")) == "joke" and note_kind(n) == "message":
+            found = joke_of(n.get("text") or "")
+            if found:
+                count[found[0]] = count.get(found[0], 0) + 1
+    return [f"FAIL batch: the joke {j!r} goes to {c} rows today, cap is {J_ROW_CAP} (templates/messages.md)"
+            for j, c in sorted(count.items()) if c > J_ROW_CAP]
+
+
+def one_message_batch(notes):
+    """Refusal 1, batch side: one entry is one message, and one prospect is one entry."""
+    out = []
+    by_entry, by_pid = {}, {}
+    for n in notes:
+        if n.get("entry") is not None:
+            by_entry.setdefault(str(n.get("entry")), []).append(n)
+        pid = pid_of(n.get("prospect_id"))
+        # Two notes on one entry are already refused above; two notes with no entry number
+        # at all are two messages, so they are counted here rather than folded together.
+        if pid and (n.get("entry") is None or n.get("entry") not in by_pid.get(pid, [])):
+            by_pid.setdefault(pid, []).append(n.get("entry"))
+    for e, ns in sorted(by_entry.items()):
+        if len(ns) > 1:
+            out.append(f"FAIL batch: entry {e} carries {len(ns)} notes. A first touch is ONE "
+                       f"message, one bubble, never parts or a continuation: {ONE_MESSAGE}")
+    for pid, es in sorted(by_pid.items()):
+        if len(es) > 1:
+            out.append(f"FAIL batch: prospect {pid} is in {len(es)} entries {es}. {ONE_MESSAGE}: "
+                       "one entry, one channel, one message")
+    return out
+
+
+# --------------------------------------------------------------- the history check
+def read_csv(path):
+    """Rows as dicts keyed by the header, each header cell stripped (the files have been
+    written with and without a space after each comma)."""
+    with open(path, newline="") as f:
+        rows = list(csv.reader(f))
+    if not rows:
+        return [], []
+    head = [h.strip().lstrip("\ufeff").strip() for h in rows[0]]
+    return head, [dict(zip(head, r)) for r in rows[1:]]
+
+
+def find_folder(notes_path):
+    """The working folder: the nearest directory at or above notes.json holding pipeline.csv."""
+    d = os.path.dirname(os.path.abspath(notes_path))
+    while True:
+        if os.path.isfile(os.path.join(d, "pipeline.csv")):
+            return d
+        parent = os.path.dirname(d)
+        if parent == d:
+            return None
+        d = parent
+
+
+def load_history(folder):
+    """(pipeline row by prospect id, outbound message rows by prospect id, every prospect id
+    the folder knows). Raises ValueError with a sentence that names the file when it cannot
+    be read or lacks a column."""
+    out = []
+    for name, need in (("pipeline.csv", ("prospect_id", "stage")),
+                       ("sent-log.csv", ("prospect_id", "stage")),
+                       ("prospects.csv", ("prospect_id",))):
+        path = os.path.join(folder, name)
+        try:
+            head, rows = read_csv(path)
+        except OSError as e:
+            raise ValueError(f"cannot read {path} ({e.strerror or e}). On iCloud run "
+                             "`brctl download` on it, wait a few seconds, and lint again")
+        missing = [c for c in need if c not in head]
+        if missing:
+            raise ValueError(f"{path} has no {', '.join(missing)} column")
+        out.append(rows)
+    pipe = {}
+    for r in out[0]:
+        pid = pid_of(r.get("prospect_id"))
+        if pid:
+            pipe[pid] = r
+    sent = {}
+    for r in out[1]:
+        pid = pid_of(r.get("prospect_id"))
+        if not pid:
             continue
-        sent, bad = sent_prefix(parts[0])
-        if bad:
-            reasons.append(f"FAIL batch: joke entry {entry}: " + "; ".join(bad))
+        stage = (r.get("stage") or "").strip().upper()
+        typed = any((r.get(k) or "").strip() not in ("", EMPTY_SHA1)
+                    for k in ("message_text", "message_sha1", "message_head"))
+        if stage in MESSAGE_STAGES or typed:
+            sent.setdefault(pid, []).append(r)
+    known = set(pipe) | {pid_of(r.get("prospect_id")) for r in out[2]} - {""}
+    return pipe, sent, known
+
+
+def history_failures(notes, pipe, sent, known):
+    """Refusal 3: a second message to a prospect who has not replied, on any channel. Also a
+    replied prospect (Zalo's thread) and a DEAD one (never again). A G1 group post has no
+    prospect and is skipped."""
+    out = []
+    for n in notes:
+        if family(n.get("variant", "")) == "group":
             continue
-        # WHICH parts are present is the law: the whole remainder on a fresh entry, a
-        # contiguous run from the next unsent part on a continuation, each exactly once. The
-        # ORDER the notes are listed in is NOT a law, because the send order is a sending
-        # rule (the batch runs in passes) and the 2026-09-12 fix must not fail a fresh entry
-        # the 2026-09-09 lint passed.
-        tail = list(J_PARTS[len(sent):])
-        want = set(tail) if not sent else set(tail[:len(got)])
-        dupes = sorted(x for x in set(got) if got.count(x) != 1)
-        if not got or dupes or set(got) != want:
-            if not sent:
-                reasons.append(f"FAIL batch: joke entry {entry} needs exactly one setup, one punchline and one ask, got {got}")
-            else:
-                reasons.append(f"FAIL batch: joke entry {entry} already sent {sent}, so it carries {tail} from {tail[0]!r} on, one note each, got {got}")
+        e = n.get("entry"); kind = note_kind(n)
+        pid = pid_of(n.get("prospect_id"))
+        if not pid:
+            out.append(f"FAIL entry {e}: no prospect_id, so the one message rule cannot be "
+                       "checked against pipeline.csv and sent-log.csv")
             continue
-        declared = sorted({(p.get("joke_setup") or "").strip() for p in parts})
-        if len(declared) != 1:
-            reasons.append(f"FAIL batch: joke entry {entry} disagrees with itself about joke_setup: {declared}")
+        if pid not in known:
+            # An id the folder does not know would read as a fresh prospect, so a one character
+            # slip in a real id ("b7c99e2c2" for "b7c99e2c2d") used to pass as a first touch
+            # (2026-09-22 QA pass). Every real prospect is in prospects.csv or pipeline.csv.
+            out.append(f"FAIL entry {e}: prospect_id {n.get('prospect_id')!r} is in neither "
+                       "pipeline.csv nor prospects.csv, so the one message rule cannot be "
+                       "checked. Copy the id exactly from pipeline.csv")
             continue
-        named = declared[0]
-        setup = next((p["text"].strip() for p in parts if p.get("part") == "setup"), None)
-        if sent and not named:
-            reasons.append(f"FAIL batch: joke entry {entry} declares sent_parts {sent} and no joke_setup, so its punchline cannot be checked against its own setup")
-            continue
-        if setup is not None and named and named != setup:
-            reasons.append(f"FAIL batch: joke entry {entry} joke_setup does not match the setup in this batch")
-            continue
-        opener = setup if setup is not None else named
-        punch = next((p["text"].strip() for p in parts if p.get("part") == "punchline"), None)
-        if punch is not None and (opener, punch) not in APPROVED_JOKES:
-            reasons.append(f"FAIL batch: joke entry {entry} pairs a setup with the wrong punchline")
-        if len({p.get("variant") for p in parts}) != 1:
-            reasons.append(f"FAIL batch: joke entry {entry} mixes variant ids across its parts")
-        # The repetition cap counts every ROW carrying this joke today, continuation included:
-        # a continuation types that joke's punchline at a stranger today exactly like a fresh
-        # row does, and counting only the setups left the whole continuation path uncapped
-        # (10 continuation rows on one joke passed clean, found in the re audit of this fix).
-        if opener:
-            setups_today[opener] = setups_today.get(opener, 0) + 1
-    for joke, n in sorted(setups_today.items()):
-        if n > J_ROW_CAP:
-            reasons.append(f"FAIL batch: the joke {joke!r} goes to {n} rows today, cap is {J_ROW_CAP} (templates/messages.md). Continuations count")
-    return reasons
+        row = pipe.get(pid) or {}
+        stage = (row.get("stage") or "").strip().upper()
+        try:
+            touches = int((row.get("touches") or "0").strip() or 0)
+        except ValueError:
+            touches = 0
+        prior = sent.get(pid, [])
+        what = "a connection request" if kind == "connect" else "a message"
+        if stage == "DEAD":
+            out.append(f"FAIL entry {e}: prospect {pid} is DEAD. Never contacted again, on any channel")
+        elif stage in ZALO_STAGES:
+            out.append(f"FAIL entry {e}: prospect {pid} is at {stage}: the prospect replied, so the "
+                       f"thread is Zalo's and Astra types nothing into it, {what} included")
+        elif prior:
+            first = prior[0]
+            more = f", plus {len(prior) - 1} more" if len(prior) > 1 else ""
+            label = (first.get("stage") or "").strip()
+            if label.upper() == "CONNECT":
+                label = "a connection request that carried a note,"
+            out.append(f"FAIL entry {e}: prospect {pid} already got its one message "
+                       f"({label} {(first.get('timestamp_et') or '').strip()} "
+                       f"on {(first.get('channel') or '').strip()}{more}) and has not replied. "
+                       f"{ONE_MESSAGE}: nothing more, on any channel, {what} included")
+        elif stage in HAD_ITS_MESSAGE or touches > 0:
+            out.append(f"FAIL entry {e}: prospect {pid} is at {stage or 'FOUND'}, touches {touches}, "
+                       f"in pipeline.csv, so it already had its one message. {ONE_MESSAGE}")
+    return out
 
 
 def diversity_failures(openers, label=None):
@@ -555,23 +699,56 @@ def diversity_failures(openers, label=None):
     return out, shapes
 
 
-def main(path):
-    notes = json.load(open(path))
+def main(argv=None):
+    ap = argparse.ArgumentParser(description="The batch gate: copy laws plus the one message rule.")
+    ap.add_argument("notes", nargs="?", default="notes.json")
+    ap.add_argument("--folder", help="the working folder holding pipeline.csv and sent-log.csv "
+                    "(default: the nearest one at or above notes.json)")
+    ap.add_argument("--no-history", action="store_true",
+                    help="copy checks only; exits 2 on a copy pass, because it is not a send gate")
+    ap.add_argument("--fixture", action="store_true",
+                    help="allow a history folder inside this skill (the test fixtures); exits 2 "
+                    "on a pass, because a fixture is not a send gate")
+    args = ap.parse_args(argv)
+    notes = json.load(open(args.notes))
+    if not isinstance(notes, list) or not all(isinstance(n, dict) for n in notes):
+        print("FAIL: notes.json must be a list of objects, one per entry"); sys.exit(1)
     failed = 0
     for n in notes:
         r = check(n)
         tag = "PASS" if not r else "FAIL"
         failed += bool(r)
-        part = f", {n['part']}" if n.get("part") else ""
-        print(f"{tag} entry {n.get('entry')} ({n.get('channel')}, {n.get('variant')}{part}, {len(n['text'])} chars)" + ("" if not r else ": " + "; ".join(r)))
-    for r in check_joke_sequences(notes):
+        kind = f", {note_kind(n)}" if note_kind(n) != "message" else ""
+        print(f"{tag} entry {n.get('entry')} ({n.get('channel')}, {n.get('variant')}{kind}, "
+              f"{len(n.get('text') or '')} chars)" + ("" if not r else ": " + "; ".join(r)))
+    for r in one_message_batch(notes) + joke_row_cap(notes):
         failed += 1; print(r)
-    # Opener diversity is about how a first touch OPENS, so it reads the opener of each
-    # prospect: the whole note on the control and the N1 arm, the setup on the joke arm. A
-    # joke CONTINUATION opened on an earlier day, so it has no opener today and is not in
-    # this population; what bounds a day of continuations is J_ROW_CAP above, which counts
-    # them. Fewer openers only ever lowers the cap below, so this can never loosen it.
-    openers = [n for n in notes if family(n.get("variant", "")) != "joke" or n.get("part") == "setup"]
+    # The history check is the half of the one message rule a single note cannot show: has
+    # this prospect already been messaged? It is ON unless --no-history says otherwise, and a
+    # run without it cannot print ALL PASS or exit 0.
+    folder = None
+    if not args.no_history:
+        folder = args.folder or find_folder(args.notes)
+        if not folder:
+            failed += 1
+            print(f"FAIL batch: no pipeline.csv at or above {os.path.dirname(os.path.abspath(args.notes))}, "
+                  "so the one message rule cannot be checked. Lint the batch's notes.json inside "
+                  "the working folder, or pass --folder <working folder>")
+        elif not args.fixture and os.path.realpath(folder).startswith(os.path.realpath(SKILL_DIR) + os.sep):
+            failed += 1
+            print(f"FAIL batch: the history folder {folder} is inside the skill itself (a template "
+                  "or a test fixture), not the working folder, so nothing real was checked")
+        else:
+            try:
+                pipe, sent, known = load_history(folder)
+            except ValueError as e:
+                failed += 1; print(f"FAIL batch: {e}")
+            else:
+                for r in history_failures(notes, pipe, sent, known):
+                    failed += 1; print(r)
+    # Opener diversity is about how a first touch OPENS, so it reads every message. A connect
+    # entry has no text and is not in this population.
+    openers = [n for n in notes if note_kind(n) == "message" and (n.get("text") or "").strip()]
     over, shapes = diversity_failures(openers)
     for line in over:
         failed += 1; print(line)
@@ -589,9 +766,19 @@ def main(path):
         for line in more:
             if line.split("(")[1].split(")")[0] in named: continue
             failed += 1; print(line)
-    print(f"{'ALL PASS' if not failed else str(failed) + ' FAILURE(S)'}: {len(notes)} notes, {len(openers)} openers, {len(shapes)} opener shapes")
-    sys.exit(1 if failed else 0)
+    tail = f"{len(notes)} notes, {len(openers)} openers, {len(shapes)} opener shapes"
+    if failed:
+        print(f"{failed} FAILURE(S): {tail}"); sys.exit(1)
+    if args.no_history:
+        print(f"COPY PASS, HISTORY NOT CHECKED (--no-history): {tail}. Not a send gate: lint "
+              "it inside the working folder to check the one message rule"); sys.exit(2)
+    if args.fixture:
+        print(f"FIXTURE PASS: {tail}. Checked against {folder} in --fixture mode. Not a send "
+              "gate"); sys.exit(2)
+    people = len({pid_of(n.get('prospect_id')) for n in notes if family(n.get('variant', '')) != 'group'})
+    print(f"ALL PASS: {tail}. One message rule checked against {folder}: {people} prospects, "
+          "none already messaged, none replied or dead"); sys.exit(0)
 
 
 if __name__ == "__main__":
-    main(sys.argv[1] if len(sys.argv) > 1 else "notes.json")
+    main()

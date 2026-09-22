@@ -4,31 +4,15 @@ Known, decided, and deliberately not closed yet. Each entry says what is exposed
 currently contains it, and the specific change that would close it. Read this before
 adding a mechanism, so a gap is not "discovered" twice.
 
-## 1. `sent_parts` is an assertion the lint cannot verify (opened 2026-09-12)
+## 1. `sent_parts` is an assertion the lint cannot verify (opened 2026-09-12, CLOSED 2026-09-22)
 
-**What it is.** The joke arm's continuation marker (`sent_parts`, `joke_setup`) lets a
-batch carry only the remaining parts of a joke sequence whose earlier parts went out on a
-previous day, which is what makes an interrupted sequence finishable at all. The lint
-validates the marker's SHAPE (a strict prefix of setup, punchline, ask; the parts present
-being the contiguous run after it; the punchline belonging to the named setup) but it
-never reads `sent-log.csv`, so it cannot confirm the claimed earlier sends actually
-happened. A marker that lies would let a fresh row skip its setup send.
-
-**What contains it today.** Three things, and they are why this is a gap and not a hole.
-Every part is still matched against the approved setups, punchlines and the fixed ask
-regex, so no unapproved copy can ride in on a marker (the 2026-09-12 re audit fuzzed
-158,256 marker batches: 19 accepted, 0 carrying text outside the approved strings). The
-joke repetition cap counts continuations, so the marker cannot be used to send one joke
-to the whole batch. And Zalo approves every batch by name before anything sends.
-
-**What would close it.** Teach `scripts/note-lint.py` to read `sent-log.csv` and verify
-that each row cited by a `sent_parts` marker exists with the stages it claims, failing the
-batch when a claimed send is absent. That is a larger change than the finding asked for
-and it gives the lint a new input, so it wants its own test fixtures for a missing row, a
-stage mismatch and a row from the wrong prospect.
-
-**Priority.** Low until the J arm has actually sent something. Facebook opened 2026-09-13 (moved from 09-15 on
-2026-09-12) and `sent-log.csv` holds 0 J rows, so today the marker is proven at the lint layer only.
+The joke arm's continuation marker let a batch carry the remaining parts of a joke sequence
+whose earlier parts went out on a previous day, and the lint could not read `sent-log.csv`
+to check the claim. Closed two ways on 2026-09-22 by Zalo's one message rule: the marker,
+the `part` field and the three part sequence are retired and refused on sight, and the lint
+now DOES read `sent-log.csv` and `pipeline.csv`, refusing any message to a prospect the log
+shows was already messaged. The fixtures the old "what would close it" asked for exist in
+`scripts/fixtures/single-message/`.
 
 ## 2. Health check 5 has no executable form (opened 2026-09-12)
 
@@ -87,3 +71,25 @@ number, because the lint requires one and bans unfilled tokens.
 **What would close it.** Zalo opening the channel, running the interrupt gate, and 20 posts
 with their calls per post recorded. Until then the honest statement about this channel is
 "specified, never run".
+
+## 6. Two batches on one day can each carry the same prospect (opened 2026-09-22)
+
+**What it is.** The one message gate reads `sent-log.csv` as it stands when the lint runs. If
+two batches are drafted on the same day (a research session and a send session, or two
+sessions) and both carry one prospect who has not been messaged yet, each file lints clean on
+its own, and both could be typed if both are approved and sent without a re lint between.
+
+**Why the obvious mechanism was not built.** Refusing a `prospect_id` that also appears in
+another `notes.json` of the same day would refuse the normal flow: on 2026-09-22 the send
+session's `session-2/notes.json` re linted a superset of `session-1/notes.json` (all 13 of
+session 1's texts are in session 2's 25). A cross file refusal would have failed that day.
+
+**What contains it today.** SKILL.md Step 3 requires a re lint of the exact `notes.json`
+immediately before a send pass and again before resuming after any other batch has sent;
+once the first batch's sends are in `sent-log.csv`, the re lint refuses the duplicate. Zalo
+also approves each batch by name.
+
+**What would close it.** A send time check per message rather than per batch: a tiny
+`note-lint.py --before-send <prospect_id>` that exits non zero if the log already holds an
+outbound message for that id, run before each message is typed. Worth building if a second
+same day batch is ever approved while the first is still sending.

@@ -8,6 +8,12 @@ status line as it sends.
 **A status line in this file is a working note. The audit trail is `sent-log.csv`, and
 nothing counts as sent unless it has a row there.**
 
+**One entry per prospect, one message per entry (Zalo, 2026-09-22).** Every entry in this
+file is the ONE message that prospect gets from Astra unless they reply, or a connection or
+friend request that carries no message. There are no bumps, no takeaways, no continuations
+and no second channel for a prospect already messaged, and `scripts/note-lint.py` refuses a
+batch that has any.
+
 ---
 
 ## Session header
@@ -17,60 +23,63 @@ nothing counts as sent unless it has a row there.**
 **Facebook:** ramp week [N], ceiling [n], cap 10, hold [none], sent today [n], left [n] (or, before the start date: not yet started, waiting for [YYYY-MM-DD], quota 0)
 **Instagram:** inactive, no ramp (or: ramp week [N], ceiling [n], cap 10, left [n])
 **Total today:** [n], the sum of the per channel numbers above, never a number divided up
-**Drafted:** [n] cold first touches, [n] bumps
-**Test arms in this batch:** [n] `D-li-N1`, [n] `D-fb-J1`, [n] `D-fb-J2`, [n] control
-**Joke repeats:** [joke]: [n] rows, [joke]: [n] rows. Cap is 4 rows per joke per day, and a continuation row counts exactly like a fresh one
-**Joke continuations:** [n] rows finishing a sequence started on an earlier day. These consume no cold first touch slot (it was spent when their setup went out) but they do count for pacing and for the joke cap
-**Typed messages today:** [n] total across all channels, at a 2 to 5 minute gap each. Continuations are typed first, then as many new first touches as the session can fit at the full gap
+**Drafted:** [n] one messages (cold first touches), [n] connection requests with no note, [n] friend requests. Bumps: none, retired 2026-09-22
+**Owed their one message today:** [n] accepted note-less connections, [n] accepted friend requests
+**Went COLD today:** [n] rows, one message and no reply by day 7. Nothing is drafted for them
+**Test arms in this batch:** [n] `D-fb-J1`, [n] `D-fb-J2`, [n] control
+**Joke repeats:** [joke]: [n] rows, [joke]: [n] rows. Cap is 4 rows per joke per day
+**Typed messages today:** [n] total across all channels, one per prospect, at a 2 to 5 minute gap each
+**Lint:** [the `ALL PASS` line from `scripts/note-lint.py`, run inside the working folder, naming the folder the one message rule was checked against. A `COPY PASS` line means the batch is NOT cleared]
 **Owner resolution:** [n] Facebook rows resolved to a verified personal profile, [n] held
 **Health checks:** all clear (or: CHECK [n] TRIPPED, see the report)
 
 Ordering inside this file: grouped by channel so each app opens once, and inside a channel
-cold tier A, then B, then C, then D, then the bumps due on that channel.
+tier A, then B, then C, then D. There is no bump section.
 
 ---
 
 ## LinkedIn
 
-### 1. [Owner Name], [Company], tier A
+### 1. [Owner Name], [Company], tier D, connection request
 
 **Open:** https://www.linkedin.com/in/...
-**Prospect id:** [id] · **Metro:** [metro] · **Variant:** A-li-P1
-**Evidence:** [the verbatim sniper fact; "seed, tranche dated YYYY-MM-DD" when the tranche is under 7 days old, otherwise the date it was re confirmed]
-**Side note:** [the extra true detail, from the homepage]
+**Prospect id:** [id] · **Metro:** [metro] · **Variant:** D-li-P1 (the one message the accepted thread will carry)
+**Evidence:** [the verbatim fact the one message will open on, kept for the day of the accept]
 **Budget:** [n] loads, [n] seconds
 
-**Invitation note** ([n]/300 characters, the whole artifact for a LinkedIn row; the
-acceptance follow up is fixed copy in `templates/messages.md`):
+**Connection request, NO note** (option A, Zalo 2026-09-22). Nothing is typed into the
+request. In `notes.json` this entry is `"kind": "connect"` with an empty `"text"`, and the
+lint fails it if the text is not empty. The one message goes after the accept, as its own
+entry in that day's batch.
+
+**Status:** DRAFT
+
+### 2. [Owner Name], [Company], tier C, the one message after the accept
+
+**Open:** https://www.linkedin.com/in/...
+**Prospect id:** [id] · **Metro:** [metro] · **Variant:** C-li-P2
+**Accepted:** [YYYY-MM-DD], request sent [YYYY-MM-DD] with no note (`sent-log.csv` CONNECT row with an empty `message_text`)
+**Evidence:** [verbatim; the date re confirmed if older than 7 days]
+**Side note:** [detail]
+
+([n]/420 characters. The ONE message this prospect gets unless he replies.)
 
 ```
-[The note. Under 300 characters. Every token filled. No brackets.]
+[Message. Every token filled. No brackets.]
 ```
 
 **Status:** DRAFT
 
-### 2. [Owner Name], [Company], tier C
+### 3. [Owner Name], [Company], tier A, open profile message (or InMail)
 
 **Open:** https://www.linkedin.com/in/...
-**Prospect id:** [id] · **Metro:** [metro] · **Variant:** C-li-P2
+**Prospect id:** [id] · **Metro:** [metro] · **Variant:** A-li-O1 (or A-li-I1)
 **Evidence:** [verbatim; seed date or the date re confirmed]
 **Side note:** [detail]
 **Budget:** [n] loads, [n] seconds
 
 ```
-[Message]
-```
-
-**Status:** DRAFT
-
-### 3. [Owner Name], [Company], bump 1 of 2
-
-**Open:** https://www.linkedin.com/in/...
-**Prospect id:** [id] · **First touch:** [YYYY-MM-DD] · **Variant:** A-li-P1
-**New fact this bump adds:** [what is new, because a bump with nothing new does not go]
-
-```
-[Bump message]
+[Message, under 420 characters]
 ```
 
 **Status:** DRAFT
@@ -86,6 +95,8 @@ acceptance follow up is fixed copy in `templates/messages.md`):
 **Evidence:** [the strongest true side note, since tier D has no sniper signal]
 **Side note:** [detail]
 
+(ONE message. The blank line is Shift+Return twice inside it, never a second send.)
+
 ```
 [Message]
 ```
@@ -100,46 +111,13 @@ acceptance follow up is fixed copy in `templates/messages.md`):
 **Side note:** [any true detail seen for free, for Zalo when the thread opens. The joke arm's messages carry no fact, by design]
 **Owner resolution:** [where the name came from, how the profile was verified, n loads, n seconds]
 
-Three separate sends, each with its own 2 to 5 minute pacing gap. One cold first touch
-against the cap. If anything comes back after send 1 or send 2, the row is REPLIED, the
-remaining sends are cancelled, and the thread goes to Zalo.
+ONE message: the approved joke, setup then punchline, then the J1 ask, on one line with no
+line break. One cold first touch against the cap and one pacing gap. If anything comes back
+it is REPLIED and the thread goes to Zalo; if nothing comes back the row goes `COLD` at day
+7 and nothing else is ever sent.
 
 ```
-[Send 1, the setup, from templates/gold-notes.md. No greeting, no name.]
-```
-
-```
-[Send 2, the punchline.]
-```
-
-```
-[Send 3, the J1 ask, only if nothing came back.]
-```
-
-**Status:** DRAFT
-
-### 4c. [Owner Name], [Company], tier D, test arm `D-fb-J1`, CONTINUATION
-
-**Open:** https://www.facebook.com/... (the same thread the setup went to)
-**Prospect id:** [id] · **Metro:** [metro] · **Variant:** D-fb-J1
-**Opener type:** trade joke, continuation
-**Already sent:** setup on [YYYY-MM-DD HH:MM ET], `sent-log.csv` row [the SENT row id or its timestamp]
-**Joke this thread carries:** [the approved setup text, verbatim]
-**Reply check:** nothing came back as of [HH:MM ET] today, so the sequence continues
-
-The setup went out under an earlier day's approval and the sequence was interrupted by the
-cap or by the session ending. What is left goes here, under TODAY's approval, ahead of any
-new first touch on this channel. In `notes.json` every note of this entry carries
-`"sent_parts": ["setup"]` (or `["setup", "punchline"]`) and `"joke_setup"` set to the
-approved setup text above, or the lint fails the batch. Never re type an already sent
-message into this file to make the lint pass.
-
-```
-[Send 2, the punchline of THAT joke.]
-```
-
-```
-[Send 3, the J1 ask, only if nothing came back.]
+[The approved joke from templates/gold-notes.md, setup then punchline, then the J1 ask with the owner's first name. One line. No greeting before the joke.]
 ```
 
 **Status:** DRAFT
@@ -189,10 +167,10 @@ interrupt gate has been run.** A batch carrying group posts while
 | Value | Meaning |
 | --- | --- |
 | `DRAFT` | written, not sent, waiting on approval or on its turn in the pacing queue |
-| `CONNECT SENT YYYY-MM-DD HH:MM ET` | LinkedIn connection request with the note sent; a `CONNECT` row exists in `sent-log.csv`; pipeline row stays `FOUND` until the message goes out after acceptance |
-| `SENT YYYY-MM-DD HH:MM ET` | sent, and a row exists in `sent-log.csv` with the same timestamp and `stage` `SENT`. This is the counted send for the prospect |
-| `PART 2 SENT ... / PART 3 SENT ...` | a later part of a multi part first touch (the J arm); a `SENT_CONT` row exists in `sent-log.csv`; counted nowhere |
-| `CANCELLED, replied` | the prospect answered mid sequence, so the remaining parts were never sent; the row is REPLIED and belongs to Zalo |
+| `CONNECT SENT YYYY-MM-DD HH:MM ET` | LinkedIn connection request sent with NO note; a `CONNECT` row with an empty message exists in `sent-log.csv`; pipeline row stays `FOUND` until the one message goes out after acceptance |
+| `FRIEND SENT YYYY-MM-DD HH:MM ET` | Facebook friend request sent, nothing typed; a `FRIEND` row exists in `sent-log.csv`; pipeline row stays `FOUND` until the one message goes out after acceptance |
+| `SENT YYYY-MM-DD HH:MM ET` | the one message went out, and a row exists in `sent-log.csv` with the same timestamp and `stage` `SENT`. Nothing else is ever sent to this prospect unless they reply |
+| `PULLED, already messaged` | the lint or the log shows this prospect already had their one message (on any channel); the entry never sends |
 | `HELD, cap reached` | the channel hit its daily cap before this entry; it rolls to tomorrow |
 | `HELD, channel stopped` | a warning event stopped that channel for the day |
 | `PULLED, evidence stale` | the ad stopped or the job post came down before sending; row goes back to FOUND |
@@ -202,6 +180,8 @@ interrupt gate has been run.** A batch carrying group posts while
 
 ## Rules while sending
 
+- One message per prospect, ever, until they reply. If a stray Enter sends part of a
+  message, the rest is NOT sent as a second bubble; log what went out.
 - One message at a time. A randomized gap of 2 to 5 minutes between sends, every time.
 - Never a platform bulk, broadcast, sequence or automation feature. Type it, send it.
 - Only Zalo's own accounts. Never a second profile to raise the ceiling.

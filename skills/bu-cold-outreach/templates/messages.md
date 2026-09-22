@@ -3,15 +3,24 @@
 The copy contract for everything Astra writes. The Black Umbrella cold outreach strategy
 outranks this file wherever they disagree, and this file is already written to match it.
 
-**Astra writes and sends message ONE and its two bumps. That is the whole rail.** The
-moment a prospect replies with anything at all, the thread becomes Zalo's: Astra records
-the reply, marks the row REPLIED, and surfaces it in the report. The material at the bottom
-of this file under "Zalo's rail" is reference for him, not a script Astra sends.
+**Astra writes and sends ONE message per prospect. That is the whole rail.** Nothing
+follows it unless the prospect replies: no bump, no takeaway, no second part, no second
+channel (Zalo, 2026-09-22: "we should not send 4 messages with no reply... needs to be a
+single cold message"). The moment a prospect replies with anything at all, the thread
+becomes Zalo's: Astra records the reply, marks the row REPLIED, and surfaces it in the
+report. A prospect who does not reply goes `COLD` and hears nothing more. The material at
+the bottom of this file under "Zalo's rail" is reference for him, not a script Astra sends.
 
-## The four parts of message one
+**One message is one bubble.** Every template in this file is a single message typed once
+and sent once. On Facebook a paragraph break is Shift+Return inside that one message, never
+a second send. `scripts/note-lint.py` refuses anything else (SKILL.md, "One message per
+prospect").
 
-Every first touch has these four parts in this order, and nothing else. No pitch, no link,
-no attachment, no calendar ask.
+## The four beats of the one message
+
+Every first touch carries these four beats in this order, in ONE message, and nothing else.
+No pitch, no link, no attachment, no calendar ask. It is the only message he gets unless he
+answers, so it has to stand on its own.
 
 1. **How you found him.** A fact that answers "who is this?" before he asks it. Something
    you can literally see on a screen. "Saw the front desk role you posted on Indeed."
@@ -25,14 +34,14 @@ no attachment, no calendar ask.
    AI setter on your website. It answers your calls and texts in about five seconds,
    24/7, and books the job into your calendar." Never "omni-channel
    conversational agent", never "AI-powered solution". Zalo's decision, 2026-09-08: the
-   demo claim goes in message one because he generates the demo in seconds the moment a
+   demo claim goes in the one message because he generates the demo in seconds the moment a
    reply lands, so the prospect never finds it missing.
 4. **The dare, as a question he can answer in one word.** "Want to try and break it?"
    and, when there is room, the how: "Call it, text it, throw it your weirdest customer."
    Zalo's decision, 2026-09-09: the reply is a game, not a purchase. A skeptical owner
    says yes to a dare faster than to a sales asset, and a prospect who tries to break the
-   demo has tested it, which is what sells it. Not a meeting ask, and still no link in
-   message one: the link is message two, in the same thread, from Zalo.
+   demo has tested it, which is what sells it. Not a meeting ask, and still no link: the
+   link comes after he replies, in the same thread, from Zalo.
 
 Length: LinkedIn up to about 90 words, Facebook and Instagram up to about 60. If it needs
 scrolling on a phone it does not get read.
@@ -186,7 +195,7 @@ because he does the multiplication himself.
 
 So: the arithmetic bridge hands him the SHAPE of his own math. The full missed call math
 and "one recovered job pays for the year" belong on the call, in `call-one-pager.md`, where
-he is the one supplying the ticket and the close rate. Never in message one.
+he is the one supplying the ticket and the close rate. Never in the one message.
 
 `scripts/note-lint.py` enforces the half it can see without reading the fact: a rate of
 calls or jobs per day, week, month or year, a "pays for itself" claim, and a money amount or
@@ -209,14 +218,15 @@ held row beats a generic send; a generic send burns the profile's one shot at th
 
 1. **State facts you read. Never claim research effort.** If you can point at it on a
    screen, say it. "I went through your whole website" is out. The ONE claim of work that is
-   allowed is the demo line in part 3, because Zalo generates the demo in seconds when the
+   allowed is the demo line in beat 3, because Zalo generates the demo in seconds when the
    reply lands (his decision, 2026-09-08, overriding the earlier "no demo in message one"
    rule). Everything else stays a fact you can see.
 2. **No invented proof, numbers or urgency.** No results nobody gave us, no capped spots,
    no "before I move on to the next city". Anything numeric has to be written in
    `proof.md` and authorized, and Astra's messages carry none of it regardless.
-3. **Message one gets the yes. Message two is the link.** Astra's job ends at the reply.
-   Zalo generates the demo on that business and sends the link, in the same thread.
+3. **The one message gets the yes. The link comes after the reply.** Astra's job ends at
+   the reply, and without a reply it ends at the one message. Zalo generates the demo on
+   that business and sends the link, in the same thread.
 4. **Volume before judgment.** Work the ramp, fill the quota, judge nothing before the
    sample is real. A variant under 20 sends has no rate, only a count.
 5. **Match the channel.** LinkedIn is warm and professional, no emoji, full sentences.
@@ -257,8 +267,8 @@ other. The variant id in `learnings.md` is `<tier>-<channel>-<phrasing>`, for ex
 > and texts, day or night, and books the job into your calendar instead of taking a
 > message. Want to try and break it?
 
-**Short forms for the LinkedIn note** (same variant id; the note has 300 characters and
-the specific opener plus the bridge come first). Plain sentences, never a colon list of
+**Short forms for LinkedIn** (same variant id; the one message after an accept, or an open
+profile message, up to 420 characters, and the specific opener plus the bridge come first). Plain sentences, never a colon list of
 features: the list form ("answers calls and texts in about five seconds, 24/7, books the
 job into your calendar") reads like a spec sheet and was retired 2026-09-09.
 
@@ -278,73 +288,44 @@ this file, changing one element only.
 
 **Since 2026-09-08 P1 and P2 end with the demo offer, and since 2026-09-09 that offer is
 the dare, so in every template below the closing diagnostic question is DROPPED: opener line(s), then [P1 or P2], then nothing.**
-The openers stay exactly as written. On LinkedIn the whole thing also has to fit a 300
-character invitation note when the message travels inside the connection request.
+The openers stay exactly as written. Every LinkedIn text is a delivered message held to 420
+characters: since 2026-09-22 nothing travels inside a connection request.
 
-## The LinkedIn invitation note (the default LinkedIn send since 2026-09-08)
+## LinkedIn: a connection request with NO note, then the one message (option A, 2026-09-22)
 
 On every owner profile opened on 2026-09-08 the Message button opened a paid Sales
-Navigator prompt, so the LinkedIn send is a connection request with the message as its
-note. The note is the whole artifact for a LinkedIn row; no separate full length message
-one is drafted.
+Navigator prompt, so the LinkedIn route to a closed profile is a connection request. From
+2026-09-08 to 2026-09-22 the message rode inside that request as its 300 character note,
+and an accept then got a fixed follow up: two messages to one person before he had said a
+word. Zalo chose option A on 2026-09-22 (about 17:10 ET): **the connection request goes out
+with NO note, and after the accept the prospect gets the ONE message.** An accepted
+connection that never replies gets nothing further.
 
-Shape, 300 characters or fewer, counted before it is pasted:
+**The one message after the accept** is the control, the same four beats as every other
+channel, drafted per row from the research already in the pipeline `notes` (re confirmed if
+it is older than 7 days) and linted like any first touch, up to 420 characters:
 
 > Hi [First], [the specific, one sentence]. [The bridge clause, one short sentence].
 > [P1 short or P2 short, verbatim]
 
-Four beats, one sentence each, 180 to 290 characters. The specific is never what gets
-cut: when the note runs long, the "what we do" line loses words before the specific
-loses one. The second side note stays in the batch entry for the bump.
+Four beats, one sentence each, about 180 to 300 characters. The specific is never what gets
+cut: when it runs long, the "what we do" line loses words before the specific loses one.
+The approved LinkedIn notes in `templates/gold-notes.md` are exactly this shape and are now
+the register for it.
 
-**Test arm N1, the note with no pitch (added 2026-09-12, tier D only, 20 sends).** The
-invitation note is not a DM. It is a card a stranger sees next to an unknown face, and its
-only job is to get the accept; the pitch has a whole message waiting for it on the other
-side. Arm N1 carries the first two beats and stops:
+**The 41 connection requests sent before 2026-09-22 carried notes, and each of those notes
+WAS that prospect's one message.** Those rows are `COLD`: an accept on one of them gets
+nothing, and only a reply moves it (to `REPLIED`, Zalo's thread). The lint reads the note
+out of the `CONNECT` row in `sent-log.csv` and refuses a message to any of them.
 
-> Hi [First], [the specific, one sentence]. [The bridge clause, one short sentence].
-> Mind if I ask you something about it?
+**Open profile messages and InMails** (`<tier>-li-O1`, `<tier>-li-I1`) need no request: the
+one message goes straight out, in the control shape, up to 420 characters.
 
-Shape: three beats, 3 to 5 sentences, 120 to 240 characters, and it ends on the question.
-No demo claim, no dare, no link, contractions throughout, same specificity law and same
-paste test as the control. The specific keeps whatever numbers it needs (a quoted shift, an
-hours gap, "she called at 9 pm"), because those are facts read off a screen; what is banned
-here is what is banned everywhere, a number about a RESULT. The specific is still researched exactly as hard; this
-arm removes the pitch, not the work.
-
-**The 120 to 240 character band is enforced by the lint, not just written here** (2026-09-12).
-The arm measures a SHORT no pitch card, so a 267 character N1 is a different artifact even
-though it sits inside LinkedIn's 300 character limit. The arm is LinkedIn only in the lint
-too: an `N1` id on facebook or instagram fails.
-
-Variant id `<tier>-li-N1`. **Live today: `D-li-N1` only.** `C-li-N1` is registered in the
-scoreboard and is NOT sendable: tier C stays on the control while the accept gate has no
-number, and it opens only when Zalo says so or when the gate is measured. Tier A and B keep
-the control throughout, because those rows are too scarce to spend on a channel test.
-
-It runs at 20 sends against 20 sends of the four beat note on the same tier, and it is
-judged at 14 days on the ACCEPTANCE rate, not the reply rate, because acceptance is the
-gate it is trying to move.
-
-**The N1 acceptance follow up, fixed copy, N1 rows only.** When an N1 row is accepted, this
-is its message one, and it carries the pitch the note left out so the prospect gets the
-same offer one message later:
-
-> Thanks for connecting, [First]. I trained a demo AI setter on [Company]'s website that
-> takes those calls 24/7 and books the job. Want to try and break it?
-
-**Every other row keeps the existing acceptance follow up unchanged** ("Thanks for
-connecting, [First]. The demo on [Company]'s site is ready when you are. Want to try and
-break it?"), because for those the note already carried the pitch.
-
-Evidence for the arm: the offer first shape is the single largest disagreement between our
-rail and the most detailed cold DM teaching available (`2XvCxwDHSgM`, a whole video titled
-"WHY MAKING THE OFFER FIRST KILLS THE CONVERSATION"; `lFkHRLHGHVc` [00:01] and [00:59],
-where the opener replaced is a free deliverable offered up front and the replacement is a
-question). Evidence against it, which is why it is an arm and not a rule: his model assumes
-a live chat thread with a prospect who logs in daily, and a bare permission question gives
-a busy owner no reason to accept an invitation from a stranger. The 20 versus 20 exists to
-settle that, and neither side of it gets declared a winner under 20 sends.
+**Retired 2026-09-22, never send:** the fixed acceptance follow ups ("Thanks for
+connecting, [First]. The demo on [Company]'s site is ready when you are...") and the N1 arm
+(the connection note with no pitch, judged on acceptance, whose pitch rode in an N1
+acceptance follow up). A connection note now fails the lint, and so does the `N1` id. The
+N1 evidence notes stay in `learnings.md` history.
 
 **Sounding like a person, the checks before a note ships (2026-09-09):**
 
@@ -377,41 +358,36 @@ layers, in this order, every session:
 
 1. **Read `templates/gold-notes.md` first**, before drafting a single note. That is the
    register. Draft toward it.
-2. **Run the lint.** Write the drafts to `evidence/YYYY-MM-DD/session-N/notes.json`
-   (a list of `{"entry", "channel", "variant", "text"}`, plus `"part"` on joke notes and
-   `"sent_parts"` with `"joke_setup"` on a joke continuation) and run
+2. **Run the lint.** Write the drafts to `evidence/YYYY-MM-DD/session-N/notes.json` INSIDE
+   the working folder: a list with ONE object per entry, `{"entry", "prospect_id",
+   "channel", "variant", "text"}`, plus `"kind": "connect"` and an empty `"text"` for a
+   LinkedIn connection request. Run
    `python3 ~/.claude/skills/bu-cold-outreach/scripts/note-lint.py <that file>`. It is
    deterministic: contractions, banned phrases, links, unfilled tokens, length, dashes,
    sentence count, and opener diversity across the batch, plus the laws of the note's own
-   variant family. The control (`P1`, `P2`) must carry the bridge, the dare and its fixed
-   "what we do" line. `N1` must carry none of those and must end on its fixed question.
-   `J1` and `J2` must be the approved joke copy, three parts per prospect, with the
-   punchline matching its own setup and no digit anywhere. A `part` field
-   (`setup`, `punchline`, `ask`) is required on joke notes and ignored elsewhere.
-   `ALL PASS` is required; a FAIL is a rewrite, never a send. Paste the lint output
-   into the batch session header. The lint was built from the three returned rounds of
-   2026-09-09 and fails every one of them.
+   variant family. The control (`P1`, `P2`, and the LinkedIn lanes `O1`, `I1`) must carry
+   the bridge, the dare and its fixed "what we do" line. `J1` and `J2` must be an approved
+   joke, setup then punchline, followed by the fixed ask, in one line, with no digit
+   anywhere. **And the one message rule (2026-09-22)**: it walks up from `notes.json` to
+   `pipeline.csv` and `sent-log.csv` and refuses two notes on one entry, one prospect in two
+   entries, a `part`, `sent_parts` or `joke_setup` field, any `kind` other than `message`
+   or `connect`, a connection request with a note, the follow up phrases, and any message
+   to a prospect who already has an outbound message in the log (on any channel, a
+   `CONNECT` that carried a note included) or whose pipeline row is `SENT`, `COLD`, has
+   touches, replied or is `DEAD`. `ALL PASS` is required, and it only prints when the
+   history was checked; a FAIL is a rewrite or a dropped row, never a send, and `COPY PASS`
+   from `--no-history` clears nothing. Paste the lint output into the batch session header.
+   The lint was built from the three returned rounds of 2026-09-09 and fails every one of
+   them, and from Zalo's 2026-09-22 screenshot and fails every message in it after the
+   first.
 
-   Four more laws it enforces, added 2026-09-12 after the audit of `184db72`: each arm is
-   held to its own channel, so an `N1` note only passes on linkedin and a `J` note only on
-   facebook; an `N1` note is 120 to 240 characters, the band written below; no joke opens
-   more than 4 rows in one day; and a joke sequence interrupted on an earlier day is
-   finished with the continuation marker rather than by re typing what already went out.
+   Two more laws it enforces: each arm is held to its own channel, so a `J` note only passes
+   on facebook and an `O1` or `I1` only on linkedin; and no joke opens more than 4 rows in
+   one day.
 
-   **The continuation marker.** A joke entry whose setup, or setup and punchline, already
-   went out carries only what is left, and every one of its notes carries
-   `"sent_parts"` (what was delivered, in send order, read off `sent-log.csv`: `["setup"]`
-   or `["setup", "punchline"]`) and `"joke_setup"` (the approved setup text that thread is
-   carrying, so the punchline is still checked against its own setup a day later). The parts
-   in the batch have to be the contiguous run following `sent_parts`, so an ask cannot jump a
-   punchline that never went out. The order the notes are LISTED in does not matter; which
-   parts are present does. The marker is an assertion about `sent-log.csv` that the lint
-   cannot verify by itself, so the batch entry cites the rows it is claiming. Padding a
-   batch with already sent text to get a pass is the one thing this must never become: the
-   lint would then be reading yesterday's sends instead of today's drafts.
-
-   A continuation row counts against the joke repetition cap and against pacing, and it does
-   NOT consume a cold first touch slot: that slot was spent the day its setup went out.
+   **Retired 2026-09-22:** the continuation marker (`sent_parts`, `joke_setup`), the `part`
+   field and the three part joke sequence they served, the `N1` arm and its 120 to 240
+   character band, and the 300 character invitation note. The lint refuses each of them.
 3. **The humanizer pass**, below, for what a regex cannot see.
 
 **The humanizer pass.**
@@ -419,8 +395,8 @@ Run every note through the humanizer skill at
 `/Users/zalo/dev/zalo-kabche-brand/.claude/skills/humanizer/SKILL.md` (read it; its 28
 patterns, the vocabulary tiers and the statistical tells apply to a 250 character note as
 much as to an article). Rewrite what it flags, keep every fact and quote exactly as
-researched, keep the four beats and the variant's "what we do" line, keep the LinkedIn
-note under 300. The checks above are the DM specific subset; the humanizer is the full
+researched, keep the four beats and the variant's "what we do" line, keep every message
+under its channel limit (420 on LinkedIn, Facebook and Instagram). The checks above are the DM specific subset; the humanizer is the full
 audit. Record the result in the batch entry as `Humanizer: pass` or `Humanizer: changed
 [what]`, and in the final message per note. A note that cannot pass without losing its
 fact is a HOLD, not a send.
@@ -438,18 +414,16 @@ fact is a HOLD, not a send.
 > seconds, 24/7, and books the job straight into your calendar. Want to try and break
 > it? Call it, text it, throw it your weirdest customer.
 
-The first is the LinkedIn shape (252 characters). The second is the Facebook shape: the
-specific and the bridge as the first paragraph, a blank line, then the full P1 or P2.
+The first is the LinkedIn shape (252 characters), now the one message after an accept.
+The second is the Facebook shape: the specific and the bridge as the first paragraph, a
+blank line (Shift+Return twice, inside the same message), then the full P1 or P2. Each is
+ONE message.
 
-**After the connection is accepted with no reply** (Step 2b of the daily loop), the
-follow up is fixed copy, no per prospect drafting, and it counts as the message one send
-for the scoreboard and the bump clock:
-
-> Thanks for connecting, [First]. The demo on [Company]'s site is ready when you are.
-> Want to try and break it?
-
+**After a note-less connection request is accepted with no reply** (Step 2b of the daily
+loop), the prospect gets the one message above, drafted and linted like any first touch.
 **Accepted with a reply**, of any kind, is REPLIED: Astra stops and hands the thread to
-Zalo. **Not accepted after 14 days** is `NO_CHANNEL` unless another channel is open.
+Zalo. **Not accepted after 14 days** is `NO_CHANNEL` on LinkedIn; another open channel may
+carry the one message instead, because a request with no note was not a message.
 
 ## Test arm J, the trade joke opener (Facebook only, tier D only, added 2026-09-12)
 
@@ -464,34 +438,36 @@ that it transfers: "if you are somebody that's even possibly a local service-bas
 business, I've proven this works great with that" ([68:00]). Every number in that paragraph
 is his unverified claim and none of it goes in a message.
 
-**Three messages, in three separate sends. Never one block.** The joke is the two part
-opener, typed as two deliberate sends per the Messenger Enter rule. The ask is the third.
+**ONE message since 2026-09-22: the joke and the ask in the same bubble.** From 2026-09-13
+to 2026-09-22 this arm typed three separate sends (the setup, the punchline, then the ask),
+and Zalo's screenshot of the Sandra Zurick thread is what ended it: three bubbles, then a
+bump, then nothing back. Now the whole thing is one line, typed once and sent once:
 
-1. The setup line alone, from the approved list in `templates/gold-notes.md`:
+> [The approved setup] [its punchline] [the J1 or J2 ask]
 
-   > Why don't ducts keep secrets?
+> **J1:** My AC and I are fighting again. Now it's giving me the cold shoulder. Alright
+> [First], real question and then I'll leave the jokes alone. Would you be open to talking
+> about the calls that come in after you close?
 
-2. The punchline, its own send:
+> **J2:** What do you call a plumber who works every Saturday? Drained. Okay [First],
+> that's my one joke of the day. Mind if I ask you something about the calls that come in
+> after you close?
 
-   > Everything leaks eventually.
+The joke opens the message and the name arrives in the ask, exactly as before. One line, no
+paragraph break: Messenger sends on Enter, and a line break would leave the ask as a second
+bubble. The lint refuses a line break, a joke that is not approved, a joke paired with the
+wrong punchline, a missing or altered ask, and any joke text alone.
 
-3. The ask, only if nothing came back:
+**The split is the ask, not the joke.** `D-fb-J1` and `D-fb-J2` differ only in the ask; the
+joke varies per row by the diversity rule and is never the axis being measured. Alternate
+J1 and J2 so the two stay within a few sends of each other, exactly as P1 and P2 alternate.
+The ask texts are unchanged from 2026-09-12 so the two phrasings stay comparable; the rows
+sent as three bubbles (2026-09-13 to 2026-09-22) are their own cohort in `learnings.md` and
+are never pooled with the one message rows.
 
-   > **J1:** Alright [First], real question and then I'll leave the jokes alone. Would you
-   > be open to talking about the calls that come in after you close?
-
-   > **J2:** Okay [First], that's my one joke of the day. Mind if I ask you something about
-   > the calls that come in after you close?
-
-**The split is the ask, not the joke.** `D-fb-J1` and `D-fb-J2` differ only in that third
-message; the joke varies per row by the diversity rule and is never the axis being
-measured. Alternate J1 and J2 so the two stay within a few sends of each other, exactly as
-P1 and P2 alternate.
-
-**A reply ends the sequence.** If the owner answers anything at all after the setup or
-after the punchline, including one word or one emoji, the row is REPLIED, the remaining
-parts are NEVER sent, and the thread is Zalo's. On this arm a laugh is a reply, so he is
-usually the one who asks the question. That is our rule, not Dylan's, and it wins.
+**A reply is the only thing that opens the thread.** If the owner answers anything at all,
+including one word or one emoji, the row is REPLIED and the thread is Zalo's. If he does
+not, the row goes `COLD` at day 7 and nothing else is sent. There is no sequence to finish.
 
 **Building the jokes.** Six are approved in `templates/gold-notes.md`, three for HVAC and
 three for plumbing. To write more, prompt the model for "10 witty jokes for HVAC
@@ -506,30 +482,26 @@ against a Facebook ceiling of 10 means a single trade day cannot give every row 
 joke, so the rule is a cap, not a ban: **no joke goes to more than 4 rows in one day**,
 enforced in `scripts/note-lint.py` since 2026-09-12 because as prose it was not enforced at
 all (the generic opener cap permits 5 of 10 identical, so 10 rows running two jokes five
-times each linted clean). **A row is a row whether it is fresh or a continuation**: a
-continuation types that joke's punchline at a stranger today exactly like a fresh row does,
-so it counts. Counting only today's setups left the whole continuation path uncapped, and 10
-continuation rows carrying one identical punchline and ask passed clean (found in the re
-audit of this fix). Mix the two trades wherever the batch allows it, and rotate which joke
-leads. Zalo approving more jokes is what raises the variety; until then, state the repeat
+times each linted clean). Mix the two trades wherever the batch allows it, and rotate which
+joke leads. Zalo approving more jokes is what raises the variety; until then, state the repeat
 count in the batch header rather than pretending it is zero.
 
-**The setup carries no greeting and no name.** Not "Hey Mike, why don't ducts keep
-secrets?" The name arrives in the ask. A name in front of a joke makes it read as a sales
+**The message opens on the joke, with no greeting and no name.** Not "Hey Mike, why don't
+ducts keep secrets?" The name arrives in the ask. A name in front of a joke makes it read as a sales
 line, and it also makes the batch diversity check in `scripts/note-lint.py` unreadable,
 because every note would then open with a different first name.
 
-**Rules that still bind.** Messenger sends on Enter, so these are separate deliberate
-sends, never a string with newlines in it (our own 2026-09-09 learning). The personal
-profile only, never the business page. The 2 to 5 minute pacing gap applies between every
-one of the three sends as it does to every message typed in these apps, so the batch runs
-in passes: every setup, then every punchline, then every ask, which is also how Dylan runs
-it ("This will be the first line you'd send like 100 of those to roofers. And then you send
-the punchline", `1Q-8UzDvHM4` [00:53]). No dashes, no banned phrases, no digits anywhere in
-the three messages, no link, no demo claim, no dare.
+**Rules that still bind.** Messenger sends on Enter, so the message is one line with no
+newline in it (our own 2026-09-09 learning). The personal profile only, never the business
+page. The 2 to 5 minute pacing gap applies between rows as it does to every message typed in
+these apps. Dylan types the setup and the punchline as separate sends ("This will be the
+first line you'd send like 100 of those to roofers. And then you send the punchline",
+`1Q-8UzDvHM4` [00:53]); we do not, by Zalo's rule, and that is one more variable this arm
+does not share with his result. No dashes, no banned phrases, no digits anywhere in the
+message, no link, no demo claim, no dare.
 
-**The one sanctioned exception to the specificity law, and its scope.** These three
-messages carry no fact about his business at all, so they fail the paste test by design.
+**The one sanctioned exception to the specificity law, and its scope.** This message
+carries no fact about his business at all, so it fails the paste test by design.
 That exemption is this arm only: Facebook, tier D, 20 sends. It exists because the arm
 tests a pattern interrupt AGAINST our specificity bet, and an opener that carried a
 specific would not be the thing Dylan measured. The row still gets whatever true detail the
@@ -545,7 +517,7 @@ whether this shape produces replies at all.
 
 **Scope and judgment.** Tier D only, 20 sends per phrasing, judged on replies at day 7, and
 under 20 sends it has a count and not a rate. One prospect is ONE cold first touch against
-the Facebook cap of 10 and three typed messages against the pacing gap.
+the Facebook cap and ONE typed message against the pacing gap.
 
 **The constraint to state out loud in the batch header.** `prospects.csv` carries 1,481
 business Facebook URLs and ZERO owner personal Facebook URLs across 2,264 rows, so every J
@@ -603,9 +575,18 @@ opener that addresses a PERSON. Addressing the room is fine and is the normal sh
 "Hi Mike,", "Hi Mike.", "Hey Mike and Dana," and a bare "Mike," fail. A G1 post on any other
 channel fails, and any other family on `facebook_groups` fails.
 
-**The first post is not a pitch and the second touch is a DM, not a comment.** A person who
-calls the demo number is the agent's job to book. A person who comments goes to Zalo, in
-DM, like every other reply: Astra records it and stops.
+**The first post is not a pitch, and Astra never follows it up.** A person who calls the
+demo number is the agent's job to book. A person who comments has replied: that goes to
+Zalo, like every other reply, and Astra records it and stops. Astra does not DM a commenter
+and does not reply under the post.
+
+## The tier templates
+
+**Each template below is ONE message.** The blank lines are paragraph breaks inside that one
+message (Shift+Return on Facebook), never separate sends, and the closing diagnostic
+question is dropped in favour of the dare per the note under the P1 and P2 lines. On
+LinkedIn the template is the one message after an accept, or an open profile message or
+InMail, never a connection note.
 
 ## Tier A, the job post (strongest willingness signal that exists)
 
@@ -710,24 +691,15 @@ locations, an active content channel he clearly runs himself.
 >
 > Out of curiosity, where do the after hours calls go?
 
-## The two bumps (Astra sends these, then stops)
+## Retired 2026-09-22: the bumps (never send)
 
-A first touch gets at most two bumps and then the row goes COLD. Every bump adds
-something new: a second true fact, a different angle on the same fact, or the takeaway.
-Never "just checking in", never "bumping this up", never a bare re-send.
-
-**Bump 1, day 3 after the first touch.** New fact, same soft question.
-
-> [The new true fact, one line, for example: "Saw the [role] post is still up." or "The
-> [offer] ad is still running."] The demo is still sitting here if you want a look.
-
-**Bump 2, day 7, the takeaway. This is always the last thing Astra sends.**
-
-> Last one from me, [Name]. If the after hours calls are already handled, ignore me and
-> good luck with [the true thing, softened]. If they are not, you know where I am.
-
-After bump 2 the row is COLD. No third touch, ever, on any channel. A prospect who went
-COLD is not re-approached with a different angle later.
+Until 2026-09-22 a first touch with no reply got bump 1 at day 3 (a new fact plus "the demo
+is still sitting here") and bump 2 at day 7, the takeaway that opened "Last one from me".
+Zalo ended both: one message per prospect until they reply. The templates are deleted on
+purpose so nobody drafts from them, and the lint refuses the takeaway's opening words, any
+`kind` that is not `message` or `connect`, and any message to a prospect the log shows was
+already messaged. A prospect with no reply by day 7 is `COLD`, and a `COLD` prospect is
+never re approached, on any channel, with any angle.
 
 ## Stop means stop
 
@@ -754,7 +726,7 @@ his information and delivered in the same thread. The line the strategy locks:
 
 > Built one on your info so you can see what I mean. No strings.
 
-The demo is built AFTER the reply, never before. That is what keeps message one honest.
+The demo is built AFTER the reply, never before. That is what keeps the one message honest.
 
 ## Demo delivery notes
 

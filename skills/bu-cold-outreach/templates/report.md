@@ -39,8 +39,9 @@ many threads are sitting unanswered and for how long.)
 ## What ran today
 
 - Cold first touches sent, per channel against that channel's own number: LinkedIn [n] of [n], Facebook [n] of [n], Instagram [inactive or n of n]. Total [n], which is the sum
-- Test arms: [n] `D-li-N1` of 20, [n] `D-fb-J1` of 20, [n] `D-fb-J2` of 20, and the control counts beside them
-- Bumps sent: [n] ([n] first bumps, [n] takeaways)
+- One message per prospect: [n] prospects messaged today, [n] typed messages (the two numbers are equal, or something went wrong and is reported under "Anything that stopped")
+- Test arms: [n] `D-fb-J1` of 20, [n] `D-fb-J2` of 20 (one message rows only; the three bubble rows of 09-13 to 09-22 are their own cohort), and the control counts beside them
+- Went `COLD` today: [n] (one message, no reply by day 7). Nothing was sent to them
 - Facebook group posts: [n of its own number, or "channel NOT STARTED"] · calls to the demo number since the last session: [n] · removed by an admin: [n]. Posts are not cold first touches and are not in the totals above
 - New rows worked: [n] found, [n] owner resolved, [n] NO_CHANNEL, [n] pulled on stale evidence
 - Replies read: [n] · marked DEAD: [n]
@@ -78,7 +79,7 @@ below a break is starved of traffic and its percentage is noise]
 ## On deck tomorrow
 
 - [n] cold on LinkedIn at its ceiling of [n] and [n] on Facebook at its ceiling of [n], tier [A] first, [metro]
-- [n] bumps due: [names]
+- [n] owed their one message: accepted note-less connections [names], accepted friend requests [names]
 - [anything Zalo needs to do: a mystery call, a batch approval, an exhausted seed list]
 
 ## Anything that stopped

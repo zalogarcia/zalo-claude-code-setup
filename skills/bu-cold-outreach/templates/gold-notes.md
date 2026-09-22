@@ -5,12 +5,20 @@ Read them before drafting, every session. They are the target register: a text t
 contractor you respect, not a sales email. Four beats, one sentence each: the specific,
 the bridge (what it means for the phones), the fixed "what we do" line, the dare.
 
+**Every one of these is ONE message (Zalo, 2026-09-22).** It is the only message the
+prospect gets unless he replies: no bump follows it, nothing continues it, and no other
+channel repeats it.
+
 What makes them work: contractions ("that's", "somebody's picking up", "ad's running"),
 the fact told as an event ("Clay called after hours and Charles came out past 10pm")
 instead of "the review says", a casual bridge that starts with "So" or "That's", the
 reviewer named once, no adjectives, no exclamation marks, no colon lists.
 
-## LinkedIn connection notes (300 max)
+## LinkedIn messages (420 max)
+
+Written in 2026-09 as connection notes. Since 2026-09-22 a connection request carries NO
+note (option A), and these are the register for the one message that goes after the accept,
+and for an open profile message or an InMail.
 
 > Hi Chris, saw Jennifer's review from June. You reached out to her yourself, almost
 > immediately. So you're the one on the phone. I trained a demo AI setter on your
@@ -41,7 +49,7 @@ reviewer named once, no adjectives, no exclamation marks, no colon lists.
 > your website: it picks up when nobody can, day or night, and books the job. Want to
 > try and break it?
 
-## Facebook messages (the specific and the bridge, a blank line, the full P1 or P2)
+## Facebook messages (the specific and the bridge, a blank line, the full P1 or P2, all ONE message)
 
 > Hey Geo, saw Briana's review from last month: called Prestige, had a quote the same
 > day. Somebody's picking up fast over there.
@@ -95,76 +103,71 @@ them up.
 - "That's $8,000 of installs sitting in voicemail." Returned: his ticket is his number. The
   lint fails it as a money amount.
 - "One recovered job pays for the year." Returned: true on the call, where he supplies the
-  ticket. In message one it is an ROI claim with no denominator, and the lint fails it.
+  ticket. In the one message it is an ROI claim with no denominator, and the lint fails it.
 
 The test: **point at the screen the number came from.** Fifteen hours is the difference
 between two posted times. Two calls is what the reviewer typed. If the number is not on a
 screen you loaded, it is not in the note.
 
-## Test arm N1, the LinkedIn note with no pitch (drafted 2026-09-12, awaiting Zalo's read)
+## Retired 2026-09-22: test arm N1, the LinkedIn note with no pitch
 
-Three beats and a question: the specific, the bridge, and the ask for permission. No demo
-claim, no dare, no link. The pitch arrives in the N1 acceptance follow up, one message
-later, once the accept is won. Same register as everything above: contractions, the fact
-told as an event, the bridge starting with "So" or "That's". Variant `D-li-N1`, tier D
-only, and nothing on this arm ships until Zalo has read these two.
+It was a connection note whose pitch arrived in an acceptance follow up, one message later.
+A connection request carries no note now, so the arm has nothing to measure and the lint
+refuses the `N1` id. Its two notes are not reproduced here so nobody drafts from them.
 
-> Hi Mike, Dana's review from July says she left two messages before anyone called her
-> back. That's the call this catches. Mind if I ask you something about it?
+## Test arm J, the Facebook trade joke openers, ONE message each (since 2026-09-22)
 
-> Hi Rachel, Google has the office closed Sundays and your site's promising emergency
-> service any time. So somebody's phone is buzzing on a Sunday. Mind if I ask you
-> something about it?
+Six approved jokes, three for HVAC owners and three for plumbing owners, in the trade
+voice: short, dry, the kind of thing a guy types with one thumb. Since 2026-09-22 each is
+ONE message: the setup, the punchline and the ask in the same bubble, on one line, typed
+once and sent once. From 2026-09-13 to 2026-09-22 they went out as three separate sends,
+and Zalo's screenshot of the Sandra Zurick thread (three bubbles, then a bump, no reply) is
+what ended that. No greeting and no first name before the joke; the name arrives in the
+ask. Vary them across a batch: three jokes per trade against a daily Facebook number means
+repeats are unavoidable, so the cap is no joke to more than 4 rows in one day.
 
-## Test arm J, the Facebook trade joke openers (drafted 2026-09-12, awaiting Zalo's read)
+The ask is fixed copy and it is the split: J1 and J2 are the only thing the arm measures.
 
-Six approved openers, three for HVAC owners and three for plumbing owners, in the trade
-voice: short, dry, the kind of thing a guy types with one thumb. Each is TWO deliberate
-sends, the setup and then the punchline, never one block and never with a newline in it.
-No greeting and no first name in the setup; the name arrives in the ask. Written for our
-rail, not copied from the researched examples. Vary them across a batch: three jokes per
-trade against a ceiling of 10 rows means repeats are unavoidable, so the cap is no joke to
-more than 4 rows in one day. Nothing on this arm ships until Zalo has read these six.
+> J1 ask: Alright [First], real question and then I'll leave the jokes alone. Would you be
+> open to talking about the calls that come in after you close?
+
+> J2 ask: Okay [First], that's my one joke of the day. Mind if I ask you something about
+> the calls that come in after you close?
 
 **HVAC**
 
-> Why don't ducts keep secrets?
->
-> Everything leaks eventually.
+> Why don't ducts keep secrets? Everything leaks eventually. Alright [First], real question
+> and then I'll leave the jokes alone. Would you be open to talking about the calls that
+> come in after you close?
 
-> My AC and I are fighting again.
->
-> Now it's giving me the cold shoulder.
+> My AC and I are fighting again. Now it's giving me the cold shoulder. Okay [First],
+> that's my one joke of the day. Mind if I ask you something about the calls that come in
+> after you close?
 
-> Serious question for you. Why did the thermostat get promoted over the whole crew?
->
-> Only one with a degree.
+> Serious question for you. Why did the thermostat get promoted over the whole crew? Only
+> one with a degree. Okay [First], that's my one joke of the day. Mind if I ask you
+> something about the calls that come in after you close?
 
 **Plumbing**
 
-> Why did the plumber fold in poker?
->
-> He kept getting flushed.
-
-> My kid asked me what a plumber's favorite shoe is.
->
-> Clogs. He's seven and I'm still mad about it.
-
-> What do you call a plumber who works every Saturday?
->
-> Drained.
-
-**The ask, third send, only if nothing came back.** J1 and J2 are the two phrasings, and
-they are the only thing the split measures:
-
-> J1: Alright [First], real question and then I'll leave the jokes alone. Would you be open
-> to talking about the calls that come in after you close?
-
-> J2: Okay [First], that's my one joke of the day. Mind if I ask you something about the
+> Why did the plumber fold in poker? He kept getting flushed. Alright [First], real
+> question and then I'll leave the jokes alone. Would you be open to talking about the
 > calls that come in after you close?
 
-If he answers the setup or the punchline with anything at all, the ask never goes: the row
-is REPLIED and Zalo takes the thread while the man is still laughing.
+> My kid asked me what a plumber's favorite shoe is. Clogs. He's seven and I'm still mad
+> about it. Okay [First], that's my one joke of the day. Mind if I ask you something about
+> the calls that come in after you close?
+
+> What do you call a plumber who works every Saturday? Drained. Alright [First], real
+> question and then I'll leave the jokes alone. Would you be open to talking about the
+> calls that come in after you close?
+
+Any joke takes either ask; the pairings above are examples, and the batch alternates J1
+and J2. The thermostat joke already says "Serious question", so it reads best with the J2
+ask rather than a second "real question".
+
+If he answers with anything at all, the row is REPLIED and Zalo takes the thread while the
+man is still laughing. If he does not, the row goes `COLD` at day 7 and nothing else goes.
 
 ## The three versions of one note, so the drift is visible
 

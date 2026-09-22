@@ -1,0 +1,11 @@
+prospect_id,business_name,metro,tier,channel,profile_url,owner_name,stage,last_touch,next_due,angle,side_note,demo_link,demo_views_last,touches,notes
+fx-fresh-fb,Fixture Air,Miami,D,fb,https://www.facebook.com/fixture.fresh,Mike Fresh,FOUND,,,D-fb-J1,,,,0,fixture: nothing sent
+fx-accepted,Fixture Plumbing,Tampa,C,li,https://www.linkedin.com/in/fixture-accepted,Chris Accepted,FOUND,,,C-li-P1,,,,0,fixture: connect with NO note on 2026-09-23 accepted
+fx-friend,Fixture Cooling,Orlando,D,fb,https://www.facebook.com/fixture.friend,Dan Friend,FOUND,,,D-fb-P2,,,,0,fixture: friend request accepted
+fx-connect-new,Fixture Heat,Austin,D,li,https://www.linkedin.com/in/fixture-connect,Rae Connect,FOUND,,,D-li-P2,,,,0,fixture: nothing sent
+fx-sent-fb,Fixture Drains,Miami,D,fb,https://www.facebook.com/fixture.sent,Sandra Sent,SENT,2026-09-22,,D-fb-J1,,,,1,fixture: one message out
+fx-sent-cross,Fixture Vents,Dallas,D,fb,https://www.facebook.com/fixture.cross,Joe Cross,SENT,2026-09-22,,D-fb-J2,,,,1,fixture: one message out on facebook
+fx-noted-connect,Fixture Ducts,Phoenix,C,li,https://www.linkedin.com/in/fixture-noted,Maggie Noted,FOUND,,,C-li-P1,,,,0,fixture: connect carried a note on 2026-09-10
+fx-cold,Fixture Pipes,Houston,D,fb,https://www.facebook.com/fixture.cold,Frank Cold,COLD,2026-09-15,,D-fb-J2,,,,1,fixture: one message no reply
+fx-replied,Fixture Flow,Tampa,D,fb,https://www.facebook.com/fixture.replied,Heather Replied,REPLIED,2026-09-15,,D-fb-J2,,,,1,fixture: laughed
+fx-dead,Fixture Stop,Tampa,D,fb,https://www.facebook.com/fixture.dead,Ron Dead,DEAD,2026-09-15,,D-fb-P1,,,,1,fixture: said stop

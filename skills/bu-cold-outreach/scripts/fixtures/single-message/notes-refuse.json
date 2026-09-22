@@ -1,0 +1,23 @@
+[
+  {"entry": 1, "prospect_id": "fx-fresh-fb", "channel": "facebook", "variant": "D-fb-J1",
+   "text": "My AC and I are fighting again. Now it's giving me the cold shoulder. Alright Mike, real question and then I'll leave the jokes alone. Would you be open to talking about the calls that come in after you close?"},
+  {"entry": 1, "prospect_id": "fx-fresh-fb", "channel": "facebook", "variant": "D-fb-J1",
+   "text": "Alright Mike, real question and then I'll leave the jokes alone. Would you be open to talking about the calls that come in after you close?"},
+  {"entry": 2, "prospect_id": "fx-sent-fb", "channel": "facebook", "variant": "D-fb-J1", "kind": "bump2",
+   "text": "Last one from me, Sandra. If the after hours calls are already handled, I'll leave you to it. If they aren't, you know where I am."},
+  {"entry": 3, "prospect_id": "fx-sent-cross", "channel": "linkedin", "variant": "D-li-O1",
+   "text": "Hi Joe, Google has you at 8 to 5 weekdays and Nina's review says she called at 9 pm. So that's a call landing somewhere.\n\nI trained a demo AI setter on your website: it answers calls and texts in about five seconds, 24/7, and books the job straight into your calendar. Want to try and break it?"},
+  {"entry": 4, "prospect_id": "fx-noted-connect", "channel": "linkedin", "variant": "C-li-P1",
+   "text": "Hi Maggie, your ad's running on Facebook and Google says you close at 5. So the evening calls land somewhere. I trained a demo AI setter on your website that takes those calls 24/7 and books the job. Want to try and break it?"},
+  {"entry": 5, "prospect_id": "fx-cold", "channel": "facebook", "variant": "D-fb-J2",
+   "text": "Why did the plumber fold in poker? He kept getting flushed. Okay Frank, that's my one joke of the day. Mind if I ask you something about the calls that come in after you close?"},
+  {"entry": 6, "prospect_id": "fx-connect-new", "channel": "linkedin", "kind": "connect", "variant": "D-li-P2",
+   "text": "Hi Rae, saw the Sunday review. Mind if I connect?"},
+  {"entry": 7, "prospect_id": "fx-replied", "channel": "facebook", "variant": "D-fb-P1",
+   "text": "Hey Heather, saw Briana's review from last month: called you, had a quote the same day. Somebody's picking up fast over there.\n\nI trained a demo AI setter on your website. It answers your calls and texts in about five seconds, 24/7, and books the job straight into your calendar. Want to try and break it?"},
+  {"entry": 8, "prospect_id": "fx-dead", "channel": "facebook", "variant": "D-fb-J1",
+   "text": "What do you call a plumber who works every Saturday? Drained. Alright Ron, real question and then I'll leave the jokes alone. Would you be open to talking about the calls that come in after you close?"},
+  {"entry": 9, "prospect_id": "fx-friend", "channel": "facebook", "variant": "D-fb-J1",
+   "sent_parts": ["setup"], "joke_setup": "Why don't ducts keep secrets?",
+   "text": "Everything leaks eventually."}
+]

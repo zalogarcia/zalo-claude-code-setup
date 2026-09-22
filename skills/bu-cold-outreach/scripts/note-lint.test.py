@@ -1,35 +1,44 @@
 #!/usr/bin/env python3
 """Tests for note-lint.py. Run: python3 note-lint.test.py
 
-Three jobs. One, the control family (P1, P2) still behaves exactly as it did on
-2026-09-09: the approved gold notes pass and the returned rounds fail. Two, the two
-arms added 2026-09-12 (N1, J1, J2) pass their own laws and fail the control's, which
-is the whole reason the families exist. Three, nothing can ship without a family.
+Four jobs. One, the control family (P1, P2) still behaves exactly as it did on
+2026-09-09: the approved gold notes pass and the returned rounds fail. Two, the test arms
+pass their own laws and fail the control's. Three, nothing can ship without a family. Four,
+added 2026-09-22 and the reason this file was restructured: the ONE MESSAGE rule (Zalo,
+2026-09-22, "we should not send 4 messages with no reply... needs to be a single cold
+message"; option A for LinkedIn the same evening, connection requests carry no note).
 
-The block at the bottom is the audit of 184db72 (2026-09-12) and the re audit of that fix:
-the continuation marker, the joke row cap, the channel and family lock, and the N1 length
-band. It adds 32 cases. **25 of the 32 are not satisfied by the pre fix script** (17 fail its
-own assertion outright; 8 more reach the right exit code for the WRONG reason, because the
-old lint rejected every continuation, and their message assertion catches that). The other 7
-are regression guards that were green before the fix and have to stay green: "an ask alone
-with NO marker still fails", "joke parts listed out of send order in a fresh entry still
-pass", "a duplicated part in a fresh entry fails", "four rows each on two jokes is at the cap
-and passes", "the control still runs on facebook", "the control still runs on linkedin", "an
-N1 note inside the band still passes".
+What 2026-09-22 retired, and what replaced the tests that covered it:
 
-Measure it, do not take the count on trust: copy this file next to
-`git show HEAD:skills/bu-cold-outreach/scripts/note-lint.py` in a scratch directory, run it,
-and read the failure list (34 failure lines over 23 distinct case names plus 11 message
-assertions at the time of writing).
+- The joke arm's three bubbles (setup, punchline, ask) and the continuation marker that
+  finished them in a later batch (`sent_parts`, `joke_setup`). The 2026-09-12 audit block
+  proved that machinery worked; it now proves the machinery is REFUSED: a `part`,
+  `sent_parts` or `joke_setup` field fails on sight, two notes on one entry fail the batch,
+  and the joke is one message, setup then punchline then the fixed ask, on one line.
+- The N1 arm (the LinkedIn connection note with no pitch) and the 300 character invitation
+  note. A connection request carries no note now, so N1 fails as retired, a `connect` entry
+  with any text fails, and every LinkedIn text is a delivered message held to 420.
+- Bumps. A kind other than message or connect, a stage of BUMP1, BUMP2 or SENT_CONT, and the
+  follow up phrases ("last one from me") all fail.
+
+The history half of the rule (a second message to a prospect who has not replied, on any
+channel) needs pipeline.csv and sent-log.csv, so `batch_case` builds a throwaway working
+folder for every batch it lints, and the fixture folder `fixtures/single-message/` holds a
+hand made passing batch and a hand made refusing batch against a small pipeline and log.
 """
-import importlib.util, json, os, subprocess, sys, tempfile
+import importlib.util, json, os, shutil, subprocess, sys, tempfile
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-spec = importlib.util.spec_from_file_location("notelint", os.path.join(HERE, "note-lint.py"))
+LINT = os.path.join(HERE, "note-lint.py")
+spec = importlib.util.spec_from_file_location("notelint", LINT)
 lint = importlib.util.module_from_spec(spec); spec.loader.exec_module(lint)
 
 FAILURES = []
 COUNT = 0
+PIPE_HEAD = ("prospect_id,business_name,metro,tier,channel,profile_url,owner_name,stage,"
+             "last_touch,next_due,angle,side_note,demo_link,demo_views_last,touches,notes")
+LOG_HEAD = ("timestamp_et,channel,prospect_id,profile_url,stage,message_sha1,message_head,"
+            "variant,opener_type,message_text")
 
 
 def case(name, note, want_ok, want_reason=None):
@@ -44,39 +53,74 @@ def case(name, note, want_ok, want_reason=None):
         FAILURES.append(f"{name}: expected a reason containing {want_reason!r}, got {got}")
 
 
-def batch_case(name, notes, want_exit):
+def run_lint(args):
+    r = subprocess.run([sys.executable, LINT] + args, capture_output=True, text=True)
+    return r.returncode, r.stdout + r.stderr
+
+
+def working_folder(pipeline=(), log=(), known=()):
+    """A throwaway working folder: pipeline.csv and sent-log.csv with the given rows,
+    prospects.csv holding every pipeline id plus `known`, and the evidence/<day>/session-1/
+    directory a real notes.json lives in."""
+    root = tempfile.mkdtemp(prefix="bu-lint-")
+    with open(os.path.join(root, "pipeline.csv"), "w") as f:
+        f.write("\n".join([PIPE_HEAD] + list(pipeline)) + "\n")
+    with open(os.path.join(root, "sent-log.csv"), "w") as f:
+        f.write("\n".join([LOG_HEAD] + list(log)) + "\n")
+    ids = [row.split(",")[0] for row in pipeline] + [str(k) for k in known]
+    with open(os.path.join(root, "prospects.csv"), "w") as f:
+        f.write("\n".join(["prospect_id,metro"] + [f"{i},Miami" for i in ids]) + "\n")
+    ev = os.path.join(root, "evidence", "2026-09-23", "session-1")
+    os.makedirs(ev)
+    return root, ev
+
+
+def batch_case(name, notes, want_exit, pipeline=(), log=(), autofill=True, extra=(), known=None):
+    """Lint a whole batch as the gate does: inside a working folder, history on. `autofill`
+    gives every note without a prospect_id its own id per entry (p<entry>), so the copy
+    batches below exercise the full gate without every one of them naming prospects. Every id
+    in the batch is written to prospects.csv unless `known` names the ids that exist."""
     global COUNT
     COUNT += 1
-    with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as f:
-        json.dump(notes, f); path = f.name
-    r = subprocess.run([sys.executable, os.path.join(HERE, "note-lint.py"), path],
-                       capture_output=True, text=True)
-    os.unlink(path)
-    if r.returncode != want_exit:
-        FAILURES.append(f"{name}: expected exit {want_exit}, got {r.returncode}\n{r.stdout}")
-    return r.stdout
+    if autofill:
+        notes = [dict(n, prospect_id=n.get("prospect_id") or f"p{n.get('entry')}")
+                 if lint.family(n.get("variant", "")) != "group" else n for n in notes]
+    if known is None:
+        known = [n.get("prospect_id") for n in notes if n.get("prospect_id")]
+    root, ev = working_folder(pipeline, log, known)
+    path = os.path.join(ev, "notes.json")
+    with open(path, "w") as f:
+        json.dump(notes, f)
+    code, out = run_lint([path] + list(extra))
+    shutil.rmtree(root)
+    if code != want_exit:
+        FAILURES.append(f"{name}: expected exit {want_exit}, got {code}\n{out}")
+    return out
 
 
-def li(text, variant="C-li-P1", entry=1):
-    return {"entry": entry, "channel": "linkedin", "variant": variant, "text": text}
+def li(text, variant="C-li-P1", entry=1, **extra):
+    return dict({"entry": entry, "channel": "linkedin", "variant": variant, "text": text}, **extra)
 
 
-def fb(text, variant="D-fb-P1", entry=1, part=None, sent_parts=None, joke_setup=None):
-    n = {"entry": entry, "channel": "facebook", "variant": variant, "text": text}
-    if part: n["part"] = part
-    if sent_parts is not None: n["sent_parts"] = sent_parts
-    if joke_setup is not None: n["joke_setup"] = joke_setup
-    return n
+def fb(text, variant="D-fb-P1", entry=1, **extra):
+    return dict({"entry": entry, "channel": "facebook", "variant": variant, "text": text}, **extra)
+
+
+def jtext(joke_index=0, arm="J1", name="Mike"):
+    """One whole joke message: the approved setup, the punchline, then the fixed ask."""
+    s, p = lint.APPROVED_JOKES[joke_index]
+    if arm == "J1":
+        ask = (f"Alright {name}, real question and then I'll leave the jokes alone. Would you "
+               "be open to talking about the calls that come in after you close?")
+    else:
+        ask = (f"Okay {name}, that's my one joke of the day. Mind if I ask you something about "
+               "the calls that come in after you close?")
+    return f"{s} {p} {ask}"
 
 
 def jrow(entry, joke_index=0, variant="D-fb-J1", name="Mike"):
-    """A whole fresh joke prospect: setup, punchline, ask, all three approved and paired."""
-    s, p = lint.APPROVED_JOKES[joke_index]
-    ask = (f"Alright {name}, real question and then I'll leave the jokes alone. Would you be "
-           "open to talking about the calls that come in after you close?")
-    return [fb(s, variant, entry=entry, part="setup"),
-            fb(p, variant, entry=entry, part="punchline"),
-            fb(ask, variant, entry=entry, part="ask")]
+    """A whole joke prospect: ONE note since 2026-09-22."""
+    return [fb(jtext(joke_index, variant[-2:], name), variant, entry=entry)]
 
 
 # ---------------------------------------------------------------- the control, P1 and P2
@@ -142,19 +186,22 @@ case("an em dash still fails",
         "you're the one on the phone. I trained a demo AI setter on your website that takes "
         "those calls 24/7 and books the job. Want to try and break it?"), False, "em or en dash")
 
-# -------------------------------------------------------------------- the N1 arm, no pitch
+# ------------------------------------------------------ N1 is retired (2026-09-22, option A)
+# The two notes Zalo read on 2026-09-12. A connection request carries no note now, so the arm
+# has nothing left to measure, and both notes fail as retired on any channel.
 N1_A = ("Hi Mike, Dana's review from July says she left two messages before anyone called "
         "her back. That's the call this catches. Mind if I ask you something about it?")
 N1_B = ("Hi Rachel, Google has the office closed Sundays and your site's promising emergency "
         "service any time. So somebody's phone is buzzing on a Sunday. Mind if I ask you "
         "something about it?")
-case("N1 note A passes", li(N1_A, "D-li-N1"), True)
-case("N1 note B passes", li(N1_B, "D-li-N1", entry=2), True)
-case("the reserved C-li-N1 id lints the same way", li(N1_A, "C-li-N1"), True)
+case("N1 note A now fails as retired", li(N1_A, "D-li-N1"), False, "N1 was retired 2026-09-22")
+case("N1 note B now fails as retired", li(N1_B, "D-li-N1", entry=2), False, "N1 was retired")
+case("the reserved C-li-N1 id fails as retired too", li(N1_A, "C-li-N1"), False, "retired")
+case("an N1 id on facebook fails as retired", fb(N1_A, "D-fb-N1"), False, "retired")
 
 # ------------------------------------------ the LinkedIn delivered lanes, O1 and I1 (2026-09-12)
-# An open profile message or an InMail is a DM, so it carries the Facebook control shape and
-# the 420 limit, not the 300 character invitation note cap, and it exists on LinkedIn only.
+# An open profile message or an InMail is a DM and carries the control shape. Since 2026-09-22
+# so is the one message after an accepted connection (P1 or P2), and all three take 420.
 DM_O1 = ("Hi Mike, Dana's July review says she left two messages before anyone called her back. "
          "Missed calls are the one thing an HVAC shop can't see on its own dashboard.\n\n"
          "I trained a demo AI setter on your website: it answers calls and texts in about five "
@@ -162,108 +209,76 @@ DM_O1 = ("Hi Mike, Dana's July review says she left two messages before anyone c
          "it? Call it, text it, throw it your weirdest customer.")
 case("an O1 open profile DM under 420 passes on linkedin", li(DM_O1, "D-li-O1"), True)
 case("an I1 InMail under 420 passes on linkedin", li(DM_O1, "A-li-I1"), True)
-case("the same text as a P1 invitation note fails the 300 cap",
-     li(DM_O1, "D-li-P1"), False, "over the linkedin limit 300")
+case("the same text as the P1 message after the accept passes: LinkedIn is 420 now",
+     li(DM_O1, "D-li-P1"), True)
 case("an O1 id on facebook fails the lane lock",
      fb(DM_O1, "D-fb-O1"), False, "the O1 lane is linkedin only")
-case("an N1 note carrying the dare fails",
-     li("Hi Mike, Dana's review from July says she waited. That's the call this catches. "
-        "Want to try and break it?", "D-li-N1"), False, "the dare is in an N1 note")
-case("an N1 note carrying the pitch line fails",
-     li("Hi Mike, Dana's review from July says she waited two days for a call back. I "
-        "trained a demo AI setter on your website. Mind if I ask you something about it?",
-        "D-li-N1"), False, "a pitch line in an N1 note")
-case("an N1 note with a drifting closer fails",
-     li("Hi Mike, Dana's review from July says she left two messages before anyone called "
-        "her back. That's the call this catches. Can I ask you a thing?", "D-li-N1"),
-     False, "an N1 note ends on")
-case("an N1 note with no contraction fails",
-     li("Hi Mike, Dana left two messages in July before anyone called her back. That is the "
-        "call this catches. Mind if I ask you something about it?", "D-li-N1"),
-     False, "no contraction")
-case("an N1 note is still held to 300 characters",
-     li("Hi Mike, " + "Dana's review from July says she left two messages before anyone "
-        "called her back and the same thing happened to her neighbour twice that week. " * 2
-        + "That's the call this catches. Mind if I ask you something about it?", "D-li-N1"),
-     False, "over the linkedin limit")
+case("a LinkedIn message over 420 fails",
+     li(DM_O1.replace("Call it, text it,", "Call it, text it, ring it twice at midnight, "
+                      "text it from the truck, call it from a roof, then call it again,"), "D-li-P1"),
+     False, "over the linkedin limit 420")
 
-# ------------------------------------------------------------------- the J arm, trade joke
+# ------------------------------------------ the J arm, trade joke, ONE message (2026-09-22)
 SETUP, PUNCH = lint.APPROVED_JOKES[0]
 ASK1 = ("Alright Mike, real question and then I'll leave the jokes alone. Would you be open "
         "to talking about the calls that come in after you close?")
 ASK2 = ("Okay Mike, that's my one joke of the day. Mind if I ask you something about the "
         "calls that come in after you close?")
-case("an approved joke setup passes", fb(SETUP, "D-fb-J1", part="setup"), True)
-case("an approved punchline passes", fb(PUNCH, "D-fb-J1", part="punchline"), True)
-case("the J1 ask passes", fb(ASK1, "D-fb-J1", part="ask"), True)
-case("the J2 ask passes", fb(ASK2, "D-fb-J2", part="ask"), True)
-case("every approved joke in gold-notes.md lints clean",
-     fb(lint.APPROVED_JOKES[4][1], "D-fb-J2", part="punchline"), True)
-case("a joke note with no part fails", fb(SETUP, "D-fb-J1"), False, "needs part")
-case("an unapproved setup fails",
-     fb("Why did the HVAC guy cross the road?", "D-fb-J1", part="setup"),
-     False, "not one of the approved jokes")
-case("a greeting in the setup fails",
-     fb("Hey Mike, why don't ducts keep secrets?", "D-fb-J1", part="setup"),
-     False, "a greeting in the joke setup")
-case("a digit in a joke note fails",
-     fb("Only 1 with a degree.", "D-fb-J1", part="punchline"), False, "a digit")
-case("the J1 ask on a J2 row fails",
-     fb(ASK1, "D-fb-J2", part="ask"), False, "does not match the fixed J2 ask")
-case("an ask carrying the pitch fails",
-     fb("Alright Mike, I trained a demo AI setter on your website. Would you be open to "
-        "talking about the calls that come in after you close?", "D-fb-J1", part="ask"),
+J1_MSG = f"{SETUP} {PUNCH} {ASK1}"
+J2_MSG = f"{SETUP} {PUNCH} {ASK2}"
+case("a J1 joke message, setup punchline and ask on one line, passes", fb(J1_MSG, "D-fb-J1"), True)
+case("a J2 joke message passes", fb(J2_MSG, "D-fb-J2"), True)
+for i in range(len(lint.APPROVED_JOKES)):
+    for arm in ("J1", "J2"):
+        case(f"approved joke {i + 1} as one {arm} message passes",
+             fb(jtext(i, arm), f"D-fb-{arm}"), True)
+# Zalo's screenshot, 2026-09-22: the three Sandra Zurick bubbles of 2026-09-14, as they went.
+SANDRA = ["My AC and I are fighting again.", "Now it's giving me the cold shoulder.",
+          "Alright Sandra, real question and then I'll leave the jokes alone. Would you be "
+          "open to talking about the calls that come in after you close?"]
+case("the Sandra setup alone fails: a bubble is not a message",
+     fb(SANDRA[0], "D-fb-J1"), False, "not an approved joke")
+case("the Sandra punchline alone fails", fb(SANDRA[1], "D-fb-J1"), False, "not an approved joke")
+case("the Sandra ask alone fails", fb(SANDRA[2], "D-fb-J1"), False, "not an approved joke")
+case("the three Sandra bubbles as ONE message pass", fb(" ".join(SANDRA), "D-fb-J1"), True)
+case("the joke with no ask fails",
+     fb(f"{SETUP} {PUNCH}", "D-fb-J1"), False, "not followed by the fixed J1 ask")
+case("the joke and the ask on two lines fail: Enter would send the first line alone",
+     fb(f"{SETUP} {PUNCH}\n{ASK1}", "D-fb-J1"), False, "a line break in a joke message")
+case("a joke message with a part field fails, whatever the part says",
+     fb(J1_MSG, "D-fb-J1", part="setup"), False, "a 'part' field")
+case("an unapproved joke fails",
+     fb(f"Why did the HVAC guy cross the road? To get to the other vent. {ASK1}", "D-fb-J1"),
+     False, "not an approved joke")
+case("a greeting before the joke fails",
+     fb(f"Hey Mike, why don't ducts keep secrets? {PUNCH} {ASK1}", "D-fb-J1"),
+     False, "a greeting before the joke")
+case("a digit in a joke message fails",
+     fb(jtext(2).replace("Only one with", "Only 1 with"), "D-fb-J1"), False, "a digit")
+case("the J1 ask on a J2 row fails", fb(J1_MSG, "D-fb-J2"), False, "the fixed J2 ask")
+case("a joke message carrying the pitch fails",
+     fb(f"{SETUP} {PUNCH} Alright Mike, I trained a demo AI setter on your website. Would you "
+        "be open to talking about the calls that come in after you close?", "D-fb-J1"),
      False, "a pitch line in a joke note")
-
-case("an N1 note carrying a paraphrased pitch fails",
-     li("Hi Mike, Dana's review from July says she left two messages before anyone called "
-        "her back. I've got something that picks up your phones and books the job. Mind if "
-        "I ask you something about it?", "D-li-N1"), False, "an offer in an N1 note")
-case("an N1 note whose specific carries a time and a shift still passes",
-     li("Hi Dale, Google has you at 8 to 5 weekdays and Nina's review says she called at 9 "
-        "pm. So that's a call landing somewhere. Mind if I ask you something about it?",
-        "D-li-N1"), True)
-case("an N1 bridge about a person picking up is not read as an offer",
-     li("Hi Sam, Nate's review says Lloyd called him back on a Saturday. So somebody's "
-        "picking up at the weekend. Mind if I ask you something about it?", "D-li-N1"), True)
+case("a joke message carrying the dare fails",
+     fb(f"{J1_MSG} Want to try and break it?", "D-fb-J1"), False, "the dare is in a joke note")
 
 # ------------------------------------------------------------------------- family plumbing
 case("an unrecognised variant family fails loudly",
-     li("Hi Chris, saw Jennifer's review from June. You reached out to her yourself. So "
-        "you're the one on the phone. I trained a demo AI setter on your website that takes "
-        "those calls 24/7 and books the job. Want to try and break it?", "C-li-P9"),
-     False, "unrecognised variant family")
-case("an empty variant fails loudly", li(N1_A, ""), False, "unrecognised variant family")
-case("a link fails on any family", li(N1_A[:-1] + " https://blackumbrella.app?", "D-li-N1"),
+     li(GOLD_LI[0][0], "C-li-P9"), False, "unrecognised variant family")
+case("an empty variant fails loudly", li(GOLD_LI[0][0], ""), False, "unrecognised variant family")
+case("a link fails on any family", fb(J1_MSG[:-1] + " https://blackumbrella.app?", "D-fb-J1"),
      False, "a link")
 case("an unfilled token fails",
-     li("Hi [First], Dana's review from July says she left two messages before anyone "
-        "called her back. That's the call this catches. Mind if I ask you something about "
-        "it?", "D-li-N1"), False, "an unfilled token")
+     li(GOLD_LI[0][0].replace("Hi Chris", "Hi [First]"), "C-li-P1"), False, "an unfilled token")
 
 # ------------------------------------------------------------------------- batch level
 full_batch = ([li(t, v, entry=i + 1) for i, (t, v) in enumerate(GOLD_LI)]
               + [fb(t, v, entry=7 + i) for i, (t, v) in enumerate(GOLD_FB)]
-              + [li(N1_A, "D-li-N1", entry=9), li(N1_B, "D-li-N1", entry=10)]
-              + [fb(SETUP, "D-fb-J1", entry=11, part="setup"),
-                 fb(PUNCH, "D-fb-J1", entry=11, part="punchline"),
-                 fb(ASK1, "D-fb-J1", entry=11, part="ask")])
-out = batch_case("a mixed batch of control, N1 and J notes is ALL PASS", full_batch, 0)
-if "ALL PASS" not in out:
-    FAILURES.append(f"mixed batch: expected ALL PASS in output, got:\n{out}")
-
-out = batch_case("a joke entry missing its ask fails the batch",
-                 [fb(SETUP, "D-fb-J1", entry=11, part="setup"),
-                  fb(PUNCH, "D-fb-J1", entry=11, part="punchline")], 1)
-if "needs exactly one setup" not in out:
-    FAILURES.append(f"incomplete joke sequence: wrong message:\n{out}")
-
-out = batch_case("a punchline from a different joke fails the batch",
-                 [fb(SETUP, "D-fb-J1", entry=11, part="setup"),
-                  fb(lint.APPROVED_JOKES[3][1], "D-fb-J1", entry=11, part="punchline"),
-                  fb(ASK1, "D-fb-J1", entry=11, part="ask")], 1)
-if "wrong punchline" not in out:
-    FAILURES.append(f"mismatched punchline: wrong message:\n{out}")
+              + jrow(9, 0, "D-fb-J1", "Al") + jrow(10, 3, "D-fb-J2", "Bo"))
+out = batch_case("a mixed batch of control and joke messages is ALL PASS", full_batch, 0)
+if "ALL PASS" not in out or "One message rule checked" not in out:
+    FAILURES.append(f"mixed batch: expected ALL PASS with the history checked, got:\n{out}")
 
 same = ("Hi {n}, {r}'s review says he called after hours and somebody came out past 10pm. "
         "So you're picking up at night. I trained a demo AI setter on your website that "
@@ -271,146 +286,53 @@ same = ("Hi {n}, {r}'s review says he called after hours and somebody came out p
 out = batch_case("three identical openers in a batch of four still trip the diversity cap",
                  [li(same.format(n=n, r=r), "C-li-P1", entry=i + 1) for i, (n, r) in
                   enumerate([("Al", "Clay"), ("Bo", "Dana"), ("Cy", "Eve")])]
-                 + [li(N1_B, "D-li-N1", entry=4)], 1)
+                 + [li(GOLD_LI[1][0], "D-li-P1", entry=4)], 1)
 if "open the same way" not in out:
     FAILURES.append(f"diversity cap: wrong message:\n{out}")
 
-out = batch_case("joke parts do not inflate the diversity denominator",
+out = batch_case("a joke message is an opener like any other message",
                  [li(same.format(n="Al", r="Clay"), "C-li-P1", entry=1),
                   li(same.format(n="Bo", r="Dana"), "C-li-P1", entry=2),
-                  li(same.format(n="Cy", r="Eve"), "C-li-P1", entry=3),
-                  fb(SETUP, "D-fb-J1", entry=4, part="setup"),
-                  fb(PUNCH, "D-fb-J1", entry=4, part="punchline"),
-                  fb(ASK1, "D-fb-J1", entry=4, part="ask")], 1)
+                  li(same.format(n="Cy", r="Eve"), "C-li-P1", entry=3)]
+                 + jrow(4, 0, "D-fb-J1", "Di"), 1)
 if "open the same way" not in out:
-    FAILURES.append(f"diversity with joke parts: expected the cap to trip on 3 of 4 openers:\n{out}")
+    FAILURES.append(f"diversity with a joke message: expected the cap to trip on 3 of 4:\n{out}")
 
-same_ask = [dict(li(same.format(n=n, r=r), "C-li-P1", entry=i + 1), part="ask")
-            for i, (n, r) in enumerate([("Al", "Clay"), ("Bo", "Dana"), ("Cy", "Eve"), ("Di", "Fay")])]
-out = batch_case("a stray part field on control notes cannot dodge the diversity check",
-                 same_ask, 1)
-if "open the same way" not in out:
-    FAILURES.append(f"part field dodge: the diversity check was skipped:\n{out}")
+case("a stray part field on a control note fails on sight",
+     dict(li(same.format(n="Al", r="Clay"), "C-li-P1"), part="ask"), False, "a 'part' field")
 
-# ------------------------------------------------------- the audit of 184db72, 2026-09-12
-# 1. The continuation marker. A sequence interrupted by the daily cap or by a session ending
-# is finished in a LATER batch under that day's approval (SKILL.md Step 2b). Before the
-# marker the lint demanded all three parts every session, so the only ways to ship a
-# continuation were to strand the row or to pad the batch with text that already went out.
-CONT_SETUP, CONT_PUNCH = lint.APPROVED_JOKES[0]
-
-out = batch_case("a continuation carrying only the ask passes",
-                 [fb(ASK1, "D-fb-J1", entry=11, part="ask",
-                     sent_parts=["setup", "punchline"], joke_setup=CONT_SETUP)], 0)
-if "ALL PASS" not in out:
-    FAILURES.append(f"ask only continuation: expected ALL PASS, got:\n{out}")
-
-out = batch_case("a continuation carrying only the punchline passes",
-                 [fb(CONT_PUNCH, "D-fb-J1", entry=11, part="punchline",
-                     sent_parts=["setup"], joke_setup=CONT_SETUP)], 0)
-if "ALL PASS" not in out:
-    FAILURES.append(f"punchline only continuation: expected ALL PASS, got:\n{out}")
-
-out = batch_case("a continuation carrying the punchline and the ask passes",
-                 [fb(CONT_PUNCH, "D-fb-J1", entry=11, part="punchline",
-                     sent_parts=["setup"], joke_setup=CONT_SETUP),
-                  fb(ASK1, "D-fb-J1", entry=11, part="ask",
-                     sent_parts=["setup"], joke_setup=CONT_SETUP)], 0)
-if "ALL PASS" not in out:
-    FAILURES.append(f"punchline plus ask continuation: expected ALL PASS, got:\n{out}")
-
-out = batch_case("an ask alone with NO marker still fails",
-                 [fb(ASK1, "D-fb-J1", entry=11, part="ask")], 1)
-if "needs exactly one setup" not in out:
-    FAILURES.append(f"unmarked ask only: wrong message:\n{out}")
-
-out = batch_case("a continuation that skips the punchline fails",
-                 [fb(ASK1, "D-fb-J1", entry=11, part="ask",
-                     sent_parts=["setup"], joke_setup=CONT_SETUP)], 1)
-if "from 'punchline' on" not in out:
-    FAILURES.append(f"skipped punchline: wrong message:\n{out}")
-
-out = batch_case("a continuation punchline from a different joke fails",
-                 [fb(lint.APPROVED_JOKES[3][1], "D-fb-J1", entry=11, part="punchline",
-                     sent_parts=["setup"], joke_setup=CONT_SETUP)], 1)
-if "wrong punchline" not in out:
-    FAILURES.append(f"cross joke continuation: wrong message:\n{out}")
-
-out = batch_case("a continuation with no joke_setup fails",
-                 [fb(CONT_PUNCH, "D-fb-J1", entry=11, part="punchline",
-                     sent_parts=["setup"])], 1)
-if "no joke_setup" not in out:
-    FAILURES.append(f"continuation without joke_setup: wrong message:\n{out}")
-
-out = batch_case("sent_parts that is not a prefix of the sequence fails",
-                 [fb(ASK1, "D-fb-J1", entry=11, part="ask",
-                     sent_parts=["punchline"], joke_setup=CONT_SETUP)], 1)
-if "must be a prefix" not in out:
-    FAILURES.append(f"non prefix marker: wrong message:\n{out}")
-
-out = batch_case("a marker claiming all three parts went out fails",
-                 [fb(ASK1, "D-fb-J1", entry=11, part="ask",
-                     sent_parts=["setup", "punchline", "ask"], joke_setup=CONT_SETUP)], 1)
-if "nothing is left to send" not in out:
-    FAILURES.append(f"exhausted marker: wrong message:\n{out}")
-
-out = batch_case("two notes of one entry disagreeing about sent_parts fails",
-                 [fb(CONT_PUNCH, "D-fb-J1", entry=11, part="punchline",
-                     sent_parts=["setup"], joke_setup=CONT_SETUP),
-                  fb(ASK1, "D-fb-J1", entry=11, part="ask",
-                     sent_parts=["setup", "punchline"], joke_setup=CONT_SETUP)], 1)
-if "disagrees with itself about sent_parts" not in out:
-    FAILURES.append(f"inconsistent marker: wrong message:\n{out}")
-
-out = batch_case("a fresh entry whose joke_setup contradicts its own setup fails",
-                 [fb(CONT_SETUP, "D-fb-J1", entry=11, part="setup",
-                     joke_setup=lint.APPROVED_JOKES[3][0]),
-                  fb(CONT_PUNCH, "D-fb-J1", entry=11, part="punchline",
-                     joke_setup=lint.APPROVED_JOKES[3][0]),
-                  fb(ASK1, "D-fb-J1", entry=11, part="ask",
-                     joke_setup=lint.APPROVED_JOKES[3][0])], 1)
-if "does not match the setup in this batch" not in out:
-    FAILURES.append(f"contradictory joke_setup: wrong message:\n{out}")
-
-# Regression guard, green before the fix and after it: the ORDER the notes are listed in is
-# not a law, only which parts are present. The send order is a sending rule (the batch runs
-# in passes), and the first cut of this fix failed 5 of the 6 orderings of a valid triple.
-out = batch_case("joke parts listed out of send order in a fresh entry still pass",
-                 [fb(CONT_PUNCH, "D-fb-J1", entry=11, part="punchline"),
-                  fb(CONT_SETUP, "D-fb-J1", entry=11, part="setup"),
-                  fb(ASK1, "D-fb-J1", entry=11, part="ask")], 0)
-if "ALL PASS" not in out:
-    FAILURES.append(f"out of order parts: expected ALL PASS, got:\n{out}")
-
-out = batch_case("a duplicated part in a fresh entry fails",
-                 [fb(CONT_SETUP, "D-fb-J1", entry=11, part="setup"),
-                  fb(CONT_PUNCH, "D-fb-J1", entry=11, part="punchline"),
-                  fb(CONT_PUNCH, "D-fb-J1", entry=11, part="punchline"),
+# ------------------------------------------ the retired multi part machinery (2026-09-22)
+# The 2026-09-12 audit of 184db72 built a continuation marker so an interrupted three bubble
+# joke could be finished in a later batch. Every shape it accepted is a second or third
+# message to a prospect who has not replied, so every one of them is now refused.
+out = batch_case("the old fresh three bubble joke entry fails the batch",
+                 [fb(SETUP, "D-fb-J1", entry=11, part="setup"),
+                  fb(PUNCH, "D-fb-J1", entry=11, part="punchline"),
                   fb(ASK1, "D-fb-J1", entry=11, part="ask")], 1)
-if "needs exactly one setup" not in out:
-    FAILURES.append(f"duplicated part: wrong message:\n{out}")
+if "entry 11 carries 3 notes" not in out:
+    FAILURES.append(f"three bubble entry: wrong message:\n{out}")
 
-out = batch_case("a continuation listing its two parts out of order still passes",
+out = batch_case("the old ask only continuation fails",
                  [fb(ASK1, "D-fb-J1", entry=11, part="ask",
-                     sent_parts=["setup"], joke_setup=CONT_SETUP),
-                  fb(CONT_PUNCH, "D-fb-J1", entry=11, part="punchline",
-                     sent_parts=["setup"], joke_setup=CONT_SETUP)], 0)
-if "ALL PASS" not in out:
-    FAILURES.append(f"out of order continuation: expected ALL PASS, got:\n{out}")
+                     sent_parts=["setup", "punchline"], joke_setup=SETUP)], 1)
+if "a 'sent_parts' field" not in out or "a 'joke_setup' field" not in out:
+    FAILURES.append(f"ask only continuation: wrong message:\n{out}")
 
-case("joke_setup naming a joke nobody approved fails",
-     fb(ASK1, "D-fb-J1", part="ask", sent_parts=["setup", "punchline"],
-        joke_setup="Why did the HVAC guy cross the road?"),
-     False, "joke_setup is not one of the approved jokes")
+out = batch_case("the old punchline plus ask continuation fails",
+                 [fb(PUNCH, "D-fb-J1", entry=11, part="punchline",
+                     sent_parts=["setup"], joke_setup=SETUP),
+                  fb(ASK1, "D-fb-J1", entry=11, part="ask",
+                     sent_parts=["setup"], joke_setup=SETUP)], 1)
+if "entry 11 carries 2 notes" not in out:
+    FAILURES.append(f"two part continuation: wrong message:\n{out}")
+
 case("a continuation marker on a control note fails",
-     dict(li(GOLD_LI[0][0], "C-li-P1"), sent_parts=["setup"]),
-     False, "not a joke note")
-case("a joke_setup on an N1 note fails",
-     dict(li(N1_A, "D-li-N1"), joke_setup=lint.APPROVED_JOKES[0][0]),
-     False, "not a joke note")
+     dict(li(GOLD_LI[0][0], "C-li-P1"), sent_parts=["setup"]), False, "a 'sent_parts' field")
+case("a joke_setup on a control note fails",
+     dict(li(GOLD_LI[0][0], "C-li-P1"), joke_setup=SETUP), False, "a 'joke_setup' field")
 
-# 2. The joke row cap. "No joke goes to more than 4 rows in one day" was prose only: the
-# generic opener cap permits 5 of 10 identical, so 10 rows on two jokes passed clean.
+# The joke row cap survives the rewrite: six approved jokes against a Facebook day still
+# means repeats, and no joke goes to more than 4 rows in one day.
 cap_ok = (jrow(1, 0, name="Al") + jrow(2, 0, name="Bo") + jrow(3, 0, name="Cy")
           + jrow(4, 0, name="Di") + jrow(5, 3, name="Ed") + jrow(6, 3, name="Fi")
           + jrow(7, 3, name="Gus") + jrow(8, 3, name="Hal"))
@@ -423,68 +345,10 @@ out = batch_case("five rows on one joke trips the joke row cap", cap_trip, 1)
 if "cap is 4" not in out:
     FAILURES.append(f"joke row cap: wrong message:\n{out}")
 
-# A continuation types that joke's punchline at a stranger today exactly like a fresh row
-# does, so it counts against the cap. Counting only setups left the whole continuation path
-# uncapped: 10 continuation rows on one joke passed clean (re audit of this fix, 2026-09-12).
-cont_row = [fb(CONT_PUNCH, "D-fb-J1", entry=9, part="punchline",
-               sent_parts=["setup"], joke_setup=CONT_SETUP)]
-out = batch_case("a continuation is the fifth row on its joke and trips the cap",
-                 cap_ok + cont_row, 1)
-if "cap is 4" not in out:
-    FAILURES.append(f"continuation not counted against the cap:\n{out}")
-
-ten_conts = []
-for i, n in enumerate(["Al", "Bo", "Cy", "Di", "Ed", "Fi", "Gus", "Hal", "Ira", "Jo"]):
-    ask = (f"Alright {n}, real question and then I'll leave the jokes alone. Would you be "
-           "open to talking about the calls that come in after you close?")
-    ten_conts += [fb(CONT_PUNCH, "D-fb-J1", entry=20 + i, part="punchline",
-                     sent_parts=["setup"], joke_setup=CONT_SETUP),
-                  fb(ask, "D-fb-J1", entry=20 + i, part="ask",
-                     sent_parts=["setup"], joke_setup=CONT_SETUP)]
-out = batch_case("ten continuations on one joke trip the cap", ten_conts, 1)
-if "cap is 4" not in out:
-    FAILURES.append(f"ten continuations on one joke: wrong message:\n{out}")
-
-out = batch_case("three continuations on one joke are under the cap and pass",
-                 ten_conts[:6], 0)
-if "ALL PASS" not in out:
-    FAILURES.append(f"three continuations: expected ALL PASS, got:\n{out}")
-
-out = batch_case("a fresh row plus three continuations of the same joke is at the cap",
-                 jrow(30, 0, name="Ken") + ten_conts[:6], 0)
-if "ALL PASS" not in out:
-    FAILURES.append(f"fresh plus three continuations: expected ALL PASS, got:\n{out}")
-
-# 3. Channel and family lock. Both test arms are one channel each.
-case("an N1 note on facebook fails", fb(N1_A, "D-fb-N1"),
-     False, "the N1 arm is linkedin only")
-case("a joke setup on linkedin fails",
-     {"entry": 1, "channel": "linkedin", "variant": "D-li-J1", "part": "setup",
-      "text": CONT_SETUP}, False, "the J arm is facebook only")
-case("a joke ask on linkedin fails",
-     {"entry": 1, "channel": "linkedin", "variant": "D-li-J1", "part": "ask",
-      "text": ASK1}, False, "the J arm is facebook only")
+# Channel and family lock. The J arm is Facebook only.
+case("a joke message on linkedin fails", li(J1_MSG, "D-li-J1"), False, "the J arm is facebook only")
 case("the control still runs on facebook", fb(GOLD_FB[0][0], "D-fb-P1"), True)
 case("the control still runs on linkedin", li(GOLD_LI[0][0], "C-li-P1"), True)
-
-out = batch_case("a J triple on linkedin fails the batch",
-                 [{"entry": 1, "channel": "linkedin", "variant": "D-li-J1",
-                   "part": p, "text": t} for p, t in
-                  [("setup", CONT_SETUP), ("punchline", CONT_PUNCH), ("ask", ASK1)]], 1)
-if "the J arm is facebook only" not in out:
-    FAILURES.append(f"J on linkedin batch: wrong message:\n{out}")
-
-# 4. The N1 length band, 120 to 240 per templates/messages.md.
-LONG_N1 = ("Hi Mike, Dana's review from July says she left two messages before anyone called "
-           "her back, and her neighbour had the same wait the same week on a Sunday night in "
-           "the middle of a heat wave. That's the call this catches every time. Mind if I ask "
-           "you something about it?")
-case("an N1 note over the band fails, under the 300 character channel limit",
-     li(LONG_N1, "D-li-N1"), False, "the N1 band is 120 to 240")
-case("an N1 note under the band fails",
-     li("Hi Mike, Dana waited two days. That's the call. Mind if I ask you something about "
-        "it?", "D-li-N1"), False, "the N1 band is 120 to 240")
-case("an N1 note inside the band still passes", li(N1_A, "D-li-N1"), True)
 
 
 # ============================================================== the offer law (2026-09-14)
@@ -535,14 +399,15 @@ case("artificial intelligence fails",
         "intelligence for you. I trained a demo AI setter on your website that takes those "
         "calls 24/7 and books the job. Want to try and break it?", "D-li-P1"),
      False, "'artificial intelligence'")
-case("the offer law reaches the N1 arm too",
-     li("Hi Mike, your AI receptionist question. That's the call this catches every single "
-        "week at your shop. Mind if I ask you something about it?", "D-li-N1"),
+case("the offer law reaches an open profile message too",
+     li("Hi Mike, Dana's July review says she waited two days. That's the call this catches. "
+        "I trained a demo AI setter on your website, our AI receptionist, and it answers and "
+        "books the job. Want to try and break it?", "D-li-O1"),
      False, "the tech as a product category")
 case("the offer law reaches the joke arm too",
-     fb("Alright Mike, real question and then I'll leave the AI receptionist jokes alone. "
-        "Would you be open to talking about the calls that come in after you close?",
-        "D-fb-J1", part="ask"), False, "the tech as a product category")
+     fb(f"{SETUP} {PUNCH} Alright Mike, real question and then I'll leave the AI receptionist "
+        "jokes alone. Would you be open to talking about the calls that come in after you "
+        "close?", "D-fb-J1"), False, "the tech as a product category")
 
 # The positive half. P1_LINE and P2_LINE are fixed HEADS and their tails are drafted per row,
 # so a note can carry the approved head and still stop selling an outcome.
@@ -833,8 +698,10 @@ LONG_INVITE = ("Hi Mike, Dana's review from July says she left two messages befo
                "Sunday night. That's the call this catches every time. I trained a demo AI "
                "setter on your website that takes those calls 24/7 and books the job. Want "
                "to try and break it? Call it, text it, throw it your weirdest customer.")
-case("an invitation note over 300 fails on linkedin",
-     li(LONG_INVITE, "C-li-P1"), False, "over the linkedin limit 300")
+# 2026-09-22: there is no invitation note any more (option A), so the same text is the one
+# LinkedIn message after the accept and takes the 420 DM limit.
+case("a LinkedIn message between 300 and 420 passes now that there is no invitation note",
+     li(LONG_INVITE, "C-li-P1"), True)
 case("declaring the internal linkedin_dm limit as a channel fails",
      {"entry": 1, "channel": "linkedin_dm", "variant": "C-li-P1", "text": LONG_INVITE},
      False, "unrecognised channel")
@@ -875,6 +742,249 @@ if "on linkedin" not in out:
 COUNT += 1
 if lint.note_channel({}) != "linkedin" or lint.note_channel({"channel": "LI"}) != "linkedin":
     FAILURES.append("note_channel does not normalise a missing or upper case channel")
+
+# ================================ the one message rule, per note (Zalo, 2026-09-22)
+# Refusal 2: a bump, a takeaway or a continuation, whatever the batch calls it.
+for kind in ["bump", "bump1", "bump2", "takeaway", "continuation", "followup", "follow_up"]:
+    case(f"kind {kind!r} fails", fb(GOLD_FB[0][0], "D-fb-P1", kind=kind), False, f"kind {kind!r}")
+for stage in ["BUMP1", "BUMP2", "SENT_CONT", "bump2"]:
+    case(f"stage {stage!r} fails", fb(GOLD_FB[0][0], "D-fb-P1", stage=stage), False,
+         f"stage {stage!r}")
+case("stage SENT is the one message and passes", fb(GOLD_FB[0][0], "D-fb-P1", stage="SENT"), True)
+case("kind message said out loud passes", fb(GOLD_FB[0][0], "D-fb-P1", kind="message"), True)
+for phrase in ["Last one from me, Chris.", "Just following up on this.",
+               "Following up on my note.", "Bumping this up.",
+               "In case you missed my last message.", "Circling back on this."]:
+    case(f"the follow up phrase fails in any note: {phrase}",
+         li(phrase + " " + GOLD_LI[0][0], "C-li-P1"), False, "banned phrase")
+
+# Connection requests: LinkedIn only, NO note (option A, Zalo, 2026-09-22 about 17:10 ET).
+case("a connect entry with no text passes", li("", "D-li-P1", kind="connect"), True)
+case("a connect entry with the text key missing passes",
+     {"entry": 1, "channel": "linkedin", "variant": "D-li-P2", "kind": "connect"}, True)
+case("a connect entry with a whitespace only text passes: nothing is typed",
+     li("   ", "D-li-P1", kind="connect"), True)
+case("a connect entry carrying a note fails",
+     li("Hi Rae, saw the Sunday review. Mind if I connect?", "D-li-P1", kind="connect"),
+     False, "a connection note")
+case("a connect entry carrying the old control note fails",
+     li(GOLD_LI[0][0], "C-li-P1", kind="connect"), False, "a connection note")
+case("a connect entry on facebook fails",
+     fb("", "D-fb-P1", kind="connect"), False, "connection requests are LinkedIn only")
+case("a connect entry naming the O1 lane fails",
+     li("", "D-li-O1", kind="connect"), False, "<tier>-li-P1 or <tier>-li-P2")
+case("a connect entry naming the retired N1 fails",
+     li("", "D-li-N1", kind="connect"), False, "<tier>-li-P1 or <tier>-li-P2")
+
+# ================================ the one message rule, batch and history (2026-09-22)
+# Refusals 1 and 3 against a small pipeline and log. `stage` column order is the real one.
+PIPE = [
+    "fresh1,Fixture Air,Miami,D,fb,,Mike,FOUND,,,D-fb-J1,,,,0,",
+    "sent1,Fixture Drains,Miami,D,fb,,Sandra,SENT,2026-09-22,,D-fb-J1,,,,1,",
+    "cold1,Fixture Pipes,Houston,D,fb,,Frank,COLD,2026-09-15,,D-fb-J2,,,,1,",
+    "rep1,Fixture Flow,Tampa,D,fb,,Heather,REPLIED,2026-09-15,,D-fb-J2,,,,1,",
+    "dead1,Fixture Stop,Tampa,D,fb,,Ron,DEAD,2026-09-15,,D-fb-P1,,,,1,",
+    "touched1,Fixture Legacy,Tampa,D,fb,,Lee,FOUND,,,D-fb-P1,,,,1,",
+    "noted1,Fixture Ducts,Phoenix,C,li,,Maggie,FOUND,,,C-li-P1,,,,0,",
+    "bare1,Fixture Plumbing,Tampa,C,li,,Chris,FOUND,,,C-li-P1,,,,0,",
+    "friend1,Fixture Cooling,Orlando,D,fb,,Dan,FOUND,,,D-fb-P2,,,,0,",
+    "nochan1,Fixture Nowhere,Miami,D,li,,Pat,NO_CHANNEL,2026-09-14,,D-li-O1,,,,1,",
+]
+LOG = [
+    '2026-09-22 10:00,fb,sent1,u,SENT,aa,My AC,D-fb-J1,joke,"My AC and I are fighting again."',
+    '2026-09-22 10:03,fb,sent1,u,SENT_CONT,dd,Now it,D-fb-J1,joke,"Now it\'s giving me the cold shoulder."',
+    '2026-09-10 16:21,li,noted1,u,CONNECT,bb,Hi Maggie,C-li-P1,review,"Hi Maggie, the note text"',
+    '2026-09-23 09:00,li,bare1,u,CONNECT,,,C-li-P1,,',
+    '2026-09-14 09:10,fb,friend1,u,FRIEND,,,D-fb-P2,,',
+    '2026-09-14 12:00,li,nochan1,u,SENT,cc,Hi Pat,D-li-O1,review,"Hi Pat, the message"',
+]
+
+
+def hb(name, notes, want_exit, *want, extra=()):
+    out = batch_case(name, notes, want_exit, pipeline=PIPE, log=LOG, autofill=False, extra=extra,
+                     known=["prospectsonly1"])
+    for w in want:
+        if w not in out:
+            FAILURES.append(f"{name}: expected {w!r} in:\n{out}")
+    return out
+
+
+J_FRESH = jtext(1, "J1", "Mike")
+hb("a single joke message to a fresh prospect passes",
+   [fb(J_FRESH, "D-fb-J1", prospect_id="fresh1")], 0, "ALL PASS", "One message rule checked")
+hb("a prospect in prospects.csv and not in the pipeline yet passes",
+   [fb(J_FRESH, "D-fb-J1", prospect_id="prospectsonly1")], 0, "ALL PASS")
+hb("an id the folder does not know is refused, not read as a fresh prospect",
+   [fb(J_FRESH, "D-fb-J1", prospect_id="brandnew")], 1, "is in neither pipeline.csv nor prospects.csv")
+hb("a real id with one character dropped is refused (2026-09-22 QA repro)",
+   [fb(J_FRESH, "D-fb-J1", prospect_id="sent")], 1, "is in neither pipeline.csv nor prospects.csv")
+hb("a real id with the owner's name appended is refused",
+   [fb(J_FRESH, "D-fb-J1", prospect_id="sent1 (Sandra)")], 1, "is in neither pipeline.csv nor prospects.csv")
+hb("the one message after a note-less connection is accepted passes (option A)",
+   [li(GOLD_LI[0][0], "C-li-P1", prospect_id="bare1")], 0, "ALL PASS")
+hb("the one message after an accepted friend request passes",
+   [fb(GOLD_FB[0][0], "D-fb-P1", prospect_id="friend1")], 0, "ALL PASS")
+hb("a connect entry with no note to a fresh prospect passes",
+   [li("", "D-li-P1", kind="connect", prospect_id="fresh1")], 0, "ALL PASS")
+hb("a second message to a SENT prospect fails",
+   [fb(jtext(3, "J2", "Sandra"), "D-fb-J2", prospect_id="sent1")], 1,
+   "already got its one message", "plus 1 more")
+hb("a bump to a no reply prospect fails on the kind AND on the history",
+   [fb("Last one from me, Sandra. If the after hours calls are already handled, I'll leave "
+       "you to it. If they aren't, you know where I am.", "D-fb-J1", kind="bump2",
+       prospect_id="sent1")], 1, "kind 'bump2'", "banned phrase: 'last one from me'",
+   "already got its one message")
+hb("a bump given an innocent kind still fails on the history",
+   [fb(jtext(4, "J1", "Sandra"), "D-fb-J1", prospect_id="sent1")], 1,
+   "already got its one message")
+hb("a second message on ANOTHER channel fails",
+   [li(DM_O1, "D-li-O1", prospect_id="sent1")], 1, "already got its one message")
+hb("a message to a COLD prospect fails",
+   [fb(J_FRESH, "D-fb-J1", prospect_id="cold1")], 1, "is at COLD")
+hb("a message after a connection that carried a note fails: the note was the one message",
+   [li(GOLD_LI[0][0], "C-li-P1", prospect_id="noted1")], 1,
+   "a connection request that carried a note")
+hb("a message to a NO_CHANNEL prospect that already had its message fails",
+   [fb(J_FRESH, "D-fb-J1", prospect_id="nochan1")], 1, "already got its one message")
+hb("pipeline touches with an empty log still fail",
+   [fb(J_FRESH, "D-fb-J1", prospect_id="touched1")], 1, "touches 1")
+hb("a message to a replied prospect fails: the thread is Zalo's",
+   [fb(J_FRESH, "D-fb-J1", prospect_id="rep1")], 1, "the thread is Zalo's")
+hb("a message to a DEAD prospect fails",
+   [fb(J_FRESH, "D-fb-J1", prospect_id="dead1")], 1, "is DEAD")
+hb("a connection request to a prospect already messaged fails",
+   [li("", "D-li-P1", kind="connect", prospect_id="sent1")], 1,
+   "a connection request included")
+hb("one prospect in two entries on two channels fails",
+   [fb(J_FRESH, "D-fb-J1", entry=1, prospect_id="fresh1"),
+    li(GOLD_LI[0][0], "C-li-P1", entry=2, prospect_id="fresh1")], 1, "is in 2 entries")
+hb("two notes on one entry fail",
+   [fb(J_FRESH, "D-fb-J1", entry=1, prospect_id="fresh1"),
+    fb(ASK1, "D-fb-J1", entry=1, prospect_id="fresh1")], 1, "entry 1 carries 2 notes")
+hb("two notes with no entry number on one prospect fail",
+   [{"channel": "facebook", "variant": "D-fb-J1", "text": J_FRESH, "prospect_id": "fresh1"},
+    {"channel": "facebook", "variant": "D-fb-J2", "text": jtext(3, "J2"), "prospect_id": "fresh1"}],
+   1, "is in 2 entries")
+hb("a note with no prospect_id fails when the history is checked",
+   [fb(J_FRESH, "D-fb-J1")], 1, "no prospect_id")
+hb("a group post needs no prospect_id", [grp(G1_A)], 0, "ALL PASS")
+out = hb("--no-history exits 2, prints COPY PASS and never ALL PASS",
+         [fb(J_FRESH, "D-fb-J1", prospect_id="sent1")], 2, "COPY PASS",
+         extra=["--no-history"])
+if "ALL PASS" in out:
+    FAILURES.append(f"--no-history printed ALL PASS:\n{out}")
+
+# The gate has to find the log or refuse. A notes.json outside any working folder fails; the
+# same file with --folder pointing at a working folder is checked against it.
+COUNT += 1
+loose = tempfile.mkdtemp(prefix="bu-lint-loose-")
+loose_path = os.path.join(loose, "notes.json")
+with open(loose_path, "w") as f:
+    json.dump([fb(J_FRESH, "D-fb-J1", prospect_id="sent1")], f)
+code, out = run_lint([loose_path])
+if code != 1 or "no pipeline.csv" not in out:
+    FAILURES.append(f"no working folder: expected exit 1 and 'no pipeline.csv', got {code}:\n{out}")
+COUNT += 1
+root, _ = working_folder(PIPE, LOG)
+code, out = run_lint([loose_path, "--folder", root])
+if code != 1 or "already got its one message" not in out:
+    FAILURES.append(f"--folder: expected the history refusal, got {code}:\n{out}")
+COUNT += 1
+os.remove(os.path.join(root, "sent-log.csv"))
+code, out = run_lint([loose_path, "--folder", root])
+if code != 1 or "cannot read" not in out:
+    FAILURES.append(f"missing sent-log.csv: expected 'cannot read', got {code}:\n{out}")
+COUNT += 1
+with open(os.path.join(root, "sent-log.csv"), "w") as f:
+    f.write("timestamp_et,channel,profile_url\n")
+code, out = run_lint([loose_path, "--folder", root])
+if code != 1 or "has no prospect_id" not in out:
+    FAILURES.append(f"sent-log.csv without its columns: expected a column failure, got {code}:\n{out}")
+COUNT += 1
+os.remove(os.path.join(root, "prospects.csv"))
+with open(os.path.join(root, "sent-log.csv"), "w") as f:
+    f.write(LOG_HEAD + "\n")
+code, out = run_lint([loose_path, "--folder", root])
+if code != 1 or "prospects.csv" not in out:
+    FAILURES.append(f"missing prospects.csv: expected a failure naming it, got {code}:\n{out}")
+shutil.rmtree(root)
+# A folder inside the skill (its templates/ or a fixture) is not the working folder.
+COUNT += 1
+code, out = run_lint([loose_path, "--folder", os.path.join(HERE, "..", "templates")])
+if code != 1 or "inside the skill itself" not in out:
+    FAILURES.append(f"--folder templates: expected the inside-the-skill refusal, got {code}:\n{out}")
+shutil.rmtree(loose)
+
+# A note-less CONNECT logged with the sha1 of the empty string is still a request with no
+# note, so the one message after the accept is allowed.
+hb_log = LOG + ['2026-09-23 09:05,li,fresh1,u,CONNECT,da39a3ee5e6b4b0d3255bfef95601890afd80709,,D-li-P1,,']
+out = batch_case("a CONNECT logged with the empty string's sha1 is not a note",
+                 [li(GOLD_LI[0][0], "C-li-P1", prospect_id="fresh1")], 0,
+                 pipeline=PIPE, log=hb_log, autofill=False)
+if "ALL PASS" not in out:
+    FAILURES.append(f"empty sha1 CONNECT: expected ALL PASS, got:\n{out}")
+
+# The real template headers carry the columns the history check reads, and a header written
+# with spaces after the commas loads too.
+COUNT += 1
+for name in ("pipeline.csv", "sent-log.csv"):
+    head, _ = lint.read_csv(os.path.join(HERE, "..", "templates", name))
+    if "prospect_id" not in head or "stage" not in head:
+        FAILURES.append(f"templates/{name} lacks prospect_id or stage: {head}")
+COUNT += 1
+root, _ = working_folder()
+with open(os.path.join(root, "pipeline.csv"), "w") as f:
+    f.write(PIPE_HEAD.replace(",", ", ") + "\n" + PIPE[1] + "\n")
+pipe_rows = lint.load_history(root)[0]
+if pipe_rows.get("sent1", {}).get("stage") != "SENT":
+    FAILURES.append(f"a spaced header did not load by column name: {pipe_rows}")
+shutil.rmtree(root)
+
+# A byte order mark on the header and an upper case id in the batch change nothing: the id
+# still matches, so the second message is still refused.
+COUNT += 1
+root, _ = working_folder(PIPE, LOG)
+with open(os.path.join(root, "pipeline.csv")) as f:
+    body = f.read()
+with open(os.path.join(root, "pipeline.csv"), "w", encoding="utf-8-sig") as f:
+    f.write(body)
+bom_path = os.path.join(root, "evidence", "2026-09-23", "session-1", "notes.json")
+with open(bom_path, "w") as f:
+    json.dump([fb(J_FRESH, "D-fb-J1", prospect_id="  SENT1 ")], f)
+code, out = run_lint([bom_path])
+if code != 1 or "already got its one message" not in out:
+    FAILURES.append(f"BOM header plus an upper case id: expected the history refusal, got {code}:\n{out}")
+shutil.rmtree(root)
+
+# The hand made batches in fixtures/single-message/: one that passes, one that trips every
+# refusal. These are the files to run by hand when you want to see the gate work.
+FX = os.path.join(HERE, "fixtures", "single-message")
+COUNT += 1
+code, out = run_lint([os.path.join(FX, "notes-pass.json"), "--fixture"])
+if code != 2 or "FIXTURE PASS" not in out:
+    FAILURES.append(f"fixtures/single-message/notes-pass.json --fixture: expected exit 2 FIXTURE PASS, got {code}:\n{out}")
+COUNT += 1
+code, out = run_lint([os.path.join(FX, "notes-pass.json")])
+if code != 1 or "inside the skill itself" not in out:
+    FAILURES.append(f"fixtures/single-message/notes-pass.json without --fixture: expected the inside-the-skill refusal, got {code}:\n{out}")
+COUNT += 1
+code, out = run_lint([os.path.join(FX, "notes-refuse.json"), "--fixture"])
+for want in ["entry 1 carries 2 notes", "kind 'bump2'", "banned phrase: 'last one from me'",
+             "prospect fx-sent-fb already got its one message",
+             "prospect fx-sent-cross already got its one message",
+             "a connection request that carried a note",
+             "prospect fx-cold is at COLD", "a connection note",
+             "prospect fx-replied is at REPLIED", "prospect fx-dead is DEAD",
+             "a 'sent_parts' field"]:
+    if want not in out:
+        FAILURES.append(f"fixtures/single-message/notes-refuse.json: missing {want!r}:\n{out}")
+if code != 1:
+    FAILURES.append(f"fixtures/single-message/notes-refuse.json: expected exit 1, got {code}")
+COUNT += 1
+code, out = run_lint([os.path.join(HERE, "fixtures", "new-families.json"), "--no-history"])
+if code != 2 or "COPY PASS" not in out:
+    FAILURES.append(f"fixtures/new-families.json: expected exit 2 COPY PASS, got {code}:\n{out}")
+
 
 print(f"{COUNT} cases")
 if FAILURES:

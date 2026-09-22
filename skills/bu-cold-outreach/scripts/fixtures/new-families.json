@@ -1,79 +1,39 @@
 [
   {
     "entry": 1,
-    "channel": "linkedin",
-    "variant": "D-li-N1",
-    "text": "Hi Mike, Dana's review from July says she left two messages before anyone called her back. That's the call this catches. Mind if I ask you something about it?"
+    "prospect_id": "fx-j1",
+    "channel": "facebook",
+    "variant": "D-fb-J1",
+    "text": "Why don't ducts keep secrets? Everything leaks eventually. Alright Mike, real question and then I'll leave the jokes alone. Would you be open to talking about the calls that come in after you close?"
   },
   {
     "entry": 2,
+    "prospect_id": "fx-j2",
+    "channel": "facebook",
+    "variant": "D-fb-J2",
+    "text": "My kid asked me what a plumber's favorite shoe is. Clogs. He's seven and I'm still mad about it. Okay Rachel, that's my one joke of the day. Mind if I ask you something about the calls that come in after you close?"
+  },
+  {
+    "entry": 3,
+    "prospect_id": "fx-o1",
     "channel": "linkedin",
-    "variant": "D-li-N1",
-    "text": "Hi Rachel, Google has the office closed Sundays and your site's promising emergency service any time. So somebody's phone is buzzing on a Sunday. Mind if I ask you something about it?"
-  },
-  {
-    "entry": 3,
-    "channel": "facebook",
-    "variant": "D-fb-J1",
-    "part": "setup",
-    "text": "Why don't ducts keep secrets?"
-  },
-  {
-    "entry": 3,
-    "channel": "facebook",
-    "variant": "D-fb-J1",
-    "part": "punchline",
-    "text": "Everything leaks eventually."
-  },
-  {
-    "entry": 3,
-    "channel": "facebook",
-    "variant": "D-fb-J1",
-    "part": "ask",
-    "text": "Alright Mike, real question and then I'll leave the jokes alone. Would you be open to talking about the calls that come in after you close?"
+    "variant": "D-li-O1",
+    "text": "Hi Rachel, Google has the office closed Sundays and your site's promising emergency service any time. So somebody's phone is buzzing on a Sunday.\n\nI built a quick demo off your website: it picks up when nobody can, calls and texts, day or night, and books the job into your calendar. Want to try and break it?"
   },
   {
     "entry": 4,
-    "channel": "facebook",
-    "variant": "D-fb-J2",
-    "part": "setup",
-    "text": "My kid asked me what a plumber's favorite shoe is."
-  },
-  {
-    "entry": 4,
-    "channel": "facebook",
-    "variant": "D-fb-J2",
-    "part": "punchline",
-    "text": "Clogs. He's seven and I'm still mad about it."
-  },
-  {
-    "entry": 4,
-    "channel": "facebook",
-    "variant": "D-fb-J2",
-    "part": "ask",
-    "text": "Okay Rachel, that's my one joke of the day. Mind if I ask you something about the calls that come in after you close?"
+    "prospect_id": "fx-accepted",
+    "channel": "linkedin",
+    "variant": "C-li-P1",
+    "text": "Hi Mike, Dana's review from July says she left two messages before anyone called her back. That's two calls you already know about, and she's the one who wrote it down. I trained a demo AI setter on your website that takes those calls 24/7 and books the job. Want to try and break it?"
   },
   {
     "entry": 5,
-    "channel": "facebook",
-    "variant": "D-fb-J1",
-    "part": "punchline",
-    "sent_parts": [
-      "setup"
-    ],
-    "joke_setup": "Why did the plumber fold in poker?",
-    "text": "He kept getting flushed."
-  },
-  {
-    "entry": 5,
-    "channel": "facebook",
-    "variant": "D-fb-J1",
-    "part": "ask",
-    "sent_parts": [
-      "setup"
-    ],
-    "joke_setup": "Why did the plumber fold in poker?",
-    "text": "Alright Dale, real question and then I'll leave the jokes alone. Would you be open to talking about the calls that come in after you close?"
+    "prospect_id": "fx-connect",
+    "channel": "linkedin",
+    "kind": "connect",
+    "variant": "D-li-P2",
+    "text": ""
   },
   {
     "entry": 6,

@@ -8,13 +8,21 @@ messages get better every week because of what is written here, and nowhere else
 The split test is the TIER OPENER crossed with the CHANNEL, plus the phrasing of the
 "what we do" line (P1 or P2 from `templates/messages.md`). A variant id is
 `<tier>-<channel>-<phrasing>`, for example `A-li-P1` or `D-ig-P2`. Since 2026-09-12 the
-phrasing slot also carries the two test arms: `N1`, the LinkedIn note with no pitch, and
-`J1` / `J2`, the Facebook trade joke opener with its two asks.
+phrasing slot also carries the Facebook trade joke opener, `J1` / `J2`, with its two asks.
+`N1` (the LinkedIn note with no pitch) was retired on 2026-09-22 when connection requests
+stopped carrying notes; its rows stay as history.
+
+**One message per prospect since 2026-09-22.** Every row after that date is one prospect,
+one message, and the J arm is one bubble. Report the J rows sent as three bubbles
+(2026-09-13 to 2026-09-22) as their own cohort, `D-fb-J1 (3 bubbles)` and `D-fb-J2 (3
+bubbles)`, and never pool them with the one message rows: the shape changed, so the rate
+did too.
 
 Where each column comes from. **Sends** are counted from `sent-log.csv`, counting ONLY rows
 whose `stage` is `SENT`. A `CONNECT` row is an invitation, not a delivered message. A
-`SENT_CONT` row is the second or third part of one multi part first touch, and counting it
-would count one prospect twice. **Replies**, **positive** and **agreed to demo** come from
+historical `SENT_CONT` row is the second or third part of a pre 2026-09-22 multi part first
+touch, and a historical `BUMP1` or `BUMP2` row is a retired bump; counting either would
+count one prospect twice. **Replies**, **positive** and **agreed to demo** come from
 the `pipeline.csv` stages, since a reply never appears in the sent log: replies are rows
 that reached `REPLIED` or beyond, positive is Astra's read of the recorded reply text,
 agreed to demo is a row Zalo advanced to `DEMO_SENT`. A drafted message is not a send, and
@@ -47,25 +55,23 @@ counting one corrupts every rate below it.
 | D-ig-P1 | 0 | 0 | 0 | 0 | |
 | D-ig-P2 | 0 | 0 | 0 | 0 | |
 
-The four test arm ids, added 2026-09-12. `D-li-N1`, `D-fb-J1` and `D-fb-J2` are live on
-tier D. `C-li-N1` is registered so the id means one thing everywhere, and it is NOT
-sendable until Zalo opens the arm to tier C.
+The joke arm ids, added 2026-09-12, one message each since 2026-09-22. `D-fb-J1` and
+`D-fb-J2` are live on tier D. `D-li-N1` and `C-li-N1` are retired (2026-09-22) and the lint
+refuses them.
 
 | Variant | Sends | Replies | Positive | Agreed to demo | Reply rate |
 | --- | --- | --- | --- | --- | --- |
-| D-li-N1 | 0 | 0 | 0 | 0 | |
-| C-li-N1 (reserved, not sendable) | 0 | 0 | 0 | 0 | |
 | D-fb-J1 | 0 | 0 | 0 | 0 | |
 | D-fb-J2 | 0 | 0 | 0 | 0 | |
 
-On LinkedIn the arms are judged on the ACCEPTANCE table below, not on this one, because
-acceptance is the gate the note is competing for.
+On LinkedIn the connection request has an ACCEPTANCE table of its own. Since 2026-09-22 the
+request carries no note, so acceptance measures the profile and the channel, not the copy,
+and the one message after the accept is scored in the reply columns.
 
-| LinkedIn variant | CONNECT notes aged 14 days | Accepted | Acceptance rate | Follow ups sent | Human replies |
+| LinkedIn variant | CONNECT rows aged 14 days | Accepted | Acceptance rate | One messages sent after the accept | Human replies |
 | --- | --- | --- | --- | --- | --- |
 | D-li-P1 | 0 | 0 | | 0 | 0 |
 | D-li-P2 | 0 | 0 | | 0 | 0 |
-| D-li-N1 | 0 | 0 | | 0 | 0 |
 
 Judgment rules:
 
@@ -97,16 +103,17 @@ Judgment rules:
    `research/dylan-gigz-2026-09-12.md` records the split for those 25 rows: 23 after hours
    praise, 2 reachability failure.
 7. **On LinkedIn the scoreboard has two tables, not one**, per the two gate rule in
-   `SKILL.md`. An acceptance table (denominator: CONNECT notes aged 14 days or more) and a
-   reply table (denominator: acceptance follow ups actually sent). The kill rule in rule 5
+   `SKILL.md`. An acceptance table (denominator: CONNECT rows aged 14 days or more) and a
+   reply table (denominator: one messages actually sent after an accept, plus open profile
+   messages and InMails). The kill rule in rule 5
    applies to each gate separately, against its own denominator. A variant with 20
    invitations still pending has NOT reached 20 sends for kill rule purposes, and a zero on
    the acceptance gate is never reported as a copy failure while the reply gate has no
    traffic: nothing was delivered, so nothing was read.
-8. **A multi part first touch is one send.** The `J` arm types three messages per prospect.
-   Only the `SENT` row counts; the `SENT_CONT` rows are audit and pacing evidence. One
-   prospect, one send, one cold first touch against the daily cap, however many messages it
-   took. Counting the parts is how the 2026-09-08 Geo entry briefly read as two prospects.
+8. **One prospect is one send.** Since 2026-09-22 every prospect gets one message, so a
+   prospect is one `SENT` row. The historical multi part rows (the J arm's `SENT_CONT` rows
+   of 09-13 to 09-22, the 2026-09-08 Geo entry) and the `BUMP1` and `BUMP2` rows count
+   nowhere; counting the parts is how the Geo entry briefly read as two prospects.
 
 ### Facebook group posts (channel NOT STARTED)
 
