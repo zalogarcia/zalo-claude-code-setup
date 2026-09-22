@@ -93,3 +93,22 @@ also approves each batch by name.
 `note-lint.py --before-send <prospect_id>` that exits non zero if the log already holds an
 outbound message for that id, run before each message is typed. Worth building if a second
 same day batch is ever approved while the first is still sending.
+
+## 7. The walk up takes the nearest `pipeline.csv`, so a full snapshot under `evidence/` would shadow the live files (opened 2026-09-22)
+
+**What it is.** Found by the independent verifier of the one message change. `find_folder`
+in `scripts/note-lint.py` returns the first directory at or above `notes.json` that holds a
+`pipeline.csv`. If a session ever copied `pipeline.csv`, `sent-log.csv` and `prospects.csv`
+under those exact names into `evidence/YYYY-MM-DD/`, a batch linted from below it would be
+checked against the stale copy, and a prospect messaged since the copy would pass as fresh.
+Reproduced in `/tmp` only.
+
+**What contains it today.** No such copy exists: the evidence tree's snapshots are named
+`pipeline-before.csv`, `before-pipeline.csv` and `before-sent-log.csv` (all 9 day folders
+scanned 2026-09-22), and a folder holding only `pipeline.csv` fails closed on the missing
+`sent-log.csv` or `prospects.csv`. `--folder <working folder>` bypasses the walk entirely.
+
+**What would close it.** Accept a walk up candidate only if it also holds `config.md`
+(Zalo's file, never snapshotted), with a `config.md` stub added to the test working folders
+and to `scripts/fixtures/single-message/`.
+
