@@ -2,7 +2,7 @@
 model: opus
 name: frontend-specialist
 description: Builds and optimizes frontend UI — components, styling, responsiveness, accessibility, and performance. Use for any client-side development task. <example>user: 'I need to build a mobile-friendly navigation bar that collapses on smaller screens' assistant: 'I'll use the frontend-specialist agent to create a responsive navigation component.'</example>
-effort: high
+effort: xhigh
 mcpServers:
   - aceternityui:
       type: stdio

@@ -142,9 +142,12 @@ Decision tree:
 
 Per plan-verification loop (full both-gates + 1 revision pass):
 
-- Brainstorm (Opus, effort:high): ~2-3 min, ~$0.50-$1.50
-- Outcomes-grader (Opus, effort:high): ~1-2 min, ~$0.50-$1.00
+- Brainstorm (Fable, effort:xhigh): ~2-3 min, ~$0.50-$1.50
+- Outcomes-grader (Opus, effort:xhigh): ~1-2 min, ~$0.50-$1.00
 - Revision dispatch (if needed): ~1-2 min, ~$0.30-$0.80
 - **Total: 4-7 min, ~$2-4 per loop**
+
+The dollar figures were measured when both gates ran at `effort: high`; both are
+pinned `xhigh` as of 2026-09-22, so treat them as a floor until re-measured.
 
 Skip heuristic eliminates this overhead for trivial plans where verification is cargo cult.
