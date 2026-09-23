@@ -13,7 +13,7 @@ already said "done". A worker cannot verify its own work. It has the same contex
 same blind spot, and it has already decided the thing works. So the verification comes
 from a separate agent with fresh context, dispatched at the end of the run.
 
-This is already the stated policy in `~/.claude/rules/plan-verification.md` ("don't
+This is already the stated policy in `~/.claude/rules-ref/plan-verification.md` ("don't
 substitute self-critique for fresh-context dispatch") and in the `~/.claude/CLAUDE.md`
 model policy ("the model that verifies should differ from the model that authored"). This
 file is that policy in the one shape a model reliably carries to the end of a long run: a

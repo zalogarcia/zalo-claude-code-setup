@@ -64,7 +64,7 @@ Wait for `## EXPLORATION COMPLETE`. Findings will be parsed alongside Gate 2's a
 
 ### Gate 2 — Principles-vet (alignment with stated standards)
 
-Dispatch `outcomes-grader` agent with the plan as the artifact and `~/.claude/rules/engineering-principles.md` as the rubric:
+Dispatch `outcomes-grader` agent with the plan as the artifact and `~/.claude/rules-ref/engineering-principles.md` as the rubric:
 
 ```
 You are grading a PLAN (markdown describing intended work, not code).
@@ -74,7 +74,7 @@ Apply your "plan-grading mode" per outcomes-grader.md.
 {full plan content — pass verbatim or read from {plan_path}}
 
 ## Rubric
-(read ~/.claude/rules/engineering-principles.md)
+(read ~/.claude/rules-ref/engineering-principles.md)
 
 For each rubric item with an "Applicable when:" clause, first determine
 applicability. If not applicable to this plan, mark PASS with reason

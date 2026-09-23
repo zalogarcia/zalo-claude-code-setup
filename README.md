@@ -12,7 +12,7 @@ Custom agents, skills, commands, MCP servers, auto-formatting hooks, and workflo
 
 ## Interactive Architecture
 
-See how the pieces fit together: 7 agents, 15 shared rules (+ on-demand `rules-ref/`), 9 commands, 9 skills, 3 workflows, hooks, MCP servers — plus animated request flows (`/autopilot`, `/bug`, `/qa-loop`, `/brainstorm`, `/plan`).
+See how the pieces fit together: 7 agents, 12 shared rules (+ on-demand `rules-ref/`), 9 commands, 9 skills, 3 workflows, hooks, MCP servers — plus animated request flows (`/autopilot`, `/bug`, `/qa-loop`, `/brainstorm`, `/plan`).
 
 **→ [Open the interactive visualization](https://zalogarcia.github.io/zalo-claude-code-setup/visualization/)**
 
@@ -186,7 +186,7 @@ Deterministic multi-agent scripts at `~/.claude/workflows/`, run via Claude Code
 | **plan-verify**    | Plan Verification Loop backing `/plan`: brainstorm critique + principles grading in parallel, then at most one `safe-planner` revision pass.                                                                                                                                                    |
 | **fable-insights** | Self-audit: one deep-analysis agent per Claude Code session transcript (args `{days}`), producing a friction report + proposed config diffs. Run interactively when you want a usage audit.                                                                                                     |
 
-### Shared Rules (15 + on-demand `rules-ref/`)
+### Shared Rules (12 + on-demand `rules-ref/`)
 
 Authoritative reference docs at `~/.claude/rules/`. Commands and agents `@`-include them; the main thread reads them when the situation applies. Built from the best of `gsd-build/get-shit-done` + `obra/superpowers`.
 
@@ -202,11 +202,16 @@ Authoritative reference docs at `~/.claude/rules/`. Commands and agents `@`-incl
 | **when-to-parallelize.md**    | 4-criteria decision rule for parallel agent dispatch                                                             |
 | **problem-solving.md**        | When-stuck dispatch table (inversion / simplification / meta-pattern) + 3+ Fixes Rule                            |
 | **git-safety.md**             | Staging discipline, pre-op checks, destructive-op approval                                                       |
-| **api-retry.md**              | Exponential-backoff + circuit-breaker protocol for transient Anthropic API errors during agent dispatch          |
 | **database-safety.md**        | Additive-only migrations + expand-contract pattern for breaking schema changes                                   |
+| **testing-safety.md**         | Admin-account-only rule for live-system tests; no fake users against production                                  |
+
+On demand in `~/.claude/rules-ref/` (not auto-loaded; the commands and agents that need them `@`-include or read them), moved out of `rules/` on 2026-09-23 so every session stops paying for them:
+
+| Rule                          | What It Governs                                                                                                  |
+| ----------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| **api-retry.md**              | Exponential-backoff + circuit-breaker protocol for transient Anthropic API errors during agent dispatch          |
 | **engineering-principles.md** | Rubric `outcomes-grader` uses to score plans (architectural coherence, scope integrity, failure resilience, ...) |
 | **plan-verification.md**      | Two-gate verification loop (brainstorm + outcomes-grader) applied after every `safe-planner` plan                |
-| **testing-safety.md**         | Admin-account-only rule for live-system tests; no fake users against production                                  |
 
 ### Meta-Rule (Session-Start Re-injection)
 

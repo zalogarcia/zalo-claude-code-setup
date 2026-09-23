@@ -1,7 +1,7 @@
 export const meta = {
   name: "plan-verify",
   description:
-    "Plan Verification Loop: brainstorm-vet + principles-grader in parallel, then one safe-planner revision pass if either flags concerns. Mirrors ~/.claude/rules/plan-verification.md.",
+    "Plan Verification Loop: brainstorm-vet + principles-grader in parallel, then one safe-planner revision pass if either flags concerns. Mirrors ~/.claude/rules-ref/plan-verification.md.",
   whenToUse:
     "The verification half of /plan (Steps 4-5). The interactive questioning and initial plan generation stay in the main thread; this runs the autonomous gates + revision.",
   phases: [
@@ -123,7 +123,7 @@ const REVISION_SCHEMA = {
   required: ["changesSummary"],
 };
 
-// ---- gate prompts (mirror ~/.claude/rules/plan-verification.md) ---------------
+// ---- gate prompts (mirror ~/.claude/rules-ref/plan-verification.md) ---------------
 const brainstormPrompt = `We produced a plan via safe-planner. Apply your critical-thinking pass.
 
 ## Original task
@@ -147,7 +147,7 @@ const graderPrompt = `You are grading a PLAN (markdown describing intended work,
 Read ${planPath}
 
 ## Rubric
-Read ~/.claude/rules/engineering-principles.md
+Read ~/.claude/rules-ref/engineering-principles.md
 
 For each rubric item with an "Applicable when:" clause, first determine applicability. If not applicable to this plan, mark it PASS with reason "not applicable: <clause>". For applicable items, return PASS / FAIL with concrete evidence quoted from the plan. Use AMBIGUOUS only if applicability itself is unclear.
 

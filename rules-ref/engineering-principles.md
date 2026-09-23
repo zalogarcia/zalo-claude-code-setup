@@ -242,4 +242,4 @@ Per `outcomes-grader` contract in `~/.claude/agents/outcomes-grader.md`:
 - Non-applicable items (per `Applicable when:` clauses) → PASS with reason `"not applicable: <clause>"`, NOT AMBIGUOUS
 - AMBIGUOUS reserved for "the plan addresses this concern but unclearly" — not for non-applicability
 
-If multiple outcomes FAIL, the orchestrator collects them and feeds them back to `safe-planner` for one revision pass per `~/.claude/rules/plan-verification.md`.
+If multiple outcomes FAIL, the orchestrator collects them and feeds them back to `safe-planner` for one revision pass per `~/.claude/rules-ref/plan-verification.md`.

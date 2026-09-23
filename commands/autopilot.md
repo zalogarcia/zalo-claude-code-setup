@@ -70,7 +70,7 @@ After autopilot reports COMPLETE / CODE-COMPLETE — NOT LIVE-VERIFIED / COMPLET
 @~/.claude/rules/database-safety.md
 @~/.claude/rules/testing-safety.md
 @~/.claude/rules/git-safety.md
-@~/.claude/rules/api-retry.md
+@~/.claude/rules-ref/api-retry.md
 @~/.claude/rules/checkpoints.md
 @~/.claude/rules/context-budget.md
 
@@ -91,7 +91,7 @@ After autopilot reports COMPLETE / CODE-COMPLETE — NOT LIVE-VERIFIED / COMPLET
 - WORKER_MODEL = "opus" (implementation waves, QA partitions, fix agents, Explore/general-purpose, live-test, outcomes-grader)
 - FALLBACK_MODEL = "opus" (model-inaccessibility re-dispatch — per api-retry.md; never sonnet)
 
-Every `Agent` tool call MUST include an explicit `model:` param, assigned by the CLAUDE.md "Subagent model policy — split by leverage": `model: "fable"` for thinking dispatches whose single output cascades (brainstorm, safe-planner, bug-fix-class diagnosis); `model: "opus"` for everything else — implementation waves, QA partitions, fix agents, Explore/general-purpose, live-test, outcomes-grader. Never omit the model: built-in agents without definition files inherit the session model, which on a Fable session runs whole fan-out waves on Fable and can exhaust its session limit. **The one exception:** if a dispatch returns a model-inaccessibility signal (the pinned model itself is unavailable — see `~/.claude/rules/api-retry.md` "Model Inaccessibility & Fallback"), re-dispatch the same prompt with `model: FALLBACK_MODEL`, log it, and continue. A pin that can't be honored because the model is gone degrades to the fallback rather than deadlocking — it never silently drops to a default model.
+Every `Agent` tool call MUST include an explicit `model:` param, assigned by the CLAUDE.md "Subagent model policy — split by leverage": `model: "fable"` for thinking dispatches whose single output cascades (brainstorm, safe-planner, bug-fix-class diagnosis); `model: "opus"` for everything else — implementation waves, QA partitions, fix agents, Explore/general-purpose, live-test, outcomes-grader. Never omit the model: built-in agents without definition files inherit the session model, which on a Fable session runs whole fan-out waves on Fable and can exhaust its session limit. **The one exception:** if a dispatch returns a model-inaccessibility signal (the pinned model itself is unavailable — see `~/.claude/rules-ref/api-retry.md` "Model Inaccessibility & Fallback"), re-dispatch the same prompt with `model: FALLBACK_MODEL`, log it, and continue. A pin that can't be honored because the model is gone degrades to the fallback rather than deadlocking — it never silently drops to a default model.
 
 ## Orchestrator Identity
 
@@ -268,7 +268,7 @@ When detected → External Blocker Protocol fires, NOT Tiered Decision Protocol.
 
 ## API Dispatch Wrapper Protocol
 
-Every Agent dispatch in /autopilot is wrapped by api-retry semantics per `~/.claude/rules/api-retry.md`. This catches transient transport-layer Anthropic API failures (overloaded_error, rate_limit_error, full phrases like "529 overloaded" / "503 Service Unavailable") and retries with exponential backoff before treating the dispatch as truly failed.
+Every Agent dispatch in /autopilot is wrapped by api-retry semantics per `~/.claude/rules-ref/api-retry.md`. This catches transient transport-layer Anthropic API failures (overloaded_error, rate_limit_error, full phrases like "529 overloaded" / "503 Service Unavailable") and retries with exponential backoff before treating the dispatch as truly failed.
 
 **Detection signals (phrase-anchored, NOT bare codes):**
 
@@ -314,7 +314,7 @@ IF loop exhausted without success:
 
 **Non-retryable signals** (`invalid_api_key`, `authentication_error`, `permission_denied`, `not_found_error`, `invalid_request_error`) are treated as real failures — mark the work unit `failed` with `block_reason = "api_auth_or_perm"` and continue. Do NOT consume retry budget on these.
 
-**Model-inaccessibility signal** (the pinned model itself is unavailable — phrases referencing a _model_ as `inaccessible` / `unavailable` / `model_not_found`, per `~/.claude/rules/api-retry.md` "Model Inaccessibility & Fallback"): do NOT backoff and do NOT mark failed. Re-dispatch the SAME prompt immediately with `model: FALLBACK_MODEL` (the swap is instant; the model isn't returning in 30s). On success, log `model_fallback_recovered` and continue. If `FALLBACK_MODEL` is ALSO inaccessible, increment `api_retry_exhaustions_in_phase` (feeds the same circuit breaker) and mark the work unit `failed`. Do NOT loop swapping models.
+**Model-inaccessibility signal** (the pinned model itself is unavailable — phrases referencing a _model_ as `inaccessible` / `unavailable` / `model_not_found`, per `~/.claude/rules-ref/api-retry.md` "Model Inaccessibility & Fallback"): do NOT backoff and do NOT mark failed. Re-dispatch the SAME prompt immediately with `model: FALLBACK_MODEL` (the swap is instant; the model isn't returning in 30s). On success, log `model_fallback_recovered` and continue. If `FALLBACK_MODEL` is ALSO inaccessible, increment `api_retry_exhaustions_in_phase` (feeds the same circuit breaker) and mark the work unit `failed`. Do NOT loop swapping models.
 
 ### Per-phase circuit breaker
 
@@ -937,11 +937,11 @@ If `## BLOCKED` → Tiered Decision Protocol, re-dispatch (max MAX_AGENT_RETRIES
 
 #### Phase 1.5: Plan Verification Loop
 
-After `## PLAN READY` and parsing into `work_units`, run the Plan Verification Loop per `~/.claude/rules/plan-verification.md` BEFORE proceeding to Phase 2. This catches conceptual weaknesses (brainstorm-vet) and engineering-principle violations (outcomes-grader against `~/.claude/rules/engineering-principles.md`) while revision is still cheap.
+After `## PLAN READY` and parsing into `work_units`, run the Plan Verification Loop per `~/.claude/rules-ref/plan-verification.md` BEFORE proceeding to Phase 2. This catches conceptual weaknesses (brainstorm-vet) and engineering-principle violations (outcomes-grader against `~/.claude/rules-ref/engineering-principles.md`) while revision is still cheap.
 
 **Pre-supplied plan skip** — if `state.json.plan_source == "supplied"`, skip this phase entirely. `/plan` already ran the verification loop against the same plan with the same rubric source, so re-running both gates would be redundant. Phase 1's pre-supplied branch has already logged `plan_verification_skipped: supplied`; just proceed to Phase 2.
 
-**Skip heuristic** — if `work_units.length ≤ 2`, log `plan_verification_skipped: trivial` to `decisions.log` and proceed directly to Phase 2. (Simple count-based check; see `~/.claude/rules/plan-verification.md` for rationale.)
+**Skip heuristic** — if `work_units.length ≤ 2`, log `plan_verification_skipped: trivial` to `decisions.log` and proceed directly to Phase 2. (Simple count-based check; see `~/.claude/rules-ref/plan-verification.md` for rationale.)
 
 Otherwise, run both gates **in parallel** (single message, two Agent calls):
 
@@ -964,7 +964,7 @@ Dispatch brainstorm (model: "fable"):
 Dispatch outcomes-grader (model: "opus"):
   Grade this PLAN (not code) against the engineering-principles rubric.
   Artifact: (read .autopilot/plan.md)
-  Rubric: (read ~/.claude/rules/engineering-principles.md)
+  Rubric: (read ~/.claude/rules-ref/engineering-principles.md)
 
   Per-item PASS / FAIL / AMBIGUOUS with quoted plan evidence.
   Items not applicable to this plan → mark PASS.

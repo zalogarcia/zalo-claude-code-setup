@@ -185,7 +185,7 @@
       "id": "rule.api-retry",
       "kind": "rule",
       "label": "api-retry",
-      "path": "rules/api-retry.md",
+      "path": "rules-ref/api-retry.md",
       "summary": "Shared retry-and-recovery protocol for orchestrators that dispatch sub-agents via the `Agent` tool. Use this when the underlying Anthropic API errors transiently (overload, rate limit, 5xx) so that work units don't get marked `failed` for what is actually a recoverable condition."
     },
     {
@@ -213,7 +213,7 @@
       "id": "rule.engineering-principles",
       "kind": "rule",
       "label": "engineering-principles",
-      "path": "rules/engineering-principles.md",
+      "path": "rules-ref/engineering-principles.md",
       "summary": "Used by `outcomes-grader` to evaluate plans (and optionally implementations) against the standards stated in `~/.claude/CLAUDE.md`. Each item describes an **outcome** the plan must exhibit — a measurable property — not a rule to follow. This makes the rubric harder to game and mo"
     },
     {
@@ -234,7 +234,7 @@
       "id": "rule.plan-verification",
       "kind": "rule",
       "label": "plan-verification",
-      "path": "rules/plan-verification.md",
+      "path": "rules-ref/plan-verification.md",
       "summary": "After `safe-planner` emits `## PLAN READY`, run two verification gates **before** acting on the plan. Both gates use fresh-context subagents (the value of brainstorm/grader pass is the second-opinion dynamic — same-model self-critique is weaker)."
     },
     {

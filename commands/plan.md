@@ -9,8 +9,8 @@ For trivial single-file edits, skip /plan and just write the change. The verific
 ## Authoritative Rules
 
 @~/.claude/rules/agent-contracts.md
-@~/.claude/rules/plan-verification.md
-@~/.claude/rules/engineering-principles.md
+@~/.claude/rules-ref/plan-verification.md
+@~/.claude/rules-ref/engineering-principles.md
 @~/.claude/rules/anti-patterns.md
 @~/.claude/rules/questioning.md
 
@@ -85,7 +85,7 @@ Wait for `## PLAN READY`. Verify file exists and is non-empty before proceeding.
 
 Parse `${RUN_DIR}/plan.md` and count work units.
 
-If `work_units ≤ 2` → **skip verification**. Log decision to `${RUN_DIR}/decisions.log` and jump to Step 5. (See `~/.claude/rules/plan-verification.md` for rationale on the simple count-based heuristic.)
+If `work_units ≤ 2` → **skip verification**. Log decision to `${RUN_DIR}/decisions.log` and jump to Step 5. (See `~/.claude/rules-ref/plan-verification.md` for rationale on the simple count-based heuristic.)
 
 ### Step 4: Plan Verification Loop (via the `plan-verify` workflow)
 
@@ -95,7 +95,7 @@ The two gates + the single revision pass are autonomous (no user input), so they
 Workflow(name="plan-verify", args={ runDir: "${RUN_DIR}" })
 ```
 
-The workflow (`~/.claude/workflows/plan-verify.js`) faithfully encodes `~/.claude/rules/plan-verification.md`:
+The workflow (`~/.claude/workflows/plan-verify.js`) faithfully encodes `~/.claude/rules-ref/plan-verification.md`:
 
 - Runs **Gate 1 (brainstorm)** and **Gate 2 (outcomes-grader)** in parallel, both reading `${RUN_DIR}/task.md` + `${RUN_DIR}/plan.md`, returning schema-validated findings (model: opus, same as the prior inline dispatch).
 - If brainstorm reports `hasSignificantConcerns` OR the grader reports any applicable item not passing, it dispatches `safe-planner` **once** to revise `${RUN_DIR}/plan.md` **in place** (cap: one revision — never loops).
@@ -113,9 +113,9 @@ Handle the result:
    - `revised && unresolvedConcerns.length > 0` → `CONCERNS REMAIN — see plan_verification.md`
 3. **Log** the outcome (and any `unresolvedConcerns`) to `${RUN_DIR}/decisions.log`.
 
-`safe-planner` overwrites `${RUN_DIR}/plan.md` in place, so Step 5 reads the final plan from the same path whether or not a revision happened. **Do NOT loop the revision** — one pass max, per `~/.claude/rules/plan-verification.md`.
+`safe-planner` overwrites `${RUN_DIR}/plan.md` in place, so Step 5 reads the final plan from the same path whether or not a revision happened. **Do NOT loop the revision** — one pass max, per `~/.claude/rules-ref/plan-verification.md`.
 
-**Fallback (workflows disabled / errored):** if the `plan-verify` workflow is unavailable, or returns an `error` field, fall back to the inline loop — dispatch `brainstorm` and `outcomes-grader` in parallel (single message, two Agent calls), then re-dispatch `safe-planner` once if either flags concerns, exactly as specified in the @-included `~/.claude/rules/plan-verification.md` (which has the verbatim gate prompts). Same opus model pins, same one-revision cap, then write `${RUN_DIR}/plan_verification.md` yourself from the combined findings.
+**Fallback (workflows disabled / errored):** if the `plan-verify` workflow is unavailable, or returns an `error` field, fall back to the inline loop — dispatch `brainstorm` and `outcomes-grader` in parallel (single message, two Agent calls), then re-dispatch `safe-planner` once if either flags concerns, exactly as specified in the @-included `~/.claude/rules-ref/plan-verification.md` (which has the verbatim gate prompts). Same opus model pins, same one-revision cap, then write `${RUN_DIR}/plan_verification.md` yourself from the combined findings.
 
 ### Step 5: Output the plan
 
@@ -156,7 +156,7 @@ still run normally.
 
 ## Anti-Patterns (will not do)
 
-- Skip the verification loop when work_units > 2 (the only skip criterion is the count — see `~/.claude/rules/plan-verification.md`)
+- Skip the verification loop when work_units > 2 (the only skip criterion is the count — see `~/.claude/rules-ref/plan-verification.md`)
 - Loop the revision pass more than once (one retry max — avoid infinite refinement)
 - Run gates 1 and 2 sequentially when they can run in parallel (the workflow runs them in parallel; the fallback must too)
 - Use AskUserQuestion or any checkpoint type — /plan is autonomous within a single conversation
