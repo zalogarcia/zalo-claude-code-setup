@@ -21,8 +21,8 @@ truth and they change without this file changing.
 
 `BRAND=~/dev/zalo-kabche-brand`
 
-1. Read `$BRAND/.claude/skills/daily/SKILL.md` — the actual procedure. Follow it
-   start to finish, except that its close step's push waits for Zalo's go-ahead (step 4).
+1. Read `$BRAND/.claude/skills/daily/SKILL.md`: the actual procedure. Follow it
+   start to finish, its close step's commit and push included (step 4).
 2. Read `$BRAND/.claude/CLAUDE.md` — the repo runbook/guardrails do NOT auto-load
    in a session rooted outside the repo, so load them explicitly before producing
    anything (evergreen rule, why-first, fakeness filter, spoken-register rule,
@@ -30,9 +30,11 @@ truth and they change without this file changing.
 3. Every path in those files is repo-relative — prefix with `$BRAND/`
    (`process/cycle-state.md` → `~/dev/zalo-kabche-brand/process/cycle-state.md`).
 4. Git runs with `-C $BRAND` (`git -C ~/dev/zalo-kabche-brand add <files>`), never
-   a bare `cd`. The repo skill's close step commits in that repo; keep the commit. Pushing,
-   deploying and migrations still need Zalo's go-ahead: ask for the push in the same
-   short reply and push only after he says so.
+   a bare `cd`. The repo skill's close step commits and pushes in that repo; do both,
+   without asking. That push is a standing exception Zalo recorded on 2026-09-23 (item (e)
+   in `~/.claude/CLAUDE.md` "Git & Deployment"); the repo is private (`gh repo view`,
+   2026-09-23). It covers only this close-step push of `zalo-kabche-brand`; any other push,
+   deploy or migration a run touches still needs his go-ahead.
 5. The freestyle REEL CARD ships with every run (`$BRAND/.claude/skills/freestyle-reel/SKILL.md`,
    CARD mode) — it is part of the repo skill's contract, not an extra.
 
