@@ -24,7 +24,7 @@ Run `SELECT 1` via `mcp__supabase__execute_sql` first. **If `SELECT 1` fails, th
 
 This folder holds a helper pair from a past run. `node ~/.claude/skills/schema-snapshot/dump-catalog.cjs <dir>` reads only `SUPABASE_SESSION_POOLER_URL` from the environment (export it from `~/dev/delta-agents/.env` first), loads pg from delta-agents' `node_modules`, runs the four queries below plus a fifth for views, read-only, and writes `columns_raw.json`, `fks.json`, `rls_raw.json`, `parents.json` and `views.json` into `<dir>`. `python3 ~/.claude/skills/schema-snapshot/render_schema.py <dir> <out>` collapses the partitions and writes a whole file, but its header block (the `Includes:` line and the `Latest bodies:` lines under it) and its drift notes are hard-coded from that past run: after rendering, put back the current file's header block (Rendering, item 1) and carry its drift notes forward (item 2), or the refresh silently rolls them back. Without the pooler URL or pg, run the queries below through `mcp__supabase__execute_sql`, add the fifth query from `dump-catalog.cjs` (`Q5`, views), and save the results under the same five file names.
 
-## The queries (run all four; 1, 2, 3 are independent — run in parallel)
+## The queries (run all five; 1, 2, 3 and 5 are independent — run in parallel)
 
 All via `mcp__supabase__execute_sql` with `project_id: $DELTA_PROD_PROJECT_REF`.
 
@@ -79,6 +79,14 @@ LEFT JOIN pg_attrdef d ON d.adrelid = c.oid AND d.adnum = a.attnum
 WHERE n.nspname = 'public' AND c.relkind = 'p'
 GROUP BY c.relname, c.relkind, c.relrowsecurity, c.relforcerowsecurity
 ORDER BY c.relname;
+```
+
+**Query 5: views** (the same query as `dump-catalog.cjs` Q5; `render_schema.py` needs its result as `views.json`, `[]` when there are none):
+
+```sql
+SELECT c.relname AS view_name, string_agg(a.attname || '|' || format_type(a.atttypid, a.atttypmod), E'\n' ORDER BY a.attnum) AS cols, pg_get_viewdef(c.oid, true) AS def, (SELECT coalesce(bool_or(o LIKE 'security_invoker=%true%'), false) FROM unnest(c.reloptions) o) AS security_invoker
+FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace JOIN pg_attribute a ON a.attrelid = c.oid AND a.attnum > 0 AND NOT a.attisdropped
+WHERE n.nspname = 'public' AND c.relkind = 'v' GROUP BY c.relname, c.oid, c.reloptions ORDER BY c.relname;
 ```
 
 ## Rendering (rewrite the file, don't string-edit it)
