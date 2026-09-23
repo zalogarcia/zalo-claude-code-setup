@@ -14,7 +14,22 @@
 # other than this one. Adding a session to the allowlist is an owner decision made
 # in the owner's own terminal, never on a peer's say so.
 #
-# Three escalating steps, each verified before the next one runs:
+# First, on EVERY run (2026-09-23), the plugin cache check. When the ChatGPT app
+# (CFBundleShortVersionString) is newer than the newest version directory under
+# ~/.codex/plugins/cache/openai-bundled/unified-computer-use/, Computer Use fails
+# in codex-bare ("CUA_REPL_ENABLED_SURFACES is required"), because only the
+# running app rewrites that cache. The check reads both versions without
+# touching the session; when the app is newer it runs open -g -a ChatGPT
+# (background, no focus) and waits up to 60 s for the app's version directory.
+# If it appears, the Codex already running has the old plugin loaded, so the run
+# ends in (c) instead of stopping at a healthy (a) or (b): a relaunch is the one
+# path proven to load a refreshed cache (09-23 08:39). A busy session is still
+# left alone (exit 3). Equal versions, no cache, no readable app version and a
+# directory that never appears are logged and the run goes on as before; the
+# check never blocks. It used to run only before a relaunch, so schedule #67's
+# --force-thread run skipped it whenever /new succeeded.
+#
+# Then three escalating steps, each verified before the next one runs:
 #   a) probe: peer-ask.sh "ping" with a 25 s timeout. A reply that shows the idle
 #      prompt and does not contain "explicitly stopped" is healthy: done, exit 0.
 #      A timeout here means the session is BUSY (a real job is running), not
@@ -25,16 +40,10 @@
 #      answered pings while its Computer Use app session was stopped ("This
 #      application session has been explicitly stopped by the user for this turn").
 #   c) relaunch: kill the session, run the xbar launcher through Terminal (it
-#      attaches, so it needs a TTY), wait up to 90 s in 5 s polls for the idle
-#      prompt, probe again. A session that never existed skips (b) and the kill.
-#      Before the kill, a plugin cache preflight (2026-09-23): when the ChatGPT
-#      app (CFBundleShortVersionString) is newer than the newest version
-#      directory under ~/.codex/plugins/cache/openai-bundled/unified-computer-use/,
-#      Computer Use fails in the new session ("CUA_REPL_ENABLED_SURFACES is
-#      required"), because only the running app rewrites that cache. So it runs
-#      open -g -a ChatGPT (background, no focus) and waits up to 60 s for the
-#      app's version directory to appear. It never blocks the relaunch: a cache
-#      that does not refresh is logged and the relaunch goes ahead.
+#      attaches, so it needs a TTY) with open -g, so the new window never takes
+#      focus from whoever is typing (a focused relaunch on 09-23 took stray
+#      keystrokes), wait up to 90 s in 5 s polls for the idle prompt, probe
+#      again. A session that never existed skips (b) and the kill.
 #
 # Blocking prompts (2026-09-23): no step types into a panel that takes the next
 # keypress as its answer. The probe goes through peer-ask.sh, which refuses on
@@ -76,7 +85,7 @@ PROBE_TIMEOUT="${PEER_REFRESH_PROBE_TIMEOUT:-25}"
 THREAD_WAIT="${PEER_REFRESH_THREAD_WAIT:-20}"
 RELAUNCH_WAIT="${PEER_REFRESH_RELAUNCH_WAIT:-90}"
 POLL="${PEER_REFRESH_POLL:-5}"
-# The plugin cache preflight's inputs, overridable only so the shim test never
+# The plugin cache check's inputs, overridable only so the shim test never
 # reads the real app or cache.
 CHATGPT_APP="${PEER_REFRESH_CHATGPT_APP:-/Applications/ChatGPT.app}"
 CUA_CACHE="${PEER_REFRESH_CUA_CACHE:-$HOME/.codex/plugins/cache/openai-bundled/unified-computer-use}"
@@ -84,6 +93,7 @@ CACHE_WAIT="${PEER_REFRESH_CACHE_WAIT:-60}"
 
 usage() {
   echo "usage: peer-refresh.sh <session> [--force-thread] [--relaunch] [--dry-run] [--reason \"text\"]" >&2
+  echo "every run first checks the ChatGPT app against the Computer Use plugin cache; when it refreshes a stale cache, the run ends in a relaunch (a busy session is left alone)" >&2
   echo "exit: 0 healthy, 1 refused or usage, 2 relaunch failed, 3 busy (nothing touched), 5 blocking prompt on screen (Enter never goes into it; the output names it)" >&2
   exit 1
 }
@@ -246,29 +256,37 @@ version_gt() {
   [ "$(printf '%s\n%s\n' "$1" "$2" | sort -V | tail -1)" = "$1" ]
 }
 
-# Before a relaunch: make sure the Computer Use plugin cache matches the
-# installed ChatGPT app (see the header). Logs every step, never fails the run.
-plugin_cache_preflight() {
-  app_ver="$("$DEFAULTS_BIN" read "$CHATGPT_APP/Contents/Info" CFBundleShortVersionString 2>/dev/null)"
-  if [ -z "$app_ver" ]; then log plugin-cache "skipped, no ChatGPT version readable at $CHATGPT_APP"; return 0; fi
-  cache_ver="$(ls -1 "$CUA_CACHE" 2>/dev/null | grep -E '^[0-9]+(\.[0-9]+)*$' | sort -V | tail -1)"
-  if [ -z "$cache_ver" ]; then log plugin-cache "skipped, no version directory under $CUA_CACHE (app $app_ver)"; return 0; fi
-  if ! version_gt "$app_ver" "$cache_ver"; then log plugin-cache "current (app $app_ver, cache $cache_ver)"; return 0; fi
-  log plugin-cache "stale (app $app_ver, cache $cache_ver), opening ChatGPT in the background"
-  if ! "$OPEN_BIN" -g -a ChatGPT; then log plugin-cache "open -g -a ChatGPT failed, relaunching anyway"; return 0; fi
+# The ChatGPT app version and the newest numeric cache directory; either may be
+# empty. Read only: the dry run calls this too.
+APP_VER=""; CACHE_VER=""
+read_versions() {
+  APP_VER="$("$DEFAULTS_BIN" read "$CHATGPT_APP/Contents/Info" CFBundleShortVersionString 2>/dev/null)"
+  CACHE_VER="$(ls -1 "$CUA_CACHE" 2>/dev/null | grep -E '^[0-9]+(\.[0-9]+)*$' | sort -V | tail -1)"
+}
+
+# Every run, before the first step (see the header). Sets RELOAD=1 when this run
+# refreshed the cache. Logs every step and never fails the run.
+RELOAD=0
+plugin_cache_check() {
+  read_versions
+  if [ -z "$APP_VER" ]; then log plugin-cache "skipped, no ChatGPT version readable at $CHATGPT_APP"; return 0; fi
+  if [ -z "$CACHE_VER" ]; then log plugin-cache "skipped, no version directory under $CUA_CACHE (app $APP_VER)"; return 0; fi
+  if ! version_gt "$APP_VER" "$CACHE_VER"; then log plugin-cache "current (app $APP_VER, cache $CACHE_VER)"; return 0; fi
+  log plugin-cache "stale (app $APP_VER, cache $CACHE_VER), opening ChatGPT in the background"
+  if ! "$OPEN_BIN" -g -a ChatGPT; then log plugin-cache "open -g -a ChatGPT failed, going on without a refresh"; return 0; fi
   waited=0
-  while [ ! -d "$CUA_CACHE/$app_ver" ]; do
-    if [ "$waited" -ge "$CACHE_WAIT" ]; then log plugin-cache "no $app_ver directory within $CACHE_WAIT s, relaunching anyway"; return 0; fi
+  while [ ! -d "$CUA_CACHE/$APP_VER" ]; do
+    if [ "$waited" -ge "$CACHE_WAIT" ]; then log plugin-cache "no $APP_VER directory within $CACHE_WAIT s, going on without a refresh"; return 0; fi
     sleep "$POLL"; waited=$((waited + POLL))
   done
-  log plugin-cache "refreshed to $app_ver after $waited s"
+  RELOAD=1
+  log plugin-cache "refreshed to $APP_VER after $waited s; a running Codex keeps the old plugin until a relaunch"
   return 0
 }
 
-# Step c: preflight, kill (if present), launch through the xbar script, wait,
-# probe. Returns 0 healthy, 5 blocked by a prompt (no Enter into it), 1 otherwise.
+# Step c: kill (if present), launch through the xbar script, wait, probe.
+# Returns 0 healthy, 5 blocked by a prompt (no Enter into it), 1 otherwise.
 relaunch() {
-  plugin_cache_preflight
   if alive; then
     t kill-session -t "=$SESSION" || { log relaunch "kill-session failed"; return 1; }
     waited=0
@@ -281,7 +299,7 @@ relaunch() {
     log relaunch "no session to kill, launching"
   fi
   [ -x "$LAUNCHER" ] || { log relaunch "launcher missing: $LAUNCHER"; return 1; }
-  "$OPEN_BIN" -a Terminal "$LAUNCHER" || { log relaunch "open -a Terminal failed"; return 1; }
+  "$OPEN_BIN" -g -a Terminal "$LAUNCHER" || { log relaunch "open -g -a Terminal failed"; return 1; }
   wait_idle "$RELAUNCH_WAIT"; rc=$?
   if [ "$rc" -eq 5 ]; then log relaunch "blocked by $BLOCK_DESC; nothing typed into it, a human must answer it"; return 5; fi
   if [ "$rc" -ne 0 ]; then
@@ -296,14 +314,24 @@ relaunch() {
 
 # ---- main ------------------------------------------------------------------
 if [ "$DRY_RUN" -eq 1 ]; then
+  read_versions
+  if [ -z "$APP_VER" ]; then cache_now="no ChatGPT version readable, would log it and go on"
+  elif [ -z "$CACHE_VER" ]; then cache_now="app $APP_VER, no cache directory, would log it and go on"
+  elif version_gt "$APP_VER" "$CACHE_VER"; then cache_now="app $APP_VER is newer than cache $CACHE_VER: would open -g -a ChatGPT, and a refresh ends the run in c)"
+  else cache_now="app $APP_VER, cache $CACHE_VER: current, nothing to do"; fi
   echo "peer-refresh: DRY RUN for '$SESSION' (allowlisted). Would run, in order, stopping at the first healthy probe:"
+  echo "  0) plugin cache check, every run: ChatGPT.app version vs the newest dir under $CUA_CACHE; if the app is newer, open -g -a ChatGPT and wait up to $CACHE_WAIT s; if its dir appears, go on to c) instead of stopping at a healthy a) or b) (a busy session is still left alone)"
+  echo "     now: $cache_now"
   if [ "$RELAUNCH" -eq 1 ]; then echo "  a) probe and b) fresh thread: skipped (--relaunch)"; elif [ "$FORCE_THREAD" -eq 1 ]; then echo "  a) probe: skipped (--force-thread)"; else echo "  a) probe: $PEER_ASK $SESSION --timeout $PROBE_TIMEOUT -m ping"; fi
   echo "  b) fresh thread: send-keys -l /new, Enter; wait up to $THREAD_WAIT s for '$IDLE_MARK'; probe"
-  echo "  c) relaunch: plugin cache preflight (ChatGPT.app version vs newest dir under $CUA_CACHE; if the app is newer, open -g -a ChatGPT and wait up to $CACHE_WAIT s); kill-session -t =$SESSION; open -a Terminal \"$LAUNCHER\"; wait up to $RELAUNCH_WAIT s; probe"
+  echo "  c) relaunch: kill-session -t =$SESSION; open -g -a Terminal \"$LAUNCHER\" (background, no focus); wait up to $RELAUNCH_WAIT s; probe"
   echo "  every step: a blocking prompt on screen (peer-ask.sh --check) stops the run with exit 5, Enter never goes into it"
   echo "  log: $LOG"
   exit 0
 fi
+
+plugin_cache_check
+RELOAD_NOTE="skipped, the plugin cache was refreshed and only a relaunch loads it"
 
 if [ "$RELAUNCH" -eq 1 ]; then
   log probe "skipped (--relaunch)"
@@ -315,7 +343,9 @@ fi
 
 if [ "$FORCE_THREAD" -eq 1 ]; then
   log probe "skipped (--force-thread)"
-  if alive; then
+  if [ "$RELOAD" -eq 1 ]; then
+    log fresh-thread "$RELOAD_NOTE"
+  elif alive; then
     fresh_thread; rc=$?
     case "$rc" in 0|5) exit "$rc" ;; esac
   else
@@ -327,13 +357,25 @@ if [ "$FORCE_THREAD" -eq 1 ]; then
 fi
 
 if probe; then
+  if [ "$RELOAD" -eq 1 ]; then
+    log probe "healthy ($(probe_desc)), relaunching to load the refreshed plugin cache"
+    relaunch; rc=$?
+    case "$rc" in 0|5) exit "$rc" ;; esac
+    exit 2
+  fi
   log probe "healthy ($(probe_desc))"
   exit 0
 fi
 case "$PROBE_RC" in
   3)
-    # Busy, not broken. A fresh thread or a kill here would destroy real work.
-    log probe "busy ($(probe_desc)); nothing touched, use --force-thread if it is hung"
+    # Busy, not broken. A fresh thread or a kill here would destroy real work,
+    # even when the plugin cache was just refreshed. The next run reads that
+    # cache as current, so the log says a relaunch is still owed.
+    if [ "$RELOAD" -eq 1 ]; then
+      log probe "busy ($(probe_desc)); nothing touched, but the plugin cache was refreshed this run and loads only after a relaunch (run --relaunch once it is idle)"
+    else
+      log probe "busy ($(probe_desc)); nothing touched, use --force-thread if it is hung"
+    fi
     exit 3 ;;
   5)
     # A prompt waiting for an answer. Typing /new or relaunching would answer it
@@ -347,8 +389,12 @@ case "$PROBE_RC" in
     exit 2 ;;
   *)
     log probe "unhealthy ($(probe_desc))"
-    fresh_thread; rc=$?
-    case "$rc" in 0|5) exit "$rc" ;; esac
+    if [ "$RELOAD" -eq 1 ]; then
+      log fresh-thread "$RELOAD_NOTE"
+    else
+      fresh_thread; rc=$?
+      case "$rc" in 0|5) exit "$rc" ;; esac
+    fi
     relaunch; rc=$?
     case "$rc" in 0|5) exit "$rc" ;; esac
     exit 2 ;;
