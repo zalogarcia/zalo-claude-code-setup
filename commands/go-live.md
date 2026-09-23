@@ -50,7 +50,16 @@ Defects found here: fix → re-run the failed stage → continue (revision-gate,
 - Coverage with denominators: "N of M runbook steps executed, K human steps verified"
 - Remaining irreducibles: vendor approvals pending, UX-taste items for human eyes
 - Claim ceiling per gates.md: surfaces without their proof signal are never reported "live".
-- When the runbook came from an `/autopilot` run and EVERY surface is ACTIVATED with its proof signal, set that run's `terminal_state` from `code_complete_not_live_verified` to `complete` and record when (`jq '.terminal_state = "complete" | .go_live_passed_at = "<ISO time>"' .autopilot/state.json`). That is what lets `/autopilot-merge` treat it as done and let it reach a production branch. Anything short of every surface ACTIVATED leaves the state as it was.
+- When the runbook came from an `/autopilot` run and EVERY surface is ACTIVATED with its proof signal, record the pass from the run's worktree in two places: its state file (`terminal_state` from `code_complete_not_live_verified` to `complete`, plus when), and a log in the repo's shared git directory, which outlives the worktree (`.autopilot/` is gitignored, and the user may `git worktree remove` the worktree after merging):
+
+  ```bash
+  NOW=$(date -u +%FT%TZ); BR=$(git branch --show-current)
+  jq --arg t "$NOW" '.terminal_state = "complete" | .go_live_passed_at = $t' .autopilot/state.json > .autopilot/state.json.tmp \
+    && mv .autopilot/state.json.tmp .autopilot/state.json
+  case "$BR" in autopilot/*) echo "$BR $NOW" >> "$(git rev-parse --git-common-dir)/autopilot-go-live-passed.log" ;; esac
+  ```
+
+  That is what lets `/autopilot-merge` treat it as done and let it reach a production branch. Anything short of every surface ACTIVATED leaves the state as it was and writes no log line.
 
 ## Anti-Patterns (will not do)
 

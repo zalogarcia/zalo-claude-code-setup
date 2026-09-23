@@ -2,7 +2,7 @@
 
 Sequential `--no-ff` merge of every completed `autopilot/*` branch in this repo onto a target branch (default `dev`). Preserves per-run commit history with one merge commit per autopilot run. Pauses on conflicts for human resolution. Does NOT auto-clean worktrees or branches.
 
-**Runs that ended `CODE-COMPLETE, NOT LIVE-VERIFIED`** (`terminal_state = code_complete_not_live_verified`, Zalo's decision of 2026-09-23): they MAY merge onto the integration branch (`dev`, or the repo's integration branch), with the flag carried into the merge commit message and the run's `/go-live` listed as pending in the merge report. They NEVER merge onto a production or deploy branch, and nothing calls them done, until their `/go-live` passes (a passing `/go-live` sets the run's `terminal_state` to `complete`). Step 1b decides which branches are production.
+**Runs that ended `CODE-COMPLETE, NOT LIVE-VERIFIED`** (`terminal_state = code_complete_not_live_verified`, Zalo's decision of 2026-09-23): they MAY merge onto the integration branch (`dev`, or the repo's integration branch), with the flag carried into the merge commit message and the run's `/go-live` listed as pending in the merge report. They NEVER merge onto a production or deploy branch, and nothing calls them done, until their `/go-live` passes (a passing `/go-live` sets the run's `terminal_state` to `complete` and logs the pass in the repo's shared git directory, see Step 8). Step 1b decides which branches are production.
 
 ## How to invoke
 
@@ -85,7 +85,9 @@ fi
 [ -z "$PROD_BRANCHES" ] && PROD_BRANCHES="main master"
 
 TARGET_IS_PROD=false
-for B in $PROD_BRANCHES; do [ "$B" = "$TARGET" ] && TARGET_IS_PROD=true; done
+# A pattern match, not a loop over $PROD_BRANCHES: zsh (this Mac's shell) does not
+# word-split an unquoted variable, so a loop would see one word and never match.
+case " $PROD_BRANCHES " in *" $TARGET "*) TARGET_IS_PROD=true ;; esac
 ```
 
 Show `PROD_BRANCHES` and `PROD_SOURCE` in the Step 5 confirmation, so the reading can be checked before anything merges.
@@ -329,7 +331,18 @@ PROD=<the production branch being promoted to>
 git log --merges --format='%h %s' --grep='NOT LIVE-VERIFIED' "${PROD}..${TARGET}"
 ```
 
-For each hit, find the run's worktree (`autopilot-collect`) and read its `terminal_state`. `complete` means its `/go-live` passed. Anything else, or a worktree that no longer exists, means the promotion is BLOCKED: name the run and say its `/go-live` must pass first. Never suggest a promotion that carries one.
+For each hit, check whether the run's `/go-live` passed. A pass is a line for its branch in the log `/go-live` writes to the repo's shared git directory (it outlives the worktree), or, while the worktree still exists, `terminal_state = complete` in its `.autopilot/state.json` (`autopilot-collect`):
+
+```bash
+LOG="$(git rev-parse --git-common-dir)/autopilot-go-live-passed.log"
+git log --merges --format='%s' --grep='NOT LIVE-VERIFIED' "${PROD}..${TARGET}" \
+  | sed -n 's/^Merge \(autopilot\/[^ ]*\) .*/\1/p' | sort -u \
+  | while read -r BR; do
+      if grep -q "^$BR " "$LOG" 2>/dev/null; then echo "go-live passed:  $BR"; else echo "go-live PENDING: $BR"; fi
+    done
+```
+
+A PENDING run whose worktree still shows `terminal_state = complete` has passed too. Any other PENDING run means the promotion is BLOCKED: name the run and say its `/go-live` must pass first. Never suggest a promotion that carries one.
 
 If nothing blocks it and the user asks "now push to main", suggest:
 
