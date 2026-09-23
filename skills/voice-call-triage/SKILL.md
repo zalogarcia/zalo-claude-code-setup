@@ -219,12 +219,13 @@ SELECT c.id, c.tenant_id, c.agent_id, c.engine, c.retell_call_id, c.twilio_call_
        c.metadata->'engine_session'->>'greeting_heard_ms' AS greeting_heard_ms,
        c.metadata->'engine_session'->>'finalized_by'      AS finalized_by,
        c.metadata->'engine_session'->>'post_call_done_at' AS post_call_done_at,
-       left(c.summary, 300) AS summary
+       left(regexp_replace(regexp_replace(c.summary, '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+', '<email>', 'g'),
+                           '\+?[0-9]{6,}([0-9]{4})', '<phone ..\1>', 'g'), 300) AS summary
 FROM tenant_voice_calls c
 WHERE c.retell_call_id = '<CallSid>' OR c.twilio_call_sid = '<CallSid>';
 ```
 
-Then the transcript as numbered turns (one `Agent: ...` or `User: ...` line per turn; the stored text has NO timestamps, so ordering against tools comes from Step 3L's logs):
+Then the transcript as numbered turns (one `Agent: ...` or `User: ...` line per turn; the stored text has NO timestamps, so ordering against tools comes from Step 3L's logs). Callers SPELL their email and number aloud ("rose organics three at gmail dot com"), which no regex masks: redact those turns by hand before quoting them in any report (last 4 digits of a phone at most).
 
 ```sql
 SELECT n AS turn, left(line, 240) AS line
@@ -247,8 +248,10 @@ ORDER BY n;
 
 ```sql
 SELECT created_at, engine, tool_name, status, duration_ms, error,
-       left(regexp_replace(arguments::text, '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+', '<email>', 'g'), 220) AS args,
-       left(regexp_replace(response::text,  '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+', '<email>', 'g'), 260) AS resp,
+       left(regexp_replace(regexp_replace(arguments::text, '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+', '<email>', 'g'),
+                           '\+?[0-9]{6,}([0-9]{4})', '<phone ..\1>', 'g'), 220) AS args,
+       left(regexp_replace(regexp_replace(response::text,  '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+', '<email>', 'g'),
+                           '\+?[0-9]{6,}([0-9]{4})', '<phone ..\1>', 'g'), 260) AS resp,
        response->>'appointmentId' AS appointment_id
 FROM tenant_voice_tool_events
 WHERE tenant_id = '<tenant_id>'::uuid AND retell_call_id = '<CallSid>'
