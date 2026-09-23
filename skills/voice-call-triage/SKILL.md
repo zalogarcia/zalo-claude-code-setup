@@ -219,8 +219,11 @@ SELECT c.id, c.tenant_id, c.agent_id, c.engine, c.retell_call_id, c.twilio_call_
        c.metadata->'engine_session'->>'greeting_heard_ms' AS greeting_heard_ms,
        c.metadata->'engine_session'->>'finalized_by'      AS finalized_by,
        c.metadata->'engine_session'->>'post_call_done_at' AS post_call_done_at,
-       left(regexp_replace(regexp_replace(c.summary, '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+', '<email>', 'g'),
-                           '\+?[0-9]{6,}([0-9]{4})', '<phone ..\1>', 'g'), 300) AS summary
+       -- the mask (also used in Step 2L): emails, then any 10+ digit run, then a US number with separators
+       left(regexp_replace(regexp_replace(regexp_replace(c.summary,
+              '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+', '<email>', 'g'),
+              '\+?[0-9]{6,}([0-9]{4})', '<phone ..\1>', 'g'),
+              '(\+?1[-. ]*)?\(?[0-9]{3}\)?[-. ]*[0-9]{3}[-. ]*([0-9]{4})', '<phone ..\2>', 'g'), 300) AS summary
 FROM tenant_voice_calls c
 WHERE c.retell_call_id = '<CallSid>' OR c.twilio_call_sid = '<CallSid>';
 ```
@@ -248,10 +251,14 @@ ORDER BY n;
 
 ```sql
 SELECT created_at, engine, tool_name, status, duration_ms, error,
-       left(regexp_replace(regexp_replace(arguments::text, '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+', '<email>', 'g'),
-                           '\+?[0-9]{6,}([0-9]{4})', '<phone ..\1>', 'g'), 220) AS args,
-       left(regexp_replace(regexp_replace(response::text,  '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+', '<email>', 'g'),
-                           '\+?[0-9]{6,}([0-9]{4})', '<phone ..\1>', 'g'), 260) AS resp,
+       left(regexp_replace(regexp_replace(regexp_replace(arguments::text,
+              '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+', '<email>', 'g'),
+              '\+?[0-9]{6,}([0-9]{4})', '<phone ..\1>', 'g'),
+              '(\+?1[-. ]*)?\(?[0-9]{3}\)?[-. ]*[0-9]{3}[-. ]*([0-9]{4})', '<phone ..\2>', 'g'), 220) AS args,
+       left(regexp_replace(regexp_replace(regexp_replace(response::text,
+              '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+', '<email>', 'g'),
+              '\+?[0-9]{6,}([0-9]{4})', '<phone ..\1>', 'g'),
+              '(\+?1[-. ]*)?\(?[0-9]{3}\)?[-. ]*[0-9]{3}[-. ]*([0-9]{4})', '<phone ..\2>', 'g'), 260) AS resp,
        response->>'appointmentId' AS appointment_id
 FROM tenant_voice_tool_events
 WHERE tenant_id = '<tenant_id>'::uuid AND retell_call_id = '<CallSid>'

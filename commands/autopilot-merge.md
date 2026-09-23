@@ -62,17 +62,25 @@ fi
 
 ### Step 1b: Resolve the production branches
 
-Production means a branch whose push or merge deploys. Read it from the deploy surfaces of the repo's `.claude/VERIFY.md` (the target branch's copy); if VERIFY.md is missing or names no deploy branch, `main` and `master` are production.
+Production means a branch whose push or merge deploys. Read it from the deploy surfaces of the repo's `.claude/VERIFY.md`, every copy that exists (the target's, `dev`'s, `main`'s, `master`'s and the working tree's), because the deploy branch itself often does not carry the file yet; a branch any copy names is production. If no copy exists or none names a deploy branch, `main` and `master` are production.
 
 ```bash
-VERIFY_TEXT=$(git show "${TARGET}:.claude/VERIFY.md" 2>/dev/null || true)
-PROD_SOURCE="no .claude/VERIFY.md on ${TARGET}"
+VERIFY_TEXT=""; VERIFY_READ=""
+for REF in "$TARGET" dev main master; do
+  case " $VERIFY_READ " in *" $REF "*) continue ;; esac
+  T=$(git show "${REF}:.claude/VERIFY.md" 2>/dev/null || true)
+  if [ -n "$T" ]; then VERIFY_TEXT="${VERIFY_TEXT}${T}
+"; VERIFY_READ="$VERIFY_READ $REF"; fi
+done
+if [ -f .claude/VERIFY.md ]; then VERIFY_TEXT="${VERIFY_TEXT}$(cat .claude/VERIFY.md)
+"; VERIFY_READ="$VERIFY_READ working-tree"; fi
+PROD_SOURCE="no .claude/VERIFY.md on the target, dev, main, master or the working tree"
 PROD_BRANCHES=""
 if [ -n "$VERIFY_TEXT" ]; then
-  PROD_SOURCE=".claude/VERIFY.md names no deploy branch"
+  PROD_SOURCE=".claude/VERIFY.md (read:$VERIFY_READ) names no deploy branch"
   # Branch names in the Deploy surfaces section: "push to `main`", "merge into prod", "deploys from release".
   for B in $(printf '%s\n' "$VERIFY_TEXT" \
-      | awk '/^## Deploy surfaces/{f=1; next} /^## /{f=0} f' \
+      | awk '/^## Deploy surfaces/{f=1; next} /^##? /{f=0} f' \
       | grep -o -i -E "(push(es|ed)? to|merge[sd]? (in)?to|deploys? from) \`?[A-Za-z0-9._/-]+" \
       | awk '{print $NF}' | tr -d '`' | sort -u); do
     # Keep only real branch names (drops words like "the").
@@ -80,7 +88,7 @@ if [ -n "$VERIFY_TEXT" ]; then
       PROD_BRANCHES="$PROD_BRANCHES $B"
     fi
   done
-  [ -n "$PROD_BRANCHES" ] && PROD_SOURCE=".claude/VERIFY.md deploy surfaces"
+  [ -n "$PROD_BRANCHES" ] && PROD_SOURCE=".claude/VERIFY.md deploy surfaces (read:$VERIFY_READ)"
 fi
 [ -z "$PROD_BRANCHES" ] && PROD_BRANCHES="main master"
 
