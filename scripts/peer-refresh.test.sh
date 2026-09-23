@@ -6,7 +6,9 @@
 # overrides.
 #
 #   bash ~/.claude/scripts/peer-refresh.test.sh
-S=~/.claude/scripts/peer-refresh.sh; pass=0; fail=0
+# PEER_REFRESH_UNDER_TEST points the suite at another copy of the script (with
+# peer-ask.sh beside it), so new cases can be shown to fail on the old one.
+S="${PEER_REFRESH_UNDER_TEST:-$HOME/.claude/scripts/peer-refresh.sh}"; pass=0; fail=0
 ok() { pass=$((pass+1)); echo "ok   $1"; }; bad() { fail=$((fail+1)); echo "FAIL $1"; }
 [ -x "$S" ] || { bad "peer-refresh.sh is not executable"; echo "0/1 passed"; exit 1; }
 
@@ -41,6 +43,12 @@ case "$cmd" in
   has-session) [ -f "$S/alive" ] ;;
   list-sessions) [ -f "$S/alive" ] && echo "codex-bare"; exit 0 ;;
   kill-session) rm -f "$S/alive" "$S/fresh"; echo killed >> "$S/events" ;;
+  display-message)
+    [ -f "$S/alive" ] || exit 1
+    tgt=""; prev=""; for a in "$@"; do [ "$prev" = "-t" ] && tgt="$a"; prev="$a"; done
+    # like tmux 3.7b: -t =name without the colon prints an empty value, exit 0
+    case "$tgt" in *:) cat "$S/created" ;; *) echo "" ;; esac
+    exit 0 ;;
   send-keys)
     [ -f "$S/alive" ] || exit 1
     last=""; for a in "$@"; do last="$a"; done
@@ -101,6 +109,7 @@ if [ "$*" = "-g -a ChatGPT" ]; then
 fi
 [ "$(cat "$S/mode")" = "never-up" ] && exit 0
 touch "$S/alive" "$S/relaunched"; rm -f "$S/fresh" "$S/fresh_entered"; echo 0 > "$S/caps"
+date +%s > "$S/created"
 perl -MTime::HiRes=time -e 'printf "%.3f\n", time' > "$S/relaunched_at"
 exit 0
 SHIM
@@ -118,7 +127,10 @@ chmod +x "$BIN/tmux" "$BIN/open" "$BIN/defaults"
 # The plugin cache case comes from the caller's environment: APPV (the ChatGPT
 # version; "none" = unreadable), CACHEV (space separated cache directory names;
 # empty = no cache) and CACHE_REFRESH=1 (the app writes its directory when
-# opened). Default: app and cache both at 26.917.51856.
+# opened). Default: app and cache both at 26.917.51856. SESSC sets the fake
+# session's creation time (epoch seconds); without it a new case gets "now",
+# after its cache directories were made, and a rerun keeps what it had (a fake
+# relaunch writes the time it happened).
 run() {
   name="$1"; mode="$2"; alive="$3"; shift 3
   # Never fall through to the real multiplexer: without the shim in front of
@@ -129,6 +141,7 @@ run() {
   [ "${APPV-26.917.51856}" = none ] || echo "${APPV-26.917.51856}" > "$ST/app_version"
   for d in ${CACHEV-26.917.51856}; do mkdir -p "$ST/cua/$d"; done
   [ "${CACHE_REFRESH:-0}" = 1 ] && touch "$ST/cache_refreshes"
+  if [ -n "${SESSC:-}" ]; then echo "$SESSC" > "$ST/created"; elif [ ! -f "$ST/created" ]; then date +%s > "$ST/created"; fi
   OUT="$(SHIM_STATE="$ST" PATH="$BIN:$PATH" PEER_REFRESH_LOG="$ST/refresh.log" \
     PEER_REFRESH_PROBE_TIMEOUT=12 PEER_REFRESH_THREAD_WAIT=4 PEER_REFRESH_RELAUNCH_WAIT=6 PEER_REFRESH_POLL=1 \
     PEER_REFRESH_CHATGPT_APP="$ST/ChatGPT.app" PEER_REFRESH_CUA_CACHE="$ST/cua" PEER_REFRESH_CACHE_WAIT=3 \
@@ -153,9 +166,10 @@ run usage2 healthy 1 codex-bare --bogus
 [ $RC -eq 1 ] && [ -z "$CALLS" ] && ok "unknown flag -> exit 1, nothing touched" || bad "unknown flag rc=$RC"
 
 # 5. dry run: allowlisted, prints the plan, touches nothing
+READONLY='^(defaults read .*|has-session -t =codex-bare|display-message -p -t =codex-bare: #\{session_created\})?$'
 run dry healthy 1 codex-bare --dry-run
 [ $RC -eq 0 ] && ok "dry run -> exit 0" || bad "dry run rc=$RC"
-! printf '%s\n' "$CALLS" | grep -qvE '^(defaults read .*)?$' && ok "dry run made no tmux or open calls (only the version read)" || bad "dry run calls: $CALLS"
+! printf '%s\n' "$CALLS" | grep -qvE "$READONLY" && ok "dry run made only read calls (version, has-session, session_created)" || bad "dry run calls: $CALLS"
 printf '%s' "$OUT" | grep -q "launch-codex-bare.sh" && ok "dry run names the launcher" || bad "dry run output: $OUT"
 
 # 6. step a: healthy at the probe -> done, nothing else
@@ -169,7 +183,7 @@ has '^send-keys -t codex-bare Enter$' && ok "probe pressed Enter separately" || 
 ! has '^open ' && ok "healthy: no relaunch" || bad "healthy: open was called"
 has '^defaults read ' && ok "healthy: the plugin cache check ran (every run)" || bad "healthy: no plugin cache check"
 printf '%s\n' "$LOG" | grep -qE '^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:]{8}[+-][0-9]{4} codex-bare probe healthy .* reason: shim test$' && ok "log line: timestamp, session, step, outcome, reason" || bad "log line shape: $LOG"
-[ "$(printf '%s\n' "$LOG" | grep -c .)" -eq 2 ] && printf '%s\n' "$LOG" | head -1 | grep -q 'plugin-cache current' && ok "two log lines: the plugin cache check, then the probe" || bad "log lines: $LOG"
+[ "$(printf '%s\n' "$LOG" | grep -c .)" -eq 3 ] && printf '%s\n' "$LOG" | head -1 | grep -q 'plugin-cache current' && printf '%s\n' "$LOG" | sed -n 2p | grep -q 'plugin-age current' && ok "three log lines: the plugin cache check, the session age check, the probe" || bad "log lines: $LOG"
 
 # 7. step a busy (probe timeout) -> exit 3, nothing touched beyond the probe
 run busy busy 1 codex-bare
@@ -354,7 +368,7 @@ g=$(first_line_matching '^open -g -a ChatGPT'); k=$(first_line_matching '^kill-s
 [ -n "$g" ] && [ -n "$k" ] && [ -n "$o" ] && [ "$g" -lt "$k" ] && [ "$k" -lt "$o" ] && ok "force-thread, app newer: ChatGPT, then kill, then launch" || bad "order: chatgpt@$g kill@$k launch@$o"
 [ "$(newflag)" -eq 0 ] && ok "force-thread, cache refreshed: /new not typed (the relaunch is the fresh thread)" || bad "every-force typed /new: $CALLS"
 printf '%s\n' "$LOG" | head -1 | grep -q 'plugin-cache stale (app 26.918.100, cache 26.917.51856)' && ok "log: the check is the first line of the run" || bad "log: $LOG"
-printf '%s\n' "$LOG" | grep -q 'plugin-cache refreshed to 26.918.100 after .*relaunch' && printf '%s\n' "$LOG" | grep -q 'fresh-thread skipped, the plugin cache was refreshed and only a relaunch loads it reason: every run' && printf '%s\n' "$LOG" | grep -q 'relaunch killed' && printf '%s\n' "$LOG" | grep -q 'relaunch healthy' && ok "log: refreshed, fresh-thread skipped, killed, healthy" || bad "log: $LOG"
+printf '%s\n' "$LOG" | grep -q 'plugin-cache refreshed to 26.918.100 after .*relaunch' && printf '%s\n' "$LOG" | grep -q 'fresh-thread skipped, the plugin cache is newer than the running Codex and only a relaunch loads it reason: every run' && printf '%s\n' "$LOG" | grep -q 'relaunch killed' && printf '%s\n' "$LOG" | grep -q 'relaunch healthy' && ok "log: refreshed, fresh-thread skipped, killed, healthy" || bad "log: $LOG"
 
 # 16b. healthy --force-thread, versions equal: exactly as before (/new, no open)
 APPV=26.917.51856 CACHEV=26.917.51856 run every-equal healthy 1 codex-bare --force-thread
@@ -382,7 +396,7 @@ APPV=26.918.100 CACHEV=26.917.51856 CACHE_REFRESH=1 run every-default healthy 1 
 [ $RC -eq 0 ] && ok "healthy probe, cache refreshed -> relaunch -> exit 0" || bad "every-default rc=$RC ($OUT)"
 g=$(first_line_matching '^open -g -a ChatGPT'); p=$(first_line_matching 'l -- ping'); k=$(first_line_matching '^kill-session')
 [ -n "$g" ] && [ -n "$p" ] && [ -n "$k" ] && [ "$g" -lt "$p" ] && [ "$p" -lt "$k" ] && has '^open -g -a Terminal ' && ok "healthy probe, cache refreshed: ChatGPT before the probe, the probe before the kill" || bad "order: chatgpt@$g ping@$p kill@$k"
-printf '%s\n' "$LOG" | grep -q 'probe healthy (replied, idle prompt), relaunching to load the refreshed plugin cache' && ok "log: healthy probe escalated to a relaunch" || bad "log: $LOG"
+printf '%s\n' "$LOG" | grep -q 'probe healthy (replied, idle prompt), relaunching to load the newer plugin cache' && ok "log: healthy probe escalated to a relaunch" || bad "log: $LOG"
 
 # 16g. no flags, stopped app session, cache refreshed: straight to the relaunch
 APPV=26.918.100 CACHEV=26.917.51856 CACHE_REFRESH=1 run every-unhealthy stopped-until-relaunch 1 codex-bare
@@ -391,12 +405,85 @@ APPV=26.918.100 CACHEV=26.917.51856 CACHE_REFRESH=1 run every-unhealthy stopped-
 # 16h. no flags, BUSY, cache refreshed: still nothing touched, the log owes a relaunch
 APPV=26.918.100 CACHEV=26.917.51856 CACHE_REFRESH=1 run every-busy busy 1 codex-bare
 [ $RC -eq 3 ] && [ "$(chatgpt_opens)" -eq 1 ] && [ "$(newflag)" -eq 0 ] && no_relaunch && ok "busy, cache refreshed: exit 3, no /new, no kill, no launch" || bad "every-busy rc=$RC ($CALLS)"
-printf '%s\n' "$LOG" | grep -q 'probe busy .*loads only after a relaunch (run --relaunch once it is idle)' && ok "log: busy, a relaunch is still owed" || bad "log: $LOG"
+printf '%s\n' "$LOG" | grep -q 'probe busy .*a relaunch is owed.*loads only after a relaunch (the next idle run relaunches)' && ok "log: busy, a relaunch is still owed" || bad "log: $LOG"
 
 # 16i. dry run with the app newer: prints the check and today's versions, opens nothing
 APPV=26.918.100 CACHEV=26.917.51856 CACHE_REFRESH=1 run every-dry healthy 1 codex-bare --force-thread --dry-run
-[ $RC -eq 0 ] && ! printf '%s\n' "$CALLS" | grep -qvE '^(defaults read .*)?$' && [ ! -d "$ROOT/every-dry/cua/26.918.100" ] && [ -z "$LOG" ] && ok "dry run, app newer: no tmux, no open, no log, cache untouched" || bad "every-dry rc=$RC calls: $CALLS log: $LOG"
+[ $RC -eq 0 ] && ! printf '%s\n' "$CALLS" | grep -qvE "$READONLY" && [ ! -d "$ROOT/every-dry/cua/26.918.100" ] && [ -z "$LOG" ] && ok "dry run, app newer: no tmux, no open, no log, cache untouched" || bad "every-dry rc=$RC calls: $CALLS log: $LOG"
 printf '%s' "$OUT" | grep -q '0) plugin cache check, every run' && printf '%s' "$OUT" | grep -q 'now: app 26.918.100 is newer than cache 26.917.51856' && printf '%s' "$OUT" | grep -qF 'open -g -a Terminal' && ok "dry run prints the every-run check, today's versions and the -g launch" || bad "dry run output: $OUT"
+
+# 17. the session age check (2026-09-23 afternoon): the ChatGPT app refreshed
+#     the cache by itself, so the versions read equal, but the newest plugin
+#     directory is newer than the session. Birth time decides, not modify time.
+HOUR_AGO=$(( $(date +%s) - 3600 ))
+born() { /usr/bin/stat -f %B "$ROOT/$1/cua/26.917.51856"; }
+# precreate <name>: make the case's cache directory before run(), so its birth
+# time can be read first and the fake session placed relative to it
+precreate() { mkdir -p "$ROOT/$1/cua/26.917.51856"; }
+relaunched() { has '^kill-session -t =codex-bare$' && has '^open -g -a Terminal .*launch-codex-bare'; }
+
+# 17a. plain run, healthy probe, plugin directory newer than the session: relaunch
+SESSC=$HOUR_AGO run age-plain healthy 1 codex-bare --reason "age test"
+[ $RC -eq 0 ] && relaunched && ok "age: folder newer, healthy plain run -> kill and launch, exit 0" || bad "age-plain rc=$RC ($CALLS)"
+[ "$(chatgpt_opens)" -eq 0 ] && [ "$(newflag)" -eq 0 ] && ok "age: versions equal, so ChatGPT not opened; no /new" || bad "age-plain opens=$(chatgpt_opens) /new=$(newflag)"
+has '^display-message -p -t =codex-bare: #\{session_created\}$' && ok "age: session_created read with the exact target and its colon (=codex-bare:)" || bad "age: display-message call: $CALLS"
+d=$(first_line_matching '^display-message'); p=$(first_line_matching 'l -- ping'); k=$(first_line_matching '^kill-session')
+[ -n "$d" ] && [ -n "$p" ] && [ -n "$k" ] && [ "$d" -lt "$p" ] && [ "$p" -lt "$k" ] && ok "age: the check runs before the probe, the probe before the kill" || bad "order: age@$d ping@$p kill@$k"
+printf '%s\n' "$LOG" | grep -qE "plugin-age newer than the session \(plugin 26\.917\.51856 created $(date -r "$(born age-plain)" +%Y-%m-%dT%H:%M:%S), session created $(date -r $HOUR_AGO +%Y-%m-%dT%H:%M:%S)\); a running Codex keeps the plugin it started with until a relaunch reason: age test" && ok "age log names both times" || bad "age log: $LOG"
+printf '%s\n' "$LOG" | grep -q 'probe healthy (replied, idle prompt), relaunching to load the newer plugin cache' && printf '%s\n' "$LOG" | grep -q 'relaunch healthy' && ok "age log: healthy probe escalated, relaunch healthy" || bad "age log: $LOG"
+
+# 17b. --force-thread, plugin directory newer than the session: relaunch, no /new
+SESSC=$HOUR_AGO run age-force healthy 1 codex-bare --force-thread
+[ $RC -eq 0 ] && relaunched && [ "$(newflag)" -eq 0 ] && ok "age: folder newer, healthy --force-thread -> kill and launch, no /new" || bad "age-force rc=$RC ($CALLS)"
+printf '%s\n' "$LOG" | grep -q 'plugin-age newer than the session' && printf '%s\n' "$LOG" | grep -q 'fresh-thread skipped, the plugin cache is newer than the running Codex and only a relaunch loads it' && ok "age log: fresh-thread skipped for the relaunch" || bad "age-force log: $LOG"
+
+# 17c. plugin directory older than the session: behaviour unchanged
+precreate age-older; SESSC=$(( $(born age-older) + 30 )) run age-older healthy 1 codex-bare
+[ $RC -eq 0 ] && ! has '^kill-session' && ! has '^open ' && [ "$(newflag)" -eq 0 ] && ok "age: folder older, plain run -> no relaunch, no /new, exit 0" || bad "age-older rc=$RC ($CALLS)"
+[ "$(printf '%s\n' "$CALLS" | grep '^send-keys' | tr '\n' '|')" = "send-keys -t codex-bare -l -- ping|send-keys -t codex-bare Enter|" ] && ok "age: folder older, the pane got exactly ping and Enter, as before" || bad "age-older sends: $CALLS"
+printf '%s\n' "$LOG" | grep -q 'plugin-age current (plugin 26.917.51856 created .*, session created .*)' && ok "age log: current" || bad "age-older log: $LOG"
+precreate age-older-force; SESSC=$(( $(born age-older-force) + 30 )) run age-older-force stopped-until-new 1 codex-bare --force-thread
+[ $RC -eq 0 ] && [ "$(newflag)" -eq 1 ] && ! has '^kill-session' && ! has '^open ' && ok "age: folder older, --force-thread -> /new only, as before" || bad "age-older-force rc=$RC ($CALLS)"
+
+# 17d. busy with a newer folder: untouched, and the next idle run relaunches
+SESSC=$HOUR_AGO run age-busy busy 1 codex-bare
+[ $RC -eq 3 ] && [ "$(newflag)" -eq 0 ] && ! has '^kill-session' && ! has '^open ' && [ "$(printf '%s\n' "$CALLS" | grep '^send-keys' | tr '\n' '|')" = "send-keys -t codex-bare -l -- ping|send-keys -t codex-bare Enter|" ] && ok "age: busy with a newer folder -> exit 3, only the probe's ping went in" || bad "age-busy rc=$RC ($CALLS)"
+printf '%s\n' "$LOG" | grep -q 'probe busy .*a relaunch is owed' && ok "age log: busy, a relaunch is owed" || bad "age-busy log: $LOG"
+echo healthy > "$ROOT/age-busy/mode"; run age-busy healthy 1 codex-bare
+[ $RC -eq 0 ] && relaunched && ok "age: the next idle run pays the debt (kill and launch)" || bad "age-busy rerun rc=$RC ($CALLS)"
+
+# 17e. no loop: the run after a relaunch sees a session newer than the folder
+run age-plain healthy 1 codex-bare
+[ $RC -eq 0 ] && ! has '^kill-session' && ! has '^open ' && ok "age: the run after the relaunch does not relaunch again" || bad "age no loop rc=$RC ($CALLS)"
+[ "$(cat "$ROOT/age-plain/created")" -ge "$(born age-plain)" ] && printf '%s\n' "$LOG" | tail -2 | head -1 | grep -q 'plugin-age current' && ok "age: the relaunch moved session_created past the folder, logged current" || bad "age no loop log: $LOG"
+
+# 17f. the clock skew margin: 3 s is inside it, 10 s is not
+precreate age-skew; SESSC=$(( $(born age-skew) - 3 )) run age-skew healthy 1 codex-bare
+[ $RC -eq 0 ] && ! has '^kill-session' && ! has '^open ' && ok "age: folder 3 s newer than the session (inside the 5 s margin) -> no relaunch" || bad "age-skew rc=$RC ($CALLS)"
+precreate age-skew10; SESSC=$(( $(born age-skew10) - 10 )) run age-skew10 healthy 1 codex-bare
+[ $RC -eq 0 ] && relaunched && ok "age: folder 10 s newer than the session -> relaunch" || bad "age-skew10 rc=$RC ($CALLS)"
+
+# 17g. a re-touched folder (same version, a file replaced inside it after the
+#      session started, so its modify AND change times are past the session plus
+#      the margin) does not relaunch: birth time decides, not %m or %c
+precreate age-touch; T="$ROOT/age-touch/cua/26.917.51856"; b0=$(born age-touch); SC=$b0
+sleep 7; echo '{}' > "$T/.mcp.json.tmp" && mv "$T/.mcp.json.tmp" "$T/.mcp.json"
+[ "$(/usr/bin/stat -f %m "$T")" -gt $(( SC + 5 )) ] && [ "$(/usr/bin/stat -f %c "$T")" -gt $(( SC + 5 )) ] && [ "$(born age-touch)" -eq "$b0" ] && ok "age setup: modify and change times moved past the session plus the margin, birth unchanged" || bad "age-touch setup: $(/usr/bin/stat -f '%B %m %c' "$T") session $SC"
+SESSC=$SC run age-touch healthy 1 codex-bare
+[ $RC -eq 0 ] && ! has '^kill-session' && ! has '^open ' && printf '%s\n' "$LOG" | grep -q 'plugin-age current' && ok "age: a re-touched folder does not relaunch" || bad "age-touch rc=$RC ($CALLS) $LOG"
+
+# 17h. an unreadable session time, and no session at all: logged, no relaunch
+SESSC=bogus run age-unread healthy 1 codex-bare
+[ $RC -eq 0 ] && ! has '^kill-session' && printf '%s\n' "$LOG" | grep -q 'plugin-age skipped, no session creation time readable from tmux' && ok "age: unreadable session time -> skipped, no relaunch" || bad "age-unread rc=$RC $LOG"
+run age-nosession healthy 0 codex-bare
+printf '%s\n' "$LOG" | grep -q 'plugin-age skipped, no session' && ! has '^display-message' && ok "age: no session -> skipped before any tmux read" || bad "age-nosession: $LOG"
+
+# 17i. dry run with a newer folder: prints both times and the decision, touches nothing
+SESSC=$HOUR_AGO run age-dry healthy 1 codex-bare --dry-run
+[ $RC -eq 0 ] && ! printf '%s\n' "$CALLS" | grep -qvE "$READONLY" && [ -z "$LOG" ] && ok "age dry run: read calls only, no log" || bad "age-dry rc=$RC calls: $CALLS log: $LOG"
+printf '%s' "$OUT" | grep -q "0b) session age check, every run" && printf '%s' "$OUT" | grep -q "now: plugin 26.917.51856 created $(date -r "$(born age-dry)" +%Y-%m-%dT%H:%M:%S), session created $(date -r $HOUR_AGO +%Y-%m-%dT%H:%M:%S): the plugin is newer than the session, would end the run in c)" && ok "age dry run prints both times and says it would relaunch" || bad "age dry output: $OUT"
+precreate age-dry-old; SESSC=$(( $(born age-dry-old) + 30 )) run age-dry-old healthy 1 codex-bare --dry-run
+printf '%s' "$OUT" | grep -q 'the session is newer, no relaunch needed' && ok "age dry run, folder older: says no relaunch needed" || bad "age dry old output: $OUT"
 
 # The cleanup stays LAST. A case appended below the rm once ran against the real
 # tmux and killed the live codex-bare session twice (2026-09-11); run() now

@@ -29,6 +29,28 @@
 # check never blocks. It used to run only before a relaunch, so schedule #67's
 # --force-thread run skipped it whenever /new succeeded.
 #
+# Right after it, also on every run (2026-09-23 afternoon), the session age
+# check. The ChatGPT app refreshes that cache by itself while it runs, and then
+# the versions read equal while the Codex in the session still holds the plugin
+# it loaded when it started. So the check compares the birth time of the newest
+# version directory with the session's creation time (tmux #{session_created});
+# a directory born more than AGE_MARGIN (5 s, for clock skew) after the session
+# ends the run in (c) exactly like a refresh, a busy session still excepted.
+# Birth time, not modify time: a new version always lands as a new directory,
+# while a file replaced inside an existing one moves only its modify and change
+# times (measured 09-23: the directory born 08:38:49, its .mcp.json replaced
+# 08:38:52, which moved the directory's modify time and left its birth). An
+# isolated same version re-add through ChatGPT's own codex app-server left all
+# three unchanged. A same version install does recreate the directory, but the
+# app's code installs a plugin that is current only when forced (its debug
+# reload) or when its bundled content variant changed, and then one relaunch is
+# right (read from the app bundle and its 09-10 log, bundled_plugin_install_
+# skipped_current; a same version app relaunch has not been observed yet, and
+# if it did recreate the directory the cost is one extra idle relaunch). A
+# relaunch makes the session newer than the directory, so the next run does not
+# relaunch again, and a relaunch owed by a busy run is recomputed and paid by
+# the next idle run.
+#
 # Then three escalating steps, each verified before the next one runs:
 #   a) probe: peer-ask.sh "ping" with a 25 s timeout. A reply that shows the idle
 #      prompt and does not contain "explicitly stopped" is healthy: done, exit 0.
@@ -90,10 +112,12 @@ POLL="${PEER_REFRESH_POLL:-5}"
 CHATGPT_APP="${PEER_REFRESH_CHATGPT_APP:-/Applications/ChatGPT.app}"
 CUA_CACHE="${PEER_REFRESH_CUA_CACHE:-$HOME/.codex/plugins/cache/openai-bundled/unified-computer-use}"
 CACHE_WAIT="${PEER_REFRESH_CACHE_WAIT:-60}"
+# The session age check's clock skew margin, in seconds.
+AGE_MARGIN=5
 
 usage() {
   echo "usage: peer-refresh.sh <session> [--force-thread] [--relaunch] [--dry-run] [--reason \"text\"]" >&2
-  echo "every run first checks the ChatGPT app against the Computer Use plugin cache; when it refreshes a stale cache, the run ends in a relaunch (a busy session is left alone)" >&2
+  echo "every run first checks the ChatGPT app against the Computer Use plugin cache, and the newest plugin directory's birth time against the session's creation time; when it refreshes a stale cache or the directory is newer than the session, the run ends in a relaunch (a busy session is left alone)" >&2
   echo "exit: 0 healthy, 1 refused or usage, 2 relaunch failed, 3 busy (nothing touched), 5 blocking prompt on screen (Enter never goes into it; the output names it)" >&2
   exit 1
 }
@@ -139,6 +163,8 @@ fi
 TMUX_BIN="$(command -v tmux || echo /usr/local/bin/tmux)"
 OPEN_BIN="$(command -v open || echo /usr/bin/open)"
 DEFAULTS_BIN="$(command -v defaults || echo /usr/bin/defaults)"
+# BSD stat by full path: a GNU stat earlier on PATH reads -f as filesystem mode.
+STAT_BIN=/usr/bin/stat
 t() { "$TMUX_BIN" "$@"; }
 now() { date +%Y-%m-%dT%H:%M:%S%z; }
 log() {
@@ -259,9 +285,10 @@ version_gt() {
 # The ChatGPT app version and the newest numeric cache directory; either may be
 # empty. Read only: the dry run calls this too.
 APP_VER=""; CACHE_VER=""
+newest_cache_ver() { ls -1 "$CUA_CACHE" 2>/dev/null | grep -E '^[0-9]+(\.[0-9]+)*$' | sort -V | tail -1; }
 read_versions() {
   APP_VER="$("$DEFAULTS_BIN" read "$CHATGPT_APP/Contents/Info" CFBundleShortVersionString 2>/dev/null)"
-  CACHE_VER="$(ls -1 "$CUA_CACHE" 2>/dev/null | grep -E '^[0-9]+(\.[0-9]+)*$' | sort -V | tail -1)"
+  CACHE_VER="$(newest_cache_ver)"
 }
 
 # Every run, before the first step (see the header). Sets RELOAD=1 when this run
@@ -281,6 +308,42 @@ plugin_cache_check() {
   done
   RELOAD=1
   log plugin-cache "refreshed to $APP_VER after $waited s; a running Codex keeps the old plugin until a relaunch"
+  return 0
+}
+
+# The session age check's reading (see the header). Read only: the dry run
+# calls this too. Sets AGE_VER, AGE_BORN and AGE_CREATED (epoch seconds) and
+# AGE_STATE: newer, current, nodir, nosession, or unreadable (AGE_WHY says which).
+# The target needs the trailing colon: on tmux 3.7b, -t =name prints an empty
+# #{session_created} with exit 0, while -t =name: prints the time (measured).
+AGE_VER=""; AGE_BORN=""; AGE_CREATED=""; AGE_STATE=""; AGE_WHY=""
+plugin_age_read() {
+  AGE_VER="$(newest_cache_ver)"; AGE_BORN=""; AGE_CREATED=""; AGE_WHY=""
+  if [ -z "$AGE_VER" ]; then AGE_STATE=nodir; return; fi
+  if ! alive; then AGE_STATE=nosession; return; fi
+  AGE_BORN="$("$STAT_BIN" -f %B "$CUA_CACHE/$AGE_VER" 2>/dev/null)"
+  AGE_CREATED="$(t display-message -p -t "=$SESSION:" '#{session_created}' 2>/dev/null)"
+  AGE_STATE=unreadable
+  case "$AGE_BORN" in ''|*[!0-9]*) AGE_WHY="no birth time readable for $CUA_CACHE/$AGE_VER"; return ;; esac
+  case "$AGE_CREATED" in ''|*[!0-9]*) AGE_WHY="no session creation time readable from tmux"; return ;; esac
+  if [ "$AGE_BORN" -gt $((AGE_CREATED + AGE_MARGIN)) ]; then AGE_STATE=newer; else AGE_STATE=current; fi
+}
+ts_of() { date -r "$1" +%Y-%m-%dT%H:%M:%S 2>/dev/null || echo "$1"; }
+age_times() { echo "plugin $AGE_VER created $(ts_of "$AGE_BORN"), session created $(ts_of "$AGE_CREATED")"; }
+
+# Every run, right after the plugin cache check. Sets RELOAD=1 when the newest
+# plugin directory is newer than the session. Logs its reading, never fails.
+session_age_check() {
+  plugin_age_read
+  case "$AGE_STATE" in
+    nodir) log plugin-age "skipped, no version directory under $CUA_CACHE" ;;
+    nosession) log plugin-age "skipped, no session" ;;
+    unreadable) log plugin-age "skipped, $AGE_WHY" ;;
+    current) log plugin-age "current ($(age_times))" ;;
+    newer)
+      RELOAD=1
+      log plugin-age "newer than the session ($(age_times)); a running Codex keeps the plugin it started with until a relaunch" ;;
+  esac
   return 0
 }
 
@@ -322,6 +385,16 @@ if [ "$DRY_RUN" -eq 1 ]; then
   echo "peer-refresh: DRY RUN for '$SESSION' (allowlisted). Would run, in order, stopping at the first healthy probe:"
   echo "  0) plugin cache check, every run: ChatGPT.app version vs the newest dir under $CUA_CACHE; if the app is newer, open -g -a ChatGPT and wait up to $CACHE_WAIT s; if its dir appears, go on to c) instead of stopping at a healthy a) or b) (a busy session is still left alone)"
   echo "     now: $cache_now"
+  plugin_age_read
+  case "$AGE_STATE" in
+    nodir) age_now="no version directory, would log it and go on" ;;
+    nosession) age_now="no session, would log it and go on" ;;
+    unreadable) age_now="$AGE_WHY, would log it and go on" ;;
+    current) age_now="$(age_times): the session is newer, no relaunch needed" ;;
+    newer) age_now="$(age_times): the plugin is newer than the session, would end the run in c) (a busy session is still left alone)" ;;
+  esac
+  echo "  0b) session age check, every run: the newest plugin directory's birth time vs the session's creation time; newer by more than $AGE_MARGIN s ends the run in c) like a refresh"
+  echo "     now: $age_now"
   if [ "$RELAUNCH" -eq 1 ]; then echo "  a) probe and b) fresh thread: skipped (--relaunch)"; elif [ "$FORCE_THREAD" -eq 1 ]; then echo "  a) probe: skipped (--force-thread)"; else echo "  a) probe: $PEER_ASK $SESSION --timeout $PROBE_TIMEOUT -m ping"; fi
   echo "  b) fresh thread: send-keys -l /new, Enter; wait up to $THREAD_WAIT s for '$IDLE_MARK'; probe"
   echo "  c) relaunch: kill-session -t =$SESSION; open -g -a Terminal \"$LAUNCHER\" (background, no focus); wait up to $RELAUNCH_WAIT s; probe"
@@ -331,7 +404,8 @@ if [ "$DRY_RUN" -eq 1 ]; then
 fi
 
 plugin_cache_check
-RELOAD_NOTE="skipped, the plugin cache was refreshed and only a relaunch loads it"
+session_age_check
+RELOAD_NOTE="skipped, the plugin cache is newer than the running Codex and only a relaunch loads it"
 
 if [ "$RELAUNCH" -eq 1 ]; then
   log probe "skipped (--relaunch)"
@@ -358,7 +432,7 @@ fi
 
 if probe; then
   if [ "$RELOAD" -eq 1 ]; then
-    log probe "healthy ($(probe_desc)), relaunching to load the refreshed plugin cache"
+    log probe "healthy ($(probe_desc)), relaunching to load the newer plugin cache"
     relaunch; rc=$?
     case "$rc" in 0|5) exit "$rc" ;; esac
     exit 2
@@ -369,10 +443,10 @@ fi
 case "$PROBE_RC" in
   3)
     # Busy, not broken. A fresh thread or a kill here would destroy real work,
-    # even when the plugin cache was just refreshed. The next run reads that
-    # cache as current, so the log says a relaunch is still owed.
+    # even when the plugin cache is newer than the session. The session age
+    # check recomputes that on every run, so the next idle run pays the debt.
     if [ "$RELOAD" -eq 1 ]; then
-      log probe "busy ($(probe_desc)); nothing touched, but the plugin cache was refreshed this run and loads only after a relaunch (run --relaunch once it is idle)"
+      log probe "busy ($(probe_desc)); nothing touched, but a relaunch is owed: the plugin cache is newer than the running Codex and loads only after a relaunch (the next idle run relaunches)"
     else
       log probe "busy ($(probe_desc)); nothing touched, use --force-thread if it is hung"
     fi
