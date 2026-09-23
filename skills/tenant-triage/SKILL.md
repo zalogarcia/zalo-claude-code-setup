@@ -234,7 +234,7 @@ Carry `trace_id` values forward — they link sessions ↔ audit rows ↔ log li
 
 Log groups (from `docs/RUNBOOK.md`; `aws logs describe-log-groups --log-group-name-prefix /ecs/delta-agents` lists them): `/ecs/delta-agents/gateway`, `/ecs/delta-agents/worker`, `/ecs/delta-agents/embedding-worker`, and for openai-live voice calls `/ecs/delta-agents/voice-bridge` (its lines carry the tenant UUID as `tenantId` and the call as `metadata.callSid`). Read `~/.claude/projects/-Users-zalo-dev/memory/aws-filter-log-events-undercounts.md` before counting anything from these pulls. Logs are structured JSON containing the tenant **UUID**; webhook-ingress lines also carry the **slug** (URL path `/hooks/:crm_type/:tenant_slug`). Filter by UUID first; add a slug pass when the symptom is "messages never arrive".
 
-Every pull goes through `pull`, which counts ALL matching events and prints a bounded slice. The old `--output text | tail -80` printed 5 "lines" for 391 events (raqm, 2026-09-23): text output joins a whole page onto one line with tabs. The slice shows ids and event names only, never message text; `/tmp/triage-<name>.json` keeps the full lines (`jq -r '.[]? | fromjson? | objects | select(.event == "<event>")'`), which are unmasked, so mask anything you quote from them.
+Every pull goes through `pull`, which counts ALL matching events and prints a bounded slice. The old `--output text | tail -80` printed 5 "lines" for 391 events (raqm, 2026-09-23): text output joins a whole page onto one line with tabs. The slice shows ids and event names only, never message text; `/tmp/triage-<name>.json` keeps the full lines (`jq -r '.[]? | fromjson? | objects | select(.event == "<event>")'`), which are unmasked, so mask anything you quote from them. `pull` writes them owner-only; delete them when the triage is done: `rm -f /tmp/triage-*.json`.
 
 ```bash
 TENANT_ID='<tenant_id>'
@@ -242,9 +242,10 @@ START=$(date -v-72H +%s)000; END=$(date +%s)000   # macOS; Linux: $(date -d '72 
 CAP=50000   # --max-items is a safety cap; never --limit, it stops after one page
 
 pull() {   # pull <name> <log group> <filter pattern>
-  aws logs filter-log-events --region us-east-1 --log-group-name "/ecs/delta-agents/$2" \
+  ( umask 077   # the raw lines are unmasked prod data: owner-only file
+    aws logs filter-log-events --region us-east-1 --log-group-name "/ecs/delta-agents/$2" \
     --filter-pattern "$3" --start-time "$START" --end-time "$END" --max-items "$CAP" \
-    --query 'events[].message' --output json > "/tmp/triage-$1.json" || { echo "$1: aws failed"; return 1; }
+    --query 'events[].message' --output json > "/tmp/triage-$1.json" ) || { echo "$1: aws failed"; return 1; }
   N=$(jq -n '[inputs | length] | add // 0' "/tmp/triage-$1.json")
   echo "== $1: $N events$([ "$N" -ge "$CAP" ] && echo ', TRUNCATED at the cap: narrow the window')"
   jq -r '.[]? | ((fromjson? | objects) // {level: "-", event: "(non-JSON line)"}) | "\(.level)\t\(.event)"' \
