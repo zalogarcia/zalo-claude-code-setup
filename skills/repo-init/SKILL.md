@@ -207,4 +207,4 @@ UNVERIFIED (needs you): test command (suite requires live Redis); Vercel proof s
 - `typecheck-and-build` — the verification mechanics for Step 2
 - `schema-snapshot` — generates the schema snapshot the Data layer section points to (Supabase repos)
 - `commit-with-heredoc` — committing the scaffold in Step 4
-- `/qa-loop`: a scaffold-only run takes the light QA tier from `~/.claude/CLAUDE.md` (one `qa-agent` dispatch, findings fixed and confirmed); a run that changes anything beyond the scaffold takes the full loop
+- `/qa-loop`: a scaffold-only run takes the light QA tier from `~/.claude/CLAUDE.md` whatever its line count (Zalo's decision, 2026-09-23: one `qa-agent` dispatch, findings fixed and confirmed); a run that changes anything beyond the scaffold takes the full loop

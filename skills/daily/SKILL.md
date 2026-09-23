@@ -22,7 +22,7 @@ truth and they change without this file changing.
 `BRAND=~/dev/zalo-kabche-brand`
 
 1. Read `$BRAND/.claude/skills/daily/SKILL.md` — the actual procedure. Follow it
-   start to finish.
+   start to finish, except that its close step's push waits for Zalo's go-ahead (step 4).
 2. Read `$BRAND/.claude/CLAUDE.md` — the repo runbook/guardrails do NOT auto-load
    in a session rooted outside the repo, so load them explicitly before producing
    anything (evergreen rule, why-first, fakeness filter, spoken-register rule,

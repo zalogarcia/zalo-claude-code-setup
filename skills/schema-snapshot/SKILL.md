@@ -22,7 +22,7 @@ Run `SELECT 1` via `mcp__supabase__execute_sql` first. **If `SELECT 1` fails, th
 
 ## Two read paths: the helper, or the MCP
 
-The helper in this folder is what built the current snapshot: `node ~/.claude/skills/schema-snapshot/dump-catalog.cjs <dir>` connects over the session pooler (`SUPABASE_SESSION_POOLER_URL` from `~/dev/delta-agents/.env`, pg from delta-agents' `node_modules`), runs the four queries below plus a fifth for views, read-only, and writes `columns_raw.json`, `fks.json`, `rls_raw.json`, `parents.json` and `views.json` into `<dir>`. Then `python3 ~/.claude/skills/schema-snapshot/render_schema.py <dir> docs/SCHEMA-PROD.md` collapses the partitions, appends `annotations.json`, and writes the whole file. If the pooler URL or pg is not available, run the same queries through `mcp__supabase__execute_sql` and save the results under those file names.
+This folder holds a helper pair from a past run. `node ~/.claude/skills/schema-snapshot/dump-catalog.cjs <dir>` reads only `SUPABASE_SESSION_POOLER_URL` from the environment (export it from `~/dev/delta-agents/.env` first), loads pg from delta-agents' `node_modules`, runs the four queries below plus a fifth for views, read-only, and writes `columns_raw.json`, `fks.json`, `rls_raw.json`, `parents.json` and `views.json` into `<dir>`. `python3 ~/.claude/skills/schema-snapshot/render_schema.py <dir> <out>` collapses the partitions and writes a whole file, but its "Includes: ... through" header line and its drift notes are hard-coded from that past run: after rendering, put back the current file's header line and carry its drift notes forward (Rendering, item 2), or the refresh silently rolls them back. Without the pooler URL or pg, run the queries below through `mcp__supabase__execute_sql`, add the fifth query from `dump-catalog.cjs` (`Q5`, views), and save the results under the same five file names.
 
 ## The queries (run all four; 1, 2, 3 are independent — run in parallel)
 
@@ -83,9 +83,9 @@ ORDER BY c.relname;
 
 ## Rendering (rewrite the file, don't string-edit it)
 
-Do **not** hand-transcribe 70+ tables into markdown — transcription introduces errors. Write the query results as JSON arrays to scratchpad files (`columns.json`, `fks.json`, `rls.json`), then render with a script and **Write the whole `docs/SCHEMA-PROD.md`** (never patch it with string edits).
+Do **not** hand-transcribe 70+ tables into markdown — transcription introduces errors. Write the query results as JSON arrays to scratchpad files named as `render_schema.py` reads them (`columns_raw.json`, `fks.json`, `rls_raw.json`, `parents.json`, `views.json`), then render with the script and **Write the whole `docs/SCHEMA-PROD.md`** (never patch it with string edits).
 
-Preparation of `columns.json`: copy Query 1's array verbatim, **drop monthly-partition leaf entries** (`usage_events_YYYY_MM`, `wallet_ledger_YYYY_MM`), and append Query 4's parents with `"partitioned": true` and a `"partitions": "<first> … <last> (monthly)"` field. Same collapse for `rls.json` (parents' RLS flags come from Query 4). `fks.json` is Query 2 verbatim.
+Save every result verbatim: `render_schema.py` does the partition collapse itself (it drops the monthly leaves `usage_events_YYYY_MM` / `wallet_ledger_YYYY_MM` and takes the parents and their RLS flags from `parents.json`, Query 4).
 
 Required output shape (match the existing file — diff-stability matters):
 
@@ -100,8 +100,8 @@ The render script lives beside this file: `render_schema.py <dir> <out>`. It pri
 
 ## Verify (per ~/.claude/rules/gates.md — show evidence in the same turn)
 
-- Script prints `Wrote docs/SCHEMA-PROD.md: <N> tables, <M> FKs`; N and M should be at or near the counts in the previous snapshot's header. A sudden large drop means a query silently returned partial data: investigate, don't ship.
-- `grep -c '^### ' docs/SCHEMA-PROD.md` matches the reported table count.
+- Script prints `Wrote docs/SCHEMA-PROD.md: <N> tables, <M> FKs, <V> view(s)`; N and M should be at or near the counts in the previous snapshot's header. A sudden large drop means a query silently returned partial data: investigate, don't ship.
+- `grep -c '^### ' docs/SCHEMA-PROD.md` equals N + V (each view also gets a `###` heading).
 - Spot-check one recently-migrated table's new column appears.
 
 ## Anti-patterns

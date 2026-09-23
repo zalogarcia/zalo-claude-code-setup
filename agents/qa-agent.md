@@ -47,7 +47,7 @@ Spend depth where risk is highest for THIS codebase. Don't spread thin just to b
 
 ## Playwright (for frontend changes)
 
-Use Playwright MCP tools to visually verify frontend findings. Do not theorize about UI — reproduce and screenshot. If nothing answers on the dev server port, start it with `~/.claude/skills/dev-server-restart/restart.sh <port> <repo dir> <probe path>` (the `dev-server-restart` skill); return `## BLOCKED` only if that script exits non-zero.
+Use Playwright MCP tools to visually verify frontend findings. Do not theorize about UI — reproduce and screenshot. If nothing answers on the dev server port, start it with `~/.claude/skills/dev-server-restart/restart.sh <port> <repo dir> <probe path>` (the `dev-server-restart` skill). Exit 1 means the server never came up: record the browser check as a check that did not run (see Return Contract). Exit 2 means it is up but the probe path returns a 5xx, which is itself a finding. If your dispatch says other qa-agents are auditing in parallel, do not start or restart the dev server and do not drive the browser (one server and one Playwright browser are shared); record the browser check as not run instead.
 
 ## The Skeptic Pass (mandatory before your verdict)
 

@@ -45,6 +45,8 @@ The b-roll behaves like an intelligent system composing a document in real time 
 
 ### Canonical comps (`src/comps/`)
 
+Several of these predate the 2026-07-27 Line retirement and still use the Line for more than a red strike (row rules, a payoff underline, a blue return, a clock line, a settle, a pointer). Copy their structure and timing, never those Line moves; `node scripts/check-lines.mjs` lists the comps whose Line never strikes.
+
 - **`Ch2SellingDiesV3`** — OBJECT KILL-CONVEYOR: the grinds of selling appear as their real artifacts (incoming-call card, no-reply thread, proposal doc, "let me think about it" bubble), each slashed in a fixed center rhythm (in at from+2, slashed at from+20, dur 42); the Line stops for "stop.", returns blue for the verdict. Copy this when the VO lists things that die.
 - **`Ch2TheMathV3`** — OBJECT LEDGER: person-with-price rows (AvatarChip + RollUp, Line rules each row at one fixed y), the orb catching CallPills mid-segment ("3:02 AM · STILL WORKING" = never sleeps), MoneyChips converging into the one gold number. Copy this for any cost-vs-payoff math.
 - **`Ch2TheLinkV3`** — UI-OBJECT swap: live-call screen (running timer) slashed → URL chip claimed blue → toggle switch flips ON, ● LIVE. Copy this for "the product replaces you / turn it on" beats.
@@ -114,7 +116,7 @@ Rules:
 
 ## Documentary mode (EXHIBIT)
 
-For proof/evidence/product beats: single continuous scene (no beat swaps — documentary holds), asymmetric layout (dossier column left, evidence right), `MonoTag` exhibit numbers, `TypeOn` annotations (caps mono, faint), LineRig pointing from annotation to the detail, Ken Burns on the plate, one highlight sweep. Screenshots/photos get the same treatment as AI plates (key/crop → `public/assets/`).
+For proof/evidence/product beats: single continuous scene (no beat swaps — documentary holds), asymmetric layout (dossier column left, evidence right), `MonoTag` exhibit numbers, `TypeOn` annotations (caps mono, faint) placed beside the detail each one names (no LineRig pointer: the Line only strikes), Ken Burns on the plate, one highlight sweep. Screenshots/photos get the same treatment as AI plates (key/crop → `public/assets/`).
 
 ## Archetype roadmap (recipes for scenarios not yet built)
 
@@ -122,17 +124,17 @@ When a script needs one of these, build it from the named ingredients — do NOT
 
 | Scenario                                      | Recipe (system ingredients)                                                                                                             |
 | --------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| DATA / CHART — a stat that matters            | bars/lines draw in machine-time (SVG pathLength like ProofCard border), `RollUp` values, Line becomes the trend line; one gold delta    |
+| DATA / CHART — a stat that matters            | bars/lines draw in machine-time (SVG pathLength like ProofCard border), `RollUp` values; one gold delta    |
 | VS TABLE — us vs them                         | two columns, rows land as beats; theirs gets `Strike`, ours gets `CheckBadge`; never both visible before their beat                     |
 | TIMELINE / ROADMAP — day 1 / 30 / 90          | horizontal canvas-mode variant: stations on a dated axis, WorldPath IS the timeline                                                     |
 | STACK / OFFER — "everything you get"          | items stamp one per beat with gold FREE pills (v1 slide-25 style, beat-ified); ends in CTA card                                         |
-| CTA END-CARD — every video's last 5s          | gold pill button + `TypeOn` URL + Line underlines the price; impact + shimmer; keep ONE variant reused everywhere                       |
-| DEFINITION — introducing a term ("Operator")  | dictionary beat: word huge (LetterStamp), mono phonetics, definition types on; Line underlines the word                                 |
+| CTA END-CARD — every video's last 5s          | gold pill button + `TypeOn` URL; impact + shimmer; keep ONE variant reused everywhere                       |
+| DEFINITION — introducing a term ("Operator")  | dictionary beat: word huge (LetterStamp), mono phonetics, definition types on                                 |
 | HOOK / QUESTION — open loops                  | Verdict-mode variant with the question igniting nothing — withhold gold until the answer segment                                        |
 | MAP / GEO — "operators in 40+ countries"      | dark dotted map plate + green `CheckBadge` pings (confirmation color)                                                                   |
-| CHAPTER DIVIDER — YouTube retention structure | 2s beat: mono `01`, chapter title LetterStamp, Line sweep; chrome='full'                                                                |
-| LOWER-THIRD / OVERLAY — over talking head     | `transparent:true` ProRes comps: name tag, one-liner captions, mini-Line underline; keep to bottom third                                |
-| UI DEMO — product walkthrough                 | screen recording via `<OffthreadVideo>` inside a browser/phone frame (slide-13 style), LineRig pointing at features, mono labels typing |
+| CHAPTER DIVIDER — YouTube retention structure | 2s beat: mono `01`, chapter title LetterStamp; chrome='full'                                                                |
+| LOWER-THIRD / OVERLAY — over talking head     | `transparent:true` ProRes comps: name tag, one-liner captions; keep to bottom third                                |
+| UI DEMO — product walkthrough                 | screen recording via `<OffthreadVideo>` inside a browser/phone frame (slide-13 style), mono labels typing beside the features |
 
 ## Voice & judgment (the taste layer)
 

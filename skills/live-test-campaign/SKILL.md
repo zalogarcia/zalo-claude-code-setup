@@ -62,7 +62,7 @@ Then write the plan to a file (`.claude/PLAN-<feature>-livetest.md`): phases, pe
 ## Execution machinery (the recipes)
 
 - **Force-fire scheduled work:** backdate `due_at` AND clear the scheduler/dedup flag in the same UPDATE (`context - 'scheduler'` or equivalent) — versioned job IDs need a fresh due time to re-enqueue. A "stranded" row is re-fireable the same way.
-- **Watchers, not sleeps:** background `until`-loop greps on CloudWatch/log filters keyed to the specific row/trace ID, with `run_in_background: true`. The notification resumes you. Filter for BOTH the success and failure event names — silence must not look like success.
+- **Watchers, not sleeps:** background `until`-loop greps on CloudWatch/log filters keyed to the specific row/trace ID, with `run_in_background: true` (interactive sessions only; a headless bridge run chunks the watch into bounded foreground calls under 600 s, because a backgrounded call dies at turn end). The notification resumes you. Filter for BOTH the success and failure event names — silence must not look like success.
 - **Fix-as-you-go:** a bug found mid-campaign gets fixed → tested → shipped → deployed → and the NEXT phase verifies the fix live. Never let the campaign pin buggy behavior as "expected". Pushing, deploying and migrations still need Zalo's go-ahead.
 - **Admin-only identities** (per `~/.claude/rules/testing-safety.md`): the designated admin email/phone, never fabricated third-party contacts.
 - **Evidence per claim** (per `~/.claude/rules/gates.md`): a "delivered" claim = vendor API record + event log + DB row state, in the same turn. A "blocked" claim = the skip event + the row's terminal state + the alert/operator surface.

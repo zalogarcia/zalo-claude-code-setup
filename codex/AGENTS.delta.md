@@ -21,6 +21,7 @@ substitutions already in your head.
 | "MCP tools are deferred, use `ToolSearch` first" | Not needed, and there is no `ToolSearch` here. Your MCP tools are preloaded and callable directly as `mcp__<server>__<tool>`. Ignore every instruction to search for a tool schema first. The one real caveat: a server that is not logged in contributes no tools, and `codex mcp list` tells you which. |
 | `/skill-name` (a slash command) | `$skill-name`. The 15 Claude slash commands are projected into skills under `~/.agents/skills/`, so `/autopilot` is `$autopilot`. |
 | `@~/.claude/rules/x.md` on its own line | An include directive. Read that file with your file tools before proceeding. It is not decoration; the rule text is load-bearing. |
+| "the rules in `~/.claude/rules/` are already loaded", "apply them without reading them again" | Not true here: Codex loads only this file, and no rule file is copied into it. When a row of the "Shared Rules" table applies, read that `~/.claude/rules/*.md` file with your file tools before acting on it. |
 | `AskUserQuestion` | `request_user_input` in an interactive session. It is not available under `codex exec`; there, ask in plain text or put the question in your final answer. |
 | `run_in_background: true` | Not available. Run it in the foreground, or hand it to `~/dev/claude-telegram-bridge/bg.mjs`. |
 | "hook-enforced", "`~/.claude/hooks/*` blocks this" | Those hooks are mirrored into `~/.codex/hooks.json` and really do fire on your shell commands and your `apply_patch` calls. A blocked call is a blocked call. |

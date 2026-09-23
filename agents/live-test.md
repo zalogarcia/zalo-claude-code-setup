@@ -21,7 +21,7 @@ A visual verification report with screenshots proving:
 
 1. **Read the recent changes** — use `git diff` or ask the user what changed. Understand WHAT to test.
 2. **Find the dev server URL** — check package.json scripts, running processes, or ask the user. Common: `localhost:3000`, `localhost:5173`, `localhost:8080`.
-3. **If nothing answers on the dev server port**, start it with the `dev-server-restart` skill's script, which runs it detached and polls until it answers: `~/.claude/skills/dev-server-restart/restart.sh <port> <repo dir> <probe path>`. Return `## BLOCKED` only if that script exits non-zero, and paste its output.
+3. **If nothing answers on the dev server port**, start it with the `dev-server-restart` skill's script, which runs it detached and polls until it answers: `~/.claude/skills/dev-server-restart/restart.sh <port> <repo dir> <probe path>`. Return `## BLOCKED` only if it exits 1 (the server never came up), and paste its output. Exit 2 means the server is up but the probe path returns a 5xx: that is a finding, so test and report it.
 
 ## Testing Flow
 

@@ -139,10 +139,10 @@ function extractFrontmatter(text) {
 
 function extractAtIncludes(text) {
   const hits = new Set();
-  const re = /@~\/\.claude\/(rules|agents)\/([a-z0-9_-]+)\.md/g;
+  const re = /@~\/\.claude\/(rules|rules-ref|agents)\/([a-z0-9_-]+)\.md/g;
   let m;
   while ((m = re.exec(text))) {
-    hits.add(`${m[1] === 'rules' ? 'rule' : 'agent'}.${m[2]}`);
+    hits.add(`${m[1] === 'agents' ? 'agent' : 'rule'}.${m[2]}`);
   }
   return [...hits];
 }
@@ -273,7 +273,11 @@ function scanAgents() {
 
 function scanRules() {
   const out = [];
-  for (const file of listMdFiles(path.join(REPO_ROOT, 'rules'))) {
+  const files = [
+    ...listMdFiles(path.join(REPO_ROOT, 'rules')),
+    ...listMdFiles(path.join(REPO_ROOT, 'rules-ref')),
+  ];
+  for (const file of files) {
     const name = path.basename(file, '.md');
     const text = fs.readFileSync(file, 'utf8');
     out.push({

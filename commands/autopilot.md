@@ -1202,7 +1202,7 @@ LOOP:
     IF failures:
       Dispatch general-purpose agent (model: "opus"):
         "Test failures: {output}. Fix the CODE, not the tests.
-         Stage fixes. Do not commit.
+         Stage fixes. Do not commit. Never push, never apply a migration to a live or shared database, never deploy: pushing, deploying and migrations still need Zalo's go-ahead.
          Return contract: ≤50 lines, structured (Status/Summary/Files staged/Verification/Concerns).
          No code blocks >10 lines. Overflow → .autopilot/agent_returns/test-fix-iter{iteration}.md.
          Emit ## IMPLEMENTATION COMPLETE."
@@ -1277,6 +1277,9 @@ LOOP:
        subset for context (imports, type definitions, callers) — but only
        FLAG bugs in files within your subset. Bugs in files outside your
        subset will be caught by the partition that owns them.
+       Do not start or restart the dev server and do not use the Playwright
+       browser: both are shared with the other partitions, and the browser
+       check is Phase 4's single live-test.
 
        Only flag bugs that affect runtime behavior. Skip style/naming/formatting.
        Severity rubric:
@@ -1410,7 +1413,7 @@ LOOP:
            This has been 'fixed' {count} times and keeps coming back.
            Trace the actual root cause — don't patch symptoms.
            Self-plan: read the file, trace data flow, find the real issue.
-           Stage fixes. Do not commit.
+           Stage fixes. Do not commit. Never push, never apply a migration to a live or shared database, never deploy: pushing, deploying and migrations still need Zalo's go-ahead.
            Return contract: ≤50 lines, structured (Status/Summary/Files staged/Verification/Concerns).
            No code blocks >10 lines. Overflow → .autopilot/agent_returns/qa-fix-iter{iteration}-{file_slug}.md.
            Emit ## IMPLEMENTATION COMPLETE."
@@ -1418,6 +1421,7 @@ LOOP:
         Dispatch general-purpose (model: "opus"):
           "Fix these bugs in {file}: {bug_list}.
            Minimal changes only. Stage fixes. Do not commit.
+           Never push, never apply a migration to a live or shared database, never deploy: pushing, deploying and migrations still need Zalo's go-ahead.
            Return contract: ≤50 lines, structured (Status/Summary/Files staged/Verification/Concerns).
            No code blocks >10 lines. Overflow → .autopilot/agent_returns/qa-fix-iter{iteration}-{file_slug}.md.
            Emit ## IMPLEMENTATION COMPLETE."
@@ -1587,7 +1591,8 @@ keep the `verify_manifest_missing` note in Remaining Issues.
            best satisfies the rubric item.
 
            Implement only what this item needs, and stage your changes with
-           `git add <specific files>`. Do NOT commit.
+           `git add <specific files>`. Do NOT commit. Never push, never apply a migration to a live or shared database, never deploy: pushing, deploying and migrations still need Zalo's go-ahead.
+           Write migration files only; `/go-live` applies them once he says go.
 
            Read ~/.claude/rules/database-safety.md, testing-safety.md, git-safety.md.
 
@@ -1836,7 +1841,7 @@ rm -f .autopilot/lock
 Concrete sites in this document that MUST invoke Terminal Cleanup before aborting (status in parens):
 
 - "Context exhausted at Phase {N}" (`aborted`) — after Context Budget Gate
-- Pre-flight table rows: "Initialize the repo…", "Cannot auto-stash residual changes…", "Another git process is running.", "No task found." (all `aborted`)
+- Pre-flight table rows: "Initialize the repo…", "Cannot auto-stash residual changes…", ".git/index.lock exists…", "No task found." (all `aborted`)
 - Phase 2/3 "ABORT to Phase 5" sites (`aborted`) — Phase 5's own cleanup covers these IF the path actually transitions to Phase 5; if the abort exits directly, invoke cleanup inline
 - Circuit breaker exit (`aborted_api_outage`) — already routes to Phase 5, which runs cleanup
 
