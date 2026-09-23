@@ -183,7 +183,7 @@ Report per segment: `✓ <CompId> — <duration>s → out/<CompId>.mp4` plus one
 - ❌ Type-only segments — if every beat is words, the nouns weren't depicted; pull the things the VO names out of `objects.tsx` (or add the missing object there) and reserve type for verdicts/payoffs
 - ❌ Bouncy/elastic easing, overshoot, springs — the look this system exists against
 - ❌ Slide-density in a beat: >5 words simultaneously, lists, side-by-side columns on mobile cuts
-- ❌ The Line as decoration (underline, travel, settle, divider): it is a red strike-through only, and `check-lines.mjs` lists every decorative use
+- ❌ The Line as decoration (underline, travel, settle, divider): it is a red strike-through only; `check-lines.mjs` lists every comp whose Line never strikes, so a comp that strikes once and also underlines still passes it
 - ❌ Mixing frame spaces: LineRig/ImpactFlash/camera impacts are ABSOLUTE; LetterStamp/DimAt/SFX-in-beat are RELATIVE to their Sequence
 - ❌ More than one Ignite per segment; gold on non-payoff words; red for emphasis (red only destroys)
 - ❌ Impact without reaction — every flash frame must also appear in `SegmentCamera impacts` and carry an SFX hit

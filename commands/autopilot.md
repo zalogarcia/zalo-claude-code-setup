@@ -383,6 +383,7 @@ Every sub-agent prompt MUST be self-contained. Include:
 6. **Stage-only rule**: "Stage your changes with `git add <specific files>`. Do NOT commit; the orchestrator commits after verifying the batch."
 7. **Contract**: which completion marker to emit
 8. **File-handling boilerplate**: paste the "Mandatory Dispatch Boilerplate" block from `~/.claude/rules/agent-contracts.md` verbatim into every implementation-agent prompt (already embedded in the Phase 2 template below)
+9. **Go-ahead line**: every prompt for an agent that edits files (implementers, fix agents, hook and build fixers, completion agents) says "Never push, never apply a migration to a live or shared database, never deploy: pushing, deploying and migrations still need Zalo's go-ahead."
 
 ### Parallelization Criteria
 
