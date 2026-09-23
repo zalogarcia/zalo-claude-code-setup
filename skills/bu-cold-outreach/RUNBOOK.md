@@ -76,7 +76,7 @@ Draft only, explicitly, even in a lane that could send:
   on, only Zalo naming a batch releases it, and even his go releases only a batch whose
   lint line reads `ALL PASS` with the one message rule checked against the working folder.
 - The speed defaults (4 loads and 5 minutes per prospect, 45 minutes per session, seed
-  evidence trusted for 7 days, one evidence load for the specific opener, one quoted
+  evidence re confirmed live on every row, one evidence load for the specific opener, one quoted
   owner search, accessibility text not screenshots, Indeed never opened) live in
   `hunting-playbook.md`, and the specificity law in `templates/messages.md`. The caller does not
   restate them. To lift one for a single session, say so in the instruction.

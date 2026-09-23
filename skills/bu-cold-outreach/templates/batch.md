@@ -59,7 +59,7 @@ entry in that day's batch.
 **Open:** https://www.linkedin.com/in/...
 **Prospect id:** [id] · **Metro:** [metro] · **Variant:** C-li-P2
 **Accepted:** [YYYY-MM-DD], request sent [YYYY-MM-DD] with no note (`sent-log.csv` CONNECT row with an empty `message_text`)
-**Evidence:** [verbatim; the date re confirmed if older than 7 days]
+**Evidence:** [verbatim; re confirmed live today]
 **Side note:** [detail]
 
 ([n]/420 characters. The ONE message this prospect gets unless he replies.)
@@ -74,7 +74,7 @@ entry in that day's batch.
 
 **Open:** https://www.linkedin.com/in/...
 **Prospect id:** [id] · **Metro:** [metro] · **Variant:** A-li-O1 (or A-li-I1)
-**Evidence:** [verbatim; seed date or the date re confirmed]
+**Evidence:** [verbatim; seed date, and re confirmed live today]
 **Side note:** [detail]
 **Budget:** [n] loads, [n] seconds
 

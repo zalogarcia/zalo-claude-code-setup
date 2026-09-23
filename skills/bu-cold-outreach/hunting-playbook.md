@@ -16,7 +16,8 @@ session instruction says otherwise.
 
 1. **Hard budget per prospect: 4 page loads and 5 minutes.** A Google search is a load.
    The loads are assigned: the homepage, the evidence load for the opener (default 5),
-   the owner search, and one reserve for opening the reviews. The fifth load or the sixth
+   the owner search, and one reserve for opening the reviews (on a tier C row the reserve
+   is the Ad Library load that re confirms the ad, Step 1). The fifth load or the sixth
    minute means the row is held with the reason written down and the next row starts. No
    exception for a row that "almost" resolved. (Was 3 loads and 4 minutes on 09-08; Zalo
    returned that batch for generic openers, so one load moved to the specific.)
@@ -42,21 +43,24 @@ session instruction says otherwise.
    evidence load at all. Expect 6 to 8 resolved owners inside a 45 minute session, not 10.
    The Facebook ceiling of 10 will usually not be filled by research, and that is fine:
    send fewer, never pad, never fall back to the business page.
-3. **Trust the seed evidence.** `prospects.csv` carries the hiring post (role and posted
-   date) and the ad (offer, active count, start date), pulled the day the tranche was
-   built. Use it verbatim in the message and do not reopen the source while the tranche
-   is under 7 days old (the date is in `SEED-REPORT.md`). Re confirmation is for older
-   tranches and FOUND redrafts (an accepted connection's one message included), per Step 1.
+3. **Re confirm the seed evidence live, every row, every time.** `prospects.csv` carries
+   the hiring post (role and posted date) and the ad (offer, active count, start date),
+   pulled the day the tranche was built. It tells you what to look for; it is not the
+   confirmation, however young the tranche is (Zalo, 2026-09-23: each prospect gets one
+   message, so a stale fact wastes it). Quote it verbatim only after Step 1 has seen it
+   live today. FOUND redrafts, an accepted connection's one message included, are re
+   confirmed the same way.
 4. **Never open Indeed.** It shows the bot a verification wall and burns minutes. Employer
-   careers portals (prevueaps and the like) are fine when a re confirmation is actually
-   due.
-5. **Two loads carry the research, both read through the accessibility tree.** The
+   careers portals (prevueaps and the like) are fine, and they are where a tier A re
+   confirmation happens.
+5. **Two loads carry the research (three on tier C, where the Ad Library load is the re
+   confirmation), all read through the accessibility tree.** The
    homepage answers Step 0 (size, franchise, AI chat, commercial only, residential, owner
    if named). The evidence load finds the specific the opener needs, per the specificity
    law in `templates/messages.md`: tier A, the employer's own job posting for the duties
    line and the shift; tier C, the Google Business Profile panel (search "[Company]
-   [metro]") for the hours and a review snippet, with the ad's own words from the seed's
-   `meta_ads_offer` or one Ad Library load when that is thin; tier D, the same Google
+   [metro]") for the hours and a review snippet, plus one Ad Library load that confirms
+   the ad in the seed's `meta_ads_offer` is still active (Step 1); tier D, the same Google
    panel for a review quote about the phone or the hours gap. A services list from the
    homepage is side note material for Zalo, never the opener. In the reviews, look for the words that
    mark the right review (after hours, Saturday, Sunday, pm, called back, voicemail, no
@@ -85,8 +89,8 @@ session instruction says otherwise.
     a minute.
 
 Everything here is free and public: the company website, Google, LinkedIn, Facebook,
-Instagram, and, only when a re confirmation is due, the Meta Ad Library and employer
-careers portals. No paid data tools, no scrapers, no email finders.
+Instagram, the Meta Ad Library and employer careers portals (the live re confirmation).
+No paid data tools, no scrapers, no email finders.
 
 A row is READY TO WRITE only when all four are true:
 
@@ -125,28 +129,29 @@ working, not the step failing.
 ## Step 1, the evidence
 
 A message that opens with a job post that came down last week reads as a bot, so the
-evidence has to be current. Currency comes from the seed first and the browser second.
+evidence has to be current. The seed says what to look for; the browser, today, says it is
+still true.
 
-**When the tranche is under 7 days old, the seed IS the confirmation.** Take the role and
-its posted date, or the ad and its start date, straight from the row and write the message
-from them. Record "seed, tranche dated YYYY-MM-DD" as the confirmation in the batch entry.
-Re confirmation applies to older tranches and to rows at FOUND being redrafted, which
-includes the one message owed to an accepted connection or friend request. There are no
-bumps to re confirm for (retired 2026-09-22).
-The evidence load below happens on every tranche, because the opener needs what the seed
-row does not carry.
+**Re confirm live on every row, whatever the tranche's age.** Zalo decided this on
+2026-09-23: each prospect gets one message, so a stale fact wastes it. There is no age
+below which the seed counts as the confirmation. Record "re confirmed live YYYY-MM-DD" and
+what was seen in the batch entry. Rows at FOUND being redrafted, including the one message
+owed to an accepted connection or friend request, are re confirmed the same way. There are
+no bumps to re confirm for (retired 2026-09-22).
+The evidence load below happens on every row, because the opener needs what the seed row
+does not carry, and for tier A it is also the re confirmation.
 
 **Tier A, the hiring signal.** Do not open Indeed (verification wall). Search
 `"[business_name]" careers` once and open the employer's own portal if one appears. This
 is the tier A evidence load even on a fresh tranche, because the opener needs the duties
 line and the shift from the posting ("answer incoming calls, texts and emails", "Monday
-to Friday, 9 to 5"), not the role title. On an older tranche the same load also confirms
-the post is still up and still the role in `indeed_role`. No portal in one search means
-the seed's role title plus the Google hours gap is the opener; a seed post older than
-about 30 days with no portal to confirm it demotes the row to tier D.
+to Friday, 9 to 5"), not the role title. The same load confirms the post is still up and
+still the role in `indeed_role`. No portal in one search means the post cannot be
+confirmed live, so it is not quoted: demote the row to tier D and open on a side note.
 
-**Tier C, the ads signal.** Go to `facebook.com/ads/library`, set the country, search the
-business name (or the page). The ad in `meta_ads_offer` has to still be ACTIVE. If the
+**Tier C, the ads signal.** One Ad Library load on every tier C row: go to
+`facebook.com/ads/library`, set the country, search the business name (or the page). The
+ad in `meta_ads_offer` has to still be ACTIVE. If the
 count in `meta_ads_active_count` has dropped to zero, the row is no longer tier C: demote
 to tier D. If a DIFFERENT ad is running now, use the one that is actually live and record
 the new offer verbatim.

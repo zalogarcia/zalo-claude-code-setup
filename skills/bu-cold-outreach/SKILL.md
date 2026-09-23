@@ -165,7 +165,8 @@ file written with or without a space after each comma both work. Never read by p
   an answering service, and it is assigned only by Zalo after his after hours mystery
   call. It lives in `pipeline.csv`.
 - The `*_evidence` columns are verbatim facts. Quote them, do not paraphrase them, and
-  re confirm them live before using them (hunting playbook, Step 1).
+  re confirm them live before using them, every time and whatever the tranche's age
+  (hunting playbook, Step 1).
 - `qualified` and `drop_reason` are the seed list's own filter verdict. Only work rows
   where `qualified` is true.
 
@@ -444,7 +445,7 @@ For each `FOUND` row:
   accept gets nothing, and only a reply moves it (to `REPLIED`). **If it carried no note** (option A, 2026-09-22), check whether it
   was accepted. Accepted with nothing said means the ONE message goes into today's batch,
   drafted and linted like any first touch: the control shape, P1 or P2 per the row's
-  variant, from the research already in `notes`, re confirmed if it is older than 7 days.
+  variant, from the research already in `notes`, re confirmed live the day it is drafted.
   Accepted with a reply is REPLIED and goes to Zalo. Still pending after 14 days means set
   `NO_CHANNEL` unless another active channel is open, in which case that channel takes the
   one message instead (a note-less request is not a message, so this is still the first).
@@ -499,14 +500,15 @@ screenshots, one quoted owner search, Indeed never opened):
 1. Load the homepage once. Kill on size, franchise, commercial only or an AI chat widget;
    otherwise take the owner name if it is there and keep the homepage facts as side note
    material for Zalo, not as the opener.
-2. Take the sniper evidence from the seed row when the tranche is under 7 days old (no re
-   confirmation), then spend one load on the specific the opener needs per the
-   specificity law in `templates/messages.md`: the duties and shift line on the
-   employer's own job posting (tier A), what the ad says plus the Google hours (tier C),
+2. Re confirm the sniper evidence from the seed row live, on every row whatever the
+   tranche's age (Zalo, 2026-09-23: each prospect gets one message, so a stale fact
+   wastes it), and spend one load on the specific the opener needs per the specificity
+   law in `templates/messages.md`: the duties and shift line on the employer's own job
+   posting (tier A, the same load confirms the post is still up), what the ad says plus
+   the Google hours (tier C, with one Ad Library load to confirm the ad is still active),
    a review quote about the phone or the hours gap from the Google Business Profile
-   (tier D). Re confirm evidence only for older tranches and FOUND redrafts. Dead
-   evidence means demote the tier or pull the row; never write around a fact that
-   stopped being true.
+   (tier D). Dead or unconfirmable evidence means demote the tier or pull the row; never
+   write around a fact that stopped being true.
 3. Resolve the owner with one quoted search for maps rail rows. Ambiguous means hold.
 4. Pick the channel: LinkedIn when the owner profile exists, then the owner's PERSONAL
    Facebook profile (never the business page; a page is not a channel, Zalo 2026-09-09),
@@ -1027,7 +1029,7 @@ to claim, and filling the price fields in `call-one-pager.md` before the first b
 
 - `SKILL.md`, this file. The lane, the loop, the sending rules, the numbers.
 - `hunting-playbook.md`, the browser procedure and its speed defaults: one homepage load,
-  seed evidence trusted for 7 days, one quoted owner search, 4 loads and 5 minutes per
+  seed evidence re confirmed live on every row, one quoted owner search, 4 loads and 5 minutes per
   prospect, 45 minutes per session and up to two sessions a day, the research ledger.
 - `call-one-pager.md`, Zalo's call sheet. Prices are fields, not numbers.
 - `RUNBOOK.md`, how M or Zalo starts a session, and how to verify Codex sees this skill.

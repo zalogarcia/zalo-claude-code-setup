@@ -302,8 +302,8 @@ with NO note, and after the accept the prospect gets the ONE message.** An accep
 connection that never replies gets nothing further.
 
 **The one message after the accept** is the control, the same four beats as every other
-channel, drafted per row from the research already in the pipeline `notes` (re confirmed if
-it is older than 7 days) and linted like any first touch, up to 420 characters:
+channel, drafted per row from the research already in the pipeline `notes` (re confirmed
+live the day it is drafted) and linted like any first touch, up to 420 characters:
 
 > Hi [First], [the specific, one sentence]. [The bridge clause, one short sentence].
 > [P1 short or P2 short, verbatim]
