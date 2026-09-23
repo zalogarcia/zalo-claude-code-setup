@@ -21,6 +21,8 @@ Run `SELECT 1` via `mcp__supabase__execute_sql` (`project_id: $DELTA_PROD_PROJEC
 
 **Read-only contract: every query in this skill is a SELECT. Never write to prod during triage.**
 
+**Caller data stays masked.** Every free-text column this skill prints (config head, last turn, contact name, message body, call summary, tool error, alert message) goes through the mask `voice-call-triage` uses: emails become `<email>`, any 10+ digit run and any US number with separators keep only the last 4 digits (`<phone ..1234>`). Ids stay whole, since the mask would corrupt uuids (its digit passes hit 152 of 1,243 address-free session keys), EXCEPT when an id carries `@`, `+<digit>`, or ends in a bare 10 to 15 digit run: a native email, SMS or WhatsApp contact's id IS its address (a WhatsApp Cloud `wa_id` is digits with no `+`), so `session_key` and the varchar `contact_id` columns get the mask behind that guard (5 of 1,248 session keys as of 2026-09-23, all `native:<tenant>:<address>`). Put the same mask on any free-text column you add; it misses emails and numbers spelled out in words, so redact those by hand before quoting.
+
 ## Step 1 — Resolve the tenant (fuzzy slug match)
 
 There is NO `tenants.name` column — the slug is the identifier; display name lives in `config` JSONB. Fuzzy-match on slug first:
@@ -39,7 +41,11 @@ LIMIT 10;
 - **Zero rows** → fall back to the display name inside config:
 
 ```sql
-SELECT id, slug, status, left(config::text, 120) AS config_head
+SELECT id, slug, status,
+       left(regexp_replace(regexp_replace(regexp_replace(config::text,
+              '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+', '<email>', 'g'),
+              '\+?[0-9]{6,}([0-9]{4})', '<phone ..\1>', 'g'),
+              '(\+?1[-. ]*)?\(?[0-9]{3}\)?[-. ]*[0-9]{3}[-. ]*([0-9]{4})', '<phone ..\2>', 'g'), 120) AS config_head
 FROM tenants
 WHERE config::text ILIKE '%<fragment>%'
 LIMIT 10;
@@ -67,9 +73,17 @@ Each block is one `mcp__supabase__execute_sql` call (`project_id: $DELTA_PROD_PR
 **3a — Recent sessions + last-turn shape** (`conversation` is a jsonb array of turns; take the raw last element rather than guessing its keys):
 
 ```sql
-SELECT session_key, status, channel_type, contact_id, trace_id,
+SELECT CASE WHEN session_key ~ '@|\+[0-9]|(^|:)[0-9]{10,15}$' THEN regexp_replace(regexp_replace(regexp_replace(session_key,
+              '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+', '<email>', 'g'),
+              '\+?[0-9]{6,}([0-9]{4})', '<phone ..\1>', 'g'),
+              '(\+?1[-. ]*)?\(?[0-9]{3}\)?[-. ]*[0-9]{3}[-. ]*([0-9]{4})', '<phone ..\2>', 'g')
+            ELSE session_key END AS session_key,
+       status, channel_type, contact_id, trace_id,
        last_activity_at, jsonb_array_length(conversation) AS turns,
-       left((conversation->-1)::text, 200) AS last_turn
+       left(regexp_replace(regexp_replace(regexp_replace((conversation->-1)::text,
+              '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+', '<email>', 'g'),
+              '\+?[0-9]{6,}([0-9]{4})', '<phone ..\1>', 'g'),
+              '(\+?1[-. ]*)?\(?[0-9]{3}\)?[-. ]*[0-9]{3}[-. ]*([0-9]{4})', '<phone ..\2>', 'g'), 200) AS last_turn
 FROM tenant_sessions
 WHERE tenant_id = '<tenant_id>'
   AND last_activity_at >= now() - interval '72 hours'
@@ -81,7 +95,14 @@ LIMIT 20;
 
 ```sql
 SELECT m.created_at, m.direction, m.channel, m.platform,
-       c.name AS contact_name, left(m.body, 160) AS body_preview
+       regexp_replace(regexp_replace(regexp_replace(c.name,
+              '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+', '<email>', 'g'),
+              '\+?[0-9]{6,}([0-9]{4})', '<phone ..\1>', 'g'),
+              '(\+?1[-. ]*)?\(?[0-9]{3}\)?[-. ]*[0-9]{3}[-. ]*([0-9]{4})', '<phone ..\2>', 'g') AS contact_name,
+       left(regexp_replace(regexp_replace(regexp_replace(m.body,
+              '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+', '<email>', 'g'),
+              '\+?[0-9]{6,}([0-9]{4})', '<phone ..\1>', 'g'),
+              '(\+?1[-. ]*)?\(?[0-9]{3}\)?[-. ]*[0-9]{3}[-. ]*([0-9]{4})', '<phone ..\2>', 'g'), 160) AS body_preview
 FROM tenant_messages m
 JOIN tenant_contacts c ON c.id = m.contact_id
 WHERE m.tenant_id = '<tenant_id>'
@@ -110,7 +131,11 @@ SELECT engine, retell_call_id, direction, call_status, disconnection_reason,
        booking_claim_unbacked,
        metadata->'engine_session'->>'backend_model' AS backend_model,
        metadata->'engine_session'->>'greeting_mode' AS greeting_mode,
-       started_at, ended_at, left(summary, 200) AS summary_preview
+       started_at, ended_at,
+       left(regexp_replace(regexp_replace(regexp_replace(summary,
+              '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+', '<email>', 'g'),
+              '\+?[0-9]{6,}([0-9]{4})', '<phone ..\1>', 'g'),
+              '(\+?1[-. ]*)?\(?[0-9]{3}\)?[-. ]*[0-9]{3}[-. ]*([0-9]{4})', '<phone ..\2>', 'g'), 200) AS summary_preview
 FROM tenant_voice_calls
 WHERE tenant_id = '<tenant_id>'
   AND created_at >= now() - interval '72 hours'
@@ -123,7 +148,11 @@ For openai-live rows: `backend_model` null means no delegation completed (no too
 **3d — Voice tool events, failures first** (voice symptoms only; join by `retell_call_id`, there is no voice_call FK):
 
 ```sql
-SELECT created_at, engine, retell_call_id, tool_name, status, error, duration_ms
+SELECT created_at, engine, retell_call_id, tool_name, status, duration_ms,
+       regexp_replace(regexp_replace(regexp_replace(error,
+              '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+', '<email>', 'g'),
+              '\+?[0-9]{6,}([0-9]{4})', '<phone ..\1>', 'g'),
+              '(\+?1[-. ]*)?\(?[0-9]{3}\)?[-. ]*[0-9]{3}[-. ]*([0-9]{4})', '<phone ..\2>', 'g') AS error
 FROM tenant_voice_tool_events
 WHERE tenant_id = '<tenant_id>'
   AND created_at >= now() - interval '72 hours'
@@ -134,7 +163,13 @@ LIMIT 40;
 **3e — Followups due/fired in window** (schedule column is `due_at`, NOT `scheduled_at`; `contact_id` here is **varchar**, not uuid — do not join `tenant_contacts` without a cast, per the 42P08 trap in SCHEMA-PROD):
 
 ```sql
-SELECT id, contact_id, sequence_id, step_number, due_at, status, updated_at
+SELECT id,
+       CASE WHEN contact_id ~ '@|\+[0-9]|(^|:)[0-9]{10,15}$' THEN regexp_replace(regexp_replace(regexp_replace(contact_id,
+              '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+', '<email>', 'g'),
+              '\+?[0-9]{6,}([0-9]{4})', '<phone ..\1>', 'g'),
+              '(\+?1[-. ]*)?\(?[0-9]{3}\)?[-. ]*[0-9]{3}[-. ]*([0-9]{4})', '<phone ..\2>', 'g')
+            ELSE contact_id END AS contact_id,
+       sequence_id, step_number, due_at, status, updated_at
 FROM tenant_followups
 WHERE tenant_id = '<tenant_id>'
   AND (due_at >= now() - interval '72 hours'
@@ -147,7 +182,11 @@ LIMIT 30;
 
 ```sql
 SELECT 'alert' AS kind, created_at, alert_type AS what, severity,
-       status, left(message, 200) AS detail
+       status,
+       left(regexp_replace(regexp_replace(regexp_replace(message,
+              '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+', '<email>', 'g'),
+              '\+?[0-9]{6,}([0-9]{4})', '<phone ..\1>', 'g'),
+              '(\+?1[-. ]*)?\(?[0-9]{3}\)?[-. ]*[0-9]{3}[-. ]*([0-9]{4})', '<phone ..\2>', 'g'), 200) AS detail
 FROM tenant_alerts
 WHERE tenant_id = '<tenant_id>'
   AND created_at >= now() - interval '72 hours'
@@ -166,7 +205,16 @@ LIMIT 50;
 
 ```sql
 SELECT created_at, escalation_type, escalation_target, status,
-       contact_id, session_key
+       CASE WHEN contact_id ~ '@|\+[0-9]|(^|:)[0-9]{10,15}$' THEN regexp_replace(regexp_replace(regexp_replace(contact_id,
+              '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+', '<email>', 'g'),
+              '\+?[0-9]{6,}([0-9]{4})', '<phone ..\1>', 'g'),
+              '(\+?1[-. ]*)?\(?[0-9]{3}\)?[-. ]*[0-9]{3}[-. ]*([0-9]{4})', '<phone ..\2>', 'g')
+            ELSE contact_id END AS contact_id,
+       CASE WHEN session_key ~ '@|\+[0-9]|(^|:)[0-9]{10,15}$' THEN regexp_replace(regexp_replace(regexp_replace(session_key,
+              '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+', '<email>', 'g'),
+              '\+?[0-9]{6,}([0-9]{4})', '<phone ..\1>', 'g'),
+              '(\+?1[-. ]*)?\(?[0-9]{3}\)?[-. ]*[0-9]{3}[-. ]*([0-9]{4})', '<phone ..\2>', 'g')
+            ELSE session_key END AS session_key
 FROM tenant_escalations
 WHERE tenant_id = '<tenant_id>'
   AND created_at >= now() - interval '72 hours'
@@ -180,40 +228,35 @@ Carry `trace_id` values forward — they link sessions ↔ audit rows ↔ log li
 
 Log groups (from `docs/RUNBOOK.md`; `aws logs describe-log-groups --log-group-name-prefix /ecs/delta-agents` lists them): `/ecs/delta-agents/gateway`, `/ecs/delta-agents/worker`, `/ecs/delta-agents/embedding-worker`, and for openai-live voice calls `/ecs/delta-agents/voice-bridge` (its lines carry the tenant UUID as `tenantId` and the call as `metadata.callSid`). Read `~/.claude/projects/-Users-zalo-dev/memory/aws-filter-log-events-undercounts.md` before counting anything from these pulls. Logs are structured JSON containing the tenant **UUID**; webhook-ingress lines also carry the **slug** (URL path `/hooks/:crm_type/:tenant_slug`). Filter by UUID first; add a slug pass when the symptom is "messages never arrive".
 
+Every pull goes through `pull`, which counts ALL matching events and prints a bounded slice. The old `--output text | tail -80` printed 5 "lines" for 391 events (raqm, 2026-09-23): text output joins a whole page onto one line with tabs. The slice shows ids and event names only, never message text; `/tmp/triage-<name>.json` keeps the full lines (`jq -r '.[]? | fromjson? | objects | select(.event == "<event>")'`), which are unmasked, so mask anything you quote from them.
+
 ```bash
 TENANT_ID='<tenant_id>'
-START=$(date -v-72H +%s)000   # macOS; Linux: $(date -d '72 hours ago' +%s)000
+START=$(date -v-72H +%s)000; END=$(date +%s)000   # macOS; Linux: $(date -d '72 hours ago' +%s)000
+CAP=50000   # --max-items is a safety cap; never --limit, it stops after one page
 
-# Gateway — all lines mentioning the tenant in the window
-aws logs filter-log-events \
-  --log-group-name /ecs/delta-agents/gateway \
-  --filter-pattern "\"$TENANT_ID\"" \
-  --start-time "$START" \
-  --query 'events[].message' --output text | tail -80
+pull() {   # pull <name> <log group> <filter pattern>
+  aws logs filter-log-events --region us-east-1 --log-group-name "/ecs/delta-agents/$2" \
+    --filter-pattern "$3" --start-time "$START" --end-time "$END" --max-items "$CAP" \
+    --query 'events[].message' --output json > "/tmp/triage-$1.json" || { echo "$1: aws failed"; return 1; }
+  N=$(jq -n '[inputs | length] | add // 0' "/tmp/triage-$1.json")
+  echo "== $1: $N events$([ "$N" -ge "$CAP" ] && echo ', TRUNCATED at the cap: narrow the window')"
+  jq -r '.[]? | ((fromjson? | objects) // {level: "-", event: "(non-JSON line)"}) | "\(.level)\t\(.event)"' \
+    "/tmp/triage-$1.json" | sort | uniq -c | sort -rn | awk '$2 != "info" || ++i <= 15'   # all warn/error names, top 15 info
+  jq -r '.[]? | fromjson? | objects | [.timestamp, .level, .event, (.metadata.callSid? // .traceId // "")] | @tsv' \
+    "/tmp/triage-$1.json" | sort | tail -30                           # the 30 latest
+}
 
-# Voice bridge (openai-live calls) — warn and error lines for the tenant
-aws logs filter-log-events \
-  --log-group-name /ecs/delta-agents/voice-bridge \
-  --filter-pattern "{ \$.tenantId = \"$TENANT_ID\" && (\$.level = \"warn\" || \$.level = \"error\") }" \
-  --start-time "$START" \
-  --query 'events[].message' --output json | jq -r '.[]?' | tail -60
-
-# Worker — error-ish lines only (CloudWatch pattern: two quoted terms = AND)
-aws logs filter-log-events \
-  --log-group-name /ecs/delta-agents/worker \
-  --filter-pattern "\"$TENANT_ID\" \"error\"" \
-  --start-time "$START" \
-  --query 'events[].message' --output text | tail -60
+pull gateway gateway "\"$TENANT_ID\""                # every line naming the tenant
+pull voice-bridge voice-bridge "{ \$.tenantId = \"$TENANT_ID\" && (\$.level = \"warn\" || \$.level = \"error\") }"
+pull worker worker "\"$TENANT_ID\" \"error\""         # two quoted terms = AND
 ```
 
 For "no reply" symptoms, also check the intentional bailed-silent paths (these are NOT bugs):
 
 ```bash
-aws logs filter-log-events \
-  --log-group-name /ecs/delta-agents/worker \
-  --filter-pattern '?agent_after_hours_skip ?paused_contact_blocked ?manual_reply_cooldown_blocked' \
-  --start-time "$START" \
-  --query 'events[].message' --output text | grep "$TENANT_ID" | tail -40
+# same shell as the block above (it defines pull, START, END, CAP)
+pull bailed-silent worker "{ \$.tenantId = \"$TENANT_ID\" && (\$.event = \"agent_after_hours_skip\" || \$.event = \"paused_contact_blocked\" || \$.event = \"manual_reply_cooldown_blocked\") }"
 ```
 
 ## Step 5 — Deploy correlation

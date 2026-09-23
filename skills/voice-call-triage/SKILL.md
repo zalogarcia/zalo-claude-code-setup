@@ -63,10 +63,16 @@ WHERE config->>'modality' = 'voice'
 Both this table and `tenant_voice_tool_events` also carry an `engine` column: `retell` (the default) or `openai-live` (GPT-Live over Twilio). **Read it first. `retell` continues with Steps 2 to 4 below. `openai-live` goes to "openai-live calls: Steps 1L to 4L" further down, which replaces Steps 2 to 4 (there is no Retell config to diff).**
 
 ```sql
-SELECT id, engine, retell_call_id, direction, from_number, to_number,
+SELECT id, engine, retell_call_id, direction,
+       right(from_number, 4) AS from_last4, right(to_number, 4) AS to_last4,
        call_status, disconnection_reason, duration_seconds,
        call_successful, user_sentiment, transfer_target_agent_id,
-       started_at, ended_at, created_at, left(summary, 300) AS summary
+       started_at, ended_at, created_at,
+       -- the mask (same as Steps 1L and 2L): emails, then any 10+ digit run, then a US number with separators
+       left(regexp_replace(regexp_replace(regexp_replace(summary,
+              '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+', '<email>', 'g'),
+              '\+?[0-9]{6,}([0-9]{4})', '<phone ..\1>', 'g'),
+              '(\+?1[-. ]*)?\(?[0-9]{3}\)?[-. ]*[0-9]{3}[-. ]*([0-9]{4})', '<phone ..\2>', 'g'), 300) AS summary
 FROM tenant_voice_calls
 WHERE tenant_id = '<tenant_id>'::uuid
   AND agent_id = '<agent_id>'::uuid          -- drop this line when searching by number/time
@@ -74,7 +80,7 @@ ORDER BY created_at DESC
 LIMIT 5;
 ```
 
-Read `transcript` in a second query only for the one call under triage (it's large).
+Read `transcript` in a second query only for the one call under triage (it's large): use Step 1L's numbered-turn query, which carries the mask, and redact emails and numbers spelled out in words by hand before quoting.
 
 Interpretation:
 
@@ -91,8 +97,19 @@ Interpretation:
 `tenant_voice_tool_events` is keyed by `retell_call_id` (NOT the local call uuid): `tool_name`, `arguments`, `response`, `status` (varchar(10)), `error`, `duration_ms`, `created_at`.
 
 ```sql
-SELECT created_at, tool_name, status, duration_ms, error,
-       left(arguments::text, 200) AS args, left(response::text, 200) AS resp
+SELECT created_at, tool_name, status, duration_ms,
+       regexp_replace(regexp_replace(regexp_replace(error,
+              '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+', '<email>', 'g'),
+              '\+?[0-9]{6,}([0-9]{4})', '<phone ..\1>', 'g'),
+              '(\+?1[-. ]*)?\(?[0-9]{3}\)?[-. ]*[0-9]{3}[-. ]*([0-9]{4})', '<phone ..\2>', 'g') AS error,
+       left(regexp_replace(regexp_replace(regexp_replace(arguments::text,
+              '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+', '<email>', 'g'),
+              '\+?[0-9]{6,}([0-9]{4})', '<phone ..\1>', 'g'),
+              '(\+?1[-. ]*)?\(?[0-9]{3}\)?[-. ]*[0-9]{3}[-. ]*([0-9]{4})', '<phone ..\2>', 'g'), 200) AS args,
+       left(regexp_replace(regexp_replace(regexp_replace(response::text,
+              '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+', '<email>', 'g'),
+              '\+?[0-9]{6,}([0-9]{4})', '<phone ..\1>', 'g'),
+              '(\+?1[-. ]*)?\(?[0-9]{3}\)?[-. ]*[0-9]{3}[-. ]*([0-9]{4})', '<phone ..\2>', 'g'), 200) AS resp
 FROM tenant_voice_tool_events
 WHERE tenant_id = '<tenant_id>'::uuid
   AND retell_call_id = '<retell_call_id>'
@@ -107,20 +124,27 @@ ORDER BY created_at ASC;
 
 Voice runs gateway-side (inbound webhook, MCP tools, post-call). Log group per `docs/RUNBOOK.md`: **`/ecs/delta-agents/gateway`** (worker `/ecs/delta-agents/worker` is NOT in the voice path).
 
+Same rules as Step 3L (memory `aws-filter-log-events-undercounts.md`): no `--limit`, `--output json` through `jq -r '.[]?'` (text output tab-joins a page onto one line), and compare `wc -l` with `wc -c` before trusting a count.
+
 ```bash
 # window = started_at − 2min … ended_at + 2min, in epoch ms
-aws logs filter-log-events \
+aws logs filter-log-events --region us-east-1 \
   --log-group-name /ecs/delta-agents/gateway \
   --start-time <start_ms> --end-time <end_ms> \
-  --filter-pattern '"<retell_call_id>"' \
-  --query 'events[].message' --output text
+  --filter-pattern '"<retell_call_id>"' --max-items 20000 \
+  --query 'events[].message' --output json | jq -r '.[]?' > /tmp/call-retell.jsonl
 
-# second pass — lifecycle events for the same window (any-term match):
-aws logs filter-log-events \
+# second pass: lifecycle events for the same window (any-term match, every tenant):
+aws logs filter-log-events --region us-east-1 \
   --log-group-name /ecs/delta-agents/gateway \
   --start-time <start_ms> --end-time <end_ms> \
   --filter-pattern '?retell_inbound ?retell_postcall ?voice_mcp ?da_context ?voice_sync ?retell_config_validation' \
-  --query 'events[].message' --output text
+  --max-items 20000 --query 'events[].message' --output json | jq -r '.[]?' > /tmp/call-lifecycle.jsonl
+
+for F in retell lifecycle; do
+  echo "$F lines=$(wc -l < /tmp/call-$F.jsonl) bytes=$(wc -c < /tmp/call-$F.jsonl)"
+  jq -R -r 'fromjson? | objects | [.timestamp, .level, .event, .tenantId] | @tsv' /tmp/call-$F.jsonl | sort
+done
 ```
 
 Event cheat-sheet (all real `logger.*` event names):
@@ -211,7 +235,11 @@ SELECT c.id, c.tenant_id, c.agent_id, c.engine, c.retell_call_id, c.twilio_call_
        right(c.from_number, 4) AS from_last4, right(c.to_number, 4) AS to_last4,
        c.call_status, c.disconnection_reason, c.duration_seconds,
        c.started_at, c.ended_at, c.analyzed_at,
-       c.booking_claim_unbacked, c.booking_claim_detail,
+       c.booking_claim_unbacked,
+       regexp_replace(regexp_replace(regexp_replace(c.booking_claim_detail::text,
+              '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+', '<email>', 'g'),
+              '\+?[0-9]{6,}([0-9]{4})', '<phone ..\1>', 'g'),
+              '(\+?1[-. ]*)?\(?[0-9]{3}\)?[-. ]*[0-9]{3}[-. ]*([0-9]{4})', '<phone ..\2>', 'g') AS booking_claim_detail,
        c.metadata->'engine_session'->>'backend_model'     AS backend_model,
        c.metadata->'engine_session'->>'tool_calls_count'  AS tool_calls_count,
        c.metadata->'engine_session'->>'close_reason'      AS close_reason,
@@ -231,7 +259,11 @@ WHERE c.retell_call_id = '<CallSid>' OR c.twilio_call_sid = '<CallSid>';
 Then the transcript as numbered turns (one `Agent: ...` or `User: ...` line per turn; the stored text has NO timestamps, so ordering against tools comes from Step 3L's logs). Callers SPELL their email and number aloud ("rose organics three at gmail dot com"), which no regex masks: redact those turns by hand before quoting them in any report (last 4 digits of a phone at most).
 
 ```sql
-SELECT n AS turn, left(line, 240) AS line
+SELECT n AS turn,
+       left(regexp_replace(regexp_replace(regexp_replace(line,
+              '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+', '<email>', 'g'),
+              '\+?[0-9]{6,}([0-9]{4})', '<phone ..\1>', 'g'),
+              '(\+?1[-. ]*)?\(?[0-9]{3}\)?[-. ]*[0-9]{3}[-. ]*([0-9]{4})', '<phone ..\2>', 'g'), 240) AS line
 FROM tenant_voice_calls c,
      LATERAL unnest(string_to_array(c.transcript, E'\n')) WITH ORDINALITY AS u(line, n)
 WHERE c.tenant_id = '<tenant_id>'::uuid AND c.retell_call_id = '<CallSid>' AND line <> ''
@@ -250,7 +282,11 @@ ORDER BY n;
 ### Step 2L: tool events
 
 ```sql
-SELECT created_at, engine, tool_name, status, duration_ms, error,
+SELECT created_at, engine, tool_name, status, duration_ms,
+       regexp_replace(regexp_replace(regexp_replace(error,
+              '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+', '<email>', 'g'),
+              '\+?[0-9]{6,}([0-9]{4})', '<phone ..\1>', 'g'),
+              '(\+?1[-. ]*)?\(?[0-9]{3}\)?[-. ]*[0-9]{3}[-. ]*([0-9]{4})', '<phone ..\2>', 'g') AS error,
        left(regexp_replace(regexp_replace(regexp_replace(arguments::text,
               '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+', '<email>', 'g'),
               '\+?[0-9]{6,}([0-9]{4})', '<phone ..\1>', 'g'),
@@ -282,7 +318,7 @@ for G in voice-bridge gateway; do
     --start-time "$START" --end-time "$END" --filter-pattern "\"$SID\"" --max-items 20000 \
     --query 'events[].message' --output json | jq -r '.[]?' > /tmp/call-$G.jsonl
   echo "$G lines=$(wc -l < /tmp/call-$G.jsonl) bytes=$(wc -c < /tmp/call-$G.jsonl)"
-  jq -r '[.timestamp, .level, .event] | @tsv' /tmp/call-$G.jsonl | sort
+  jq -R -r 'fromjson? | objects | [.timestamp, .level, .event] | @tsv' /tmp/call-$G.jsonl | sort
 done
 ```
 
@@ -302,7 +338,11 @@ Lines are JSON with `event`, `level`, `component` and `metadata.callSid`. Three 
 ### Step 4L: alerts for the call
 
 ```sql
-SELECT created_at, alert_type, severity, status, notification_sent, left(message, 200) AS message,
+SELECT created_at, alert_type, severity, status, notification_sent,
+       left(regexp_replace(regexp_replace(regexp_replace(message,
+              '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+', '<email>', 'g'),
+              '\+?[0-9]{6,}([0-9]{4})', '<phone ..\1>', 'g'),
+              '(\+?1[-. ]*)?\(?[0-9]{3}\)?[-. ]*[0-9]{3}[-. ]*([0-9]{4})', '<phone ..\2>', 'g'), 200) AS message,
        coalesce(metadata->>'callSid', metadata->>'providerCallId') AS call_sid
 FROM tenant_alerts
 WHERE tenant_id = '<tenant_id>'::uuid
