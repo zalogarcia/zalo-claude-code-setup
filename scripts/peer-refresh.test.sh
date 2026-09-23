@@ -1,8 +1,9 @@
 #!/bin/bash
-# Tests for peer-refresh.sh. A fake tmux and a fake open sit first on PATH and
-# record every call in a scratch dir, so the script's escalation logic is
-# asserted call by call and no real session is ever touched. Timings are cut to
-# seconds through the PEER_REFRESH_* overrides.
+# Tests for peer-refresh.sh. A fake tmux, a fake open and a fake defaults sit
+# first on PATH and record every call in a scratch dir, so the script's
+# escalation logic is asserted call by call and no real session, app or plugin
+# cache is ever touched. Timings are cut to seconds through the PEER_REFRESH_*
+# overrides.
 #
 #   bash ~/.claude/scripts/peer-refresh.test.sh
 S=~/.claude/scripts/peer-refresh.sh; pass=0; fail=0
@@ -21,6 +22,8 @@ for b in '\xe2\x80\x92' '\xe2\x80\x93' '\xe2\x80\x94' '\xe2\x80\x95'; do
   LC_ALL=C grep -q "$(printf "$b")" "$S" && dashes=1
 done
 [ "$dashes" -eq 0 ] && ok "no em or en dashes" || bad "em or en dash in the script"
+grep -qF 'open -g -a ChatGPT' "$S" && ok "plugin cache preflight opens ChatGPT in the background (-g)" || bad "preflight open is not -g -a ChatGPT"
+grep -qF -- '--check' "$S" && ok "blocking prompt check goes through peer-ask.sh --check" || bad "no peer-ask --check call"
 
 # 2. the shim: fake tmux + fake open, driven by a mode file
 ROOT="$(mktemp -d /tmp/peer-refresh-test.XXXXXX)"
@@ -39,23 +42,43 @@ case "$cmd" in
   send-keys)
     [ -f "$S/alive" ] || exit 1
     last=""; for a in "$@"; do last="$a"; done
-    if [ "$last" = "Enter" ]; then echo 0 > "$S/caps"; else
+    if [ "$last" = "Enter" ]; then echo 0 > "$S/caps"; [ -f "$S/fresh" ] && touch "$S/fresh_entered"; else
       printf '%s\n' "$last" >> "$S/typed"
       [ "$last" = "/new" ] && touch "$S/fresh"
+      [ "$last" = "ping" ] && [ "$(cat "$S/mode")" = "panel-on-ping" ] && touch "$S/panel"
     fi
     exit 0 ;;
   capture-pane)
     [ -f "$S/alive" ] || exit 1
+    healthy() { echo "• pong"; echo "› Ask Codex to do anything"; echo "  gpt-6-astra default"; }
+    stopped() { echo "■ This application session has been explicitly stopped by the user for this turn"; echo "› Ask Codex to do anything"; }
+    # the three startup panels seen or found on 2026-09-23 (text from the live
+    # pane and the Codex 0.154.0 binary)
+    hooks_panel() { echo "› Ask Codex to do anything"; echo "Hooks need review"; echo "5 hooks need review before they can run."; echo "Press t to trust all; enter to review hooks; esc to close"; }
+    update_modal() { echo "✨ Update available! 0.154.0 -> 0.156.1"; echo "Release notes: https://github.com/openai/codex/releases/latest"; echo "› 1. Update now (runs brew upgrade --cask codex)"; echo "  2. Skip"; echo "  3. Skip until next version"; echo "Press enter to continue"; }
+    migrate_modal() { echo "Choose how you'd like Codex to proceed."; echo "› Try new model"; echo "  Use existing model"; echo "Press enter to continue"; }
+    # panels that are on screen whatever the capture count
+    case "$mode" in
+      hooks-prompt) hooks_panel; exit 0 ;;
+      panel-on-ping) [ -f "$S/panel" ] && { hooks_panel; exit 0; } ;;
+      update-after-relaunch|stopped-then-update) [ -f "$S/relaunched" ] && { update_modal; exit 0; } ;;
+      migrate-after-new) [ -f "$S/fresh_entered" ] && { migrate_modal; exit 0; } ;;
+      # the composer draws first and the hooks panel opens half a second after
+      # the relaunch, i.e. after the idle wait first sees the composer
+      late-panel) if [ -f "$S/relaunched_at" ] && perl -MTime::HiRes=time -e 'exit(time - $ARGV[0] >= 0.5 ? 0 : 1)' "$(cat "$S/relaunched_at")"; then hooks_panel; exit 0; fi ;;
+      # the passive banner Codex prints on every start while an update is
+      # dismissed: NOT a prompt, the probe must go through
+      passive-banner) echo "✨ Update available! 0.154.0 -> 0.156.1"; echo "Run brew upgrade --cask codex to update." ;;
+    esac
     n=$(cat "$S/caps" 2>/dev/null || echo 0); n=$((n+1)); echo $n > "$S/caps"
     # the first capture after Enter is the baseline peer-ask takes: still typing
     if [ "$n" -lt 2 ]; then echo "• typing"; echo "› working"; exit 0; fi
-    healthy() { echo "• pong"; echo "› Ask Codex to do anything"; echo "  gpt-6-astra default"; }
-    stopped() { echo "■ This application session has been explicitly stopped by the user for this turn"; echo "› Ask Codex to do anything"; }
     case "$mode" in
       healthy) healthy ;;
       busy) echo "• Working (12s • esc to interrupt)" ;;
       stopped-until-new) if [ -f "$S/fresh" ]; then healthy; else stopped; fi ;;
       stopped-until-relaunch) if [ -f "$S/relaunched" ]; then healthy; else stopped; fi ;;
+      stopped-then-update) stopped ;;
       *) healthy ;;
     esac
     exit 0 ;;
@@ -64,25 +87,49 @@ esac
 SHIM
 cat > "$BIN/open" <<'SHIM'
 #!/bin/bash
-# fake open: records the call; "launches" the session unless mode is never-up.
+# fake open: records the call. "open -g -a ChatGPT" is the plugin cache
+# preflight: it writes the app's version directory into the fake cache when the
+# case says the app refreshes it. Anything else "launches" the session unless
+# mode is never-up.
 S="$SHIM_STATE"
 printf 'open %s\n' "$*" >> "$S/calls.log"
+if [ "$1" = "-g" ]; then
+  [ -f "$S/cache_refreshes" ] && mkdir -p "$S/cua/$(cat "$S/app_version")"
+  exit 0
+fi
 [ "$(cat "$S/mode")" = "never-up" ] && exit 0
-touch "$S/alive" "$S/relaunched"; rm -f "$S/fresh"; echo 0 > "$S/caps"
+touch "$S/alive" "$S/relaunched"; rm -f "$S/fresh" "$S/fresh_entered"; echo 0 > "$S/caps"
+perl -MTime::HiRes=time -e 'printf "%.3f\n", time' > "$S/relaunched_at"
 exit 0
 SHIM
-chmod +x "$BIN/tmux" "$BIN/open"
+cat > "$BIN/defaults" <<'SHIM'
+#!/bin/bash
+# fake defaults: records the call, prints the case's ChatGPT app version.
+S="$SHIM_STATE"
+printf 'defaults %s\n' "$*" >> "$S/calls.log"
+[ -f "$S/app_version" ] || exit 1
+cat "$S/app_version"
+SHIM
+chmod +x "$BIN/tmux" "$BIN/open" "$BIN/defaults"
 
-# run <name> <mode> <alive:0|1> <args...>; leaves RC, CALLS, LOG, OUT set
+# run <name> <mode> <alive:0|1> <args...>; leaves RC, CALLS, LOG, OUT set.
+# The plugin cache case comes from the caller's environment: APPV (the ChatGPT
+# version; "none" = unreadable), CACHEV (space separated cache directory names;
+# empty = no cache) and CACHE_REFRESH=1 (the app writes its directory when
+# opened). Default: app and cache both at 26.917.51856.
 run() {
   name="$1"; mode="$2"; alive="$3"; shift 3
   # Never fall through to the real multiplexer: without the shim in front of
   # PATH the script under test would act on the live session.
-  [ -x "$BIN/tmux" ] && [ -x "$BIN/open" ] || { echo "run $name: shim missing under $BIN, refusing to touch the real session" >&2; exit 1; }
-  ST="$ROOT/$name"; mkdir -p "$ST"; echo "$mode" > "$ST/mode"; : > "$ST/calls.log"
+  [ -x "$BIN/tmux" ] && [ -x "$BIN/open" ] && [ -x "$BIN/defaults" ] || { echo "run $name: shim missing under $BIN, refusing to touch the real session" >&2; exit 1; }
+  ST="$ROOT/$name"; mkdir -p "$ST/cua"; echo "$mode" > "$ST/mode"; : > "$ST/calls.log"
   [ "$alive" = 1 ] && touch "$ST/alive"
+  [ "${APPV-26.917.51856}" = none ] || echo "${APPV-26.917.51856}" > "$ST/app_version"
+  for d in ${CACHEV-26.917.51856}; do mkdir -p "$ST/cua/$d"; done
+  [ "${CACHE_REFRESH:-0}" = 1 ] && touch "$ST/cache_refreshes"
   OUT="$(SHIM_STATE="$ST" PATH="$BIN:$PATH" PEER_REFRESH_LOG="$ST/refresh.log" \
     PEER_REFRESH_PROBE_TIMEOUT=12 PEER_REFRESH_THREAD_WAIT=4 PEER_REFRESH_RELAUNCH_WAIT=6 PEER_REFRESH_POLL=1 \
+    PEER_REFRESH_CHATGPT_APP="$ST/ChatGPT.app" PEER_REFRESH_CUA_CACHE="$ST/cua" PEER_REFRESH_CACHE_WAIT=3 \
     "$S" "$@" 2>&1)"; RC=$?
   CALLS="$(cat "$ST/calls.log")"; LOG="$(cat "$ST/refresh.log" 2>/dev/null)"
 }
@@ -99,6 +146,7 @@ printf '%s' "$OUT" | grep -q "REFUSED" && ok "refusal names the allowlist" || ba
 # 4. usage errors are refusals too
 run usage healthy 1
 [ $RC -eq 1 ] && [ -z "$CALLS" ] && ok "no session arg -> exit 1, nothing touched" || bad "no session arg rc=$RC"
+printf '%s' "$OUT" | grep -qF '5 blocking prompt on screen' && ok "usage text documents exit 5" || bad "usage text lacks exit 5: $OUT"
 run usage2 healthy 1 codex-bare --bogus
 [ $RC -eq 1 ] && [ -z "$CALLS" ] && ok "unknown flag -> exit 1, nothing touched" || bad "unknown flag rc=$RC"
 
@@ -117,6 +165,7 @@ has '^send-keys -t codex-bare Enter$' && ok "probe pressed Enter separately" || 
 ! has '/new' && ok "healthy: no /new sent" || bad "healthy: /new was sent"
 ! has '^kill-session' && ok "healthy: no kill-session" || bad "healthy: kill-session was called"
 ! has '^open ' && ok "healthy: no relaunch" || bad "healthy: open was called"
+! has '^defaults ' && ok "healthy: no plugin cache preflight (it runs only before a relaunch)" || bad "healthy: preflight ran"
 printf '%s\n' "$LOG" | grep -qE '^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:]{8}[+-][0-9]{4} codex-bare probe healthy .* reason: shim test$' && ok "log line: timestamp, session, step, outcome, reason" || bad "log line shape: $LOG"
 [ "$(printf '%s\n' "$LOG" | grep -c .)" -eq 1 ] && ok "exactly one log line for one step" || bad "log lines: $LOG"
 
@@ -177,6 +226,116 @@ has '^open -a Terminal .*launch-codex-bare' && ok "--relaunch: relaunched via th
 [ "$(printf '%s\n' "$CALLS" | grep -c -- '-l -- ping')" -eq 1 ] && ok "--relaunch: one probe, after the relaunch" || bad "ping count under --relaunch"
 [ "$(first_line_matching 'kill-session')" -lt "$(first_line_matching 'l -- ping')" ] && ok "--relaunch: kill before the probe" || bad "--relaunch order"
 printf '%s\n' "$LOG" | grep -q "probe skipped (--relaunch)" && printf '%s\n' "$LOG" | grep -q "fresh-thread skipped (--relaunch)" && ok "log: probe and fresh-thread skipped (--relaunch)" || bad "log: $LOG"
+
+# 14. blocking prompts (2026-09-23). Every case: exit 5, the log names the
+#     prompt, and nothing is typed into the panel.
+sends() { printf '%s\n' "$CALLS" | grep -c '^send-keys'; }
+# after <regex>: the send-keys calls recorded after the first call matching it
+sends_after() { printf '%s\n' "$CALLS" | awk -v re="$1" 'f && /^send-keys/ {c++} $0 ~ re {f=1} END {print c+0}'; }
+
+# 14a. default path: the hooks review panel is up when the probe starts
+run blk-probe hooks-prompt 1 codex-bare --reason "shim test"
+[ $RC -eq 5 ] && ok "hooks panel at the probe -> exit 5" || bad "hooks probe rc=$RC ($OUT)"
+[ "$(sends)" -eq 0 ] && ok "hooks panel at the probe: zero send-keys (no ping, no Enter)" || bad "hooks probe typed: $CALLS"
+! has '^kill-session' && ! has '^open ' && ok "hooks panel at the probe: no kill, no relaunch" || bad "hooks probe escalated: $CALLS"
+printf '%s\n' "$LOG" | grep -q 'probe blocked by the Codex hooks review prompt (saw "hooks need review"), on screen: Hooks need review; nothing typed into it, a human must answer it' && ok "log names the hooks review prompt and the pane line" || bad "log: $LOG"
+printf '%s' "$OUT" | grep -q 'blocked by the Codex hooks review prompt' && ok "stdout names the hooks review prompt" || bad "stdout: $OUT"
+
+# 14b. fresh-thread path: --force-thread onto the hooks panel types no /new
+run blk-thread hooks-prompt 1 codex-bare --force-thread
+[ $RC -eq 5 ] && ok "--force-thread onto the hooks panel -> exit 5" || bad "force-thread hooks rc=$RC ($OUT)"
+[ "$(sends)" -eq 0 ] && ok "--force-thread onto the hooks panel: /new never typed" || bad "force-thread hooks typed: $CALLS"
+! has '^kill-session' && ! has '^open ' && ok "--force-thread onto the hooks panel: no relaunch (the panel comes back on every start)" || bad "force-thread hooks escalated: $CALLS"
+printf '%s\n' "$LOG" | grep -q 'fresh-thread blocked by the Codex hooks review prompt (saw "hooks need review"), on screen: Hooks need review; /new not typed' && ok "log: fresh-thread blocked, names the prompt" || bad "log: $LOG"
+
+# 14c. fresh-thread path: /new opens a model migration prompt
+run blk-new migrate-after-new 1 codex-bare --force-thread
+[ $RC -eq 5 ] && ok "a Press enter prompt after /new -> exit 5" || bad "migrate rc=$RC ($OUT)"
+[ "$(sends_after '-l -- /new')" -eq 1 ] && ok "after /new only its own Enter went in (no ping)" || bad "sends after /new: $(sends_after '-l -- /new') ($CALLS)"
+! has '^kill-session' && ! has '^open ' && ok "Press enter prompt after /new: no relaunch" || bad "migrate escalated: $CALLS"
+printf '%s\n' "$LOG" | grep -q 'fresh-thread blocked by a "Press enter to" prompt (saw "Press enter to")' && ok "log names the Press enter prompt" || bad "log: $LOG"
+
+# 14d. relaunch path: --relaunch comes up on the update prompt
+run blk-relaunch update-after-relaunch 1 codex-bare --relaunch
+[ $RC -eq 5 ] && ok "update prompt after --relaunch -> exit 5" || bad "update relaunch rc=$RC ($OUT)"
+has '^open -a Terminal ' && ok "update prompt after --relaunch: the relaunch itself ran" || bad "no launch: $CALLS"
+[ "$(sends)" -eq 0 ] && ok "update prompt after --relaunch: zero send-keys (Update now is never picked)" || bad "update relaunch typed: $CALLS"
+printf '%s\n' "$LOG" | grep -qF 'relaunch blocked by the Codex update prompt (saw "Update now (runs"), on screen: › 1. Update now (runs brew upgrade --cask codex); nothing typed' && ok "log names the update prompt and the pane line" || bad "log: $LOG"
+
+# 14e. escalation: stopped, /new does not help, the relaunch lands on the update prompt
+run blk-escalate stopped-then-update 1 codex-bare
+[ $RC -eq 5 ] && ok "escalation ending on the update prompt -> exit 5" || bad "escalation rc=$RC ($OUT)"
+[ "$(sends_after '^open -a Terminal')" -eq 0 ] && ok "escalation: nothing typed after the relaunch" || bad "typed after relaunch: $CALLS"
+printf '%s\n' "$LOG" | grep -q 'relaunch blocked by the Codex update prompt' && ok "log: relaunch blocked by the update prompt" || bad "log: $LOG"
+
+# 14f. the composer draws first and the hooks panel opens 0.5 s after the
+#      relaunch: the extra poll after the composer shows catches it before the
+#      probe types (without that poll, ping went in and only the check before
+#      Enter stopped it)
+run blk-late late-panel 1 codex-bare --relaunch
+[ $RC -eq 5 ] && ok "late hooks panel after a relaunch -> exit 5" || bad "late panel rc=$RC ($OUT)"
+[ "$(sends)" -eq 0 ] && ok "late hooks panel: the probe never typed" || bad "late panel typed: $CALLS"
+printf '%s\n' "$LOG" | grep -q 'relaunch blocked by the Codex hooks review prompt' && ok "log: relaunch blocked by the late hooks panel" || bad "log: $LOG"
+
+# 14g2. the panel opens while "ping" is going in: Enter is never pressed, and
+#       the log says the ping is in the pane rather than "nothing typed"
+run blk-midping panel-on-ping 1 codex-bare
+[ $RC -eq 5 ] && ok "panel opens mid ping -> exit 5" || bad "mid ping rc=$RC ($OUT)"
+has '^send-keys -t codex-bare -l -- ping$' && ! has '^send-keys -t codex-bare Enter$' && ok "panel opens mid ping: ping typed, Enter never pressed" || bad "mid ping calls: $CALLS"
+printf '%s\n' "$LOG" | grep -q 'probe blocked by the Codex hooks review prompt .*; the ping is in the pane but Enter was not pressed, a human must answer it' && ok "log says the ping is in the pane, not nothing typed" || bad "log: $LOG"
+
+# 14h. the check itself cannot run: fail closed, never type /new blind
+BROKEN="$ROOT/broken"; mkdir -p "$BROKEN"; cp "$S" "$BROKEN/peer-refresh.sh"
+printf '#!/bin/bash\nexit 126\n' > "$BROKEN/peer-ask.sh"; chmod +x "$BROKEN/peer-refresh.sh" "$BROKEN/peer-ask.sh"
+S_REAL="$S"; S="$BROKEN/peer-refresh.sh"
+run blk-broken healthy 1 codex-bare --force-thread
+S="$S_REAL"
+[ $RC -eq 5 ] && ok "broken prompt check -> exit 5 (fail closed)" || bad "broken check rc=$RC ($OUT)"
+[ "$(sends)" -eq 0 ] && ok "broken prompt check: /new never typed" || bad "broken check typed: $CALLS"
+printf '%s\n' "$LOG" | grep -q 'fresh-thread blocked by no screen check (peer-ask.sh --check exit 126' && ok "log: the failed check is named" || bad "log: $LOG"
+
+# 14g. the passive update banner is not a prompt: the probe goes through
+run passive passive-banner 1 codex-bare
+[ $RC -eq 0 ] && ok "passive Update available banner -> healthy, exit 0" || bad "passive banner rc=$RC ($OUT)"
+has '^send-keys -t codex-bare -l -- ping$' && ok "passive banner: ping typed" || bad "passive banner: no ping ($CALLS)"
+
+# 15. plugin cache preflight before a relaunch
+chatgpt_opens() { printf '%s\n' "$CALLS" | grep -c '^open -g -a ChatGPT$'; }
+
+# 15a. app newer than the cache, the app refreshes it
+APPV=26.918.100 CACHEV=26.917.51856 CACHE_REFRESH=1 run cache-newer healthy 1 codex-bare --relaunch --reason "cache test"
+[ $RC -eq 0 ] && ok "app newer: relaunch still healthy, exit 0" || bad "cache newer rc=$RC ($OUT)"
+[ "$(chatgpt_opens)" -eq 1 ] && ok "app newer: open -g -a ChatGPT called once" || bad "app newer: ChatGPT opens=$(chatgpt_opens) ($CALLS)"
+g=$(first_line_matching '^open -g -a ChatGPT'); k=$(first_line_matching '^kill-session'); o=$(first_line_matching '^open -a Terminal')
+[ -n "$g" ] && [ -n "$k" ] && [ -n "$o" ] && [ "$g" -lt "$k" ] && [ "$k" -lt "$o" ] && ok "app newer: ChatGPT opened before the kill and the launch" || bad "order: chatgpt@$g kill@$k launch@$o"
+printf '%s\n' "$LOG" | grep -q 'plugin-cache stale (app 26.918.100, cache 26.917.51856), opening ChatGPT in the background reason: cache test' && ok "log: stale, with both versions" || bad "log: $LOG"
+printf '%s\n' "$LOG" | grep -q 'plugin-cache refreshed to 26.918.100 after' && ok "log: refreshed" || bad "log: $LOG"
+
+# 15b. app newer, the cache never refreshes: logged, the relaunch goes ahead
+APPV=26.918.100 CACHEV=26.917.51856 run cache-stuck healthy 1 codex-bare --relaunch
+[ $RC -eq 0 ] && has '^open -a Terminal ' && ok "cache never refreshes: relaunch still runs, exit 0" || bad "cache stuck rc=$RC ($OUT)"
+[ "$(chatgpt_opens)" -eq 1 ] && ok "cache never refreshes: ChatGPT opened once" || bad "cache stuck opens=$(chatgpt_opens)"
+printf '%s\n' "$LOG" | grep -q 'plugin-cache no 26.918.100 directory within 3 s, relaunching anyway' && ok "log: the wait ran out, relaunching anyway" || bad "log: $LOG"
+
+# 15c. app equal to the cache: no open
+APPV=26.917.51856 CACHEV=26.917.51856 run cache-equal healthy 1 codex-bare --relaunch
+[ $RC -eq 0 ] && [ "$(chatgpt_opens)" -eq 0 ] && ok "app equal to the cache: ChatGPT not opened" || bad "cache equal rc=$RC opens=$(chatgpt_opens)"
+printf '%s\n' "$LOG" | grep -q 'plugin-cache current (app 26.917.51856, cache 26.917.51856)' && ok "log: current" || bad "log: $LOG"
+
+# 15d. no cache directory at all: no open
+APPV=26.917.51856 CACHEV="" run cache-missing healthy 1 codex-bare --relaunch
+[ $RC -eq 0 ] && [ "$(chatgpt_opens)" -eq 0 ] && ok "cache missing: ChatGPT not opened" || bad "cache missing rc=$RC opens=$(chatgpt_opens)"
+printf '%s\n' "$LOG" | grep -q 'plugin-cache skipped, no version directory under' && ok "log: cache missing, skipped" || bad "log: $LOG"
+
+# 15e. versions compare as numbers, not text; non version names ("latest") are ignored
+APPV=26.1000.2 CACHEV="26.999.1 26.917.51856 latest" run cache-numeric healthy 1 codex-bare --relaunch
+[ "$(chatgpt_opens)" -eq 1 ] && printf '%s\n' "$LOG" | grep -q 'stale (app 26.1000.2, cache 26.999.1)' && ok "26.1000.2 is newer than 26.999.1 (numeric compare)" || bad "numeric compare: $LOG"
+APPV=26.917.51856 CACHEV="26.901.100 26.917.51856 latest" run cache-several healthy 1 codex-bare --relaunch
+[ "$(chatgpt_opens)" -eq 0 ] && printf '%s\n' "$LOG" | grep -q 'current (app 26.917.51856, cache 26.917.51856)' && ok "several cache dirs: the newest one is compared" || bad "several dirs: $LOG"
+
+# 15f. no readable app version: no open
+APPV=none run cache-noapp healthy 1 codex-bare --relaunch
+[ $RC -eq 0 ] && [ "$(chatgpt_opens)" -eq 0 ] && printf '%s\n' "$LOG" | grep -q 'plugin-cache skipped, no ChatGPT version readable' && ok "no app version: skipped, not opened" || bad "no app rc=$RC: $LOG"
 
 # The cleanup stays LAST. A case appended below the rm once ran against the real
 # tmux and killed the live codex-bare session twice (2026-09-11); run() now

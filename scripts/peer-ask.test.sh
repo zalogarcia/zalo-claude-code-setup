@@ -47,4 +47,139 @@ PEER_ASK_SOCKET=peer-ask-test "$S" "$SN3" -m "what is the capital of France" --t
 SN5=n$$; pane "$SN5" 'IFS= read -r x; sleep 3; echo "● Real answer: Paris"; printf "\xe2\x9d\xaf\xc2\xa0   \n"; sleep 90'
 out="$(PEER_ASK_SOCKET=peer-ask-test "$S" "$SN5" -m "capital of France" --timeout 25)"; rc=$?
 [ $rc -eq 0 ] && printf '%s' "$out" | grep -qF "Real answer: Paris" && ok "Claude glyph + NBSP composer line detected" || bad "NBSP composer rc=$rc"
+# 8. blocking prompts (2026-09-23): a fake tmux first on PATH records every call
+#    and shows a fixed visible screen, so "nothing was typed" is asserted on the
+#    recorded calls. Session names here do not exist on the real server, so even
+#    a fall through to the real tmux would stop at has-session with exit 2.
+SROOT="$(mktemp -d /tmp/peer-ask-shim.XXXXXX)"; SBIN="$SROOT/bin"; mkdir -p "$SBIN"
+cat > "$SBIN/tmux" <<'SHIM'
+#!/bin/bash
+# fake tmux: $SHIM_STATE/screen is the visible screen, $SHIM_STATE/scroll the
+# history above it (only printed when -S is passed, like the real capture-pane).
+S="$SHIM_STATE"; printf '%s\n' "$*" >> "$S/calls.log"
+cmd="$1"; shift
+case "$cmd" in
+  has-session) exit 0 ;;
+  send-keys)
+    last=""; for a in "$@"; do last="$a"; done
+    if [ "$last" = "Enter" ]; then touch "$S/entered"; echo 0 > "$S/caps"; exit 0; fi
+    printf '%s' "$last" >> "$S/typed"
+    # a panel that opens while the text is going in
+    [ -f "$S/panel_on_type" ] && cp "$S/panel_on_type" "$S/screen"
+    exit 0 ;;
+  capture-pane)
+    case " $* " in *" -S "*) cat "$S/scroll" 2>/dev/null ;; esac
+    cat "$S/screen"
+    if [ -f "$S/entered" ]; then
+      n=$(cat "$S/caps"); n=$((n+1)); echo $n > "$S/caps"
+      if [ "$n" -lt 2 ]; then echo "• Working"; else echo "• pong"; echo "› Ask Codex to do anything"; fi
+    elif [ -f "$S/typed" ]; then
+      echo "› $(cat "$S/typed")"
+    fi
+    exit 0 ;;
+  *) exit 0 ;;
+esac
+SHIM
+chmod +x "$SBIN/tmux"
+# sa <case> <screen text> <peer-ask args...>; SCROLL and PANEL_ON_TYPE from the
+# caller's environment. Leaves RC, OUT and CALLS set.
+sa() {
+  name="$1"; screen="$2"; shift 2
+  [ "$(PATH="$SBIN:$PATH" bash -c 'command -v tmux')" = "$SBIN/tmux" ] || { echo "sa $name: fake tmux is not first on PATH, refusing to run" >&2; exit 1; }
+  ST="$SROOT/$name"; mkdir -p "$ST"; printf '%s\n' "$screen" > "$ST/screen"; : > "$ST/calls.log"
+  [ -n "${SCROLL:-}" ] && printf '%s\n' "$SCROLL" > "$ST/scroll"
+  [ -n "${PANEL_ON_TYPE:-}" ] && printf '%s\n' "$PANEL_ON_TYPE" > "$ST/panel_on_type"
+  OUT="$(SHIM_STATE="$ST" PATH="$SBIN:$PATH" "$S" shim-peer-$$ "$@" 2>&1)"; RC=$?
+  CALLS="$(cat "$ST/calls.log")"
+}
+sends() { printf '%s\n' "$CALLS" | grep -c '^send-keys'; }
+COMPOSER='› Ask Codex to do anything
+  gpt-6-astra default · ~ · Main [default]'
+HOOKS='› Ask Codex to do anything
+Hooks need review
+5 hooks need review before they can run.
+Press t to trust all; enter to review hooks; esc to close'
+UPDATE='✨ Update available! 0.154.0 -> 0.156.1
+Release notes: https://github.com/openai/codex/releases/latest
+› 1. Update now (runs brew upgrade --cask codex)
+  2. Skip
+  3. Skip until next version
+Press enter to continue'
+# one case per listed literal, plus the two full panels as Codex draws them
+blk() { # blk <case> <expected label> <screen>
+  sa "$1" "$3" -m ping --timeout 10
+  [ $RC -eq 5 ] && [ "$(sends)" -eq 0 ] && printf '%s' "$OUT" | grep -qF "BLOCKED by $2" \
+    && ok "blocked, zero send-keys, named: $1" || bad "$1: rc=$RC sends=$(sends) out=$OUT"
+}
+blk hooks-panel 'the Codex hooks review prompt (saw "hooks need review")' "$HOOKS"
+blk hooks-line 'the Codex hooks review prompt (saw "hooks need review")' "$COMPOSER
+3 hooks need review before they can run."
+blk press-t 'the Codex hooks review prompt (saw "Press t to trust")' "Press t to trust all; enter to review hooks; esc to close"
+blk update-modal 'the Codex update prompt (saw "Update now (runs")' "$UPDATE"
+blk update-option 'the Codex update prompt (saw "Update now (runs")' "› 1. Update now (runs brew upgrade --cask codex)"
+# the plain phrase counts where a panel is: no composer on screen
+blk update-now-bare 'the Codex update prompt (saw "Update now")' "A new version of Codex is ready.
+Update now"
+blk skip-until 'the Codex update prompt (saw "Skip until next version")' "  3. Skip until next version"
+blk press-enter 'a "Press enter to" prompt (saw "Press enter to")' "Choose how you'd like Codex to proceed.
+› Try new model
+  Use existing model
+Press enter to continue"
+blk press-enter-caps 'a "Press enter to" prompt (saw "Press enter to")' "Continuing startup with a fresh local database...
+Press Enter to continue."
+# Codex animates braille dots into blank cells; they must not hide a prompt,
+# not even a dot sitting in a one space word gap
+blk braille-dots 'the Codex update prompt (saw "Update now (runs")' "› 1. Update ⠂ now (runs brew upgrade --cask codex)"
+blk braille-glued 'the Codex update prompt (saw "Update now (runs")' "› 1. Update⠂now (runs brew upgrade --cask codex)"
+blk braille-hooks 'the Codex hooks review prompt (saw "hooks need review")' "5 hooks⠂need review before they can run."
+# a picker opened under the last reply: its footer is below the composer glyph line
+blk picker 'a "Press enter to" prompt (saw "Press enter to")' "• I opened the model picker.
+Select a model
+› gpt-6-astra
+  gpt-5
+Press enter to confirm or esc to go back"
+sa hooks-lines "$HOOKS" -m ping --timeout 10
+printf '%s' "$OUT" | grep -qF 'on screen: Hooks need review' && ok "refusal prints the pane line it matched" || bad "no pane line: $OUT"
+printf '%s' "$OUT" | grep -qF "nothing typed into 'shim-peer-$$'" && ok "refusal says nothing was typed" || bad "refusal text: $OUT"
+# --check: the same test, never types
+sa check-blocked "$UPDATE" --check
+[ $RC -eq 5 ] && [ "$(sends)" -eq 0 ] && ok "--check on the update prompt -> exit 5, zero send-keys" || bad "--check blocked rc=$RC sends=$(sends)"
+sa check-clear "$COMPOSER" --check
+[ $RC -eq 0 ] && [ "$(sends)" -eq 0 ] && ok "--check on an idle composer -> exit 0, zero send-keys" || bad "--check clear rc=$RC sends=$(sends) out=$OUT"
+# not a prompt: the passive banner Codex prints on every start while an update
+# is dismissed shares the "Update available!" literal with the modal
+sa passive "✨ Update available! 0.154.0 -> 0.156.1
+Run brew upgrade --cask codex to update.
+See full release notes: https://github.com/openai/codex/releases/latest
+$COMPOSER" -m ping --timeout 20
+[ $RC -eq 0 ] && printf '%s\n' "$CALLS" | grep -q -- '-l -- ping$' && printf '%s\n' "$CALLS" | grep -q ' Enter$' && ok "passive Update available banner: ping typed and sent, exit 0" || bad "passive banner rc=$RC out=$OUT"
+# not a prompt: the words only in the scrollback, above the visible screen
+SCROLL="$UPDATE" sa scrollback "$COMPOSER" -m ping --timeout 20
+[ $RC -eq 0 ] && [ "$(sends)" -ge 2 ] && ok "prompt text only in the scrollback: ping sent, exit 0" || bad "scrollback rc=$RC sends=$(sends) out=$OUT"
+# not a prompt: an old answer quoting the words, more than 15 lines above the bottom
+sa far-above "• Earlier I saw the Update now option and a hooks need review line.
+$(for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16; do echo "  report line $i"; done)
+$COMPOSER" -m ping --timeout 20
+[ $RC -eq 0 ] && [ "$(sends)" -ge 2 ] && ok "words more than 15 lines above the bottom: ping sent, exit 0" || bad "far above rc=$RC sends=$(sends) out=$OUT"
+# not a prompt: a reply ABOVE the idle composer using the everyday phrases (the
+# QA reproduction: this used to lock the peer out with exit 5)
+sa prose-update "• Want me to apply the update now, or wait until tonight?
+  Press enter to confirm is what the dialog said, so I stopped there.
+$COMPOSER" -m ping --timeout 20
+[ $RC -eq 0 ] && [ "$(sends)" -ge 2 ] && ok "a reply saying \"update now\" and \"press enter to\" above the composer: ping sent, exit 0" || bad "prose above composer rc=$RC sends=$(sends) out=$OUT"
+sa prose-check "• Want me to apply the update now?
+$COMPOSER" --check
+[ $RC -eq 0 ] && ok "--check does not flag a reply above the composer" || bad "--check prose rc=$RC out=$OUT"
+# the message itself carries a listed literal: it sits in the composer before
+# Enter, and the re-check must not refuse on it
+sa self-quote "$COMPOSER" -m "what does Update now do" --timeout 20
+[ $RC -eq 0 ] && printf '%s\n' "$CALLS" | grep -q ' Enter$' && ok "a message quoting \"Update now\" is still sent" || bad "self quote rc=$RC out=$OUT"
+# a panel that opens while the text is going in: typed, but Enter NOT pressed
+PANEL_ON_TYPE="$HOOKS" sa late-panel "$COMPOSER" -m ping --timeout 10
+[ $RC -eq 5 ] && ! printf '%s\n' "$CALLS" | grep -q ' Enter$' && printf '%s' "$OUT" | grep -qF 'Enter was NOT pressed' && ok "panel opens mid typing -> exit 5, Enter never pressed" || bad "late panel rc=$RC calls=$CALLS out=$OUT"
+# the usage text documents the new exit code
+"$S" 2>&1 | grep -qF '5 blocking prompt on screen' && ok "usage text documents exit 5" || bad "usage text lacks exit 5"
+# "Update available" stays off the list on purpose (the passive banner)
+sed -n "/^BLOCKING_PROMPTS=/,/prompt'\$/p" "$S" | grep -qi 'update available' && bad "Update available is a listed literal" || ok "Update available is not a listed literal"
+rm -rf "$SROOT"
 echo "$pass/$((pass+fail)) passed"; [ $fail -eq 0 ]
