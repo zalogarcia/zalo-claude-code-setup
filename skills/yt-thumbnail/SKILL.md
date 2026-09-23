@@ -31,17 +31,9 @@ Skip for: reel cover frames (reel template in `design/visual-spec.md` §6, diffe
 | `/Users/zalo/Documents/Zalo Blue.png`     | 2048² headshot, blue gradient bg, black denim                         | When the comp bg is dark/cool                         |
 | `/Users/zalo/Documents/zalo gold.JPG`     | 1024² headshot, gold bg                                               | Warm-bg comps (closest to paper tones)                |
 
-**AI character sheets (secondary refs — wardrobe/pose consistency, NEVER the identity input).** Repo-tracked copies in `~/dev/zalo-kabche-brand/design/reference-photos/` (registry README there; the Zalo OS Brand Card renders the pack):
+**Real photos only (Zalo, 2026-09-23).** Every image of Zalo passed to gpt-image-2 `images.edit`, whether as the identity input or as a wardrobe or pose reference, is a real photo from the table above. The AI character sheets (`character-sheet-*.png` in `~/dev/zalo-kabche-brand/design/reference-photos/`) are never passed in any `image=[...]` list, because a generated sheet drifts his face and every image built on it inherits the drift. instagram-carousels and linkedin-statics follow the same rule. A swipe composition ref that does not show Zalo is still fine. Identity audits compare against the real photo.
 
-| Path (brand repo `design/reference-photos/`) | What it is                                                      | Use for                                                         |
-| -------------------------------------------- | --------------------------------------------------------------- | --------------------------------------------------------------- |
-| `character-sheet-identity.png`               | 4 views + head front/profile + color & feature notes, black tee | Wardrobe/pose ref for black-tee comps; feature-notes crib sheet |
-| `character-sheet-black-hoodie.png`           | Full-body 5-view, black hoodie + joggers                        | Wardrobe/pose ref, casual register                              |
-| `character-sheet-blue-blazer.png`            | Full-body 5-view, light blue blazer                             | NOT for thumbnails (no-suits rule) — other brand assets only    |
-
-Rail rule: the identity image passed to gpt-image-2 `images.edit` is ALWAYS a real photo from the first table; a sheet may join the multi-image `image=[...]` list as a wardrobe/pose reference (like a swipe composition ref). Identity audits compare against the REAL photo, never a sheet.
-
-Every film block batches new clean stills (2-3 setups) — **append them here as they land**; fresher real stills beat AI renders for the final ship. **Registry gap (narrowed 2026-07-15):** the real photos still share ONE wardrobe (denim over hoodie); the AI sheets add black-tee / hoodie / blazer variety for restyle prompts, but film-block stills in 2-3 outfits remain the real fix.
+Every film block batches new clean stills (2-3 setups): **append them here as they land**; fresher real stills beat AI renders for the final ship. **Registry gap (narrowed 2026-07-15):** the real photos still share ONE wardrobe (denim over hoodie). Wardrobe variety comes from the restyle clause in the prompt (next section), and film-block stills in 2-3 outfits remain the real fix.
 
 ## Wardrobe rotation (Zalo, 2026-07-15 — "not the same jacket always")
 
