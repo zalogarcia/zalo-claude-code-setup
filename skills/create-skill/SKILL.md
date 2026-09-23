@@ -49,12 +49,12 @@ When both apply — markdown SKILL.md that **points to** a sibling shell script.
 
 ## Step 3 — Fill the canonical template
 
-Write to `~/.claude/skills/<kebab-case-name>/SKILL.md`:
+Write to `~/.claude/skills/<kebab-case-name>/SKILL.md`. Keep a section only when you have content specific to this skill for it and drop the rest: the whole body is paid for every time the skill fires.
 
 ````markdown
 ---
 name: <kebab-case-name>
-description: <RICH description with trigger phrases. Include "Use when X / Y / Z" phrases the model will pattern-match on. Mention what it replaces if it's replacing recurring inline patterns. End with one sentence on the consistency benefit. ~3-5 sentences total.>
+description: <What the skill does, then "Use when ..." naming the situations and user intents that should fire it (one or two representative phrasings are fine; a list of near-synonyms is not), plus when not to use it if a sibling skill is close. Mention what it replaces if it's replacing recurring inline patterns. Keep it short: this text rides in every request.>
 ---
 
 <One-line value proposition. What does this skill DO? Not what it IS.>
@@ -84,13 +84,12 @@ Secrets are stored in environment variables (configured in `~/.claude/settings.l
 
 ## Output shape
 
-<What Claude should report after invoking. Single-line success format. Multi-line failure format. NEVER paste full logs.>
+<What Claude should report after invoking. Single-line success format. Multi-line failure format. Don't paste full logs.>
 
 ## Anti-patterns
 
-- ❌ <Common failure mode 1 with brief reason>
-- ❌ <Common failure mode 2>
-- ❌ <The seductive-but-wrong shortcut>
+- ❌ <A failure that has actually happened, with its reason>
+- ❌ <The seductive-but-wrong shortcut, with why it is wrong>
 
 ## Edge cases
 
@@ -109,7 +108,7 @@ The `description:` field is the **only** field Claude pattern-matches against to
 
 **Good descriptions:**
 - Lead with the action: "Author a new...", "Kill any stale...", "Standardize...", "Encode the correct..."
-- Name **concrete trigger phrases** the user might say: `Use when the user says "X" / "Y" / "Z"`
+- Name the **situations and user intents** that should fire it: `Use when the user wants X, or when Y happens`. One or two representative phrasings help; a growing list of near-synonyms does not, because the description rides in every request and intent categories generalize better than enumerated phrases.
 - Mention what it replaces (if anti-recurrence): `Replaces 100+ hand-written X chains`
 - Cite paired skills/agents
 
@@ -188,13 +187,13 @@ After writing:
 ## Anti-patterns of skill creation
 
 - ❌ **Creating a skill before the pattern is proven recurring.** Wait for 3+ inline invocations across sessions, OR until the user explicitly says "this is annoying, can we skill-ify it".
-- ❌ **Vague description.** If you can't write 3 concrete trigger phrases in the description, the skill won't auto-fire.
+- ❌ **Vague description.** If you can't name the concrete situations that should fire it, the skill won't auto-fire.
 - ❌ **Duplicating an MCP.** Check `mcp__*` tools first; if the MCP covers it, point CLAUDE.md at the MCP instead of writing a skill.
 - ❌ **Shell script for what's really a judgment call.** Scripts can't decide "should I do this?" — that's markdown's job. Don't push judgment into shell.
 - ❌ **Markdown-only for what's really mechanical.** If the operation is `kill X, sleep N, curl Y` with no judgment, write the script — markdown skills get inconsistently re-derived.
 - ❌ **Auto-fire dependencies that don't exist.** E.g., a skill that assumes `pnpm` is installed without detecting it.
 - ❌ **Project-specific patterns.** Those belong in `<project>/.claude/skills/`, not `~/.claude/skills/`.
-- ❌ **No anti-patterns section.** The anti-patterns list is half the value of a skill — it tells Claude what NOT to do, which is harder to derive from scratch.
+- ❌ **Generic anti-patterns.** The anti-patterns list earns its place with failures that actually happened and shortcuts that look right but are not, each with its reason. A prohibition against a mistake the model was not going to make costs tokens and can anchor it toward that mistake.
 - ❌ **Secret in plaintext.** Always use env-var pattern. Never write a secret into SKILL.md.
 
 ## Edge cases
@@ -206,7 +205,7 @@ After writing:
 
 ## Pair with
 
-- **`~/.claude/rules-ref/persuasion-principles.md`** — read it when writing the skill's rule-like language (Authority/Commitment/Scarcity framing for instructions that must stick); it lives in rules-ref (on-demand), not always-loaded rules
+- **Rule-like language in the new skill**: state each rule at normal volume with its reason beside it ("Do X, because Y"). Current models follow instructions closely, so caps, CRITICAL and stacked MUST/NEVER over-apply; reserve emphasis for a rule you have actually seen underweighted.
 - **`/brainstorm`** — if unsure whether the pattern is truly recurring, dispatch brainstorm to stress-test the skill idea before writing it
 - **30-day usage analysis** — for retroactive skill discovery (general-purpose agent scanning `~/.claude/projects/`)
 - **`commit-with-heredoc`** — commit the new skill following the convention

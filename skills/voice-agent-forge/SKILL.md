@@ -103,7 +103,7 @@ Accordingly, Additionally, Arguably, Certainly, Consequently, Hence, However, In
 ## Anti-patterns
 
 - ❌ Inventing prices/rates/dates to fill a section — collect the lead and send a link via the SMS tool instead.
-- ❌ Canned objection scripts (the old "Common objections" / stock objection database) — superseded 2026-08-24 by the Selling Method block + per-client handlers. If you find yourself pasting an objection response you didn't derive from THIS client's context, stop.
+- ❌ Canned objection scripts or a stock objection database: objection handling comes from the Selling Method block plus per-client handlers (discipline #7). If you find yourself pasting an objection response you didn't derive from this client's context, stop.
 - ❌ Pasting `<selling_method>` into a support, receptionist, or routing-only bot — the block itself documents this as pure cost that distorts behavior.
 - ❌ Paraphrasing or trimming the Selling Method block — it is a measured artifact; verbatim or absent, nothing in between (the two platform adaptations in discipline #6 are the only exceptions).
 - ❌ Writing real URLs or phone numbers as clickable links inside the prompt — tools are external; reference using them.

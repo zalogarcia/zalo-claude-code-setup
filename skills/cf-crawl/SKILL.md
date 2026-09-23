@@ -26,7 +26,7 @@ BASE="https://api.cloudflare.com/client/v4/accounts/${ACCOUNT_ID}/browser-render
 | Single page → Markdown | `/markdown` | Synchronous POST |
 | Multi-page crawl | `/crawl` | Async POST + poll GET |
 
-**IMPORTANT:** For single-page scraping, prefer `/content` or `/markdown` — they are synchronous and return results immediately. Only use `/crawl` for multi-page jobs.
+For single-page scraping, prefer `/content` or `/markdown`: they are synchronous and return results immediately. Only use `/crawl` for multi-page jobs.
 
 ---
 
@@ -109,7 +109,7 @@ curl -s -X POST "${BASE}/content" \
 
 Crawls an entire site by following links and sitemaps. Async: POST to start, GET to poll.
 
-> **Note:** The /crawl endpoint launched 2026-03-10 and may still be rolling out. If polling returns "Crawl job not found", fall back to sequential `/markdown` calls for each URL.
+> **Note:** If polling returns "Crawl job not found", fall back to sequential `/markdown` calls for each URL (see "Fallback Strategy for Multi-Page Scraping" below).
 
 ### Start a crawl job
 

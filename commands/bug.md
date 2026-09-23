@@ -41,7 +41,7 @@ Pass:
 - The bug description and reproduction steps from Step 1
 - Working directory + relevant file paths
 - Instruction to follow the 4-phase debugging in `~/.claude/agents/bug-fix.md`
-- Instruction to check live logs first if Supabase/infrastructure is involved (`mcp__supabase__get_logs`)
+- Instruction to check live logs first if Supabase/infrastructure is involved (`mcp__supabase__query_logs`)
 
 Wait for one of:
 

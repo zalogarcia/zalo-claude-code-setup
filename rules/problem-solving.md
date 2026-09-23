@@ -58,4 +58,4 @@ This is from `~/.claude/agents/bug-fix.md`'s 4-phase systematic debugging — Ph
 
 Sibling of the 3+ Fixes Rule, for third-party APIs: **two failed attempts against an external API with the same error class → the next action MUST be a ground-truth probe** (`validate_only` / dry-run flag, GET the live resource, capture the real payload) — never a third rewritten guess.
 
-Basis (2026-07-19 audit): ~6 rounds of rewritten n8n expressions round-tripped through the user before one `validate_only` curl found the real missing field — the probe had been named early and declined; same week, mocks written against an assumed GHL response shape failed the customer's live test.
+Basis: rewritten guesses against an external API tend to round-trip through the user many times, while one probe finds the real payload.

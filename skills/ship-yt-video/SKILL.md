@@ -3,7 +3,7 @@ name: ship-yt-video
 description: End-to-end checklist for shipping a Zalo Kabche long-form YouTube video so no packaging or publish step gets skipped — edit-quality pass, a 3-TITLE split test pulled from the title-structures database, a 3-thumbnail split test (yt-thumbnail skill), a chapters-timed description, the correct upload path (Studio direct for long-form — Post for Me chokes on it), and the Claude-in-Chrome Studio setup. Use when the user says "ship the youtube video", "publish the video to youtube", "upload the long-form video", "put the video on youtube", or is finishing any video in ~/dev/zalo-kabche-brand. Replaces ad-hoc uploads that miss the title database, mistime chapters, or push a 45-min file through a pipeline that can't take it.
 ---
 
-The one authority for putting a finished Zalo Kabche long-form video on YouTube. Runs the full pipeline as a gated checklist — packaging (3 titles + 3 thumbnails), description, upload, Studio setup — so we never again ship with a plain title, mistimed chapters, or a failed upload. (Born 2026-07-15 from the Master Any AI ship, which missed the title database and burned an hour on a Post for Me upload that can't handle long-form.)
+The one authority for putting a finished Zalo Kabche long-form video on YouTube. Runs the full pipeline as a gated checklist (packaging with 3 titles + 3 thumbnails, description, upload, Studio setup) so no video ships with a plain title, mistimed chapters, or a failed upload.
 
 ## When to invoke
 
@@ -32,9 +32,9 @@ Never stitch-and-ship. Run the silence/retake pass (`feedback_video_edit_checkli
 
 Packaging is Zalo's declared weakest skill and the stage most likely to be shortcut. Both halves are **split tests of 3**, not one-and-done.
 
-### 1a. THREE titles — from the database (the step missed on 2026-07-15)
+### 1a. Three titles from the database
 
-**MANDATORY: run every video through `process/packaging/title-structures.md`.** Do NOT write a plain descriptive title ("X (Full Course)") — that matches no proven pattern and is exactly what the database exists to prevent.
+Run every video through `process/packaging/title-structures.md`. Never ship a plain descriptive title ("X (Full Course)"): it matches no proven pattern, which is exactly what the database exists to prevent.
 
 1. Classify the video's bucket: belief-breaker/contrarian · proof & math · method & how · test & review · story/journey · wound-first.
 2. Pick **3 different proven patterns** that fit, and write one title each — carry each pattern's trending proof number (e.g. "Give Me [Duration] and I'll [Outcome]" — 2.0M/mo).
@@ -52,9 +52,9 @@ Invoke **`yt-thumbnail`** for the 3-concept split-test set (4-axis diversity + w
 Write the YouTube description; save to the deliverable folder as `YouTube Description.txt`.
 
 - **Hook** in the first ~2 lines (shown before "…more"); brand voice, no hype.
-- **Chapters** — `0:00` first, ≥3, ≥10s apart, in order. **Compute timestamps from the FINAL cut**, not the raw edit: if an intro was prepended, every module/section offset shifts by the intro length. (Missed-adjacent risk on 2026-07-15 — got this right by measuring divider positions + intro offset.)
+- **Chapters**: `0:00` first, ≥3, ≥10s apart, in order. **Compute timestamps from the FINAL cut**, not the raw edit: if an intro was prepended, every module/section offset shifts by the intro length. Measure the divider positions plus the intro offset.
 - **What you'll learn** bullets; **CTA** (subscribe + one comment prompt — generic/evergreen, no next-video teaser); **hashtags**.
-- Verify special chars typed clean (em dash —, middot ·); avoid `@` (triggers a mention dropdown).
+- Verify special chars typed clean (middot ·) and that the description carries no em or en dashes (none in Zalo's copy, any channel); avoid `@` (triggers a mention dropdown).
 
 ## Phase 3 — Upload (long-form goes DIRECT to Studio)
 

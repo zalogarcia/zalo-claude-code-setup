@@ -94,7 +94,7 @@ Rules: regions in reading order (title → panels → bottom); one metaphor per 
 ## Dispatch template (Agent → `image-craft-expert`)
 
 ```
-Generate an infographic with gpt-image-2 ONLY — do NOT run nano-banana, skip the dual-model default.
+Generate an infographic with gpt-image-2 only. Skip your dual-model default and do not run nano-banana.
 
 ## Prompt (refine with your craft, but keep every quoted string verbatim and keep the layout regions)
 <assembled prompt>

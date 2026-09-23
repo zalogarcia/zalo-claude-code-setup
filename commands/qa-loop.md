@@ -53,7 +53,7 @@ LOOP:
         Pass changed files + standard QA prompt; no `model:` override (inherits
         the agent's `fable` frontmatter pin — one dispatch per iteration is
         low-volume). Wait for
-        ## VERIFICATION PASSED / ## ISSUES FOUND / ## BLOCKED (prior behavior).
+        ## VERIFICATION PASSED / ## ISSUES FOUND / ## BLOCKED.
         A `## VERIFICATION PASSED` is NOT clean if its body says
         `Assessment: PASS WITH CONCERNS` or `FAIL`, or
         `**Status:** DONE_WITH_CONCERNS`, or if it is missing its `Assessment:`

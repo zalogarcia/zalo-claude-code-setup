@@ -254,17 +254,15 @@ to a few minutes. External Blocker Protocol handles vendor-side waits
 minutes, hours, or days — those are not retryable in a backoff loop; the
 work unit gets deferred and the orchestrator continues with other work.
 
-## Fable Fan-Out Preflight (MANDATORY before large Fable dispatch waves)
+## Fable Fan-Out Preflight (before large Fable dispatch waves)
 
-Distinct from transient errors: Fable session limits are a BUDGET, and large
-Fable fan-outs exhaust it predictably. The 2026-07-11 60-session audit counted
-32 usage-limit incidents; the worst day (2026-07-02, ~20 hits) killed a
-16-agent fix wave at zero output and 81 of 125 verifiers mid-audit — driven by
-"only use fable agents" instructions that were complied with silently.
+Distinct from transient errors: Fable session limits are a budget, and large
+Fable fan-outs exhaust it predictably. Whole waves have died at zero output
+after an "only use fable agents" instruction was followed silently.
 
 **The rule:** before dispatching a wave of **more than 5 Fable-bound agents**
 (explicitly pinned `model: fable`, OR inheriting a Fable session model), the
-orchestrator MUST surface the math and get a decision — do not comply
+orchestrator must surface the math and get a decision: do not comply
 silently, do not refuse:
 
 ```markdown
@@ -308,9 +306,8 @@ agent on `opus` (never `sonnet`), per the CLAUDE.md model policy.
 
 ## Resume, Never Restart
 
-Limit walls and API outages kill agents, not completed work. The 2026-07
-audit's proven pattern: a 125-agent workflow resumed from cache across three
-session-limit crashes so only the ~81 dead agents re-ran.
+Limit walls and API outages kill agents, not completed work. Resuming replays
+the completed agents from cache, so only the dead ones re-run.
 
 - **Workflows:** always relaunch with `resumeFromRunId` — completed agent()
   calls replay from cache. Never re-run a workflow from scratch after a limit

@@ -16,7 +16,7 @@ Skip for: non-git scratch directories, autopilot worktrees (`*-autopilot-*` — 
 
 ## Why VERIFY.md is the key artifact
 
-A 60-session analysis showed the best-instrumented repo succeeds because of accumulated repo knowledge: how to prove THIS repo's deploys are live, which commands actually work, where the admin test account lives. Documented incident: a "deploy verified" overclaim happened because a dashboard commit deploys via **Vercel** while the cited proof signal was **ECS** — dashboard-only commits skip every ECS job, so ECS green proved nothing. `VERIFY.md` is the machine-readable manifest that orchestrators (`/autopilot`, `/bug`, `qa-agent`, `live-test-campaign`) read BEFORE claiming anything is tested or live.
+Sessions in a repo succeed because of accumulated repo knowledge: how to prove this repo's deploys are live, which commands actually work, where the admin test account lives. The failure it prevents is a "deploy verified" claim that cites the wrong pipeline, such as ECS green offered as proof for a dashboard commit that deploys via **Vercel** and skips every ECS job. `VERIFY.md` is the machine-readable manifest that orchestrators (`/autopilot`, `/bug`, `qa-agent`, `live-test-campaign`) read before claiming anything is tested or live.
 
 ## Step 1 — Scan the repo
 
@@ -93,7 +93,7 @@ Canonical template (fill every `<placeholder>` from scan + verification evidence
 | ------------------ | ---------------------------------- | ------------------------------------------------------------------- |
 | <dashboard>        | <Vercel project X on push to main> | <vercel inspect prod + grep live bundle for a change-unique string> |
 | <gateway/services> | <ECS cluster Y, services list>     | <per-service image tag == pushed SHA + /health 200>                 |
-| <edge functions>   | <supabase deploy via PR/CI>        | <function version bump N→N+1 + get_logs clean 5 min>                |
+| <edge functions>   | <supabase deploy via PR/CI>        | <function version bump N→N+1 + query_logs clean 5 min>              |
 
 ## Deploy traps
 
@@ -109,8 +109,7 @@ Canonical template (fill every `<placeholder>` from scan + verification evidence
      publishes, and the reply. /autopilot's Phase 4 gate and /go-live run it.
      If none exists yet, write the honest line below — it makes the gap
      machine-visible instead of silently absent.
-     (Basis: 2026-07 GHL post-mortem — 41% of 39 live-test defects were only
-     catchable by simulated inbound traffic; mocked unit tests missed them all.) -->
+     (Mocked unit tests miss the defects this catches.) -->
 
 - command: <e.g. `npm run harness:webhooks` — sends recorded Twilio/Meta fixture payloads at the local gateway>
 - fixtures: <path — seed from REAL captured payloads, not hand-written guesses>

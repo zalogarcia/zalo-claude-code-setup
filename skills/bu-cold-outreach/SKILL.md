@@ -14,10 +14,9 @@ owns every thread from the moment a prospect replies.
 
 **Read this before anything else in the skill. It outranks every older line below.**
 
-Zalo, 2026-09-22 about 17:05 ET, with a screenshot of the Sandra Zurick thread (three joke
-bubbles on 09-14, a "Last one from me" bump on 09-22, zero replies): "For the astra
-outreach we should not send 4 messages with no reply... needs to be a single cold message."
-Then, about 17:10 ET, on LinkedIn: option A.
+Zalo's decision on 2026-09-22, after one prospect got four messages and never replied: a
+single cold message per prospect. On LinkedIn he chose option A (connection requests carry no
+note).
 
 The rule:
 
@@ -50,12 +49,11 @@ Everything else that already worked stays inside that one message: no link, the 
 voice, the per channel caps, the ramp, the pacing, stop on warning, and approval mode.
 
 The target is the owner operator of a 3 to 8 truck HVAC or plumbing company doing $1M to
-$3M, anywhere in the US (the strategy doc named Phoenix, Dallas-Fort Worth and Tampa
-first; Zalo widened it to countrywide on 2026-09-08). He is off the tools, spends on ads or is
+$3M, anywhere in the US. He is off the tools, spends on ads or is
 hiring office help, and every after hours call that hits voicemail is a service call or an
 install he already paid to generate.
 
-## The lane requirement, read this before anything else
+## The lane requirement
 
 **This skill sends messages from Zalo's real social accounts. It requires the codex-bare
 session, which runs without the macOS sandbox and has the Computer Use plugin, so it can
@@ -228,9 +226,8 @@ governs prospects who have not, and it is the only rule Astra's rows follow.
 | `NO_SHOW` | same day | warm reschedule | day 2, then day 6 takeaway | Zalo |
 | `CALL_HELD` | day 1 | recap with the exact offer discussed | day 4 their objection, day 10 takeaway | Zalo |
 
-**There are no bumps (retired 2026-09-22).** Bump 1 at day 3 and bump 2, the takeaway, at
-day 7 were this skill's follow up sequence from 2026-09-08 to 2026-09-22; Zalo ended them.
-A prospect who does not answer the one message goes `COLD` and hears nothing else.
+**There are no bumps (retired 2026-09-22).** A prospect who does not answer the one message
+goes `COLD` and hears nothing else.
 
 - Any stop request at any stage means `DEAD`, in that session, forever, on every channel.
 
@@ -297,9 +294,7 @@ text is a delivered DM), and it refuses either lane id on any channel but linked
 the text sent are the same string, checked by sha1 in the batch as usual.
 
 **LinkedIn is a two gate funnel and each gate gets its own denominator (2026-09-12).** The
-skill previously said CONNECT rows were "excluded from every send count and every reply
-rate" while `learnings.md` rule 5 said "on LinkedIn a send is the connection note". Both
-cannot be true, and the disagreement made five days of numbers unreadable. The rule now:
+rule:
 
 - **Gate 1, acceptance.** Denominator is CONNECT rows that have reached 14 days old.
   Numerator is acceptances. This is the LinkedIn number that matters first. Since
@@ -353,7 +348,7 @@ because the log is append only:**
   every reply rate and the scoreboard. It stays in the file as the audit record of a rule
   violation, and an auto responder answered it, which is not a reply either.
 
-So the working log's delivered owner messages to date is ONE, not three. Any count that says
+So those three rows are ONE delivered owner message, not three. Any count that says
 otherwise has read rows instead of prospects.
 
 **Nothing counts as sent unless it is here.** The report's counts and the funnel use this
@@ -375,7 +370,7 @@ Read `config.md`, `pipeline.csv`, `sent-log.csv`, yesterday's `batch-*.md` and y
 report. Run the health checks. Then state, in the first lines of output:
 
 - the mode (approval on or off),
-- **one line per ACTIVE channel**, because since 2026-09-12 each channel has its own ramp:
+- **one line per ACTIVE channel**, because each channel has its own ramp:
   the channel, its ramp week, its ramp ceiling, its cap, any hold on it, and today's quota
   after what already went out today; on LinkedIn the three lane numbers (invitations, open
   profile messages, InMail) and on Facebook the friend request number beside the cold
@@ -390,7 +385,7 @@ report. Run the health checks. Then state, in the first lines of output:
   as inactive so a missing rail is never silent,
 - any tripped health check, and which channel it halts.
 
-There is no single shared ceiling any more. A channel that is held, reset or inactive takes
+There is no single shared ceiling. A channel that is held, reset or inactive takes
 nothing away from the others, and no channel is ever allowed above its own cap in the
 channel table of `config.md`.
 
@@ -425,7 +420,7 @@ the notes, set the row to `NO_CHANNEL` if that was the only channel, and do not 
 a send. Only escalate it to a warning event if the platform states a reason that is about
 Zalo's account.
 
-### 2. Day 7 close out (this replaced "Bumps due" on 2026-09-22)
+### 2. Day 7 close out
 
 Date driven from `pipeline.csv`. Walk every `SENT` row and compare `last_touch` to today.
 Seven days or more with no reply: set the stage to `COLD` and keep `next_due` empty. Draft
@@ -627,7 +622,7 @@ this block is that a future session, M included, should not arrive in three week
 "what about cold email" as though it were an untried idea. It was tried, by other people,
 at volume, and measured.
 
-**The measured failures. All of these are DATA, not somebody's opinion.**
+**The measured failures, each labeled DATA or CLAIM in the last column.**
 
 | What was tried | What it produced | Type |
 | --- | --- | --- |
@@ -673,10 +668,8 @@ produces more cold first touches. Adding a channel is the only way to raise the 
 
 **A LinkedIn connection request IS a cold first touch and consumes a daily slot**
 (2026-09-12). It is also the denominator for the 80 per week limit, so it is counted twice,
-against two different budgets, and BOTH bind. Before this was written down the playbook said
-an invitation counts against the week and "not the 15 DMs per day", which would have let a
-week 3 session send 15 follow ups plus the whole weekly invitation remainder in one
-afternoon. There is no day on which LinkedIn actions exceed that channel's daily number.
+against two different budgets, and BOTH bind. There is no day on which LinkedIn actions exceed
+that channel's daily number.
 An open profile message or an InMail is a cold first touch against the same 15 and never
 against the 80; it has no accept gate, so the ramp hold, which binds invitations, does not
 reduce it (`config.md`, arithmetic step 6).
@@ -702,9 +695,8 @@ The channel's quota is zero until the date, whatever its `ramp_week` and
 says yes and whose start date is in the future is CORRECTLY configured, not a contradiction,
 and it is not held back by a prose line somebody has to remember to read.
 
-Before this there was ONE shared ramp for all three channels, so opening a second channel
-either could not happen or silently halved the first. Now: opening Facebook costs LinkedIn
-nothing, and a warning that resets Facebook leaves LinkedIn where it was. The one exception
+Opening Facebook costs LinkedIn nothing, and a warning that resets Facebook leaves LinkedIn
+where it was. The one exception
 is two warning events on two different channels inside 7 days, which resets every channel
 to week 1 and 10 a day, because that pattern is about how we are sending.
 
@@ -718,9 +710,9 @@ open profile and InMail lanes then fill to the channel cap of 15 minus that numb
 touched by the 80, per `config.md` arithmetic step 6. State that arithmetic per channel in
 the session header, including the date a not yet started channel is waiting for.
 
-**A cold first touch is one prospect and ONE message (2026-09-22).** Until then the `J` arm
-typed three bubbles per prospect; now every first touch, the joke included, is one message,
-one bubble, one cold first touch against the daily cap and one pacing gap.
+**A cold first touch is one prospect and ONE message (2026-09-22).** Every first touch, the
+joke included, is one message, one bubble, one cold first touch against the daily cap and one
+pacing gap.
 
 **Messenger sends on Enter (2026-09-09).** A newline passed to the Facebook composer fires
 Send mid message: entry 4 of the 2026-09-08 batch went out as the opener alone. Type
@@ -908,7 +900,7 @@ per the tier rule for friend requests in `config.md`.
 `templates/gold-notes.md`. That is a precondition on the arm, separate from the per batch
 approval, and it holds even if `approval_mode` is ever off.
 
-Everything not named here is unchanged: the four beats, the dare, the demo claim, the caps,
+Both arms keep everything not named here: the four beats, the dare, the demo claim, the caps,
 the pacing, the stop on warning rule, approval mode, and the law that Astra's messages carry
 no numbers. And over all of it, the one message rule at the top of this file.
 
@@ -954,14 +946,9 @@ approached again.
 A warning event is not a health check; it stops a channel immediately and unconditionally,
 per the sending rules.
 
-**Why check 5 is written in delivered messages and not in calendar days** (restated
-2026-09-12). It used to read "14 days of sending, zero replies on every channel", which is
-the same misread checks 1a and 1b were fixed to stop making: a pending invitation is not a
-delivered message. Sending began 2026-09-08, so on 2026-09-22 the old wording fires on a
-delivered set of one Facebook message plus whatever the Facebook joke arm has managed since
-it opened on 2026-09-13 (its start date moved forward later on 2026-09-12), a few days of it
-7 days old and nowhere near 20, and it would read 37 unaccepted LinkedIn
-invitations as two weeks of failed sending and halt the whole cold track on Facebook's day 7.
+**Why check 5 is written in delivered messages and not in calendar days:** a pending
+invitation is not a delivered message, so a calendar count would read unaccepted LinkedIn
+invitations as weeks of failed sending and halt the whole cold track on too little evidence.
 
 The floor is **20 delivered messages aged 7 days** because that is the number this skill
 already uses everywhere a rate gets read: "no verdict on a variant under 20 sends", the per
@@ -969,13 +956,12 @@ arm size of 20 against 20, and the ramp's own measured delivery gate of 20 deliv
 DMs aged day 7. Under that floor there is no reply rate to be zero, only a count.
 
 **A channel that has delivered nothing SATISFIES its half of the trigger, it does not
-disable the check** (corrected in the re audit of this fix, 2026-09-12). The first cut read
-"14 days since that channel's first delivered message" and nothing else, which made the
-check unreachable in exactly the state it exists to catch: on this account LinkedIn is
-`Active: yes` with 37 invitations and zero acceptances, so it has no delivered message and no
-14 day clock, and a literal reading let 400 unanswered Facebook messages pile up over five
-months without check 5 ever firing. A channel that has been open for two weeks and delivered
-nothing is the strongest structural evidence there is. Same trap in the other direction:
+disable the check**. Reading only "14 days since that channel's first delivered message"
+would make the check unreachable in exactly the state it exists to catch: a channel with
+invitations and zero acceptances has no delivered message and no 14 day clock, so unanswered
+messages on the other channels could pile up for months without check 5 ever firing. A
+channel that has been open for two weeks and delivered nothing is the strongest structural
+evidence there is. Same trap in the other direction:
 opening a third channel must not push the halt out by another 14 days, which the OR branch
 also prevents, because a channel that has just opened and delivered nothing yet has not been
 Active for 14 days and so cannot satisfy either branch until it either delivers or goes two
@@ -1085,7 +1071,6 @@ to claim, and filling the price fields in `call-one-pager.md` before the first b
   unrecognised channel rather than silently giving it a limit that belongs to another.
 - `scripts/note-lint.test.py`, the lint's own suite: `python3 scripts/note-lint.test.py`.
   Run it after any change to the lint; a change that does not keep it green does not ship.
-  254 cases as of 2026-09-22.
 - `scripts/fixtures/single-message/`, a small working folder (`pipeline.csv`,
   `sent-log.csv`, `prospects.csv`) with two hand made batches: `notes-pass.json` and
   `notes-refuse.json`, which trips every one message refusal (exit 1). A folder inside the

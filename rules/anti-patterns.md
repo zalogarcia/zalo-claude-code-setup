@@ -7,7 +7,7 @@ Behavioral rules that apply regardless of project. Drawn from both gsd-build/get
 1. **Never read agent definition files** (`~/.claude/agents/*.md`) — `subagent_type` auto-loads them.
 2. **Never inline large files into subagent prompts** — tell agents to read files from disk instead.
 3. **Read depth scales with context** — see `~/.claude/rules/context-budget.md` for tier behavior.
-4. **Delegate heavy work to subagents** — the orchestrator routes; it does not build, analyze, research, or verify in main context.
+4. **Delegate heavy work to subagents.** Inside orchestrator commands (`/autopilot`, `/qa-loop`, `/go-live`) the orchestrator routes and does not build, analyze, research, or verify in its own context; in a normal session the main thread decides and implements (`~/.claude/CLAUDE.md` "When to Use Subagents").
 5. **Proactive pause warning** — when context budget is heavy, surface it to the user before continuing.
 
 ## File Reading Rules

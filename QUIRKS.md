@@ -1,4 +1,4 @@
-# Environment Quirks (front-loaded — each cost a re-derivation this month)
+# Environment Quirks (each one has cost a re-derivation before)
 
 - zsh exit codes: `cmd > /tmp/out 2>&1; echo $?` — never trust `$?` after a pipe; for tsc/build use the typecheck-and-build skill.
 - `status` is a RESERVED zsh variable — assignments silently no-op (caused a false 50-min stall alarm); pick another name.

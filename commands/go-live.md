@@ -1,6 +1,6 @@
 # /go-live — Activation & Live Verification Bridge
 
-Closes the seam between "code complete on a branch" and "verified working in production" — the gap where the 2026-07 GHL post-mortem's 39 live-test defects lived. Consumes the activation runbook an `/autopilot` run wrote (or derives one), executes every step Claude can execute, checkpoints the steps only a human can do, then live-verifies with the traffic harness + live-test campaign so the user's first touch is UX judgment, not bug discovery.
+Closes the seam between "code complete on a branch" and "verified working in production", where defects with no static signature (activation gaps, missing publishes, vendor wiring) surface. Consumes the activation runbook an `/autopilot` run wrote (or derives one), executes every step Claude can execute, checkpoints the steps only a human can do, then live-verifies with the traffic harness + live-test campaign so the user's first touch is UX judgment, not bug discovery.
 
 ## Authoritative Rules
 

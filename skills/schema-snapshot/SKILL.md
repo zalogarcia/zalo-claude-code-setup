@@ -1,6 +1,6 @@
 ---
 name: schema-snapshot
-description: 'Dump the production Supabase public schema (tables, columns, types, nullability, defaults, FKs, RLS flags) via the Supabase MCP and rewrite docs/SCHEMA-PROD.md with a generated-at header and drift notes. Use after applying any migration, whenever the snapshot is >7 days old, when a prod SQL query fails on a column/table name, or when the user asks to "refresh the schema snapshot". Kills schema-guessing in ad-hoc SQL — the #2 measured friction cluster (~60 wasted turns).'
+description: 'Dump the Delta Agents production Supabase public schema (tables, columns, types, nullability, defaults, FKs, RLS flags) via the Supabase MCP and rewrite docs/SCHEMA-PROD.md with a generated-at header and drift notes. Use after applying any migration, whenever the snapshot is >7 days old, when a prod SQL query fails on a column/table name, or when the user asks to "refresh the schema snapshot". Prevents schema-guessing in ad-hoc SQL. The queries target Delta Agents prod ($DELTA_PROD_PROJECT_REF); in another repo, swap in the ref of that project first.'
 ---
 
 Refresh `docs/SCHEMA-PROD.md` from the live production database so ad-hoc SQL never guesses column names again.
@@ -86,7 +86,7 @@ Preparation of `columns.json`: copy Query 1's array verbatim, **drop monthly-par
 Required output shape (match the existing file — diff-stability matters):
 
 1. **Header block:** title, `Generated: YYYY-MM-DD HH:MM UTC`, source project id, pointer to this skill, the refresh triggers (after every migration / >7 days).
-2. **"Known drift vs migrations"** section — carry forward and re-verify existing notes. Current state (verified 2026-07-02): `tenant_followups.created_at`/`updated_at` were historically prod-only drift, **reconciled** by migration `00101_mock_demo_full_business.sql` (`ADD COLUMN IF NOT EXISTS`); no remaining drift known. If the refresh reveals a prod column missing from `supabase/migrations/`, ADD it to this section.
+2. **"Known drift vs migrations"** section: carry forward and re-verify the notes already in the file. If the refresh reveals a prod column missing from `supabase/migrations/`, ADD it to this section.
 3. **"Common wrong guesses"** table (no `agents` table → `tenant_agents`; no `tenant_audit_log` → `audit_log`; no `first_name` → `name`; `due_at` not `scheduled_at`; no `tenants.name` → `slug`; query partition parents not leaves).
 4. **`contact_id` type table** — derive from the data: which tables use `uuid` vs `varchar` contact_id (the 42P08 cast trap).
 5. **Per-table sections** (alphabetical): `### \`table_name\``, RLS line (`enabled (forced)`/`enabled (not forced)`), compact column table `| column | type | null | default |`(shorten`character varying`→`varchar`, `timestamp with time zone`→`timestamptz`, `character(n)`→`char(n)`, `\_text`→`text[]`), then FK list.
@@ -96,7 +96,7 @@ A working render script from the last run: `render_schema.py` (session scratchpa
 
 ## Verify (per ~/.claude/rules/gates.md — show evidence in the same turn)
 
-- Script prints `Wrote docs/SCHEMA-PROD.md: <N> tables, <M> FKs` — N should be ~70+ (2026-07 baseline: 73 tables, 120 FKs). A sudden large drop means a query silently returned partial data — investigate, don't ship.
+- Script prints `Wrote docs/SCHEMA-PROD.md: <N> tables, <M> FKs`; N and M should be at or near the counts in the previous snapshot's header. A sudden large drop means a query silently returned partial data: investigate, don't ship.
 - `grep -c '^### ' docs/SCHEMA-PROD.md` matches the reported table count.
 - Spot-check one recently-migrated table's new column appears.
 

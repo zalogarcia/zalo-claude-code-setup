@@ -1,6 +1,6 @@
 ---
 name: seedance-video-prompt-builder
-description: Generate a detailed, shot-by-shot, copy-and-paste-ready video prompt for Seedance 2.0 from a creative brief. Use this skill whenever the user wants to create a Seedance video prompt, write a shot list, plan a video sequence, or describe a video concept for AI generation, or mentions Seedance. Also trigger when the user describes a scene, ad concept, brand film, product video, or any visual sequence they want turned into a generation-ready prompt — even if they don't explicitly say "video prompt." Trigger on phrases like "write me a video prompt", "Seedance prompt", "shot list", "plan a video", "video concept", "create a sequence", "brand film prompt", "ad prompt", or any time the user describes what they want to happen in a video and needs it translated into a copy-paste-ready prompt.
+description: Generate a detailed, shot-by-shot, copy-and-paste-ready video prompt for Seedance 2.0 from a creative brief. Use whenever the user wants a Seedance prompt or a shot list, or describes a scene, ad concept, brand film, product video or other visual sequence they want turned into a generation-ready video prompt, even if they don't say "video prompt". Not for generating the clip itself (the seedance skill) or for branded motion-graphics slides (machine-editorial-broll).
 ---
 
 # Seedance Video Prompt Builder
@@ -91,4 +91,4 @@ If no duration is specified, default to 15–20 seconds.
 
 **User:** "Dramatic brand film for a trail running shoe. Mountain setting, golden hour, single runner. Epic but not over-the-top. ~15 seconds."
 
-**You:** Read the reference file, then output the shot-by-shot timeline (8–12 shots) as the ENTIRE response. No intro, no outro, no analysis sections.
+**You:** Read the reference file, then output the shot-by-shot timeline (8-12 shots), starting at `SHOT 1`.

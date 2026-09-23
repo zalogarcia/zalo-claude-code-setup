@@ -43,7 +43,7 @@ npx tsc --noEmit > /tmp/tsc.out 2>&1; echo "EXIT=$?"
 $PM run build > /tmp/build.out 2>&1; echo "EXIT=$?"
 ```
 
-- If `EXIT=0` → done. Report "typecheck + build clean".
+- If `EXIT=0` → done. Report the one-line success shape under "Output shaping", with both EXIT codes.
 - If `EXIT≠0` → show the failure region and STOP.
 
 ## Output shaping (the real value of this skill)
@@ -53,7 +53,7 @@ Do **not** dump the full log into the conversation. Extract only the part that m
 **On failure** — show only lines around the error. The hand-written `tail -N` approach is unreliable because failure regions can be 3 or 80 lines depending on the error count. Use this instead:
 
 ```bash
-# For tsc failures — show all error lines + 2 lines of context after each
+# For tsc failures: the first 20 error lines (each carries file:line and the message)
 grep -nE "error TS[0-9]+:" /tmp/tsc.out | head -20
 
 # For build failures — first ~40 lines after the word "error" or "failed"
@@ -63,7 +63,7 @@ awk '/error|Failed|FAIL/{flag=1} flag{print; n++; if(n>40)exit}' /tmp/build.out
 **On success** — one line:
 
 ```
-typecheck: 0 errors | build: success (Xs)
+typecheck: EXIT=0 (0 errors) | build: EXIT=0 (Xs)
 ```
 
 ## Anti-patterns

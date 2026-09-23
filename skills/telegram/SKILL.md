@@ -47,5 +47,5 @@ curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendPhoto" \
 - Use `parse_mode: "Markdown"` for formatted text messages
 - For long messages (>4096 chars), split into multiple messages
 - When sending code snippets, wrap them in triple backticks in the message
-- Always confirm to the user that the message was sent successfully
+- Tell the user the message was sent only after the API response shows `"ok":true`; otherwise report the `description` it returned
 - If sending a file, verify the file exists before attempting to send

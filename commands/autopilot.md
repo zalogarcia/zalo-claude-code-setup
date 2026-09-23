@@ -1,6 +1,6 @@
 # /autopilot — Autonomous Orchestrator
 
-Pure orchestrator that dispatches sub-agents for all work. The main thread never reads code, never writes code, never fixes bugs. It routes, tracks, verifies, and compacts. Sub-agents do the work — in parallel where possible, each with self-planning before coding. The orchestrator commits sequentially after each batch returns.
+Pure orchestrator that dispatches sub-agents for all work. The main thread never reads code, never writes code, never fixes bugs. It routes, tracks, verifies, and compacts. Sub-agents do the work, in parallel where possible. The orchestrator commits sequentially after each batch returns.
 
 ## How to invoke
 
@@ -91,15 +91,15 @@ After autopilot reports COMPLETE / CODE-COMPLETE — NOT LIVE-VERIFIED / COMPLET
 - WORKER_MODEL = "opus" (implementation waves, QA partitions, fix agents, Explore/general-purpose, live-test, outcomes-grader)
 - FALLBACK_MODEL = "opus" (model-inaccessibility re-dispatch — per api-retry.md; never sonnet)
 
-Every `Agent` tool call MUST include an explicit `model:` param, assigned by the CLAUDE.md "Subagent model policy — split by leverage": `model: "fable"` for thinking dispatches whose single output cascades (brainstorm, safe-planner, bug-fix-class diagnosis); `model: "opus"` for everything else — implementation waves, QA partitions, fix agents, Explore/general-purpose, live-test, outcomes-grader. Never omit the model: built-in agents without definition files inherit the session model, which silently re-creates the 2026-07-02 Fable fan-out limit exhaustion. **The one exception:** if a dispatch returns a model-inaccessibility signal (the pinned model itself is unavailable — see `~/.claude/rules/api-retry.md` "Model Inaccessibility & Fallback"), re-dispatch the same prompt with `model: FALLBACK_MODEL`, log it, and continue. A pin that can't be honored because the model is gone degrades to the fallback rather than deadlocking — it never silently drops to a default model.
+Every `Agent` tool call MUST include an explicit `model:` param, assigned by the CLAUDE.md "Subagent model policy — split by leverage": `model: "fable"` for thinking dispatches whose single output cascades (brainstorm, safe-planner, bug-fix-class diagnosis); `model: "opus"` for everything else — implementation waves, QA partitions, fix agents, Explore/general-purpose, live-test, outcomes-grader. Never omit the model: built-in agents without definition files inherit the session model, which on a Fable session runs whole fan-out waves on Fable and can exhaust its session limit. **The one exception:** if a dispatch returns a model-inaccessibility signal (the pinned model itself is unavailable — see `~/.claude/rules/api-retry.md` "Model Inaccessibility & Fallback"), re-dispatch the same prompt with `model: FALLBACK_MODEL`, log it, and continue. A pin that can't be honored because the model is gone degrades to the fallback rather than deadlocking — it never silently drops to a default model.
 
 ## Orchestrator Identity
 
 ```
-NEVER READ SOURCE CODE. NEVER WRITE SOURCE CODE. NEVER FIX BUGS INLINE.
-If you find yourself opening any file that is not inside `.autopilot/`,
-`package.json`/`pyproject.toml` (for command detection), or `CLAUDE.md` → STOP.
-Dispatch a sub-agent. "Just this once" = autopilot violation.
+The orchestrator does not read source code, write source code, or fix bugs inline.
+The only files it opens are inside `.autopilot/`, `package.json`/`pyproject.toml`
+(for command detection), and `CLAUDE.md`. Anything else goes to a sub-agent, even
+a one-off look, because the orchestrator's context has to last the whole run.
 ```
 
 **You are a router, not a worker.** Your job is to:
@@ -113,9 +113,9 @@ Dispatch a sub-agent. "Just this once" = autopilot violation.
 
 ## Autonomy Doctrine
 
-> **`~/.claude/rules/checkpoints.md` is SUSPENDED for the entire duration of /autopilot.** The checkpoint template language (`## Checkpoint —`, `**Resume:**`, A/B/C menus, "awaiting your decision") was the #1 source of autonomy violations in past runs. The doctrine bans the _tools_ (AskUserQuestion, checkpoint blocks) AND the _prose patterns_ those tools encode. If you would emit a checkpoint, instead: auto-resolve via the Tiered Decision Protocol or the External Blocker Protocol, log to `decisions.log`, and keep dispatching.
+> **`~/.claude/rules/checkpoints.md` is suspended for the entire /autopilot run.** The user is not watching, so a checkpoint stalls the run until they come back, and the checkpoint template language (`## Checkpoint` headings, `**Resume:**`, A/B/C menus, "awaiting your decision") is how a run most often slips back into asking. The doctrine bans the _tools_ (AskUserQuestion, checkpoint blocks) AND the _prose patterns_ those tools encode. If you would emit a checkpoint, instead: auto-resolve via the Tiered Decision Protocol or the External Blocker Protocol, log to `decisions.log`, and keep dispatching.
 
-**YOU MUST NEVER:**
+**Never:**
 
 - Use `AskUserQuestion` or any checkpoint type (`checkpoint:human-verify`, `checkpoint:decision`, `checkpoint:human-action`)
 - Emit `## Checkpoint —` headings, `**Resume:**` lines, or any A/B/C decision menu in main-thread output
@@ -131,7 +131,7 @@ Dispatch a sub-agent. "Just this once" = autopilot violation.
 - Read or write source code directly
 - Dispatch a sub-agent without an explicit `model:` param, or pin `model: "fable"` on fan-out/implementation/QA dispatches the split policy assigns to opus (the sole exception: `model: FALLBACK_MODEL` on a model-inaccessibility re-dispatch, per the API Dispatch Wrapper Protocol)
 
-**YOU MUST ALWAYS:**
+**Always:**
 
 - Resolve decisions via Tiered Decision Protocol
 - Resolve external blockers (quota, vendor review, rate limits) via External Blocker Protocol
@@ -141,7 +141,7 @@ Dispatch a sub-agent. "Just this once" = autopilot violation.
 - Commit sequentially from the orchestrator (sub-agents stage only)
 - Write phase state to disk and compact after each phase
 - Keep dispatching until all work units are `done`, `failed`, or `deferred` — then write report and exit. No interim sign-offs.
-- **Mid-run halts are FORBIDDEN** except for these three explicit exits:
+- **Halt mid-run only at these three explicit exits:**
   (a) API circuit breaker tripped (`ABORTED_API_OUTAGE`) — see API Dispatch Wrapper Protocol
   (b) Context Budget Gate exceeded 70% twice in a row AFTER a compaction restore (`aborted`) — NOT mid-phase
   (c) `git worktree add` failed during Phase 0 (cannot create isolated workspace)
@@ -234,7 +234,7 @@ When the orchestrator OR any sub-agent encounters a "missing" secret, env var, A
 
 ## External Blocker Protocol
 
-Real-world non-config blockers — Anthropic usage caps, third-party vendor reviews (Stripe Connect, A2P 10DLC, Apple App Review), upstream API rate limits, "wait for X to provision" — were the #2 source of past autonomy violations. The orchestrator stalls with a "graceful shutdown" that _looks_ responsible but breaks the doctrine ("paused, awaiting your decision", "when you ping me back at ~1:50pm").
+Real-world non-config blockers (Anthropic usage caps, third-party vendor reviews such as Stripe Connect, A2P 10DLC or Apple App Review, upstream API rate limits, "wait for X to provision") tempt a "graceful shutdown" that _looks_ responsible but stalls the run and breaks the doctrine ("paused, awaiting your decision", "when you ping me back").
 
 **The rule:** External blockers do NOT pause /autopilot. They reroute work.
 
@@ -376,11 +376,10 @@ Every sub-agent prompt MUST be self-contained. Include:
 2. **Task**: exactly what to build/fix/investigate
 3. **Scope**: exact file paths from repo root (no globs). Which are OFF-LIMITS (all files from ALL other work units, not just current batch)
 4. **Context**: relevant decisions, constraints, what other agents are doing
-5. **Self-planning mandate**: "Before writing any code: read every file you'll modify, identify dependencies and imports, list risks. Then implement."
-6. **Git safety**: "Read `~/.claude/rules/git-safety.md`. Stage specific files ONLY with `git add <file>`. Never `git add -A` or `git add .`. Never push. Never amend."
-7. **Stage-only rule**: "Stage your changes with `git add <specific files>`. Do NOT commit — the orchestrator commits after verifying the batch."
-8. **Contract**: which completion marker to emit
-9. **File-handling boilerplate**: paste the "Mandatory Dispatch Boilerplate" block from `~/.claude/rules/agent-contracts.md` verbatim into every implementation-agent prompt (already embedded in the Phase 2 template below)
+5. **Git safety**: "Read `~/.claude/rules/git-safety.md`. Stage specific files ONLY with `git add <file>`. Never `git add -A` or `git add .`. Never push. Never amend."
+6. **Stage-only rule**: "Stage your changes with `git add <specific files>`. Do NOT commit; the orchestrator commits after verifying the batch."
+7. **Contract**: which completion marker to emit
+8. **File-handling boilerplate**: paste the "Mandatory Dispatch Boilerplate" block from `~/.claude/rules/agent-contracts.md` verbatim into every implementation-agent prompt (already embedded in the Phase 2 template below)
 
 ### Parallelization Criteria
 
@@ -412,7 +411,7 @@ Note: For bug fixing, dispatch `general-purpose` (model: "opus") with explicit i
 
 ### Return Contract
 
-The orchestrator's context fills up when sub-agents return prose dumps with inlined code, diffs, or command output. Three parallel agents each returning ~100K tokens push the orchestrator into POOR tier in one batch — that triggered a doctrine violation in a prior run. Hard cap, no exceptions.
+The orchestrator's context fills up when sub-agents return prose dumps with inlined code, diffs, or command output; a few parallel returns of that size can push it into the POOR tier in a single batch. The cap below applies to every dispatch.
 
 **Hard cap: 50 lines of return body per agent** (excluding the H2 marker line).
 
@@ -572,7 +571,7 @@ Cleared back to `null` when the dispatch returns successfully or hits a non-retr
    9. If state.json.api_retry_exhaustions_in_phase >= MAX_PHASE_API_EXHAUSTIONS: circuit breaker tripped — do NOT dispatch further; jump to Phase 5 with status ABORTED_API_OUTAGE.
    Then continue with Phase {next_phase_number}.
    ```
-3. **Restore** — execute the 5-step restore list above
+3. **Restore**: execute the numbered restore list in the Keep text above
 4. **Confirm** — state in chat: "Resuming Phase {N}. Pure orchestrator — no code reading/writing."
 5. **Continue** — next phase
 
@@ -609,7 +608,7 @@ After every compaction restore, check context usage:
 
 Every fresh `/autopilot` invocation spawns its own isolated worktree on a new branch. No lock check, no stale-lock detection, no race window. The main repo never carries a `/autopilot` run, and concurrent invocations cannot collide because each lives in a separate worktree+branch keyed by `$(date +%Y%m%d-%H%M%S)-$$`. **`/autopilot resume` SKIPS this block entirely** — resume always operates on the worktree the user `cd`'d into.
 
-Prior versions of this protocol used check-then-spawn with `noclobber` lock acquisition + stale-lock detection. That worked in theory but had a TOCTOU race: a second invocation could see the lock file exist while state.json was not yet written, mistake it for a crashed run, and steal the lock. Always-worktree eliminates the race entirely. Trade-off: every fresh run leaves a worktree directory the user prunes later via `git worktree remove`.
+A shared lock file in the main repo would have a TOCTOU race (a second invocation can see the lock before state.json exists, mistake it for a crashed run, and steal it); one worktree per invocation removes that race. Trade-off: every fresh run leaves a worktree directory the user prunes later via `git worktree remove`.
 
 For a fresh invocation:
 
@@ -678,7 +677,7 @@ fi
 
 **Pre-flight checks (deterministic auto-resolution — NEVER render a recovery menu):**
 
-Past runs violated the doctrine by emitting "## Decision needed — A) stash B) commit C) you handle" menus when pre-flight failed. The fix is to resolve every pre-flight failure deterministically. The orchestrator either auto-recovers or hard-aborts with a single clear reason — never a multi-option ask.
+Resolve every pre-flight failure deterministically: the orchestrator either auto-recovers or hard-aborts with a single clear reason, never a multi-option menu such as "A) stash B) commit C) you handle".
 
 | Check               | Pass condition                   | Failure → auto-resolution                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | ------------------- | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -736,7 +735,7 @@ Write findings to .autopilot/project_context.md as structured markdown. The "Ava
 
 Parse the agent's findings into state.json fields: `build_command`, `test_command`, `typecheck_command`, `package_manager`, `admin_email`, `live_test_enabled` (false if no admin email found), `harness_command` (null if "none" — the VERIFY.md "Traffic harness" command).
 
-If the inventory reported `VERIFY.md: missing`, log `verify_manifest_missing: run /repo-init` to `decisions.log` and surface it in the Phase 5 report's Remaining Issues — deploy-proof signals will have to be derived ad hoc this run, which is exactly the condition that produced the ECS-green-cited-for-a-Vercel-surface overclaim (2026-07 audit).
+If the inventory reported `VERIFY.md: missing`, log `verify_manifest_missing: run /repo-init` to `decisions.log` and surface it in the Phase 5 report's Remaining Issues: deploy-proof signals will have to be derived ad hoc this run, which is how one pipeline's green status gets cited as proof for a surface a different pipeline deploys.
 
 **MERGE these fields into `.autopilot/state.json` — do NOT overwrite.** The Workspace Isolation block already seeded `worktree_spawned`, `worktree_path`, `worktree_branch`, and `terminal_state`; a wholesale `cat > state.json` here would wipe them and break the worktree banner + the resume contract. Use `jq` to merge:
 
@@ -815,9 +814,8 @@ Rules for the rubric you produce:
 - 4-10 items typical. More if the task is broad. Fewer if the task is narrow.
 - Cover: primary deliverable existence, key behaviors, integration points,
   any explicit constraints from the task description (auth, persistence, etc.)
-- MANDATORY coverage items (the 2026-07 GHL post-mortem classes — a rubric
-  derived only from the task/plan inherits the plan's blind spots, so these
-  are required INDEPENDENT of what the plan says):
+- Required coverage items (a rubric derived only from the task/plan inherits
+  the plan's blind spots, so include these whatever the plan says):
   * If the task ships a user-facing capability: one item asserting the
     ACTIVATION PATH exists and is reachable — "a user/tenant can turn this ON
     via <named UI control/flag>; the control's file is cited" (engineering-
@@ -1017,12 +1015,11 @@ FOR each batch (ordered by dependency):
     """
     You are an autonomous implementation agent for /autopilot.
 
-    ## AUTONOMY CLAUSE — non-negotiable
-    You are running INSIDE /autopilot. The user is NOT watching.
-    - NEVER ask the user anything. NEVER use AskUserQuestion. NEVER emit any checkpoint:* block.
-    - NEVER say "should I...", "do you want...", "please confirm...".
-    - If you would normally pause for clarification → make the simpler/safer choice and log it in your return under "Autonomous decisions".
-    - If you would normally ask for a missing secret/env var/API key → run the Secret & Config Resolution Protocol below. NEVER ask the user for the value.
+    ## Autonomy
+    You are running inside /autopilot and the user is not watching, so a question would block the run.
+    - Do not ask the user anything: no AskUserQuestion, no checkpoint:* blocks, no "should I...", "do you want...", "please confirm...".
+    - Where you would normally pause for clarification, make the simpler/safer choice and log it in your return under "Autonomous decisions".
+    - If a secret, env var or API key looks missing, run the Secret & Config Resolution Protocol below; do not ask the user for the value.
 
     ## Secret & Config Resolution Protocol (when something looks "missing")
     Before treating any config as missing, run ALL of these checks:
@@ -1046,11 +1043,6 @@ FOR each batch (ordered by dependency):
     Read .autopilot/project_context.md for tech stack info AND available config inventory.
 
     ## Rules
-    - Self-plan before coding:
-      1. Read every file you'll modify (understand current state)
-      2. Identify dependencies and imports
-      3. List risks (what could break?)
-      4. Then implement
     - Read ~/.claude/rules/database-safety.md — migrations must be additive/non-breaking
     - Read ~/.claude/rules/testing-safety.md — admin email only for live testing
     - Read ~/.claude/rules/git-safety.md — stage specific files only
@@ -1067,10 +1059,10 @@ FOR each batch (ordered by dependency):
     - Never use git add -A or git add .
     - Never push to remote
 
-    ## Return contract (HARD LIMIT — read this carefully)
-    Your return body MUST be ≤ 50 lines (excluding the H2 marker line).
-    The orchestrator's context fills up if returns are prose dumps; three
-    parallel agents each returning 100K tokens triggers a doctrine violation.
+    ## Return contract
+    Keep your return body to 50 lines or fewer (excluding the H2 marker line).
+    The orchestrator runs several agents in parallel and its context fills up
+    if returns are prose dumps; it reads only the first 50 lines.
 
     Use this exact shape:
 
@@ -1303,8 +1295,8 @@ LOOP:
   partition_files = []  # paths to findings files from partitions that emitted ISSUES FOUND
 
   FOR each returned qa-agent:
-    IF ## VERIFICATION PASSED → READ THE BODY BEFORE ACCEPTING IT.
-       A pass marker is not a pass on its own (measured 2026-09-19: 24 of 47
+    IF ## VERIFICATION PASSED → read the body before accepting it.
+       A pass marker is not a pass on its own (about half of the measured
        pass-marker returns contradicted themselves or were missing a mandated
        field). Treat it as ## ISSUES FOUND if ANY of these hold:
          - its `Assessment:` line says PASS WITH CONCERNS or FAIL
@@ -1421,7 +1413,6 @@ LOOP:
       ELSE:
         Dispatch general-purpose (model: "opus"):
           "Fix these bugs in {file}: {bug_list}.
-           Self-plan: read the file, understand full context, then fix.
            Minimal changes only. Stage fixes. Do not commit.
            Return contract: ≤50 lines, structured (Status/Summary/Files staged/Verification/Concerns).
            No code blocks >10 lines. Overflow → .autopilot/agent_returns/qa-fix-iter{iteration}-{file_slug}.md.
@@ -1463,8 +1454,7 @@ Orchestrator runs all verification commands directly:
    was built → this is a FAILED gate item, not a skippable one: log
    `traffic_harness_missing` to decisions.log, add it to Remaining Issues as
    HIGH, and cap the terminal status at CODE-COMPLETE — NOT LIVE-VERIFIED.
-   (Basis: 2026-07 GHL post-mortem — 41% of live-test defects had no static
-   signature; mocked unit tests cannot model real-PG constraints, CTE snapshot
+   (Mocked unit tests cannot model real-PG constraints, CTE snapshot
    visibility, realtime publishes, or media-only webhook payloads.)
 4. **Stub detection** (scoped to autopilot's changes):
    ```bash
@@ -1566,9 +1556,14 @@ keep the `verify_manifest_missing` note in Remaining Issues.
            """
            You are an autonomous completion agent for /autopilot.
 
-           ## AUTONOMY CLAUSE — non-negotiable
-           Same as Phase 2 implementation agents — never ask the user.
-           See Secret & Config Resolution Protocol if config seems missing.
+           ## Autonomy
+           You are running inside /autopilot and the user is not watching: do not
+           ask the user anything. If a secret or config value looks missing, check
+           .autopilot/project_context.md ("Available config inventory"), the .env*
+           files, `supabase secrets list 2>/dev/null`, `printenv <NAME>`, and existing
+           code references before treating it as missing; if it is still absent, log
+           `BLOCKED_BY_MISSING_CONFIG: <NAME>` to .autopilot/deferred_issues.md and
+           emit ## BLOCKED.
 
            ## Rubric item (must satisfy)
            {item.item verbatim}
@@ -1587,16 +1582,12 @@ keep the `verify_manifest_missing` note in Remaining Issues.
            need additions to existing files — modify them. Use whatever shape
            best satisfies the rubric item.
 
-           Self-plan before coding:
-             1. Decide: which existing files (if any) need changes?
-             2. Decide: which new files need to be created?
-             3. Read the existing files in scope before modifying them.
-             4. Implement minimally — only what's needed to satisfy this item.
-             5. Stage your changes with `git add <specific files>`. Do NOT commit.
+           Implement only what this item needs, and stage your changes with
+           `git add <specific files>`. Do NOT commit.
 
            Read ~/.claude/rules/database-safety.md, testing-safety.md, git-safety.md.
 
-           ## Return contract (HARD LIMIT)
+           ## Return contract
            ≤50 lines, structured (Status/Summary/Files staged/Verification/Concerns).
            No code blocks >10 lines, no full file bodies, no raw diffs.
            Overflow → .autopilot/agent_returns/outcomes-iter{iteration}-{item_slug}.md.
@@ -1700,9 +1691,9 @@ Generate `.autopilot/report.md`:
 **Task:** <summary>
 **Status:** COMPLETE | CODE-COMPLETE — NOT LIVE-VERIFIED | COMPLETE_WITH_ISSUES | ABORTED | ABORTED_API_OUTAGE
 
-<!-- STATUS VOCABULARY (hard rule — 2026-07 GHL post-mortem: four "COMPLETE"
-reports with live verification deferred in sub-bullets produced 39 live-test
-defects and a two-day debugging session the user didn't expect):
+<!-- STATUS VOCABULARY (hard rule, because a COMPLETE report with live
+verification deferred into sub-bullets reads as working code that was never
+proven live):
 COMPLETE is claimable ONLY when every behavior AC was verified in its LIVE form
 this run — live-test ran (live_test_enabled=true) AND the traffic harness ran
 green when inbound-traffic code changed. If ANY behavior AC was graded via an
@@ -1723,7 +1714,7 @@ MANDATORY as the FIRST section of the report, not a sub-bullet. -->
 <!-- Worktree banner — include ONLY if state.json.worktree_spawned == true -->
 
 > **Ran in worktree:** `<worktree_path>` on branch `<worktree_branch>`
-> (auto-spawned because another autopilot was active in the main repo).
+> (every fresh /autopilot run gets its own worktree).
 >
 > **Review:** `cd <worktree_path> && git log --oneline <pre_autopilot_sha>..HEAD`
 > **Merge back (from main repo):** `git merge <worktree_branch>` (or open a PR)
@@ -1836,7 +1827,7 @@ jq --arg s "$STATUS_LOWER" '.terminal_state = $s' .autopilot/state.json > .autop
 rm -f .autopilot/lock
 ```
 
-**Abort-path coverage rule (binding):** Every `ABORT:` instruction in this document that fires AFTER the Workspace Isolation block wrote `.autopilot/lock` MUST execute the Terminal Cleanup Block (with appropriate `<STATUS>`) before emitting the user-facing abort message. Under the always-worktree policy there is no shared lock to race against, so the backstop concern of prior versions (stale-lock detection on a concurrent invocation) no longer applies — each invocation owns its own worktree's `.autopilot/lock` exclusively. Cleanup-on-abort still matters because `/autopilot resume` inside the same worktree reads `terminal_state` to decide whether resume is meaningful.
+**Abort-path coverage rule (binding):** Every `ABORT:` instruction in this document that fires AFTER the Workspace Isolation block wrote `.autopilot/lock` MUST execute the Terminal Cleanup Block (with appropriate `<STATUS>`) before emitting the user-facing abort message. Each invocation owns its own worktree's `.autopilot/lock` exclusively, so there is no shared lock to race against. Cleanup-on-abort still matters because `/autopilot resume` inside the same worktree reads `terminal_state` to decide whether resume is meaningful.
 
 Concrete sites in this document that MUST invoke Terminal Cleanup before aborting (status in parens):
 

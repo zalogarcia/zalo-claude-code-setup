@@ -40,7 +40,7 @@ When using the `AskUserQuestion` tool, options should be:
 
 ## The Freeform Rule
 
-When the user wants to explain freely, **STOP using `AskUserQuestion`**. If the user selects "Other" and their response signals they want to describe something in their own words, you MUST ask your follow-up as plain text — not via `AskUserQuestion`.
+When the user wants to explain freely, stop using `AskUserQuestion`. If the user selects "Other" and their response signals they want to describe something in their own words, ask your follow-up as plain text, not via `AskUserQuestion`.
 
 ## Anti-Patterns
 
@@ -51,4 +51,4 @@ When the user wants to explain freely, **STOP using `AskUserQuestion`**. If the 
 - **Rushing** — moving on before the user finishes a thought.
 - **Shallow acceptance** — accepting "good" or "users" without sharpening.
 - **Premature constraints** — locking in implementation choices before understanding the goal.
-- **User skills** — NEVER ask about the user's technical experience. Claude builds.
+- **User skills**: never ask about the user's technical experience. Claude builds.

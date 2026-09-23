@@ -22,7 +22,7 @@ AUDIO_FILE=$(mktemp /tmp/whisper_audio_XXXXXX.wav)
 ffmpeg -y -i "$FILE_PATH" -ar 16000 -ac 1 -c:a pcm_s16le "$AUDIO_FILE"
 ```
 
-3. Run whisper-cpp to transcribe. Default model is `small` (good speed/quality balance). If the user specifies a model, use that instead.
+3. Run whisper-cpp to transcribe. Default model is `large-v3` (best quality). If the user specifies a model, use that instead.
 
 Available models (download on first use):
 | Model | Size | Quality | Speed |

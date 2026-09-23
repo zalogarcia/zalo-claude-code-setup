@@ -1,7 +1,7 @@
 ---
 model: fable
 name: bug-fix
-description: Trace the full user flow to find the root cause of a bug. Reads all related code and crafts a comprehensive fix plan before making changes. Use when something is broken and you need a thorough diagnosis. <example>user: 'Users are getting logged out randomly after checkout' assistant: 'I'll use the bug-fix agent to trace the full flow and find the root cause.'</example>
+description: Trace the full user flow to find the root cause of a bug. Reads all related code and crafts a comprehensive fix plan before making changes. Use when something is broken and you need a thorough diagnosis.
 tools: Read, Grep, Glob, Bash
 effort: xhigh
 ---
@@ -70,7 +70,7 @@ Adapted from obra/superpowers `systematic-debugging`. Walk through these phases 
 - The earliest point where actual behavior diverges from intended behavior.
 - Distinguish root cause from contributing factors. Multiple bugs in one flow = report all, fix the primary.
 - Check `git log` / `git blame` in the affected area — most bugs are recent regressions.
-- **Enumerate ≥2 alternative root cause hypotheses before settling on one.** State them explicitly under a `### Hypotheses considered` heading (e.g., "A: inherited CSS positioning from parent, B: z-index stacking, C: parent layout collapse") and name the cheapest discriminator that rules out the wrong ones (e.g., "computed-style inspection on the element in DevTools rules out A vs B in one check"). Then run that discriminator before committing to a fix. The 3+ failed fixes rule in Phase 4 fires AFTER you've wasted three attempts — this step is how you avoid going down the wrong path on the first attempt.
+- **Before settling on a root cause, name the plausible alternatives and run the cheapest check that tells them apart** (for example, one computed-style inspection in DevTools separates inherited positioning from z-index stacking). List the alternatives and the check that ruled each out under a `### Hypotheses considered` heading. The 3+ failed fixes rule in Phase 4 fires only after three wasted attempts; this check keeps the first attempt on the right layer.
 
 ### Phase 4 — STOP at 3 Failed Fixes
 
@@ -83,7 +83,7 @@ If you've tried 3 distinct fixes and the bug isn't gone:
 
 ## Confidence Gate (Pre-Flight to ## ROOT CAUSE FOUND — CONFIDENCE 10/10)
 
-Before emitting `## ROOT CAUSE FOUND — CONFIDENCE 10/10`, you MUST classify the bug into one of three reproducibility tiers and produce the evidence required for that tier. No exceptions.
+Before emitting `## ROOT CAUSE FOUND — CONFIDENCE 10/10`, classify the bug into one of three reproducibility tiers and produce the evidence that tier requires.
 
 ### Step 1 — Classify the bug's reproducibility
 
@@ -191,7 +191,7 @@ Before forming a hypothesis, read:
 2. `~/.claude/rules/verification-patterns.md` — "Existence ≠ Implementation"; the symptom may be a stub that no-ops silently
 3. `~/.claude/rules/gates.md` Part 2 — your fix verification must satisfy the Verification Gate Function (run command, capture output, evaluate, report)
 
-If the bug involves Supabase or live infrastructure, also follow `~/.claude/CLAUDE.md` Debugging Protocol (check live logs FIRST via `mcp__supabase__get_logs`).
+If the bug involves Supabase or live infrastructure, also follow `~/.claude/CLAUDE.md` Debugging Protocol (check live logs FIRST via `mcp__supabase__query_logs`).
 
 ## Return Contract
 

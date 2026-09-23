@@ -11,7 +11,7 @@ Turn a video script into branded Machine Editorial b-roll: mobile-first chains o
 - User says "make b-roll slides for X", "motion graphics in our style", "cut this chunk"
 - User wants a new segment added to an existing set, or a theme/vertical variant
 
-Skip for: AI-generated _footage_ (people, scenes, camera moves → `seedance`), static slide images, one-off image assets (→ `nano-banana`).
+Skip for: AI-generated _footage_ (people, scenes, camera moves → `seedance`), static slide images, one-off image assets (→ `image-craft-expert` on gpt-image-2, the only image rail for Zalo's brand).
 
 ## The design system (Machine Editorial v3)
 
@@ -75,11 +75,11 @@ For story-shaped passages: lay ideas out spatially, fly the camera between them,
 - End the path AS the underline of the destination station; make the path physically turn where the script turns.
 - Zoom-out finale: check the whole-canvas bbox fits the viewport at finale z (text half-widths included) — clipped words are the classic bug.
 
-## AI image plates (gpt-image-2 / nano-banana)
+## AI image plates (gpt-image-2)
 
 When a beat benefits from an object/scene (product core, mockup, metaphor), generate a masked plate and composite it:
 
-1. Generate on chroma green (gpt-image-2 rejects `background:"transparent"`): prompt must say "COMPLETELY ISOLATED on a solid uniform pure chroma-key green background (#00FF00), no floor, no ground shadow, no reflections". Use `quality:"medium"` (high often drops the connection) via `curl https://api.openai.com/v1/images/generations` with `$OPENAI_API_KEY`, or `nano-banana -t` (needs valid `GEMINI_API_KEY`).
+1. Generate on chroma green (gpt-image-2 rejects `background:"transparent"`): prompt must say "COMPLETELY ISOLATED on a solid uniform pure chroma-key green background (#00FF00), no floor, no ground shadow, no reflections". Use `quality:"medium"` (high often drops the connection) via `curl https://api.openai.com/v1/images/generations` with `$OPENAI_API_KEY`. Never nano-banana/Gemini: gpt-image-2 is the standing image rail.
 2. Key + trim: `ffmpeg -i in.png -vf "colorkey=0x00FF00:0.32:0.08,despill=type=green" -frames:v 1 out.png`, then PIL `getchannel('A').getbbox()` crop. Save to `public/assets/`.
 3. Composite with `<ImagePlate src="assets/x.png" width at over kenBurns sweepAt/>` — entrance settle, continuous Ken Burns, ambient accent glow, optional documentary highlight sweep. Wrap in `<ExhibitFrame label="fig. 01 — ...">` for the documentary look.
 4. Style guardrail: ask for dark-navy + electric-blue palette, premium 3D render, rim light — plates must sit in the Stage's world, not on top of it.

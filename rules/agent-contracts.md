@@ -43,7 +43,7 @@ A return missing either is treated as **not passing**. Route it as `## ISSUES FO
 
 **Mechanism, not just text.** `~/.claude/hooks/qa-verdict-guard.py` (PostToolUse on `Agent|Task`) parses the returned body and injects this routing when a `## VERIFICATION PASSED` return contradicts its own verdict line or is missing a mandated field. Contract text alone decays; the hook does not. Tests: `python3 ~/.claude/hooks/qa-verdict-guard.test.py`. The hook nudges, it does not block: the audit already ran, and blocking a returned verdict throws it away.
 
-**Basis** (2026-09-19 harness sweep, complete 30 day population of 57 pass class subagent returns from 3,308 transcripts). Of the 47 carrying `## VERIFICATION PASSED`: **21** said `Assessment: PASS WITH CONCERNS`, **17** said `**Status:** DONE_WITH_CONCERNS`, **1** said `Assessment: FAIL`. Every one of them routed as a clean pass.
+**Basis:** before this mapping existed, a large share of `## VERIFICATION PASSED` returns carried `PASS WITH CONCERNS`, `DONE_WITH_CONCERNS` or even `FAIL` in their body, and every one of them routed as a clean pass.
 
 ## Marker Rules
 

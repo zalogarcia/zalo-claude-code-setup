@@ -14,7 +14,7 @@ Run a production-grade live-test campaign that finds the bugs only reality can s
 
 Skip for: pure-UI copy tweaks (use the `live-test` agent alone), logic fully provable by unit tests, changes with no deployed surface.
 
-## Phase -1 — Design the campaign (do NOT skip; this is where half the bugs are found)
+## Phase -1: Design the campaign (this is where half the bugs are found)
 
 Dispatch TWO agents in parallel before touching anything:
 
@@ -25,7 +25,7 @@ Then write the plan to a file (`.claude/PLAN-<feature>-livetest.md`): phases, pe
 
 **Live-vs-lab discipline:** unit/seam-pinned pure logic (validators, predicates, math, string transforms, retry state machines) gets ZERO live budget. Live budget goes exclusively to seams only reality proves: real data shapes (e.g. identifiers living in side tables with NULL legacy columns), vendor calls, cross-service wiring, caches, counters, and anything that changed in the last 48h.
 
-## The "how a test can lie" catalog (check EVERY item against your plan)
+## The "how a test can lie" catalog (check each item against your plan)
 
 1. **State poisoning** — residue from prior tests (completed rows, cooldown stamps, lifetime caps, opt-out flags) silently blocks the paths you think you're testing. Audit + neutralize FIRST; snapshot every mutable column you'll touch.
 2. **Cleanup that arms guards** — the reason/status you write during cleanup can itself trigger business rules (e.g. a cancel reason that arms a 30-day re-engagement block). Use a dedicated inert marker (`test_cleanup`) and strip side-band keys (stamps, timestamps) explicitly.

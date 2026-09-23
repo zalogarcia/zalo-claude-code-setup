@@ -25,7 +25,7 @@ if [ -r "$QUIRKS" ]; then
   [ -n "$quirks" ] && content=$(printf '%s\n\n%s' "$content" "$quirks")
 fi
 
-wrapped=$(printf '<EXTREMELY_IMPORTANT>\nYou are operating with a customized ~/.claude/ setup. The meta-rule below governs how you use it. Treat as override of default behavior; user instructions in CLAUDE.md still win.\n\n%s\n</EXTREMELY_IMPORTANT>' "$content")
+wrapped=$(printf '<setup-meta-rule>\nThis session runs a customized ~/.claude/ setup, and the meta-rule below describes how to use it. Where it differs from CLAUDE.md, CLAUDE.md wins.\n\n%s\n</setup-meta-rule>' "$content")
 
 # Use jq for safe JSON escaping (jq is already used elsewhere in this setup).
 if command -v jq >/dev/null 2>&1; then

@@ -3,7 +3,7 @@ name: voice-call-triage
 description: Triage one voice call (or "the last call") on Delta Agents prod — pull the tenant_voice_calls row (status/duration/disconnection reason), the tenant_voice_tool_events timeline, the gateway ECS log window around the call, and a DA-intended vs Retell-actual config diff via the Retell GET endpoints. Use when the user says "it hung up", "call didn't work", "check the last call", "why did the voice agent…", "the call never picked up", or names a phone number + a call symptom. Encodes the call→symptom→logs loop that took ~20 iterations per bug in past voice sessions.
 ---
 
-Triage a single Delta Agents voice call end-to-end: DB evidence → tool timeline → gateway logs → config diff. Collect ALL FOUR evidence layers BEFORE hypothesizing (the past 20-iteration loops came from fixing the first plausible theory instead of reading the second evidence layer).
+Triage a single Delta Agents voice call end-to-end: DB evidence → tool timeline → gateway logs → config diff. Collect all four evidence layers before hypothesizing: past 20-iteration debugging loops came from fixing the first plausible theory instead of reading the second evidence layer.
 
 Repo root assumed at `/Users/zalo/dev/delta-agents` (adjust if the checkout lives elsewhere). All prod reads go through the Supabase MCP (`mcp__supabase__execute_sql`, project `$DELTA_PROD_PROJECT_REF`) — never local `psql`. Column names below are verified against `docs/SCHEMA-PROD.md`; re-check there before editing any query.
 
@@ -58,7 +58,9 @@ WHERE config->>'modality' = 'voice'
 
 ## Step 1 — the call row(s)
 
-`tenant_voice_calls` — real columns: `retell_call_id` (varchar), `direction`, `from_number`, `to_number`, `call_status`, `disconnection_reason`, `duration_seconds`, `call_successful`, `user_sentiment`, `transfer_target_agent_id`, `started_at`, `ended_at`, `summary`, `transcript`, `metadata`. (`contact_id`/`agent_id` are uuid — cast comparisons `::uuid`.)
+`tenant_voice_calls` real columns: `retell_call_id` (varchar), `direction`, `from_number`, `to_number`, `call_status`, `disconnection_reason`, `duration_seconds`, `call_successful`, `user_sentiment`, `transfer_target_agent_id`, `started_at`, `ended_at`, `summary`, `transcript`, `metadata`. (`contact_id`/`agent_id` are uuid: cast comparisons `::uuid`.)
+
+Both this table and `tenant_voice_tool_events` also carry an `engine` column (default `retell`; the code also writes `openai-live`). Read it for the call under triage: Steps 3 and 4 describe the Retell path, so for a non-`retell` call the Retell config diff does not apply and the call path also runs through `apps/voice-bridge`, which this skill does not cover yet.
 
 ```sql
 SELECT id, retell_call_id, direction, from_number, to_number,

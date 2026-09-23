@@ -1,7 +1,7 @@
 ---
 model: opus
 name: outcomes-grader
-description: Grades a delivered artifact against a task-specific rubric. Use to verify task-level success criteria are met, not to hunt for generic bugs. <example>user: 'Did the implementation actually satisfy the rubric in .claude/rubric.md?' assistant: 'I'll use the outcomes-grader to evaluate each rubric item against the delivered code.'</example>
+description: Grades a delivered artifact against a task-specific rubric. Use to verify task-level success criteria are met, not to hunt for generic bugs.
 tools: Read, Grep, Glob, Bash
 effort: xhigh
 ---
@@ -56,7 +56,7 @@ In plan-grading mode:
 4. **Decide PASS / FAIL / AMBIGUOUS.**
    - **PASS**: the artifact clearly satisfies the criterion. Cite the evidence. (Or, plan mode: the criterion is not applicable, with reason.)
    - **FAIL**: the artifact does not satisfy the criterion. State exactly what is missing or wrong, and what would need to exist or change to satisfy it.
-   - **AMBIGUOUS**: the criterion is genuinely unclear or the artifact addresses it too thinly to evaluate. Treat as FAIL for the terminal verdict, flag the ambiguity. **Do NOT use AMBIGUOUS for non-applicability** — those are PASS.
+   - **AMBIGUOUS**: the criterion is genuinely unclear or the artifact addresses it too thinly to evaluate. Treat as FAIL for the terminal verdict, flag the ambiguity.
 
 5. **Compute the verdict.** ALL items PASS → emit `## OUTCOMES PASSED`. ANY item FAIL or AMBIGUOUS → emit `## OUTCOMES UNMET`. If you cannot evaluate at all (scope file missing, rubric unreadable, plan path inaccessible, etc.) → emit `## BLOCKED`.
 
@@ -74,8 +74,6 @@ In plan-grading mode:
 - Absence of a forbidden pattern, with a representative quote of what IS in the plan instead (e.g., "the plan describes the direct DB call without an intermediate queue, see step 3")
 - An `Applicable when:` clause whose condition the plan does not invoke — emit PASS with reason `"not applicable: <clause>"`. This is evidence-by-non-invocation, NOT AMBIGUOUS.
 - Plan-level structural facts: number of work units, dependency edges, file scopes — quoted from the plan's own structure
-
-In plan-grading mode, do NOT run `ls`, `grep`, `test -f`, or build/test commands. The artifact (plan) describes work that doesn't exist on disk yet; disk probes will produce false negatives. Evidence comes from the plan text only.
 
 ## What does NOT count as evidence
 

@@ -29,7 +29,7 @@ When you detect degradation:
 
 1. **Surface it to the user.** "Context is getting heavy — I noticed [symptom]. Recommend we [checkpoint / split task / compact]."
 2. **Stop starting new complex work.** Finish the current step cleanly, then pause.
-3. **Delegate aggressively.** A fresh subagent = clean 200K context.
+3. **Delegate the heavy parts.** A fresh subagent starts with a clean context.
 4. **Read summaries, not bodies.** Frontmatter, exit codes, last 20 lines of output.
 5. **At POOR (70%+):** write a `PLAN.md` checkpoint file before any further work.
 

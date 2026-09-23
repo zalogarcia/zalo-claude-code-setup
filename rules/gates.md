@@ -88,7 +88,7 @@ Skip any step = lying, not verifying
 | Regression test works          | Red-green cycle verified                                     | Test passes once                        |
 | Agent completed                | VCS diff shows changes                                       | Agent reports "success"                 |
 | Requirements met               | Line-by-line checklist                                       | Tests passing                           |
-| Supabase edge deploy succeeded | `mcp__supabase__get_logs` shows no errors in last 5 min      | `supabase functions deploy` exit 0      |
+| Supabase edge deploy succeeded | `mcp__supabase__query_logs` shows no errors in last 5 min    | `supabase functions deploy` exit 0      |
 | Frontend renders correctly     | `live-test` agent screenshot + console clean                 | Component compiles                      |
 | Coverage ("all X handled")     | Measured denominator: N of N + the measurement method        | Spot-check, sampling, "looks complete"  |
 | Deploy is live                 | The repo's `.claude/VERIFY.md` proof signal for THAT surface | Green CI, a different pipeline's signal |
@@ -96,7 +96,7 @@ Skip any step = lying, not verifying
 
 ### Coverage Claims Need Denominators
 
-Every verification overclaim in the 2026-07 60-session audit (all 4 of them) had the same shape: a **coverage** claim ("all captions verified", "everything mined", "shipped everywhere") backed by a spot-check. Correctness claims were never inflated — coverage claims were.
+Verification overclaims cluster in one shape: a **coverage** claim ("all captions verified", "everything mined", "shipped everywhere") backed by a spot-check. Correctness claims rarely inflate; coverage claims do.
 
 ```
 NO "ALL / EVERY / EVERYTHING" CLAIMS WITHOUT A MEASURED DENOMINATOR
@@ -121,7 +121,7 @@ If measuring every member is impractical, the honest claim is "N of M checked (s
 - Thinking "just this once"
 - Tired and wanting work over
 - Claiming "fixed" for a failure environment you did NOT reproduce in this turn — if the failing device/app context (e.g. iPhone Safari, a specific vendor sandbox) wasn't reproduced, the claim ceiling is "deployed a candidate fix — please confirm on your device", never "fixed"
-- Claiming "COMPLETE" when behavior ACs were verified only by **on-disk proxies** (unit tests with mocked I/O, greps, "the code exists and typechecks") — if the live form of any behavior AC did not execute, the claim ceiling is **"CODE-COMPLETE — NOT LIVE-VERIFIED"**, with the unproven surfaces listed first, never as sub-bullets (2026-07 GHL post-mortem: four buried deferrals → 39 live-test defects)
+- Claiming "COMPLETE" when behavior ACs were verified only by **on-disk proxies** (unit tests with mocked I/O, greps, "the code exists and typechecks") — if the live form of any behavior AC did not execute, the claim ceiling is **"CODE-COMPLETE — NOT LIVE-VERIFIED"**, with the unproven surfaces listed first, never as sub-bullets (a deferral buried in a sub-bullet reads as proven)
 - **ANY wording implying success without having run verification in this message**
 
 ### Bottom Line

@@ -8,7 +8,7 @@ Produce git commits with multi-line messages safely. The HEREDOC-inside-`$(...)`
 ## When to invoke
 
 - Any time the user says "commit" / "commit this" / "create a commit"
-- At the end of `/ship`, `/autopilot`, `/bug`, or any workflow that finishes by committing
+- At the end of the `ship-to-prod` skill, `/autopilot`, `/bug`, or any workflow that finishes by committing
 - When asked to commit with a specific message style (conventional commits, etc.)
 
 Skip for: trivial single-word commit messages where `git commit -m "fix typo"` is fine.
@@ -17,7 +17,7 @@ Skip for: trivial single-word commit messages where `git commit -m "fix typo"` i
 
 Before crafting the message:
 
-1. **Format BEFORE staging.** If the repo has a formatter hook (deno fmt, prettier via husky, ruff — check `.claude/VERIFY.md` "Formatter / hooks" or the hook configs), run the formatter on your changed files NOW, then stage. Staging unformatted files lets the hook rewrite the whole file at commit time, turning a surgical diff into a 700-line reformat that must be restored and reapplied (recurring incident class in the 2026-07 audit — 4 sessions, 3 repos).
+1. **Format BEFORE staging.** If the repo has a formatter hook (deno fmt, prettier via husky, ruff; check `.claude/VERIFY.md` "Formatter / hooks" or the hook configs), run the formatter on your changed files NOW, then stage. Staging unformatted files lets the hook rewrite the whole file at commit time, turning a surgical diff into a 700-line reformat that must be restored and reapplied.
 2. `git status` — confirm staged files match intent
 3. `git diff --cached` — review the actual changes
 4. `git log --oneline -5` — match the repo's existing commit style (conventional commits? imperative mood? capitalization?)
@@ -34,7 +34,7 @@ git commit -m "$(cat <<'EOF'
 
 <optional: BREAKING CHANGE / Fixes #123 / Refs #456>
 
-Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>
+Co-Authored-By: Claude <model name> <noreply@anthropic.com>
 EOF
 )"
 ```
@@ -69,10 +69,10 @@ Check `git log --oneline -20` to see what the repo uses, then match.
 Always include the Co-Authored-By trailer for AI-assisted commits:
 
 ```
-Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>
+Co-Authored-By: Claude <model name> <noreply@anthropic.com>
 ```
 
-(Adjust the model name if running a different Claude version.)
+(Use the exact trailer line from the session's attribution reminder when there is one; otherwise name the running model.)
 
 ## After committing
 
@@ -125,7 +125,7 @@ Why: reduces signup friction by ~40% based on the staging A/B test
 
 Refs #204
 
-Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>
+Co-Authored-By: Claude <model name> <noreply@anthropic.com>
 EOF
 )"
 ```

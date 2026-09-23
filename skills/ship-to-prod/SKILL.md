@@ -11,7 +11,7 @@ Ship the delta-agents repo (`/Users/zalo/dev/delta-agents`) to production ECS in
 - **ECS cluster:** `delta-agents` (region `us-east-1`)
 - **Services / containers / task-def families:** `gateway`, `worker`, `embedding-worker`, `insights-worker`, `url-watch-worker`, `wa-bailey`, `voice-bridge` (SEVEN, verified against deploy.yml 2026-09-13; a six-service list silently skips voice-bridge) — task-def families are `delta-agents-{service}` (see `.aws/task-definitions/*.json`)
 - **Image tag = full commit SHA:** `340829666011.dkr.ecr.us-east-1.amazonaws.com/delta-agents/{service}:{sha}`
-- **Path-filtered deploys:** the `detect-changes` job (dorny/paths-filter) only deploys services whose paths changed. `packages/**` fans out to ALL six. `apps/widget/**` rebuilds the gateway (it serves the widget bundle). An `--allow-empty` commit deploys NOTHING.
+- **Path-filtered deploys:** the `detect-changes` job (dorny/paths-filter) only deploys services whose paths changed. `packages/**` fans out to six of the seven: voice-bridge's filter is deliberately narrower (its own source plus the `shared`, `contracts`, `workflow-schema` and `form-schema` packages), so a `packages/core` or `packages/providers` push leaves voice-bridge on an older tag. `apps/widget/**`, `apps/form/**` and `apps/voice-orb/**` rebuild the gateway (it serves those bundles). An `--allow-empty` commit deploys NOTHING.
 - **Ordering:** worker deploys before gateway (`deploy-gateway` needs `deploy-worker`). Full run takes ~10-12 min. A `post-deploy-smoke` job runs last.
 - **Health path:** `/health` in `apps/gateway/src/index.ts` returns `{"status":"ok","service":"gateway"}`. (`/ready` is the sticky readiness gate; RUNBOOK's `/healthz` is the ALB-level alias — the source-of-truth path is `/health`.)
 
@@ -40,7 +40,7 @@ Skip for: dashboard-only preview builds, local dev, anything not destined for `m
 
 ## Step 1 — Commit (heredoc pattern)
 
-Invoke the `commit-with-heredoc` skill: stage specific files (never `git add .`), review `git diff --cached`, then commit with the `$(cat <<'EOF' … EOF)` pattern including the `Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>` trailer (adjust to the running model).
+Invoke the `commit-with-heredoc` skill: stage specific files (never `git add .`), review `git diff --cached`, then commit with the `$(cat <<'EOF' … EOF)` pattern including the Co-Authored-By trailer (the exact line from the session's attribution reminder when there is one, otherwise the running model's name).
 
 **Gotcha — the commit may time out but LAND.** The gitleaks-guard pre-commit hook can eat the Bash tool budget so the call reports a timeout while git finished underneath. Before any retry:
 

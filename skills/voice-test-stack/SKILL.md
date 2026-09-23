@@ -110,7 +110,8 @@ the script surfaces the failure region itself. Logs stay at
 
 ## Pair with
 
-- `.claude/test-identities.md` (in the repo) — admin account, test phone +17867810250,
-  Retell test agents (Ava / zalito uno), dashboard token-mint recipe
+- `.claude/test-identities.md` (in the repo): admin account, test phone +17867810250
+  (admin-owned; any call or text a live test triggers goes to an owner-controlled test number
+  like this one, never to a customer or tenant contact), Retell test agents (Ava / zalito uno), dashboard token-mint recipe
 - `dev-server-restart` skill — single-port restarts when you don't need the full stack
 - `live-test` agent / `live-test-campaign` skill — bring the stack up first, then test
