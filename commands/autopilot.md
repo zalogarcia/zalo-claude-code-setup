@@ -52,7 +52,9 @@ Example `.claude/rubric.md`:
 After autopilot reports COMPLETE / CODE-COMPLETE — NOT LIVE-VERIFIED / COMPLETE_WITH_ISSUES:
 
 - `.autopilot/report.md` — full run summary (a NOT LIVE-VERIFIED status means the
-  behavior ACs were proven only by on-disk proxies — run `/go-live` before trusting them)
+  behavior ACs were proven only by on-disk proxies — run `/go-live` before trusting them.
+  Such a run may merge onto the integration branch through `/autopilot-merge`, flag
+  carried; it never merges onto a production branch, and is not done, until `/go-live` passes)
 - `.autopilot/activation.md` — go-live runbook (flags, migrations, vendor-console
   steps); consumed by `/go-live`
 - `.autopilot/rubric.md` — final rubric (edit it and re-run if auto-gen missed something)
@@ -677,7 +679,7 @@ if [ -f package-lock.json ]; then
 fi
 ```
 
-**Worktree cleanup**: After a clean Phase 5 terminal_state (`complete` or `complete_with_issues`), the worktree remains on disk for the user to inspect/push. The user prunes via `git worktree remove <path>` once they've reviewed the run. Autopilot does NOT auto-remove the worktree (the user may want to inspect commits or resume).
+**Worktree cleanup**: After a clean Phase 5 terminal_state (`complete`, `code_complete_not_live_verified` or `complete_with_issues`), the worktree remains on disk for the user to inspect/push. The user prunes via `git worktree remove <path>` once they've reviewed the run. Autopilot does NOT auto-remove the worktree (the user may want to inspect commits or resume).
 
 **Pre-flight checks (deterministic auto-resolution — NEVER render a recovery menu):**
 
@@ -1720,6 +1722,10 @@ MANDATORY as the FIRST section of the report, not a sub-bullet. -->
 - ...
 - **Next step:** run `/go-live` in this worktree (activation runbook at
   `.autopilot/activation.md`) before treating any of the above as working.
+- **Merging:** this run may merge onto the integration branch (`dev`, or the
+  repo's integration branch) through `/autopilot-merge`, which carries this flag
+  into the merge commit message and lists the `/go-live` as pending. It never
+  merges onto a production or deploy branch until `/go-live` passes.
 
 <!-- Worktree banner — include ONLY if state.json.worktree_spawned == true -->
 
@@ -1727,7 +1733,8 @@ MANDATORY as the FIRST section of the report, not a sub-bullet. -->
 > (every fresh /autopilot run gets its own worktree).
 >
 > **Review:** `cd <worktree_path> && git log --oneline <pre_autopilot_sha>..HEAD`
-> **Merge back (from main repo):** `git merge <worktree_branch>` (or open a PR)
+> **Merge back (from main repo):** `git merge <worktree_branch>` (or open a PR). A
+> NOT LIVE-VERIFIED run merges onto the integration branch only, via `/autopilot-merge`.
 > **Clean up:** `git worktree remove <worktree_path>` after merging
 
 ## Work Units
@@ -1827,8 +1834,12 @@ Compute via:
 **Terminal Cleanup Block (named, referenced — runs BEFORE the terminal summary on every Phase 5 exit AND every ABORT path that occurs after the Workspace Isolation block wrote `.autopilot/lock`):**
 
 ```bash
-# Set terminal_state in state.json — values: complete | complete_with_issues | aborted | aborted_api_outage
+# Set terminal_state in state.json. Values (all five): complete | code_complete_not_live_verified |
+# complete_with_issues | aborted | aborted_api_outage
 STATUS_LOWER=$(echo "<STATUS>" | tr '[:upper:]' '[:lower:]')
+# The report status "CODE-COMPLETE, NOT LIVE-VERIFIED" (any punctuation) maps to its token,
+# which /autopilot-merge and autopilot-collect read.
+case "$STATUS_LOWER" in code-complete*|code_complete*) STATUS_LOWER=code_complete_not_live_verified ;; esac
 jq --arg s "$STATUS_LOWER" '.terminal_state = $s' .autopilot/state.json > .autopilot/state.json.tmp \
   && mv .autopilot/state.json.tmp .autopilot/state.json
 

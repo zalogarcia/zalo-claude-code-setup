@@ -2,6 +2,8 @@
 
 Sequential `--no-ff` merge of every completed `autopilot/*` branch in this repo onto a target branch (default `dev`). Preserves per-run commit history with one merge commit per autopilot run. Pauses on conflicts for human resolution. Does NOT auto-clean worktrees or branches.
 
+**Runs that ended `CODE-COMPLETE, NOT LIVE-VERIFIED`** (`terminal_state = code_complete_not_live_verified`, Zalo's decision of 2026-09-23): they MAY merge onto the integration branch (`dev`, or the repo's integration branch), with the flag carried into the merge commit message and the run's `/go-live` listed as pending in the merge report. They NEVER merge onto a production or deploy branch, and nothing calls them done, until their `/go-live` passes (a passing `/go-live` sets the run's `terminal_state` to `complete`). Step 1b decides which branches are production.
+
 ## How to invoke
 
 ```
@@ -58,6 +60,36 @@ if ! git show-ref --verify --quiet "refs/heads/${TARGET}"; then
 fi
 ```
 
+### Step 1b: Resolve the production branches
+
+Production means a branch whose push or merge deploys. Read it from the deploy surfaces of the repo's `.claude/VERIFY.md` (the target branch's copy); if VERIFY.md is missing or names no deploy branch, `main` and `master` are production.
+
+```bash
+VERIFY_TEXT=$(git show "${TARGET}:.claude/VERIFY.md" 2>/dev/null || true)
+PROD_SOURCE="no .claude/VERIFY.md on ${TARGET}"
+PROD_BRANCHES=""
+if [ -n "$VERIFY_TEXT" ]; then
+  PROD_SOURCE=".claude/VERIFY.md names no deploy branch"
+  # Branch names in the Deploy surfaces section: "push to `main`", "merge into prod", "deploys from release".
+  for B in $(printf '%s\n' "$VERIFY_TEXT" \
+      | awk '/^## Deploy surfaces/{f=1; next} /^## /{f=0} f' \
+      | grep -o -i -E "(push(es|ed)? to|merge[sd]? (in)?to|deploys? from) \`?[A-Za-z0-9._/-]+" \
+      | awk '{print $NF}' | tr -d '`' | sort -u); do
+    # Keep only real branch names (drops words like "the").
+    if git show-ref --verify --quiet "refs/heads/$B" || git show-ref --verify --quiet "refs/remotes/origin/$B"; then
+      PROD_BRANCHES="$PROD_BRANCHES $B"
+    fi
+  done
+  [ -n "$PROD_BRANCHES" ] && PROD_SOURCE=".claude/VERIFY.md deploy surfaces"
+fi
+[ -z "$PROD_BRANCHES" ] && PROD_BRANCHES="main master"
+
+TARGET_IS_PROD=false
+for B in $PROD_BRANCHES; do [ "$B" = "$TARGET" ] && TARGET_IS_PROD=true; done
+```
+
+Show `PROD_BRANCHES` and `PROD_SOURCE` in the Step 5 confirmation, so the reading can be checked before anything merges.
+
 ### Step 2: Discover completed autopilots (via `autopilot-collect` skill)
 
 Invoke the skill — do NOT reimplement discovery inline:
@@ -66,12 +98,16 @@ Invoke the skill — do NOT reimplement discovery inline:
 TSV=$(~/.claude/skills/autopilot-collect/collect.sh "$TARGET")
 ```
 
-Parse the TSV (skip header). Filter to `terminal_state ∈ {complete, complete_with_issues}`. Surface skipped rows separately with their state so the user sees what was excluded (e.g. a still-running autopilot must NOT be merged).
+Parse the TSV (skip header). Filter to `terminal_state ∈ {complete, complete_with_issues}`, plus `code_complete_not_live_verified` when the target is NOT a production branch (Step 1b). Surface skipped rows separately with their state so the user sees what was excluded (e.g. a still-running autopilot must NOT be merged, and a not-live-verified run is skipped when the target is production).
 
 ```bash
-MERGEABLE=$(echo "$TSV" | tail -n +2 | awk -F'\t' '$3 == "complete" || $3 == "complete_with_issues"')
-SKIPPED=$(echo "$TSV" | tail -n +2 | awk -F'\t' '$3 != "complete" && $3 != "complete_with_issues"')
+if [ "$TARGET_IS_PROD" = true ]; then OK_STATES="complete complete_with_issues"
+else OK_STATES="complete complete_with_issues code_complete_not_live_verified"; fi
+MERGEABLE=$(echo "$TSV" | tail -n +2 | awk -F'\t' -v ok=" $OK_STATES " 'index(ok, " " $3 " ")')
+SKIPPED=$(echo "$TSV" | tail -n +2 | awk -F'\t' -v ok=" $OK_STATES " '!index(ok, " " $3 " ")')
 ```
+
+A skipped `code_complete_not_live_verified` row gets this reason: "not live-verified: never onto production branch <TARGET>. Merge it onto the integration branch, or run its `/go-live` first".
 
 If `MERGEABLE` is empty → report "No completed autopilot branches to merge." and exit cleanly. Show `SKIPPED` if non-empty so the user knows why nothing matched.
 
@@ -90,9 +126,9 @@ Found N autopilot branches ready to merge onto <TARGET>:
 
   1. autopilot/20260518-153313-6334  (7 commits, 22 files)  Build conversations tab
   2. autopilot/20260518-164212-7891  (4 commits, 11 files)  Webhook retry handler
-  3. autopilot/20260518-171530-8234  (9 commits, 31 files)  Settings page redesign
+  3. autopilot/20260518-171530-8234  (9 commits, 31 files)  Settings page redesign  [NOT LIVE-VERIFIED: /go-live pending]
 
-Skipped (not in terminal-state {complete, complete_with_issues}):
+Skipped (not mergeable onto <TARGET>):
   - autopilot/20260518-182104-9012  state=running       (do NOT merge — still active)
   - autopilot/20260517-093015-5421  state=aborted       (review .autopilot/report.md)
 ```
@@ -154,6 +190,10 @@ Emit `checkpoint:human-verify`:
 1. autopilot/... (N commits, K files) <task>
 2. ...
 
+**Production branches:** <PROD_BRANCHES> (from <PROD_SOURCE>). <TARGET> is <not a production branch | a production branch, so not-live-verified runs are skipped>.
+
+**Not live-verified runs in this merge:** <none | list, each merged with the flag in its commit message; its `/go-live` stays pending>
+
 **Conflict policy:** sequential `--no-ff` merge. If any branch conflicts, this workflow pauses and asks you to resolve.
 
 **Cleanup:** worktrees and branches will be LEFT in place after merging. Remove manually when ready.
@@ -170,13 +210,20 @@ Wait for user confirmation. Do NOT proceed without an explicit go-ahead. Pushing
 ```
 FOR each branch in MERGEABLE_SORTED:
   task = branch's TASK_SUMMARY (from TSV)
+  path = branch's PATH, state = its TERMINAL_STATE (from TSV)
   short_id = branch suffix after "autopilot/"
 
-  # Attempt the merge.
-  git merge --no-ff "$branch" -m "Merge autopilot/${short_id} — ${task}"
+  # Attempt the merge. A not-live-verified run carries its flag into the message.
+  IF state == code_complete_not_live_verified:
+    git merge --no-ff "$branch" \
+      -m "Merge autopilot/${short_id} [CODE-COMPLETE, NOT LIVE-VERIFIED]: ${task}" \
+      -m "Live verification pending: run /go-live in ${path}. Not done, and never to be merged onto a production branch, until /go-live passes."
+  ELSE:
+    git merge --no-ff "$branch" -m "Merge autopilot/${short_id} — ${task}"
 
   IF exit 0:
     Print: "✓ Merged autopilot/${short_id}"
+    IF state == code_complete_not_live_verified: add it to GO_LIVE_PENDING (with ${path}).
     CONTINUE to next branch.
 
   IF conflict (exit != 0, `git status` shows merge in progress):
@@ -208,7 +255,7 @@ FOR each branch in MERGEABLE_SORTED:
     On `continue`:
       Verify: `git status --porcelain` is empty AND `git log -1 --pretty=%P | wc -w` shows 2+ parents (merge commit landed)
       If verification fails → re-emit the checkpoint with the current status
-      Otherwise log "resolved autopilot/${short_id}" and proceed to next branch
+      Otherwise log "resolved autopilot/${short_id}" (a not-live-verified run joins GO_LIVE_PENDING here too) and proceed to next branch
 
     On `skip`:
       Verify: `git status --porcelain` is empty (user ran `git merge --abort`)
@@ -236,6 +283,9 @@ Merge complete.
   Merged:   N branches
   Skipped:  K branches (conflict, user chose skip)
   Target:   <TARGET> now at <new SHA>
+  Go-live pending (merged NOT LIVE-VERIFIED, not done until /go-live passes):
+    - autopilot/<id>  <task>  → run /go-live in <worktree path>
+    (or "none")
 
 Recent commits on <TARGET>:
   <git log --oneline -N output>
@@ -270,7 +320,18 @@ Otherwise, emit `checkpoint:decision`:
 
 ### Step 8: Promotion to main (out of scope)
 
-This command does NOT promote dev to main. That's a separate decision involving review/CI/release process. If the user asks "now push to main", suggest:
+This command does NOT promote dev to main. That's a separate decision involving review/CI/release process.
+
+Before suggesting any promotion onto a production branch, list the not-live-verified merges it would carry:
+
+```bash
+PROD=<the production branch being promoted to>
+git log --merges --format='%h %s' --grep='NOT LIVE-VERIFIED' "${PROD}..${TARGET}"
+```
+
+For each hit, find the run's worktree (`autopilot-collect`) and read its `terminal_state`. `complete` means its `/go-live` passed. Anything else, or a worktree that no longer exists, means the promotion is BLOCKED: name the run and say its `/go-live` must pass first. Never suggest a promotion that carries one.
+
+If nothing blocks it and the user asks "now push to main", suggest:
 
 - For trivial promotion: `git checkout main && git merge --ff-only dev && git push origin main`
 - For reviewed promotion: open a PR `dev → main` via `gh pr create --base main --head dev`
@@ -283,6 +344,7 @@ Surface the recommendation; do not execute without explicit user direction.
 - Force-push to the target branch
 - Skip conflict files silently — every conflict surfaces a `checkpoint:human-action`
 - Merge a branch whose `terminal_state` is `running`, `aborted`, or `missing-state` — those are surfaced as skipped, never merged
+- Merge a `code_complete_not_live_verified` run onto a production branch, drop its flag from the merge commit message, or call it done before its `/go-live` passes
 - Use `git add -A` or `git add .` during conflict resolution — only specific resolved files
 - Use `git merge` without `--no-ff` — would lose the per-run boundary the user explicitly chose to preserve
 - Promote dev → main automatically — that's a release decision, not a merge decision

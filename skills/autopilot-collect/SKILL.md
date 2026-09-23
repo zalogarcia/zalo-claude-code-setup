@@ -36,6 +36,7 @@ PATH	BRANCH	TERMINAL_STATE	COMMITS_AHEAD_OF_dev	FILES_TOUCHED	TASK_SUMMARY
 ### Terminal-state legend
 
 - `complete` — clean Phase 5 exit, ready to merge
+- `code_complete_not_live_verified` — Phase 5 exit with behavior proven only by on-disk proxies. Mergeable onto the integration branch only, flag carried into the merge commit; never onto a production branch until its `/go-live` passes (which sets `complete`). `/autopilot-merge` enforces this
 - `complete_with_issues` — Phase 5 exit with deferred issues; mergeable but review the deferred_issues.md
 - `aborted` — exited early (pre-flight failure, context exhaustion); usually NOT mergeable, inspect first
 - `aborted_api_outage` — API circuit breaker tripped; partial work, may be mergeable
@@ -48,7 +49,8 @@ When invoked from a command (e.g. `/autopilot-merge`), capture stdout into a var
 
 ```bash
 TSV=$(~/.claude/skills/autopilot-collect/collect.sh)
-# Skip header, filter to mergeable states
+# Skip header, filter to the states mergeable onto a PRODUCTION branch. Onto an
+# integration branch, code_complete_not_live_verified is mergeable too (/autopilot-merge Step 2).
 echo "$TSV" | tail -n +2 | awk -F'\t' '$3 == "complete" || $3 == "complete_with_issues"'
 ```
 
