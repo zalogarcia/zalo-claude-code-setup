@@ -15,7 +15,7 @@ Revision Gate that converges on a clean state. Each iteration runs a parallel, a
 
 Identify what changed: `git diff` (or `git diff HEAD~1` if already committed). Note affected files and modules.
 
-Tier note: /qa-loop IS the full tier of the multi-file QA mandate. If the change set qualifies for the light tier (≤150 changed lines, behavior-preserving, no auth/payment/data-deletion/migration paths, no new deps — see `~/.claude/CLAUDE.md` "3+ file edits"), the orchestrator may run a single `qa-agent` dispatch instead of invoking this loop — no `model:` override; it inherits the agent's `fable` frontmatter pin (single low-volume verifier dispatch, per the split policy's verifier ≠ author rule). Once /qa-loop is invoked, run the full loop — don't downgrade mid-flight.
+Tier note: /qa-loop IS the full tier of the multi-file QA mandate. If the change set qualifies for the light tier (≤150 changed lines or a scaffold-only repo-init run of any size, behavior-preserving, no auth/payment/data-deletion/migration paths, no new deps — see `~/.claude/CLAUDE.md` "3+ file edits"), the orchestrator may run a single `qa-agent` dispatch instead of invoking this loop — no `model:` override; it inherits the agent's `fable` frontmatter pin (single low-volume verifier dispatch, per the split policy's verifier ≠ author rule). Once /qa-loop is invoked, run the full loop — don't downgrade mid-flight.
 
 ### Step 2: QA Loop (MAX_ITERATIONS = 10)
 
