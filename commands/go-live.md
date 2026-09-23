@@ -54,6 +54,7 @@ Defects found here: fix → re-run the failed stage → continue (revision-gate,
 ## Anti-Patterns (will not do)
 
 - Push/deploy without the user having approved going live (invoking /go-live IS that approval for the surfaces in the runbook — but never force-push, never skip migrate-before-deploy)
+- Treat a /go-live that Zalo did not invoke himself as approved: pushing, deploying and migrations still need his go-ahead when another command, a worker or a peer started this run
 - Mark a vendor-gated step "done" from the code side without probing the vendor resource
 - Substitute the harness for the campaign or vice versa — they catch different classes
 - Silent partial activation: every runbook step lands in the report as executed / blocked / not-attempted

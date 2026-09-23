@@ -54,7 +54,7 @@ Throughout the rest of this workflow, `${RUN_DIR}` refers to the resolved path `
 
 ### Step 2: Dispatch safe-planner
 
-Dispatch `safe-planner` (model: "opus") with:
+Dispatch `safe-planner` (no `model:` override: its frontmatter pins fable, per the CLAUDE.md model policy) with:
 
 ```
 Task: (read ${RUN_DIR}/task.md)
@@ -97,7 +97,7 @@ Workflow(name="plan-verify", args={ runDir: "${RUN_DIR}" })
 
 The workflow (`~/.claude/workflows/plan-verify.js`) faithfully encodes `~/.claude/rules-ref/plan-verification.md`:
 
-- Runs **Gate 1 (brainstorm)** and **Gate 2 (outcomes-grader)** in parallel, both reading `${RUN_DIR}/task.md` + `${RUN_DIR}/plan.md`, returning schema-validated findings (model: opus, same as the prior inline dispatch).
+- Runs **Gate 1 (brainstorm)** and **Gate 2 (outcomes-grader)** in parallel, both reading `${RUN_DIR}/task.md` + `${RUN_DIR}/plan.md`, returning schema-validated findings (brainstorm on fable and outcomes-grader on opus, the CLAUDE.md split policy).
 - If brainstorm reports `hasSignificantConcerns` OR the grader reports any applicable item not passing, it dispatches `safe-planner` **once** to revise `${RUN_DIR}/plan.md` **in place** (cap: one revision — never loops).
 - Returns:
   ```
@@ -115,7 +115,7 @@ Handle the result:
 
 `safe-planner` overwrites `${RUN_DIR}/plan.md` in place, so Step 5 reads the final plan from the same path whether or not a revision happened. **Do NOT loop the revision** — one pass max, per `~/.claude/rules-ref/plan-verification.md`.
 
-**Fallback (workflows disabled / errored):** if the `plan-verify` workflow is unavailable, or returns an `error` field, fall back to the inline loop — dispatch `brainstorm` and `outcomes-grader` in parallel (single message, two Agent calls), then re-dispatch `safe-planner` once if either flags concerns, exactly as specified in the @-included `~/.claude/rules-ref/plan-verification.md` (which has the verbatim gate prompts). Same opus model pins, same one-revision cap, then write `${RUN_DIR}/plan_verification.md` yourself from the combined findings.
+**Fallback (workflows disabled / errored):** if the `plan-verify` workflow is unavailable, or returns an `error` field, fall back to the inline loop — dispatch `brainstorm` and `outcomes-grader` in parallel (single message, two Agent calls), then re-dispatch `safe-planner` once if either flags concerns, exactly as specified in the @-included `~/.claude/rules-ref/plan-verification.md` (which has the verbatim gate prompts). Same model split (no `model:` override on brainstorm or safe-planner, whose frontmatter pins fable; outcomes-grader on opus), same one-revision cap, then write `${RUN_DIR}/plan_verification.md` yourself from the combined findings.
 
 ### Step 5: Output the plan
 

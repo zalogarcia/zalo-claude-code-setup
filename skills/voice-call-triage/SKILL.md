@@ -1,6 +1,6 @@
 ---
 name: voice-call-triage
-description: Triage one voice call (or "the last call") on Delta Agents prod — pull the tenant_voice_calls row (status/duration/disconnection reason), the tenant_voice_tool_events timeline, the gateway ECS log window around the call, and a DA-intended vs Retell-actual config diff via the Retell GET endpoints. Use when the user says "it hung up", "call didn't work", "check the last call", "why did the voice agent…", "the call never picked up", or names a phone number + a call symptom. Encodes the call→symptom→logs loop that took ~20 iterations per bug in past voice sessions.
+description: Triage one voice call (or "the last call") on Delta Agents prod — pull the tenant_voice_calls row (status/duration/disconnection reason), the tenant_voice_tool_events timeline, the gateway ECS log window around the call, and a DA-intended vs Retell-actual config diff via the Retell GET endpoints. Use when a specific voice call misbehaved (hung up, never connected, did the wrong thing) or the user names a phone number with a call symptom.
 ---
 
 Triage a single Delta Agents voice call end-to-end: DB evidence → tool timeline → gateway logs → config diff. Collect all four evidence layers before hypothesizing: past 20-iteration debugging loops came from fixing the first plausible theory instead of reading the second evidence layer.

@@ -158,10 +158,12 @@ Emit `checkpoint:human-verify`:
 
 **Cleanup:** worktrees and branches will be LEFT in place after merging. Remove manually when ready.
 
-**Resume:** reply `go` / `yes` to proceed, or describe any change.
+**Push after merging:** <yes: `git push origin <TARGET>` (you passed `--push`) | no: you will be asked after the merge>
+
+**Resume:** reply `go` / `yes` to proceed (with `--push`, that also approves the push shown above), or describe any change.
 ```
 
-Wait for user confirmation. Do NOT proceed without an explicit go-ahead.
+Wait for user confirmation. Do NOT proceed without an explicit go-ahead. Pushing still needs Zalo's go-ahead, so `--push` only takes effect through this confirmation, which must show the push line.
 
 ### Step 6: Sequential merge loop
 
@@ -239,7 +241,7 @@ Recent commits on <TARGET>:
   <git log --oneline -N output>
 ```
 
-If `PUSH_FLAG` is true OR the user explicitly said `--push` in the original invocation → push:
+If `PUSH_FLAG` is true AND the Step 5 confirmation showed the push line and got a `go` → push:
 
 ```bash
 git push origin "$TARGET"

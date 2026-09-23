@@ -2,7 +2,7 @@
 model: fable
 name: qa-agent
 description: Audits recent code changes for real, reproducible bugs. Use after implementing features, before deployments, or when asked to stress test, verify, or audit code.
-tools: Read, Grep, Glob, Bash
+tools: Read, Grep, Glob, Bash, mcp__playwright__browser_navigate, mcp__playwright__browser_navigate_back, mcp__playwright__browser_snapshot, mcp__playwright__browser_take_screenshot, mcp__playwright__browser_click, mcp__playwright__browser_type, mcp__playwright__browser_fill_form, mcp__playwright__browser_select_option, mcp__playwright__browser_hover, mcp__playwright__browser_press_key, mcp__playwright__browser_wait_for, mcp__playwright__browser_resize, mcp__playwright__browser_console_messages, mcp__playwright__browser_network_requests, mcp__playwright__browser_tabs, mcp__playwright__browser_close
 effort: xhigh
 ---
 
@@ -47,7 +47,7 @@ Spend depth where risk is highest for THIS codebase. Don't spread thin just to b
 
 ## Playwright (for frontend changes)
 
-Use Playwright MCP tools to visually verify frontend findings. Do not theorize about UI — reproduce and screenshot. If the dev server isn't running, ask the user to start it.
+Use Playwright MCP tools to visually verify frontend findings. Do not theorize about UI — reproduce and screenshot. If nothing answers on the dev server port, start it with `~/.claude/skills/dev-server-restart/restart.sh <port> <repo dir> <probe path>` (the `dev-server-restart` skill); return `## BLOCKED` only if that script exits non-zero.
 
 ## The Skeptic Pass (mandatory before your verdict)
 

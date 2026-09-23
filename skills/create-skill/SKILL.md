@@ -1,6 +1,6 @@
 ---
 name: create-skill
-description: Author a new Claude Code skill following the established pattern. Use when the user says "create a skill", "add a skill", "let's skill-ify X", "promote this to a skill", or asks "should this be a skill?" Guides the decision (is it worth a skill?), picks the form factor (markdown-only vs shell script), generates the SKILL.md from the canonical template, optionally generates an accompanying shell script, and proposes the CLAUDE.md callout for deterministic firing. Replaces ad-hoc skill creation with a consistent shape that matches typecheck-and-build, commit-with-heredoc, dev-server-restart, autopilot-collect, and cf-crawl.
+description: Author a new Claude Code skill in the established shape, or decide whether a recurring pattern deserves one. Use when the user wants to create, add or promote something to a skill, or asks whether it should be one. Covers the worth-it gate, the markdown-vs-script form factor, the SKILL.md template and the optional CLAUDE.md callout.
 ---
 
 Create a new skill that fits the established pattern in `~/.claude/skills/`. Don't free-form a SKILL.md — work the decision tree, pick the form factor, fill the template, register.
@@ -23,7 +23,7 @@ Apply this gate **before** writing anything. A "no" here means don't create the 
 | Has the pattern appeared in **3+ different sessions** in the last 30 days?      | yes             |
 | Is it **generic across projects**, not tied to one repo?                        | yes             |
 | Is it **non-trivial** — 3+ lines OR 1 line with non-obvious flags?              | yes             |
-| Is the output **deterministic** given consistent input?                         | yes             |
+| Is the procedure **repeatable**: the same steps each run, even when applying them takes judgment? | yes |
 | Is it **NOT already covered** by an MCP, an existing skill, or a one-liner CLI? | yes             |
 
 If any answer is "no", explain why and don't create the skill. Examples of legitimate rejections:
@@ -31,7 +31,7 @@ If any answer is "no", explain why and don't create the skill. Examples of legit
 - ❌ "Run `git status`" — trivial one-liner
 - ❌ "Query Supabase SQL" — already covered by `mcp__supabase__execute_sql`
 - ❌ "Deploy this specific Edge function" — project-specific
-- ❌ "Help me think about X" — judgmental, use `/brainstorm` instead
+- ❌ "Help me think about X": open-ended thinking with no repeatable procedure; use `/brainstorm` instead
 - ✅ "Standardize tsc + build with smart tail" — recurring, generic, non-obvious tail length
 
 ## Step 2 — Choose the form factor
@@ -205,7 +205,7 @@ After writing:
 
 ## Pair with
 
-- **Rule-like language in the new skill**: state each rule at normal volume with its reason beside it ("Do X, because Y"). Current models follow instructions closely, so caps, CRITICAL and stacked MUST/NEVER over-apply; reserve emphasis for a rule you have actually seen underweighted.
+- **Rule-like language in the new skill**: state each rule at normal volume with its reason beside it ("Do X, because Y"). Current models follow instructions closely, so caps, CRITICAL and stacked MUST/NEVER over-apply; reserve emphasis for a rule you have actually seen underweighted. The longer version: `~/.claude/rules-ref/persuasion-principles.md`.
 - **`/brainstorm`** — if unsure whether the pattern is truly recurring, dispatch brainstorm to stress-test the skill idea before writing it
 - **30-day usage analysis** — for retroactive skill discovery (general-purpose agent scanning `~/.claude/projects/`)
 - **`commit-with-heredoc`** — commit the new skill following the convention

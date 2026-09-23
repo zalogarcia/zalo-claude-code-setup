@@ -30,8 +30,9 @@ truth and they change without this file changing.
 3. Every path in those files is repo-relative — prefix with `$BRAND/`
    (`process/cycle-state.md` → `~/dev/zalo-kabche-brand/process/cycle-state.md`).
 4. Git runs with `-C $BRAND` (`git -C ~/dev/zalo-kabche-brand add <files>`), never
-   a bare `cd`. The repo skill's close step (commit + push in that repo) is its
-   established loop — keep it, and say in one line what you pushed.
+   a bare `cd`. The repo skill's close step commits in that repo; keep the commit. Pushing,
+   deploying and migrations still need Zalo's go-ahead: ask for the push in the same
+   short reply and push only after he says so.
 5. The freestyle REEL CARD ships with every run (`$BRAND/.claude/skills/freestyle-reel/SKILL.md`,
    CARD mode) — it is part of the repo skill's contract, not an extra.
 

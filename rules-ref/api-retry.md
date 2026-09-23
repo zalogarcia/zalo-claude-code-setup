@@ -55,23 +55,21 @@ After attempt 4 fails with a retryable signal → mark dispatch as
 `api_retry_exhausted`, increment the phase-level exhaustion counter (see
 Circuit Breaker), and route to the orchestrator's normal failure handling.
 
-**Implementation in bash:**
+**How to wait.** The harness blocks a foreground `sleep`, so never wait with
+one. Pick the first that applies:
 
-```bash
-sleep_for_attempt() {
-  case "$1" in
-    1) echo 0 ;;
-    2) echo 30 ;;
-    3) echo 60 ;;
-    4) echo 120 ;;
-    *) echo -1 ;;  # exhausted
-  esac
-}
-```
+1. **Interactive session:** arm the Monitor tool with a command that exits
+   once the wait is over, for example
+   `until [ "$(date +%s)" -ge <sleep_until_epoch> ]; do sleep 5; done; echo retry-due`,
+   and re-dispatch when its event arrives.
+2. **Dynamic `/loop`:** ScheduleWakeup for the remaining seconds.
+3. **Neither is available** (a headless bridge run, where anything
+   backgrounded dies at turn end): re-dispatch immediately. The harness
+   already retries transient API errors (overloaded, 429, 5xx) with its own
+   backoff inside each call, so the custom wait adds little there.
 
-The orchestrator runs `sleep <N>` between retry attempts. Each retry uses
-the **same prompt** as the original dispatch — the failure was
-transport-layer, not prompt-layer.
+Each retry uses the **same prompt** as the original dispatch; the failure
+was transport-layer, not prompt-layer.
 
 ## Constants
 
@@ -115,9 +113,9 @@ mass-marking everything failed.
 
 ## State Persistence (compaction safety)
 
-Long backoff sleeps (up to 120s) can cross a `/compact` boundary. To survive
+Long backoff waits (up to 120s) can cross a `/compact` boundary. To survive
 compaction, the orchestrator persists retry state to its state file
-(typically `.autopilot/state.json`) BEFORE entering each `sleep`.
+(typically `.autopilot/state.json`) BEFORE each wait.
 
 **Schema (added to existing state.json):**
 
@@ -141,7 +139,7 @@ When the orchestrator resumes (post-compaction or post-interrupt), it MUST:
 2. If absent → no in-flight retry; proceed normally
 3. If present:
    - If `sleep_until_ts` is in the past → dispatch the retry immediately
-   - If `sleep_until_ts` is in the future → `sleep` the remainder, then dispatch
+   - If `sleep_until_ts` is in the future → wait out the remainder (see "How to wait" above), then dispatch
    - If `sleep_until_ts` is missing, malformed, or unparseable as ISO8601, treat it as past (re-dispatch immediately) and log `current_dispatch_retry_corrupt_recovered` to `decisions.log`.
 4. After dispatch returns, clear `current_dispatch_retry` (or update to next
    attempt's state)

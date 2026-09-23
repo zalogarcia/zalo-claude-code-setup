@@ -1,6 +1,6 @@
 ---
 name: voice-agent-forge
-description: Generate production-ready Retell-style voice/chat agent system prompts in the Operator Base "house format" — the same structure the game-app's Prompt Forge (Prompt Studio) and demo-retell-setup templates produce. Use when the user says "write a voice agent prompt", "build a Retell agent", "make an orchestrator bot", "create the sub-agents", "forge a prompt for [client]", "draft the AI receptionist prompt", or asks for a multi-bot routing setup (orchestrator + specialized agents). Produces the full <identity>/<company_identity>/<goal>/<context>/<important_information>/<conversational_style_guideline>/<conversation_steps>/<selling_method>/<objection_handling_database>/<knowledge_database> skeleton with the voice-specific rules and the Selling Method block baked in, so every client bot comes out consistent instead of re-derived from scratch each time.
+description: Write Retell-style voice or chat agent system prompts (single bot, or orchestrator plus sub-agents) in the Operator Base house format, with the Selling Method block for sales bots. Use when the user wants a new client agent prompt or a multi-bot routing setup; not for small wording edits.
 ---
 
 Forge voice (Retell) and chat (ADRS) agent system prompts in Operator Base house format. One client = an orchestrator bot plus N specialized sub-agents the orchestrator transfers to. This skill gives you the exact section taxonomy, the voice-specific rules, and the generation discipline so every bot comes out in the same shape.

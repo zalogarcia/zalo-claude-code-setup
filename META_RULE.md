@@ -41,7 +41,7 @@ Edit this file freely — the `session-start.sh` hook reads it fresh each time.
 
 **Shared rules** in `~/.claude/rules/` are authoritative and already loaded in every session; the "Shared Rules" table in `~/.claude/CLAUDE.md` says when each one applies.
 
-On-demand references live in `~/.claude/rules-ref/` (not auto-loaded; read when the situation applies): `frontend-workflow.md` (UI-design-heavy pipeline).
+On-demand references live in `~/.claude/rules-ref/` (not auto-loaded; read when the situation applies): `frontend-workflow.md` (UI-design-heavy pipeline), `persuasion-principles.md` (writing rules current models follow), `api-retry.md`, `plan-verification.md` and `engineering-principles.md` (orchestrator protocols; see CLAUDE.md "Shared Rules").
 
 ## The discipline
 

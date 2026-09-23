@@ -1,6 +1,6 @@
 ---
 name: live-test-campaign
-description: Run a master live-test campaign against a deployed app or feature — design-review the code first, enumerate edge cases by lifecycle stage, split live-vs-lab, then execute a cheapest-first phase ladder (preflight → read-only API → side-effect-free calls → UI → state writes → guard/abort paths → real external sends → cleanup) with positive-evidence discipline and a state-neutralization protocol. Use after shipping a feature, before launch, or whenever the user asks to "live test everything" / "make sure it's perfect" / "catch all edge cases". Battle-tested on a multi-day production campaign that found bugs static QA and 100+ unit tests missed.
+description: 'Run a designed live-test campaign against a deployed app or feature: code design review first, then a cheapest-first, destructive-last phase ladder with positive-evidence and state-neutralization rules. Use after shipping or before launch, or when the user asks to live test everything or catch all edge cases.'
 ---
 
 Run a production-grade live-test campaign that finds the bugs only reality can surface: real DB row shapes, vendor API behavior, webhook routing, Redis counters, cache staleness, race timing, and operator-facing UX drift. This is NOT a smoke test — it is a designed campaign with an evidence standard.
@@ -19,6 +19,7 @@ Skip for: pure-UI copy tweaks (use the `live-test` agent alone), logic fully pro
 Dispatch TWO agents in parallel before touching anything:
 
 1. **`brainstorm` agent — edge-case storm + code design review.** Give it: what the feature does, what changed recently (recency-ranked — last-48h changes are P0), what was already live-proven, and the hard environment constraints. Ask for: (a) an edge-case taxonomy organized BY LIFECYCLE STAGE (config → ingest/seed → execute → post-execute → cancel → kill/abort → observability), applying inversion ("what would a hostile/unlucky sequence do?"), the scale game (0 items vs many; first step vs last step), and the codebase's OWN recurring bug classes (check project memory: phantom columns, local-vs-external IDs, stale closures, fail-open vs fail-closed); (b) a live-vs-lab split; (c) how the TEST PLAN ITSELF could lie (see catalog below); (d) a cheapest-first sequencing with cleanup steps. **The brainstorm reads code — expect it to find real bugs before a single test runs.** When it does, FIX AND SHIP THE BUG FIRST so the campaign verifies the fix, not pins the bug.
+   Pushing, deploying and migrations still need Zalo's go-ahead: ask before each ship.
 2. **`Explore` agent — deployed-surface inventory.** Exact endpoints (method + path + auth + error codes), env flags (+ fail-open/closed semantics + current values in task defs), every structured log event name on the paths under test (with metadata keys), DB tables/columns/status values, cron/sweeper cadences, UI data-testids, and where config saves. The plan must be grounded in what is DEPLOYED, not what you remember.
 
 Then write the plan to a file (`.claude/PLAN-<feature>-livetest.md`): phases, per-phase checklists, evidence requirements, the neutralization protocol, and a "deliberately skipped (lab-pinned)" section. Update it as phases complete — it must survive compaction.
@@ -62,7 +63,7 @@ Then write the plan to a file (`.claude/PLAN-<feature>-livetest.md`): phases, pe
 
 - **Force-fire scheduled work:** backdate `due_at` AND clear the scheduler/dedup flag in the same UPDATE (`context - 'scheduler'` or equivalent) — versioned job IDs need a fresh due time to re-enqueue. A "stranded" row is re-fireable the same way.
 - **Watchers, not sleeps:** background `until`-loop greps on CloudWatch/log filters keyed to the specific row/trace ID, with `run_in_background: true`. The notification resumes you. Filter for BOTH the success and failure event names — silence must not look like success.
-- **Fix-as-you-go:** a bug found mid-campaign gets fixed → tested → shipped → deployed → and the NEXT phase verifies the fix live. Never let the campaign pin buggy behavior as "expected".
+- **Fix-as-you-go:** a bug found mid-campaign gets fixed → tested → shipped → deployed → and the NEXT phase verifies the fix live. Never let the campaign pin buggy behavior as "expected". Pushing, deploying and migrations still need Zalo's go-ahead.
 - **Admin-only identities** (per `~/.claude/rules/testing-safety.md`): the designated admin email/phone, never fabricated third-party contacts.
 - **Evidence per claim** (per `~/.claude/rules/gates.md`): a "delivered" claim = vendor API record + event log + DB row state, in the same turn. A "blocked" claim = the skip event + the row's terminal state + the alert/operator surface.
 - **Subagent fan-out:** brainstorm + Explore in parallel for design; `live-test` for UI; `qa-agent` on any code you ship mid-campaign. Keep the main thread as orchestrator.

@@ -20,6 +20,10 @@ Skip for: local-dev databases (`supabase start`), branches — this snapshot doc
 
 Run `SELECT 1` via `mcp__supabase__execute_sql` first. **If `SELECT 1` fails, the MCP transport is down — back off and report; do NOT rewrite queries trying to "fix" them.** (A past session burned 21 turns misreading an MCP outage as query bugs.)
 
+## Two read paths: the helper, or the MCP
+
+The helper in this folder is what built the current snapshot: `node ~/.claude/skills/schema-snapshot/dump-catalog.cjs <dir>` connects over the session pooler (`SUPABASE_SESSION_POOLER_URL` from `~/dev/delta-agents/.env`, pg from delta-agents' `node_modules`), runs the four queries below plus a fifth for views, read-only, and writes `columns_raw.json`, `fks.json`, `rls_raw.json`, `parents.json` and `views.json` into `<dir>`. Then `python3 ~/.claude/skills/schema-snapshot/render_schema.py <dir> docs/SCHEMA-PROD.md` collapses the partitions, appends `annotations.json`, and writes the whole file. If the pooler URL or pg is not available, run the same queries through `mcp__supabase__execute_sql` and save the results under those file names.
+
 ## The queries (run all four; 1, 2, 3 are independent — run in parallel)
 
 All via `mcp__supabase__execute_sql` with `project_id: $DELTA_PROD_PROJECT_REF`.
@@ -92,7 +96,7 @@ Required output shape (match the existing file — diff-stability matters):
 5. **Per-table sections** (alphabetical): `### \`table_name\``, RLS line (`enabled (forced)`/`enabled (not forced)`), compact column table `| column | type | null | default |`(shorten`character varying`→`varchar`, `timestamp with time zone`→`timestamptz`, `character(n)`→`char(n)`, `\_text`→`text[]`), then FK list.
 6. Footer: "generated file — do not hand-edit; refresh via `schema-snapshot`".
 
-A working render script from the last run: `render_schema.py` (session scratchpad — regenerate from this spec if gone; it is ~100 lines of JSON→markdown).
+The render script lives beside this file: `render_schema.py <dir> <out>`. It prints `Wrote <out>: <N> tables, <M> FKs, <V> view(s)`.
 
 ## Verify (per ~/.claude/rules/gates.md — show evidence in the same turn)
 
@@ -107,10 +111,10 @@ A working render script from the last run: `render_schema.py` (session scratchpa
 - ❌ Running the dump against a Supabase **branch** and labeling it prod.
 - ❌ Retrying/rewriting queries when `SELECT 1` already failed — that's a transport outage, not a SQL bug.
 - ❌ Hand-writing the markdown tables from memory of the query output — transcribe to JSON verbatim, render mechanically.
-- ❌ Local `psql` / pg scripts against prod — they die on missing binaries/creds. The Supabase MCP is the only sanctioned prod read path.
+- ❌ Ad-hoc `psql` or hand-written pg scripts against prod. The two sanctioned read paths are `dump-catalog.cjs` (read-only catalog queries over the session pooler) and the Supabase MCP.
 
 ## Edge cases
 
 - **New partitioned table appears:** Query 4 catches the parent; extend the partition-collapse regex for its leaf naming pattern.
 - **Output exceeds MCP result cap anyway** (schema doubled): split Query 1 with `WHERE c.table_name < 'tenant_m'` / `>= 'tenant_m'` halves and merge the JSON.
-- **Views/matviews:** intentionally excluded (`relkind = 'r'`/`'p'` only). If views become query targets, add a `relkind = 'v'` section rather than mixing them in.
+- **Views:** the helper's fifth query dumps them (`relkind = 'v'`, with `security_invoker`), and `render_schema.py` writes them in their own Views section. Materialized views are not covered.

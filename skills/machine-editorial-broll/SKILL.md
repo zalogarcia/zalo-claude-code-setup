@@ -1,9 +1,9 @@
 ---
 name: machine-editorial-broll
-description: Generate branded motion-graphics "slides b-roll" for Zalo's videos (VSLs, YouTube, teleprompter scripts, reels) using the Machine Editorial v3 system in the Remotion studio at /Users/zalo/dev/operator-broll. Use when the user says "slides b-roll", "b-roll for this script", "motion graphics for my video", "VSL-style slides", "machine editorial", or hands over a script/teleprompter text and wants the graphics cut. NOT for AI-generated footage — that's the seedance skill; this one is for the branded typographic beat system (dark navy + electric blue Line + gold ignite). Keeps every video's b-roll in one consistent, ownable visual language instead of re-deriving the style per video.
+description: Generate branded motion-graphics "slides b-roll" for Zalo's videos (VSLs, YouTube, teleprompter scripts, reels) using the Machine Editorial v3 system in the Remotion studio at /Users/zalo/dev/operator-broll. Use when the user says "slides b-roll", "b-roll for this script", "motion graphics for my video", "VSL-style slides", "machine editorial", or hands over a script/teleprompter text and wants the graphics cut. NOT for AI-generated footage — that's the seedance skill; this one is for the branded typographic beat system (dark navy + electric blue + gold ignite). Keeps every video's b-roll in one consistent, ownable visual language instead of re-deriving the style per video.
 ---
 
-Turn a video script into branded Machine Editorial b-roll: mobile-first chains of full-screen beats with huge type, a continuous camera, The Line signature, impact physics, and a synth SFX bed — rendered with Remotion from the studio project.
+Turn a video script into branded Machine Editorial b-roll: mobile-first chains of full-screen beats with huge type, a continuous camera, impact physics, and a synth SFX bed — rendered with Remotion from the studio project.
 
 ## When to invoke
 
@@ -22,7 +22,7 @@ The b-roll behaves like an intelligent system composing a document in real time 
 1. **Mobile-first beats.** A segment is a chain of ~2s full-screen beats (`Beat`), max ~5 words on screen at once, key type 150–210px, center-weighted. Never compose a dense slide.
 2. **Two speeds only.** Machine-time (linear: line draws, typing, counters) and settle-time (expoOut entrances). Nothing bounces, ever. Camera shake is a decaying mechanical kick, not a spring.
 3. **Motion never stops.** One continuous `SegmentCamera` move (push + drift) across the whole segment — no per-beat resets (`Beat push={false}`); beats overlap on enter/exit; grain is live (per-frame).
-4. **THE LINE is the signature.** One comp-level `LineRig` line lives through the entire segment: it underlines what matters (blue), slashes what dies (red), releases, travels, and settles under the payoff. It never dies mid-segment. Red only destroys; blue is the machine; gold = money/payoff (max one Ignite per segment); green confirms.
+4. **The Line is a strike-through only.** operator-broll retired it as decoration (Zalo, 2026-07-27; `~/dev/operator-broll/.claude/CLAUDE.md`): a `LineRig` line is allowed for exactly one purpose, the red slash through text you are negating. No travelling underlines, payoff underscores, settles under a headline or divider rules; run `node scripts/check-lines.mjs` before any render. Red only destroys; blue is the machine; gold = money/payoff (max one Ignite per segment); green confirms.
 5. **The world reacts.** When a message lands: `ImpactFlash` (2-frame flash + shockwave ring) + the same frame in `SegmentCamera impacts` (camera kick) + SFX hit. Pain beats get no gold and softer impacts.
 6. **Typographic craft.** Big words enter via `LetterStamp` (per-letter cascade, tracking tightens on settle, 5-frame chromatic split). Soft middle beats use `WordCascade`. Mono labels via `MonoTag`/`TypeOn`.
 7. **Chrome:** `chrome="minimal"` (kicker + floor tag only) for ad cuts and anything mobile; `chrome="full"` (segment ID + live timecode + meta) for full-frame YouTube masters.
@@ -145,7 +145,7 @@ When a script needs one of these, build it from the named ingredients — do NOT
 ## How to use
 
 1. **Read the script**, split into segments (one idea cluster each, 7–9s), then each segment into beats (~2s, one idea). Per beat, write the script phrase it covers and name what the visual DEPICTS from that phrase (Depiction Law — the mute test) before picking any move. Per segment decide: which archetype comp to copy, the ONE gold payoff (if any), what dies in red, what number rolls.
-2. **Choreograph The Line first** — it's the spine. Write the `LineKeyframe[]` in ABSOLUTE comp frames: born → slash/underline (draw ~8–12f) → hold → release (collapse w→0 toward travel direction, `o:0`) → next station → final settle. Route travels AROUND text blocks (dive below), never through them. Beat-internal `at` values (LetterStamp/DimAt/SFX) are SEQUENCE-RELATIVE — keep a beat map comment reconciling both.
+2. **Place the strike-throughs.** The Line only slashes text being negated (red). Write each strike as `LineKeyframe[]` in ABSOLUTE comp frames: born, slash (draw about 8 to 12f), hold, release (collapse w→0, `o:0`). No travel, no underline, no final settle. Beat-internal `at` values (LetterStamp/DimAt/SFX) are SEQUENCE-RELATIVE — keep a beat map comment reconciling both.
 3. **Beats on a 6-frame overlap grid**: `from` = previous from + duration − 6; final beat gets `exit={0}` and ends exactly at `durationInFrames`.
 4. **Impacts + SFX on landing frames**: `SegmentCamera impacts={[...]}` = `ImpactFlash at` frames = SFX hit frames. SFX placeholders live in `public/sfx/` (thock=stamp, slash=kill, riser=into payoff, shimmer=ignite) — place via `<Sequence from><Audio src={staticFile(...)} volume={0.4-0.9}/></Sequence>`.
 5. **Register** in `src/Root.tsx` (1920×1080@30; 200–280 frames/segment), then verify cheaply before committing to renders:
@@ -181,7 +181,7 @@ Report per segment: `✓ <CompId> — <duration>s → out/<CompId>.mp4` plus one
 - ❌ Type-only segments — if every beat is words, the nouns weren't depicted; pull the things the VO names out of `objects.tsx` (or add the missing object there) and reserve type for verdicts/payoffs
 - ❌ Bouncy/elastic easing, overshoot, springs — the look this system exists against
 - ❌ Slide-density in a beat: >5 words simultaneously, lists, side-by-side columns on mobile cuts
-- ❌ The Line crossing through a text block while traveling — route below/around
+- ❌ The Line as decoration (underline, travel, settle, divider): it is a red strike-through only, and `check-lines.mjs` lists every decorative use
 - ❌ Mixing frame spaces: LineRig/ImpactFlash/camera impacts are ABSOLUTE; LetterStamp/DimAt/SFX-in-beat are RELATIVE to their Sequence
 - ❌ More than one Ignite per segment; gold on non-payoff words; red for emphasis (red only destroys)
 - ❌ Impact without reaction — every flash frame must also appear in `SegmentCamera impacts` and carry an SFX hit

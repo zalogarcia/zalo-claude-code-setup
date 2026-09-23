@@ -2,7 +2,7 @@
 model: fable
 name: bug-fix
 description: Trace the full user flow to find the root cause of a bug. Reads all related code and crafts a comprehensive fix plan before making changes. Use when something is broken and you need a thorough diagnosis.
-tools: Read, Grep, Glob, Bash
+tools: Read, Grep, Glob, Bash, mcp__supabase__query_logs
 effort: xhigh
 ---
 

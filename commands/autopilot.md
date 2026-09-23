@@ -127,6 +127,7 @@ a one-off look, because the orchestrator's context has to last the whole run.
   - "awaiting your decision", "paused", "resets at", "when you ping me"
   - "or continue with", "or should we", "or do you prefer"
 - Push to any remote branch (write `PUSH_PENDING: <branch> <N commits>` to report.md instead)
+- Apply a migration to a live or shared database, or deploy anything. Pushing, deploying and migrations still need Zalo's go-ahead: write the migration files and the `.autopilot/activation.md` runbook, and `/go-live` runs them once he says go.
 - Auto-claim uncommitted changes as the task
 - Read or write source code directly
 - Dispatch a sub-agent without an explicit `model:` param, or pin `model: "fable"` on fan-out/implementation/QA dispatches the split policy assigns to opus (the sole exception: `model: FALLBACK_MODEL` on a model-inaccessibility re-dispatch, per the API Dispatch Wrapper Protocol)
@@ -280,24 +281,26 @@ Every Agent dispatch in /autopilot is wrapped by api-retry semantics per `~/.cla
 **Wrapper logic for every Agent dispatch:**
 
 ```
-attempt = 0
-WHILE attempt < MAX_API_RETRIES:
+attempt = 0          # 1 initial dispatch + up to MAX_API_RETRIES (3) retries = 4 dispatches, per api-retry.md
+LOOP:
   Dispatch agent
   IF return body matches retryable signal:
+    IF attempt == MAX_API_RETRIES:
+      BREAK as exhausted            # the 4th dispatch failed too; no wait after it
     attempt += 1
     last_signal = matched signal
     sleep_until_ts = now + API_RETRY_BACKOFF[attempt-1]  # 30s, 60s, 120s
     Persist current_dispatch_retry to state.json:
       {wu_id, agent, prompt_ref, attempt, last_signal, sleep_until_ts}
     Log api_retry to decisions.log
-    Sleep until sleep_until_ts
+    Wait until sleep_until_ts without a foreground sleep (api-retry.md "How to wait")
     Continue loop (re-dispatch same agent + prompt)
   ELSE:
     Log api_retry_recovered if attempt > 0
     Clear current_dispatch_retry from state.json
     BREAK with successful return
 
-IF loop exhausted without success:
+IF loop ended as exhausted:
   api_retry_exhaustions_in_phase += 1
   Log api_retry_exhausted to decisions.log
 
@@ -328,7 +331,7 @@ IF loop exhausted without success:
 
 ### State persistence (compaction safety)
 
-Long backoff sleeps (up to 120s) can cross a `/compact` boundary. Persist retry state to `state.json` BEFORE every sleep:
+Long backoff waits (up to 120s) can cross a `/compact` boundary. Persist retry state to `state.json` BEFORE every wait:
 
 ```json
 {
@@ -567,7 +570,7 @@ Cleared back to `null` when the dispatch returns successfully or hits a non-retr
    5. If in QA loop: re-read .autopilot/bug_tracker.json
    6. If in outcomes loop (state.json.outcomes_iteration > 0): re-read .autopilot/unmet_outcomes.json
    7. If state.json.rubric_path is set: re-read .autopilot/rubric.md
-   8. If state.json.current_dispatch_retry is non-null AND sleep_until_ts is in the future: sleep the remainder, then re-dispatch the same agent + prompt_ref. If sleep_until_ts is in the past: re-dispatch immediately. After dispatch returns, clear current_dispatch_retry to null. If `sleep_until_ts` is missing, malformed, or unparseable as ISO8601, treat it as past (re-dispatch immediately) and log `current_dispatch_retry_corrupt_recovered` to `decisions.log`.
+   8. If state.json.current_dispatch_retry is non-null AND sleep_until_ts is in the future: wait out the remainder (api-retry.md "How to wait"), then re-dispatch the same agent + prompt_ref. If sleep_until_ts is in the past: re-dispatch immediately. After dispatch returns, clear current_dispatch_retry to null. If `sleep_until_ts` is missing, malformed, or unparseable as ISO8601, treat it as past (re-dispatch immediately) and log `current_dispatch_retry_corrupt_recovered` to `decisions.log`.
    9. If state.json.api_retry_exhaustions_in_phase >= MAX_PHASE_API_EXHAUSTIONS: circuit breaker tripped — do NOT dispatch further; jump to Phase 5 with status ABORTED_API_OUTAGE.
    Then continue with Phase {next_phase_number}.
    ```
@@ -596,7 +599,7 @@ After every compaction restore, check context usage:
 6. Read last 20 lines of `.autopilot/decisions.log`
 7. `git log --oneline -20` → see recent autopilot commits
 8. `git status` → verify clean tree
-9. If `state.json.current_dispatch_retry` is non-null: sleep remainder of `sleep_until_ts` (or 0 if past), then re-dispatch same agent + prompt. After return, clear `current_dispatch_retry`.
+9. If `state.json.current_dispatch_retry` is non-null: wait out the remainder of `sleep_until_ts` (none if past; api-retry.md "How to wait"), then re-dispatch same agent + prompt. After return, clear `current_dispatch_retry`.
 10. If a prior run exited with `ABORTED_API_OUTAGE`: reset `api_retry_exhaustions_in_phase` to 0 (assume the outage cleared since the user is re-invoking) and re-dispatch any work units marked `blocked_by_api_outage` as fresh dispatches.
 11. Resume from `current_phase` at the stored iteration/batch — do NOT restart
 
@@ -683,7 +686,7 @@ Resolve every pre-flight failure deterministically: the orchestrator either auto
 | ------------------- | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Repo has commits    | `git rev-list --count HEAD` > 0  | Hard ABORT: "Initialize the repo with at least one commit before running /autopilot." (Cannot auto-recover — requires user action before re-invocation.)                                                                                                                                                                                                                                                                                                                                                                                                     |
 | Working tree clean  | `git status --porcelain` empty   | **AUTO-STASH**: `git stash push -m "pre-autopilot residual $(date -u +%Y-%m-%dT%H:%M:%SZ)" --include-untracked`. Log to `decisions.log`: `pre_flight_auto_stash` with the stash ref. Continue. The user recovers the stash via `git stash list` after the run. **If `git stash push` itself fails (disk full, permission error, internal git error)**, hard ABORT: "Cannot auto-stash residual changes — `git stash` returned non-zero. Resolve working tree manually before re-invoking /autopilot." **NEVER** render a "stash / commit / you handle" menu. |
-| Lock file present   | `.git/index.lock` absent         | If present, check age: if > 5 min old, log `stale_lock_removed` and `rm .git/index.lock`. If < 5 min, hard ABORT: "Another git process is running. Re-invoke /autopilot when it completes." (Cannot auto-recover — concurrent process risk.)                                                                                                                                                                                                                                                                                                                 |
+| Lock file present   | `.git/index.lock` absent         | If present, never delete it (git-safety: investigate before deleting). Record its age and any running git process (`pgrep -fl git`) in `decisions.log`, then hard ABORT: ".git/index.lock exists (age <N> min, git processes: <list or none>). Check what holds it, remove it by hand only if no git process owns it, then re-invoke /autopilot." (Cannot auto-recover: concurrent process risk.)                                                                                                                                                                                                                                                                                                                 |
 | Task is unambiguous | One source of truth for the task | See "Determine task" below — multi-source ambiguity has its own resolution table                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 
 After all checks: record `pre_autopilot_sha` via `git rev-parse HEAD` → state.json.
@@ -1058,6 +1061,7 @@ FOR each batch (ordered by dependency):
       git add {unit.files joined by space}
     - Never use git add -A or git add .
     - Never push to remote
+    - Never apply a migration to a live or shared database and never deploy (edge functions, ECS, Vercel): write the files only. Pushing, deploying and migrations still need Zalo's go-ahead.
 
     ## Return contract
     Keep your return body to 50 lines or fewer (excluding the H2 marker line).
@@ -1471,7 +1475,7 @@ Orchestrator runs all verification commands directly:
    - `## UI ISSUES FOUND` → if QA budget remains, dispatch fix agent, loop back to Phase 3
    - `## BLOCKED` → log as DEGRADED, continue
 
-6b. **Deploy-proof signal check** (only if this run deploys or the user will push after):
+6b. **Deploy-proof signal check** (only if the change set will be pushed or deployed after the run):
 For EACH deploy surface touched by the change set, look up its proof signal in
 `.claude/VERIFY.md` ("Deploy surfaces & THE proof signal for each") and use THAT
 signal — never a different pipeline's green status. Dashboard-only commits that

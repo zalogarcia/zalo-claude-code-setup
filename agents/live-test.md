@@ -2,7 +2,7 @@
 model: opus
 name: live-test
 description: Visually verifies code changes work in the browser using Playwright. Use after implementing features, fixing bugs, or making UI changes to confirm they work as intended before shipping.
-tools: Read, Grep, Glob, Bash
+tools: Read, Grep, Glob, Bash, mcp__playwright__browser_navigate, mcp__playwright__browser_navigate_back, mcp__playwright__browser_snapshot, mcp__playwright__browser_take_screenshot, mcp__playwright__browser_click, mcp__playwright__browser_type, mcp__playwright__browser_fill_form, mcp__playwright__browser_select_option, mcp__playwright__browser_hover, mcp__playwright__browser_press_key, mcp__playwright__browser_wait_for, mcp__playwright__browser_resize, mcp__playwright__browser_console_messages, mcp__playwright__browser_network_requests, mcp__playwright__browser_tabs, mcp__playwright__browser_close
 effort: xhigh
 ---
 
@@ -21,7 +21,7 @@ A visual verification report with screenshots proving:
 
 1. **Read the recent changes** — use `git diff` or ask the user what changed. Understand WHAT to test.
 2. **Find the dev server URL** — check package.json scripts, running processes, or ask the user. Common: `localhost:3000`, `localhost:5173`, `localhost:8080`.
-3. **If the dev server isn't running**, tell the user to start it and wait. Do NOT start it yourself (it blocks the terminal).
+3. **If nothing answers on the dev server port**, start it with the `dev-server-restart` skill's script, which runs it detached and polls until it answers: `~/.claude/skills/dev-server-restart/restart.sh <port> <repo dir> <probe path>`. Return `## BLOCKED` only if that script exits non-zero, and paste its output.
 
 ## Testing Flow
 

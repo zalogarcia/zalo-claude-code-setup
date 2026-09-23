@@ -1,6 +1,6 @@
 ---
 name: seedance
-description: Generates videos via Segmind Seedance 2.0 (ByteDance). Text-to-video, image-to-video, and video-to-video with native synced audio, multi-shot prompts, 4-15s duration, 480p/720p/1080p/4k, aspect ratios 16:9/9:16/1:1/4:3/3:4/21:9/adaptive, first/last-frame conditioning for clip chaining, up to 9 reference images + 3 reference videos + 3 reference audios for character/style/motion consistency, standard/high bitrate output. Use when asked to "generate a video", "make a clip", "create b-roll", "animate this image", "make a 5 second video of X", or any AI video generation task.
+description: 'Generate AI video clips (text, image or video to video, 4-15s, optional synced audio) through Segmind Seedance 2.0''s generate.sh. Use for any AI video generation request: a clip, b-roll, animating an image, a multi-shot sequence.'
 ---
 
 Generate videos via the Segmind Seedance 2.0 API. Invoke `generate.sh` — do not hand-write the curl chain.

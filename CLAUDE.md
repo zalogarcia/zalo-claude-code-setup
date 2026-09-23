@@ -37,6 +37,7 @@ When starting work on a new project, or when the user asks to initialize/set up 
 - Default working branch is `dev` unless the user specifies otherwise.
 - Never force-push to `main` or `dev` without explicit approval.
 - If deploying edge functions or running migrations, ask the user first — these affect shared infrastructure.
+- Pushing, deploying and migrations need Zalo's go-ahead everywhere, including inside skills and commands that run autonomously. The only standing exceptions, each recorded by him: (a) delta-agents changes he has told to ship, through the `ship-to-prod` skill, whose Step 0 names the target once; (b) `main` of the jev-computer-use private backup origin, which nothing deploys from (memory `project_jev_computer_use.md`); (c) `/go-live` when Zalo invokes it himself, which is his go for that run's runbook deploy (its migrate-before-deploy steps included); (d) the `second-brain` vault's private backup origin, pushed after every commit (his backup decision of 2026-07-14, recorded in `~/dev/second-brain/CLAUDE.md` "Privacy"). A `/go-live` started by another command, a worker or a peer is not.
 
 ## Shared Rules (Authoritative)
 
@@ -56,6 +57,8 @@ The meta-rule injected at every session boundary (`~/.claude/META_RULE.md`) name
 | `~/.claude/rules/git-safety.md`            | Any git operation — staging, pre-op checks, destructive-op approval                                      |
 | `~/.claude/rules/database-safety.md`       | Any database migration — additive-only, non-breaking, expand-contract for breaking changes               |
 | `~/.claude/rules/testing-safety.md`        | Live app testing — admin email only, no fake users against live systems                                  |
+
+On demand in `~/.claude/rules-ref/` (not auto-loaded; commands and agents `@`-include or read them): `api-retry.md` (API retry, circuit breaker, the full Fable Fan-Out Preflight), `plan-verification.md` (the two-gate check after `safe-planner`), `engineering-principles.md` (the `outcomes-grader` plan rubric).
 
 ## Debugging Protocol
 
@@ -164,7 +167,7 @@ Subagents protect the main context window and enable parallelism. Use them delib
 - **Prefer planning and QA in subagents, not the main thread.** Use `safe-planner` for complex plans (3+ steps, multi-file) and `qa-agent` for audits. Quick inline planning for trivial tasks (via `/plan`) is fine. The main thread is for decisions and implementation.
 - Delegate exploration/research to subagents — keep the main context clean and focused
 - Launch independent subagents in parallel (single message, multiple Agent calls)
-- Use background agents (`run_in_background: true`) when you don't need results immediately
+- Use background agents (`run_in_background: true`) when you don't need results immediately (interactive sessions only; in a headless bridge run a backgrounded agent is killed at turn end, so dispatch in the foreground)
 - After frontend changes, proactively use `live-test` to verify — don't wait to be asked
 - When a subagent returns findings, synthesize the key points yourself — don't paste the full output back into context
 - If a task would require reading 5+ files to understand, use `Explore` or a subagent instead of reading them all in the main thread
@@ -225,7 +228,7 @@ Interactive Claude Code sessions launched from the xbar menu run inside **named 
 
 <!-- Add entries here when corrected. Format: "- **Context**: What to do instead (date)" -->
 
-- **Sleep-polling**: foreground `sleep`/poll loops are blocked by the harness — use `run_in_background: true` for long commands, or the Monitor tool with an until-condition, to wait (2026-07-02)
+- **Sleep-polling**: foreground `sleep`/poll loops are blocked by the harness — use `run_in_background: true` for long commands (interactive sessions only; headless bridge runs stay in the foreground), or the Monitor tool with an until-condition, to wait (2026-07-02)
 - **Background agents**: after dispatching background agents, don't strand their completion notifications — stay resumable (end the turn cleanly with pending work noted) or schedule a wakeup to collect results (2026-07-02)
 - **Fix/edit spirals**: the 3+ Fixes and 2-Strike Probe rules are hook-enforced — `~/.claude/hooks/loop-detector.py` injects them on 3 same-shape Bash failures, 2 same-endpoint API failures, or 4 same-file edits without passing verification; tests: `python3 ~/.claude/hooks/loop-detector.test.py` (2026-08-01)
 - **Package installs**: hook-enforced — `~/.claude/hooks/npm-install-guard.py` blocks new deps, sub-7-day versions, `-g`, and bare `npm install` where a lockfile exists (use `npm ci`); `min-release-age=7` in `~/.npmrc` covers transitive deps but needs npm ≥ 11.10.0; tests: `python3 ~/.claude/hooks/npm-install-guard.test.py` (2026-08-05)

@@ -1,6 +1,6 @@
 ---
 name: tenant-triage
-description: Evidence-first triage for "tenant X says Y broke, check why" reports on Delta Agents prod. Resolves the tenant by fuzzy slug match, time-scopes from the user's report, pulls parallel evidence (sessions, messages, voice calls + tool events, followups, alerts/audit/escalations) via the Supabase MCP, greps ECS gateway/worker logs by tenant id, correlates with recent deploys, and emits a triage summary BEFORE any hypothesis. Use when the user says "tenant … says", "our user … reports", "check why … for tenant", "customer reported", or names a tenant plus a fuzzy symptom. Encodes the intake typed 13× in 15 days.
+description: Evidence-first triage for "tenant X says Y broke, check why" reports on Delta Agents prod. Resolves the tenant by fuzzy slug match, time-scopes from the user's report, pulls parallel evidence (sessions, messages, voice calls + tool events, followups, alerts/audit/escalations) via the Supabase MCP, greps ECS gateway/worker logs by tenant id, correlates with recent deploys, and emits a triage summary BEFORE any hypothesis. Use for a tenant or customer complaint with a fuzzy symptom (a tenant, user or customer reports that something broke and wants to know why).
 ---
 
 Turn a fuzzy customer complaint ("raqm says voice broke a couple days ago") into a grounded evidence table before anyone hypothesizes.

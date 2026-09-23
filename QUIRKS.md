@@ -7,7 +7,7 @@
 - Python urllib/requests hits SSL cert errors on this Mac — use `curl` for HTTP in scripts.
 - Scripts in the scratchpad can't resolve a project's `node_modules` — run node from the project dir.
 - delta-agents monorepo: rebuild the shared package's dist before gateway/worker tests — stale dist = phantom type errors.
-- Long/background work: `run_in_background: true` + completion notification or a DONE-marker file — foreground `sleep`/pgrep polling is blocked.
+- Long/background work (interactive sessions only; a headless bridge run keeps Bash and Agent calls in the foreground): `run_in_background: true` + completion notification or a DONE-marker file — foreground `sleep`/pgrep polling is blocked.
 - Playwright MCP writes screenshots to `.playwright-mcp/` under the project, not the scratchpad.
 - Git worktrees need a real `npm install` — never symlink the parent's `node_modules`.
 - Apply the additive migration BEFORE deploying code that reads the new schema (migrate-before-deploy).

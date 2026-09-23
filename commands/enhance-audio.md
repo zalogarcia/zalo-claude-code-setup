@@ -22,7 +22,7 @@ ffmpeg -i "$FILE_PATH" -af "volumedetect" -vn -f null /dev/null 2>&1
 ```
 Report: mean volume, max volume, and dynamic range.
 
-3. Apply the enhancement preset. Default is `podcast`. Ask the user which preset if not specified.
+3. Apply the enhancement preset. When no preset is given, use `podcast` without asking.
 
 ### Presets
 
@@ -34,7 +34,7 @@ ffmpeg -y -i "$FILE_PATH" \
   "$OUTPUT_PATH"
 ```
 
-**standard** — Good all-around speech cleanup (default):
+**standard** — Good all-around speech cleanup:
 ```bash
 ffmpeg -y -i "$FILE_PATH" \
   -af "highpass=f=80,lowpass=f=12000,afftdn=nf=-30:nr=12:nt=w,areverse,silenceremove=start_periods=1:start_silence=0.1:start_threshold=-50dB,areverse,loudnorm=I=-16:TP=-1.5:LRA=11" \

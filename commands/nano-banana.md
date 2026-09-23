@@ -1,6 +1,6 @@
 ---
 name: nano-banana
-description: Generates AI images using the nano-banana CLI (Gemini 3.1 Flash default, Pro available). Handles multi-resolution (512-4K), aspect ratios, reference images for style transfer, green screen workflow for transparent assets, cost tracking, and exact dimension control. Use when asked to "generate an image", "create a sprite", "make an asset", "generate artwork", or any image generation task for UI mockups, game assets, videos, or marketing materials.
+description: Generates AI images with the nano-banana CLI (Gemini 3.1 Flash default, Pro available). Use only when the user explicitly asks for nano-banana or Gemini. Every other image request goes to gpt-image-2 (image-craft-expert, infographics, yt-thumbnail).
 ---
 
 # nano-banana

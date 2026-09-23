@@ -1,7 +1,7 @@
 ---
 model: opus
 name: frontend-specialist
-description: Builds and optimizes frontend UI: components, styling, responsiveness, accessibility, and performance. Use for any client-side development task.
+description: 'Builds and optimizes frontend UI: components, styling, responsiveness, accessibility, and performance. Use for any client-side development task.'
 effort: xhigh
 mcpServers:
   - aceternityui:

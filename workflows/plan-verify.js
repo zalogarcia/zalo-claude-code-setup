@@ -7,13 +7,11 @@ export const meta = {
   phases: [
     {
       title: "Verify",
-      detail: "Gate 1 (brainstorm) + Gate 2 (outcomes-grader) in parallel",
-      model: "opus",
+      detail: "Gate 1 (brainstorm, fable) + Gate 2 (outcomes-grader, opus) in parallel",
     },
     {
       title: "Revise",
-      detail: "one safe-planner revision pass, only if a gate flagged concerns",
-      model: "opus",
+      detail: "one safe-planner revision pass (fable), only if a gate flagged concerns",
     },
   ],
 };
@@ -163,7 +161,7 @@ const [brainstorm, principles] = await parallel([
       label: "gate1:brainstorm",
       phase: "Verify",
       agentType: "brainstorm",
-      model: "opus",
+      model: "fable",
       schema: BRAINSTORM_SCHEMA,
     }),
   () =>
@@ -291,7 +289,7 @@ Return a short changesSummary and list any concerns you could NOT fully resolve 
     label: "revise:safe-planner",
     phase: "Revise",
     agentType: "safe-planner",
-    model: "opus",
+    model: "fable",
     schema: REVISION_SCHEMA,
   });
 

@@ -44,16 +44,13 @@ The output of this step is a complete design spec. Proceed directly to Step 3.
 
 ### Step 3: Generate Draft Mockup Images (USER CHECKPOINT)
 
-Generate **3 distinct design options**, each rendered on **both** image generators (6 images total). The 3 options MUST come from the brainstorming phase and each MUST be a genuinely different design proposal with its own aesthetic philosophy, layout approach, color palette, and style — NOT just color variations or minor tweaks of the same design.
+Generate **3 distinct design options**, each rendered with **gpt-image-2** (3 images total; the owner's standing image model). The 3 options MUST come from the brainstorming phase and each MUST be a genuinely different design proposal with its own aesthetic philosophy, layout approach, color palette, and style — NOT just color variations or minor tweaks of the same design.
 
-For each of the 3 options, launch **two `image-craft-expert` subagents in parallel** (6 agents total, all in parallel):
+Launch **three `image-craft-expert` subagents in parallel**, one per option:
 
-1. **Option A — Gemini Pro**: `nano-banana "Option A prompt" --model pro -s 2K -o draft-optionA-gemini`
-2. **Option A — ChatGPT**: OpenAI `gpt-image-1.5`, size `1536x1024`, save to `draft-optionA-chatgpt.png`
-3. **Option B — Gemini Pro**: `nano-banana "Option B prompt" --model pro -s 2K -o draft-optionB-gemini`
-4. **Option B — ChatGPT**: OpenAI `gpt-image-1.5`, size `1536x1024`, save to `draft-optionB-chatgpt.png`
-5. **Option C — Gemini Pro**: `nano-banana "Option C prompt" --model pro -s 2K -o draft-optionC-gemini`
-6. **Option C — ChatGPT**: OpenAI `gpt-image-1.5`, size `1536x1024`, save to `draft-optionC-chatgpt.png`
+1. **Option A**: OpenAI `gpt-image-2`, size `1536x1024`, save to `draft-optionA.png`
+2. **Option B**: OpenAI `gpt-image-2`, size `1536x1024`, save to `draft-optionB.png`
+3. **Option C**: OpenAI `gpt-image-2`, size `1536x1024`, save to `draft-optionC.png`
 
 Each option's prompt should:
 
@@ -61,7 +58,7 @@ Each option's prompt should:
 - Specify the viewport/resolution (desktop, mobile, or both)
 - Request a realistic UI mockup, not an abstract illustration
 
-**Show ALL SIX generated mockup images to the user**, organized as 3 pairs (Option A: Gemini vs ChatGPT, Option B: Gemini vs ChatGPT, Option C: Gemini vs ChatGPT). Ask the user which option they prefer and which rendering (Gemini or ChatGPT) better captures the direction. They can also combine elements across options. Wait for user approval before proceeding.
+**Show all three generated mockup images to the user.** Ask the user which option they prefer. They can also combine elements across options. Wait for user approval before proceeding.
 
 ### Step 4: Implement the Redesign (Autonomous)
 
@@ -78,7 +75,7 @@ The agent implements the code changes. Proceed directly to Step 5.
 
 ### Step 5: Generate Final Mockup Image (USER CHECKPOINT)
 
-After implementation, generate a polished final mockup of the **chosen option only** using the **same image generator the user chose in Step 3**. If the user picked a ChatGPT rendering, use ChatGPT here. If they picked Gemini, use Gemini here. Do NOT generate on both — use only the one that matches the user's Step 3 choice, since the verification target must be consistent with the original reference.
+After implementation, generate a polished final mockup of the **chosen option only** with **gpt-image-2**, the same generator as Step 3, so the verification target stays consistent with the original reference.
 
 - Generate a polished final mockup that represents what the redesign SHOULD look like at pixel-perfect quality
 - Use the refined design spec and any adjustments made during implementation
@@ -130,5 +127,5 @@ Everything else runs autonomously.
 - **Always verify against the mockup** after implementation — don't skip visual QA
 - **Stay scoped to the redesign** — don't refactor unrelated code or add new features
 - **Preserve existing functionality** — the redesign is visual, not functional (unless the user requests functional changes)
-- **If the dev server isn't running**, ask the user to start it before Step 6
+- **If the dev server isn't running**, start it with the `dev-server-restart` skill before Step 6; stop and report only if that fails
 - **Do NOT ask the user for feedback between brainstorming loops** — handle that autonomously
