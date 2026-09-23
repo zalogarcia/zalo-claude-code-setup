@@ -90,11 +90,26 @@ ORDER BY m.created_at DESC
 LIMIT 30;
 ```
 
-**3c — Voice calls** (voice symptoms only):
+**3c — Voice calls** (voice symptoms only). Two engines write this table: `retell`, and `openai-live` (GPT-Live over Twilio, where `retell_call_id` holds the Twilio CallSid `CA...`). Split by engine first, then list the calls:
 
 ```sql
-SELECT retell_call_id, direction, call_status, disconnection_reason,
+SELECT engine, count(*) AS calls,
+       count(*) FILTER (WHERE booking_claim_unbacked)  AS unbacked_booking_claims,
+       count(*) FILTER (WHERE booking_claim_unbacked IS NULL AND call_status = 'ended') AS not_audited,
+       count(*) FILTER (WHERE engine = 'openai-live'
+                          AND metadata->'engine_session'->>'backend_model' IS NULL) AS no_delegation
+FROM tenant_voice_calls
+WHERE tenant_id = '<tenant_id>'
+  AND created_at >= now() - interval '72 hours'
+GROUP BY engine;
+```
+
+```sql
+SELECT engine, retell_call_id, direction, call_status, disconnection_reason,
        duration_seconds, call_successful, user_sentiment, agent_id,
+       booking_claim_unbacked,
+       metadata->'engine_session'->>'backend_model' AS backend_model,
+       metadata->'engine_session'->>'greeting_mode' AS greeting_mode,
        started_at, ended_at, left(summary, 200) AS summary_preview
 FROM tenant_voice_calls
 WHERE tenant_id = '<tenant_id>'
@@ -103,10 +118,12 @@ ORDER BY created_at DESC
 LIMIT 20;
 ```
 
+For openai-live rows: `backend_model` null means no delegation completed (no tool could run, so any booking the agent claimed was invented); `booking_claim_unbacked` is a whole-call verdict (a booking that succeeded later in the call clears it even when the agent said "you're booked" first). For one suspicious call, run `voice-call-triage` ("openai-live calls: Steps 1L to 4L"): it reads the in-call booking guard lines from the `voice-bridge` log. These columns are newer than some checkouts' `docs/SCHEMA-PROD.md`; if sql-guard blocks one, confirm it in `information_schema.columns` and refresh the snapshot, never drop the column.
+
 **3d — Voice tool events, failures first** (voice symptoms only; join by `retell_call_id`, there is no voice_call FK):
 
 ```sql
-SELECT created_at, retell_call_id, tool_name, status, error, duration_ms
+SELECT created_at, engine, retell_call_id, tool_name, status, error, duration_ms
 FROM tenant_voice_tool_events
 WHERE tenant_id = '<tenant_id>'
   AND created_at >= now() - interval '72 hours'
@@ -161,7 +178,7 @@ Carry `trace_id` values forward — they link sessions ↔ audit rows ↔ log li
 
 ## Step 4 — ECS runtime logs (gateway + worker)
 
-Log groups (from `docs/RUNBOOK.md`): `/ecs/delta-agents/gateway`, `/ecs/delta-agents/worker`, `/ecs/delta-agents/embedding-worker`. Logs are structured JSON containing the tenant **UUID**; webhook-ingress lines also carry the **slug** (URL path `/hooks/:crm_type/:tenant_slug`). Filter by UUID first; add a slug pass when the symptom is "messages never arrive".
+Log groups (from `docs/RUNBOOK.md`; `aws logs describe-log-groups --log-group-name-prefix /ecs/delta-agents` lists them): `/ecs/delta-agents/gateway`, `/ecs/delta-agents/worker`, `/ecs/delta-agents/embedding-worker`, and for openai-live voice calls `/ecs/delta-agents/voice-bridge` (its lines carry the tenant UUID as `tenantId` and the call as `metadata.callSid`). Read `~/.claude/projects/-Users-zalo-dev/memory/aws-filter-log-events-undercounts.md` before counting anything from these pulls. Logs are structured JSON containing the tenant **UUID**; webhook-ingress lines also carry the **slug** (URL path `/hooks/:crm_type/:tenant_slug`). Filter by UUID first; add a slug pass when the symptom is "messages never arrive".
 
 ```bash
 TENANT_ID='<tenant_id>'
@@ -173,6 +190,13 @@ aws logs filter-log-events \
   --filter-pattern "\"$TENANT_ID\"" \
   --start-time "$START" \
   --query 'events[].message' --output text | tail -80
+
+# Voice bridge (openai-live calls) — warn and error lines for the tenant
+aws logs filter-log-events \
+  --log-group-name /ecs/delta-agents/voice-bridge \
+  --filter-pattern "{ \$.tenantId = \"$TENANT_ID\" && (\$.level = \"warn\" || \$.level = \"error\") }" \
+  --start-time "$START" \
+  --query 'events[].message' --output json | jq -r '.[]?' | tail -60
 
 # Worker — error-ish lines only (CloudWatch pattern: two quoted terms = AND)
 aws logs filter-log-events \
@@ -216,7 +240,7 @@ Emit this exact shape. The **Hypothesis** section must come last and must cite e
 
 - Sessions (3a): <N in window; last activity; anomalies>
 - Messages (3b): <in/out counts; last outbound at>
-- Voice (3c/3d): <calls; disconnection_reasons; failed tool events: tool_name → error>
+- Voice (3c/3d): <calls per engine (retell / openai-live); disconnection_reasons; unbacked booking claims; openai-live calls with no delegation; failed tool events: tool_name → error>
 - Followups (3e): <due vs fired vs stuck-pending counts>
 - Alerts/audit/escalations (3f): <notable rows or "clean">
 - Runtime logs (4): <error lines / bailed-silent events / "clean">

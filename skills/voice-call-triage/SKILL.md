@@ -1,6 +1,6 @@
 ---
 name: voice-call-triage
-description: Triage one voice call (or "the last call") on Delta Agents prod — pull the tenant_voice_calls row (status/duration/disconnection reason), the tenant_voice_tool_events timeline, the gateway ECS log window around the call, and a DA-intended vs Retell-actual config diff via the Retell GET endpoints. Use when a specific voice call misbehaved (hung up, never connected, did the wrong thing) or the user names a phone number with a call symptom.
+description: Triage one voice call (or "the last call") on Delta Agents prod — pull the tenant_voice_calls row (status/duration/disconnection reason), the tenant_voice_tool_events timeline, the gateway ECS log window around the call, and a DA-intended vs Retell-actual config diff via the Retell GET endpoints; for GPT-Live (engine openai-live) calls, the Twilio CallSid path instead: engine session, voice-bridge and gateway logs, the in-call booking guard. Use when a specific voice call misbehaved (hung up, never connected, did the wrong thing) or the user names a phone number with a call symptom.
 ---
 
 Triage a single Delta Agents voice call end-to-end: DB evidence → tool timeline → gateway logs → config diff. Collect all four evidence layers before hypothesizing: past 20-iteration debugging loops came from fixing the first plausible theory instead of reading the second evidence layer.
@@ -20,7 +20,7 @@ For a FUZZY tenant symptom that is not call-shaped ("tenant X says things broke"
 
 ## Inputs
 
-Tenant (slug or id) + agent (name or id), **or** a phone number, **or** a Retell call id. Optional: a time window ("yesterday afternoon").
+Tenant (slug or id) + agent (name or id), **or** a phone number, **or** a Retell call id, **or** a Twilio CallSid (`CA...`, an openai-live call). Optional: a time window ("yesterday afternoon").
 
 ## Preflight
 
@@ -60,10 +60,10 @@ WHERE config->>'modality' = 'voice'
 
 `tenant_voice_calls` real columns: `retell_call_id` (varchar), `direction`, `from_number`, `to_number`, `call_status`, `disconnection_reason`, `duration_seconds`, `call_successful`, `user_sentiment`, `transfer_target_agent_id`, `started_at`, `ended_at`, `summary`, `transcript`, `metadata`. (`contact_id`/`agent_id` are uuid: cast comparisons `::uuid`.)
 
-Both this table and `tenant_voice_tool_events` also carry an `engine` column (default `retell`; the code also writes `openai-live`). Read it for the call under triage: Steps 3 and 4 describe the Retell path, so for a non-`retell` call the Retell config diff does not apply and the call path also runs through `apps/voice-bridge`, which this skill does not cover yet.
+Both this table and `tenant_voice_tool_events` also carry an `engine` column: `retell` (the default) or `openai-live` (GPT-Live over Twilio). **Read it first. `retell` continues with Steps 2 to 4 below. `openai-live` goes to "openai-live calls: Steps 1L to 4L" further down, which replaces Steps 2 to 4 (there is no Retell config to diff).**
 
 ```sql
-SELECT id, retell_call_id, direction, from_number, to_number,
+SELECT id, engine, retell_call_id, direction, from_number, to_number,
        call_status, disconnection_reason, duration_seconds,
        call_successful, user_sentiment, transfer_target_agent_id,
        started_at, ended_at, created_at, left(summary, 300) AS summary
@@ -196,9 +196,119 @@ Diff checklist (each mismatch is a concrete root-cause candidate):
 6. Phone number's `inbound_webhook_url` token segment ≠ current agent token, or `inbound_agents` points at a different `agent_id` → inbound 401s / wrong agent answers.
 7. `webhook_url` or `mcps[].url` not absolute `https://` → `GATEWAY_URL` regression.
 
+## openai-live calls (GPT-Live): Steps 1L to 4L
+
+For a row with `engine = 'openai-live'` these steps replace Steps 2 to 4. The call ran on Twilio media streams through the gateway and the `voice-bridge` ECS service, so there is **no Retell config to diff: skip Step 4 entirely.** Code of record (delta-agents `origin/main`): `apps/gateway/src/voice-live/` (webhook, bootstrap, persist, terminal consumer), `apps/voice-bridge/src/` (the live session), `apps/gateway/src/retell-webhooks/booking-claim-audit.ts` (the post-call booking audit, shared by both engines).
+
+**Identifiers.** The Twilio CallSid (`CA...`) is the call id everywhere: `tenant_voice_calls.retell_call_id` AND `twilio_call_sid` both hold it, `tenant_voice_tool_events.retell_call_id` holds it (join on that, never on a `call_id` column, there is none), and log lines carry it as `metadata.callSid`.
+
+**Before the first query:** these columns (`engine`, `twilio_call_sid`, `booking_claim_unbacked`, `booking_claim_detail`) are newer than some checkouts' `docs/SCHEMA-PROD.md`, and sql-guard blocks a column its snapshot lacks. Confirm with `SELECT column_name FROM information_schema.columns WHERE table_name = 'tenant_voice_calls'` (catalog queries always pass), then run the triage from a checkout whose snapshot is current, or refresh it with the `schema-snapshot` skill. Never drop the column from the query to get past the guard.
+
+### Step 1L: the call row and the engine session
+
+```sql
+SELECT c.id, c.tenant_id, c.agent_id, c.engine, c.retell_call_id, c.twilio_call_sid, c.direction,
+       right(c.from_number, 4) AS from_last4, right(c.to_number, 4) AS to_last4,
+       c.call_status, c.disconnection_reason, c.duration_seconds,
+       c.started_at, c.ended_at, c.analyzed_at,
+       c.booking_claim_unbacked, c.booking_claim_detail,
+       c.metadata->'engine_session'->>'backend_model'     AS backend_model,
+       c.metadata->'engine_session'->>'tool_calls_count'  AS tool_calls_count,
+       c.metadata->'engine_session'->>'close_reason'      AS close_reason,
+       c.metadata->'engine_session'->>'greeting_mode'     AS greeting_mode,
+       c.metadata->'engine_session'->>'greeting_heard_ms' AS greeting_heard_ms,
+       c.metadata->'engine_session'->>'finalized_by'      AS finalized_by,
+       c.metadata->'engine_session'->>'post_call_done_at' AS post_call_done_at,
+       left(c.summary, 300) AS summary
+FROM tenant_voice_calls c
+WHERE c.retell_call_id = '<CallSid>' OR c.twilio_call_sid = '<CallSid>';
+```
+
+Then the transcript as numbered turns (one `Agent: ...` or `User: ...` line per turn; the stored text has NO timestamps, so ordering against tools comes from Step 3L's logs):
+
+```sql
+SELECT n AS turn, left(line, 240) AS line
+FROM tenant_voice_calls c,
+     LATERAL unnest(string_to_array(c.transcript, E'\n')) WITH ORDINALITY AS u(line, n)
+WHERE c.tenant_id = '<tenant_id>'::uuid AND c.retell_call_id = '<CallSid>' AND line <> ''
+ORDER BY n;
+```
+
+| Observation | Meaning |
+| --- | --- |
+| `call_status = 'ongoing'` long after the call, no `post_call_done_at` | The terminal job never landed. The reconcile sweep later writes `disconnection_reason = 'error_session_missing_terminal'` with `finalized_by = 'sweep'`. Go to Step 3L for `voice_live_terminal_*` lines. |
+| `finalized_by` set (`stream_status`, `status_callback`, `amd_callback`, `amd`, `tenant_cap_busy`, `sweep`) | The row was closed by a Twilio callback or the sweep, not by the terminal job. |
+| `disconnection_reason` | Mapped from the bridge's close reason (`VOICE_LIVE_DISCONNECTION_REASON_BY_CLOSE` in `packages/contracts/src/voice-live.ts`): `remote_hangup` gives `user_hangup`, `connection_lost` gives `error_connection_lost`. Compare with `close_reason`. |
+| `backend_model` null (with `tool_calls_count` 0 or null) | No delegation completed: the realtime model never handed work to the backend model, so no tool could run. Every booking or lookup the agent claimed on that call was invented. |
+| `greeting_mode` | `clip` (pre-recorded greeting played), `commentary`, or `none`. `none` on a call that should have greeted pairs with the `voice_live_greeting_clip_missing` alert (Step 4L). |
+| `booking_claim_unbacked` | NULL: never audited (an empty transcript returns before the audit writes). `false`: audited, nothing reportable. `true`: the agent claimed or promised a booking with no backing tool; `booking_claim_detail` has `{kind, phrase, utterance, turnIndex, verdict}`. **It is a whole-call verdict**: a booking tool that succeeds LATER in the call makes it `false` even when the agent told the caller "you're booked" before any booking existed. Ordering is only visible in Step 3L. |
+
+### Step 2L: tool events
+
+```sql
+SELECT created_at, engine, tool_name, status, duration_ms, error,
+       left(regexp_replace(arguments::text, '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+', '<email>', 'g'), 220) AS args,
+       left(regexp_replace(response::text,  '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+', '<email>', 'g'), 260) AS resp,
+       response->>'appointmentId' AS appointment_id
+FROM tenant_voice_tool_events
+WHERE tenant_id = '<tenant_id>'::uuid AND retell_call_id = '<CallSid>'
+ORDER BY created_at ASC;
+```
+
+- `status` is `ok` or `error`; a guard block is stored as an `error` of `blocked_by_guard`. Tool names carry family prefixes (`get_slots_<calendar>`, `book_appointment_<calendar>`, `update_contact`, `get_contact`, `send_message_to_human`, `schedule_/update_/cancel_followup`, `create_task`).
+- A `book_appointment_*` row with `status = 'ok'` and an `appointmentId` in the response is the only proof a booking exists. Read the response's `warning` too (for example "Booked, but this contact has no email on file").
+- **Never written as rows:** `end_call` and `transfer_call_*` (they run inside the bridge), `backend_timeout` and `session_closed_before_result`, and the calendar prefetch. Those appear only in Step 3L's logs.
+- Zero rows with `backend_model` null in Step 1L: no delegation, see above.
+
+### Step 3L: gateway and voice-bridge logs, by CallSid
+
+Two log groups (checked with `aws logs describe-log-groups --log-group-name-prefix /ecs/delta-agents`): `/ecs/delta-agents/gateway` and `/ecs/delta-agents/voice-bridge`, region `us-east-1`. Read `~/.claude/projects/-Users-zalo-dev/memory/aws-filter-log-events-undercounts.md` first: no `--limit` (it kills pagination), `--output json` piped through `jq -r '.[]?'` (text output tab-joins a page onto one line), and compare `wc -c` with `wc -l` before trusting a count.
+
+```bash
+SID='<CallSid>'
+START=<started_at - 2 min, epoch ms>; END=<ended_at + 5 min, epoch ms>   # post-call analysis lands ~5 s after hangup
+for G in voice-bridge gateway; do
+  aws logs filter-log-events --region us-east-1 --log-group-name /ecs/delta-agents/$G \
+    --start-time "$START" --end-time "$END" --filter-pattern "\"$SID\"" --max-items 20000 \
+    --query 'events[].message' --output json | jq -r '.[]?' > /tmp/call-$G.jsonl
+  echo "$G lines=$(wc -l < /tmp/call-$G.jsonl) bytes=$(wc -c < /tmp/call-$G.jsonl)"
+  jq -r '[.timestamp, .level, .event] | @tsv' /tmp/call-$G.jsonl | sort
+done
+```
+
+Lines are JSON with `event`, `level`, `component` and `metadata.callSid`. Three exceptions: the bridge's `voice_live_tool_call` also has `metadata.callId`, which is the OpenAI function call id, not the CallSid; the post-call booking audit lines put the CallSid in `metadata.callId`; the gateway's `voice_mcp_tool_call` carries no call id, so it does not match a CallSid filter.
+
+| Phase | Healthy | Broken |
+| --- | --- | --- |
+| Call start (gateway) | `voice_live_webhook_received`, `voice_live_thin_row_persisted`, `voice_live_twiml_served`, `voice_live_greeting_clip`, `voice_live_bootstrap_ok`, `voice_live_context_built` | `voice_live_rejected_*`, `voice_live_bootstrap_failed`, `voice_live_greeting_no_clip` (error) |
+| Session (bridge) | `voice_live_stream_started`, `voice_live_greeting_mode`, `voice_live_greeting_heard`, `voice_live_session_started`, `voice_live_first_output` | `voice_live_session_refused`, `voice_live_greeting_not_spoken`, `voice_live_openai_auth_failed`, `voice_live_openai_connect_failed`, `voice_live_session_error` |
+| Tools (bridge) | `voice_live_backend_usage`, `voice_live_mcp_call`, `voice_live_tool_call` (`metadata.tool`, `status`), `voice_live_tool_result_sent` | `voice_live_mcp_call_failed`, `voice_live_backend_timeout` |
+| Booking guard (bridge, in call) | `voice_live_booking_ready_nudge`, `voice_live_booking_claim_backed` | **`voice_live_booking_claim_unbacked` / `voice_live_booking_promise_unbacked`** (warn; `metadata.phrase`, `resolvedBy`), then `voice_live_guard_silence_break` |
+| Call end | `voice_live_twilio_stream_ended`, `voice_live_session_closed`, `voice_live_terminal_enqueued` (bridge); `voice_live_stream_status`, `voice_live_status_callback` (gateway) | `voice_live_terminal_handoff_failed` |
+| Post-call (gateway) | `voice_live_analysis_done`, `voice_live_terminal_consumed`, `voice_live_recording_stored` | `voice_live_terminal_rejected`, `_row_missing`, `_post_call_failed`, `voice_live_analysis_failed`, `voice_live_postcall_booking_claim_unbacked` / `_promise_unbacked`, `voice_live_postcall_booking_no_backend` |
+
+**The premature booking claim.** Put the bridge's `voice_live_booking_claim_unbacked` timestamp next to the `book_appointment_*` row from Step 2L. A claim logged BEFORE the booking tool's `created_at` means the caller heard "you're booked" before the booking existed, and Step 1L's `booking_claim_unbacked = false` does not clear it (the later booking backed the call as a whole). Find the matching turn in the numbered transcript by the logged `phrase`.
+
+### Step 4L: alerts for the call
+
+```sql
+SELECT created_at, alert_type, severity, status, notification_sent, left(message, 200) AS message,
+       coalesce(metadata->>'callSid', metadata->>'providerCallId') AS call_sid
+FROM tenant_alerts
+WHERE tenant_id = '<tenant_id>'::uuid
+  AND created_at BETWEEN '<started_at>'::timestamptz - interval '5 minutes'
+                     AND '<ended_at>'::timestamptz + interval '1 hour'
+  AND (alert_type LIKE 'voice_live_%' OR alert_type LIKE 'voice_booking_%')
+ORDER BY created_at;
+```
+
+- `voice_live_greeting_clip_missing` (tenant alert, `warning`, `metadata {agentId, callSid, reason}`): the bootstrap had no greeting clip. Throttled to once per tenant per UTC day, so a missing row on a second call that day proves nothing; the gateway's `voice_live_greeting_no_clip` error line is per call.
+- `voice_booking_claim_unbacked` / `voice_booking_promise_unbacked` (tenant alerts, throttled per tenant per day): raised by the post-call audit when Step 1L's flag is `true`. Their metadata names the call as `providerCallId` (the CallSid) and `voiceCallId`, plus `engine`, `phrase`, `utterance` and `verdict`; `notification_sent = false` means nobody was told.
+- `voice_live_postcall_booking_no_backend` is NOT a tenant alert: it is a gateway `logger.error` line plus one ops Slack message per call (deduped by Redis key `voice:booking_no_backend:<CallSid>` for 7 days). It fires when an openai-live call had a reportable claim or promise and ZERO tool events. Look for it in Step 3L's gateway pull (its CallSid is in `metadata.callId`).
+
 ## Output — correlation summary FIRST
 
-Emit a short timeline (call start → inbound webhook → tool events → disconnect → post-call), the disconnection reason class, and which of the four evidence layers contains the anomaly — THEN the hypothesis and fix. If all four layers are clean, say so and widen the time window before theorizing.
+Emit a short timeline (call start → inbound webhook → tool events → disconnect → post-call; for openai-live also the bridge's booking guard lines, placed against the tool events), the disconnection reason class, and which of the four evidence layers contains the anomaly — THEN the hypothesis and fix. If all four layers are clean, say so and widen the time window before theorizing.
 
 ## Verify (per ~/.claude/rules/gates.md)
 
@@ -213,7 +323,9 @@ Emit a short timeline (call start → inbound webhook → tool events → discon
 - ❌ Echoing/logging the decrypted Retell key, the `Authorization` header, or the tokened `webhook_url` — key_hint is the only safe identifier to show. `unset RETELL_KEY` when done.
 - ❌ Hardcoding any Retell key — always resolve via `apiKeyRef` → `tenant_api_keys` as above.
 - ❌ Treating zero tool events on a WEB/orb test call as a bug (`{{call_id}}` absent there by design).
-- ❌ Grepping `/ecs/delta-agents/worker` for voice — the voice path is gateway-only.
+- ❌ Grepping `/ecs/delta-agents/worker` for voice. Retell calls are gateway-only; openai-live calls are gateway plus `/ecs/delta-agents/voice-bridge`.
+- ❌ Running the Retell config diff (Step 4) on an openai-live call, or reading `booking_claim_unbacked = false` as "the agent never claimed a booking early" (it is a whole-call verdict; the bridge's guard line has the order).
+- ❌ Pasting a caller's email or phone into a report. Show the last 4 digits; the transcript spells emails out in words, so mask those too.
 
 ## Edge cases
 
