@@ -50,7 +50,7 @@ Defects found here: fix → re-run the failed stage → continue (revision-gate,
 - Coverage with denominators: "N of M runbook steps executed, K human steps verified"
 - Remaining irreducibles: vendor approvals pending, UX-taste items for human eyes
 - Claim ceiling per gates.md: surfaces without their proof signal are never reported "live".
-- When the runbook came from an `/autopilot` run and EVERY surface is ACTIVATED with its proof signal, record the pass from the run's worktree in two places: its state file (`terminal_state` from `code_complete_not_live_verified` to `complete`, plus when), and a log in the repo's shared git directory, which outlives the worktree (`.autopilot/` is gitignored, and the user may `git worktree remove` the worktree after merging):
+- When the runbook came from an `/autopilot` run and EVERY surface is ACTIVATED with its proof signal, record the pass from the run's worktree in two places: its state file (`terminal_state` from `code_complete_not_live_verified` to `complete`, plus when), and a log in the repo's shared git directory, which outlives the worktree (`.autopilot/` lives only in the worktree and is never committed, and the user may `git worktree remove` the worktree after merging):
 
   ```bash
   NOW=$(date -u +%FT%TZ); BR=$(git branch --show-current)
