@@ -21,7 +21,7 @@ Run `SELECT 1` via `mcp__supabase__execute_sql` (`project_id: $DELTA_PROD_PROJEC
 
 **Read-only contract: every query in this skill is a SELECT. Never write to prod during triage.**
 
-**Caller data stays masked.** Every free-text column this skill prints (config head, last turn, contact name, message body, call summary, tool error, alert message) goes through the mask `voice-call-triage` uses: emails become `<email>`, any 10+ digit run and any US number with separators keep only the last 4 digits (`<phone ..1234>`). Ids stay whole, since the mask would corrupt uuids (its digit passes hit 152 of 1,243 address-free session keys), EXCEPT when an id carries `@`, `+<digit>`, or ends in a bare 10 to 15 digit run: a native email, SMS or WhatsApp contact's id IS its address (a WhatsApp Cloud `wa_id` is digits with no `+`), so `session_key` and the varchar `contact_id` columns get the mask behind that guard (5 of 1,248 session keys as of 2026-09-23, all `native:<tenant>:<address>`). Put the same mask on any free-text column you add; it misses emails and numbers spelled out in words, so redact those by hand before quoting.
+**Caller data stays masked.** Every free-text column this skill prints (config head, last turn, contact name, message body, call summary, tool error, alert message) goes through the mask `voice-call-triage` uses: emails become `<email>`, any 10+ digit run and any US number with separators keep only the last 4 digits (`<phone ..1234>`). Ids stay whole, since the mask would corrupt uuids (its digit passes hit 152 of 1,243 address-free session keys), EXCEPT when an id carries `@`, `+<digit>`, or ends in a bare 10 to 15 digit run: a native email, SMS or WhatsApp contact's id IS its address (a WhatsApp Cloud `wa_id` is digits with no `+`), so `session_key`, the varchar `contact_id` columns and `audit_log.resource_id` (a `message_processed` row stores the session key there) get the mask behind that guard (as of 2026-09-23: 5 of 1,248 session keys, all `native:<tenant>:<address>`, and 31 audit rows). Put the same mask on any free-text column you add; it misses emails and numbers spelled out in words, so redact those by hand before quoting.
 
 ## Step 1 — Resolve the tenant (fuzzy slug match)
 
@@ -195,7 +195,13 @@ LIMIT 30;
 ```
 
 ```sql
-SELECT created_at, action, resource_type, resource_id, trace_id
+SELECT created_at, action, resource_type,
+       CASE WHEN resource_id ~ '@|\+[0-9]|(^|:)[0-9]{10,15}$' THEN regexp_replace(regexp_replace(regexp_replace(resource_id,
+              '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+', '<email>', 'g'),
+              '\+?[0-9]{6,}([0-9]{4})', '<phone ..\1>', 'g'),
+              '(\+?1[-. ]*)?\(?[0-9]{3}\)?[-. ]*[0-9]{3}[-. ]*([0-9]{4})', '<phone ..\2>', 'g')
+            ELSE resource_id END AS resource_id,
+       trace_id
 FROM audit_log
 WHERE tenant_id = '<tenant_id>'
   AND created_at >= now() - interval '72 hours'
