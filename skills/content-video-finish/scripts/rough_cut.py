@@ -612,8 +612,9 @@ def cmd_verify(args) -> None:
     dur = float(probe(video)["format"]["duration"])
     vdir = edit_dir / "verify"
     vdir.mkdir(exist_ok=True)
-    for old in vdir.glob("*.png"):
-        old.unlink()
+    # only this command's own outputs; drill down PNGs saved here (Step 0.4) survive
+    for old in [*vdir.glob("cut_*.png"), vdir / "head.png", vdir / "tail.png"]:
+        old.unlink(missing_ok=True)
 
     pcm = read_pcm(video, 0.0, dur)
     sr = 16000
