@@ -113,6 +113,9 @@ the locked layout below.
   no retakes in that take. 2093 of 2093 frames, A/V difference 0.3 ms, 0 of 31 boundaries
   flagged on the third re-render. The QA pass after it then tightened `verify` to the full
   30 ms pad rule, which flags 1 of those 31 (cut 30: 20 ms before a trailing, quiet "the").
+- **Zalo approved it the same day.** He got the review copy as a Telegram document plus the
+  `timeline_view` PNG of the busiest stretch (29.5 s to 33.5 s of the cut, 4 cuts, each in a
+  flat stretch of waveform) and replied "Looks good" to the PNG.
 - **When he ran straight into a dropped word, the old fallback picked the quietest point
   from the word's own edge**, 0 to 20 ms away, inside the fade. The fallback now searches
   only the 30 to 200 ms window, and flags "pad rule cannot hold" when that window does not
