@@ -95,3 +95,10 @@ skills/ghl-json/
 
 # runtime logs written by hooks and scripts (peer-refresh.log, stripe-actions.jsonl)
 logs/
+
+# private operational data, never for the public mirror (personal details, tenant ids, briefs)
+rail2-otp/
+muneer-triage/
+clarity-pulls/
+token-canary-evidence/
+queued-briefs/
