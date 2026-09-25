@@ -39,7 +39,8 @@ def check(label, cond, detail=""):
 class Layout:
     """A fake dead worker: bridge dir, run log, dev dir, output roots, projects."""
 
-    def __init__(self, brief="", started_min_ago=10, with_log=True, log_text=None):
+    def __init__(self, brief="", started_min_ago=10, with_log=True, log_text=None,
+                 pid=999999, extra_records=()):
         self.root = tempfile.mkdtemp(prefix="bg-salvage-test-")
         _dirs.append(self.root)
         self.bridge = os.path.join(self.root, "bridge")
@@ -53,7 +54,7 @@ class Layout:
         log_path = os.path.join(self.runs, "bg9-%d.jsonl" % (self.started_ms // 1000))
         inflight = {
             "bg9-%d-4242" % self.started_ms: {
-                "pid": 999999,  # deliberately dead
+                "pid": pid,  # 999999 is deliberately dead; os.getpid() is alive
                 "lane": "bg9",
                 "startedAt": str(self.started_ms),
                 "log": log_path,
@@ -71,6 +72,8 @@ class Layout:
                         "content": [{"type": "text", "text": log_text}]}}) + "\n")
                 else:
                     f.write(json.dumps({"type": "system", "subtype": "init"}) + "\n")
+                for rec in extra_records:
+                    f.write(json.dumps(rec) + "\n")
 
     def env(self):
         return dict(
@@ -336,6 +339,41 @@ def main():
     rc, out, _ = L.run()
     check("10c: an unresolvable brief says NOT CHECKED, never clean",
           "NOT CHECKED" in out and "clean (no dirty tree" not in out, out[-400:])
+
+    # 11. A LIVE worker is never a relaunch candidate (2026-09-25): a
+    # rate_limit_event anywhere in a still-running worker's log flagged it
+    # "died on a usage/rate limit", the verdict listed it under "Relaunch ONLY
+    # the remainder", and M dispatched a second writer onto the same film
+    # while the first was alive and finishing it.
+    L = Layout(brief="# TASK\nBuild the film.", log_text="Waiting on the 4K render.",
+               pid=os.getpid(), extra_records=[{"type": "rate_limit_event"}])
+    rc, out, _ = L.run()
+    live_key = list(json.load(open(os.path.join(L.bridge, "bg-inflight.json"))))[0]
+    verdict = out.split("--- VERDICT ---")[-1]
+    check("11a: a live worker is marked STILL RUNNING", "STILL RUNNING" in out, out[-600:])
+    check("11b: a live worker is never flagged as died on a limit",
+          "died on a usage/rate limit" not in out, out[-600:])
+    check("11c: the verdict does not offer a live worker for relaunch",
+          f"--report {live_key}" not in verdict and "do NOT relaunch" in verdict, verdict)
+
+    # 11e. the real 2026-09-25 shape: the live worker STARTED long before the
+    # salvage window, so its bg-inflight record was skipped and its fresh run
+    # log came back as a pid-less "dead/finished" orphan.
+    L = Layout(brief="# TASK\nBuild the film.", log_text="Waiting on the 4K render.",
+               pid=os.getpid(), started_min_ago=600,
+               extra_records=[{"type": "rate_limit_event"}])
+    os.utime(L.log_path, None)  # the log is fresh even though the worker is old
+    rc, out, _ = L.run()
+    check("11e: a live worker older than the window is STILL RUNNING, not an orphan",
+          "STILL RUNNING" in out and "dead/finished" not in out
+          and "died on a usage/rate limit" not in out, out[-700:])
+
+    # 11d. the same log on a DEAD worker still reads as died on a limit.
+    L = Layout(brief="# TASK\nBuild the film.", log_text="Waiting on the 4K render.",
+               extra_records=[{"type": "rate_limit_event"}])
+    rc, out, _ = L.run()
+    check("11d: a dead worker with a limit event is still flagged",
+          "died on a usage/rate limit" in out and "STILL RUNNING" not in out, out[-600:])
 
     for d in _dirs:
         shutil.rmtree(d, ignore_errors=True)

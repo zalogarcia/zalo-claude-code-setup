@@ -126,17 +126,21 @@ def load_workers(cutoff):
                 started = float(rec.get("startedAt") or 0) / 1000.0
             except (TypeError, ValueError):
                 started = 0.0
-            if started and started < cutoff:
-                continue
             log = Path(rec["log"]) if rec.get("log") else None
             if log:
+                # Claim the log BEFORE the window check: an old live worker's
+                # fresh log must not come back below as a pid-less orphan
+                # reading "dead/finished" (2026-09-25).
                 seen_logs.add(str(log))
+            alive = pid_alive(rec.get("pid"))
+            if started and started < cutoff and not alive:
+                continue
             workers.append(
                 {
                     "key": key,
                     "lane": rec.get("lane") or key.split("-")[0],
                     "pid": rec.get("pid"),
-                    "alive": pid_alive(rec.get("pid")),
+                    "alive": alive,
                     "started": started or cutoff,
                     "log": log,
                     "brief": str(rec.get("task") or ""),
@@ -666,6 +670,13 @@ def main():
         else:
             print("    SOURCE 2 FILES  none newer than the worker start")
 
+        if w["alive"]:
+            # A live worker is not salvage: its log can carry a rate_limit_event
+            # it rode out, and a short last turn is just the step it is on.
+            print("    STILL RUNNING: this worker is alive, do NOT relaunch or dispatch a second "
+                  "writer onto its target; wait for its report (bg.mjs ps shows it)")
+            continue
+
         t = transcript_findings(w)
         if t:
             found_any = True
@@ -728,12 +739,17 @@ def main():
 
     # ---- verdict ----------------------------------------------------------
     print("\n--- VERDICT ---")
+    live = [w for w in workers if w["alive"]]
+    if live:
+        print("STILL RUNNING, do NOT relaunch (wait for their reports):")
+        for w in live:
+            print(f"  [{w['key']}]  pid={w['pid']}")
     if found_any:
         print("WORK SURVIVED. Do NOT re-run from scratch — read the sources above first:")
         for r in salvageable_runs:
             print(f"  python3 ~/.claude/scripts/bg-salvage.py --dump {r['run_id']}")
         for w in workers:
-            if transcript_findings(w):
+            if not w["alive"] and transcript_findings(w):
                 print(f"  python3 ~/.claude/scripts/bg-salvage.py --report {w['key']}")
         print("  git status / git diff in the repos flagged under SOURCE 1")
         print("Relaunch ONLY the remainder.")
