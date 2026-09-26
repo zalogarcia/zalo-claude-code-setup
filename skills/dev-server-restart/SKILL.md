@@ -43,12 +43,13 @@ PORT=4321 CWD=/path/to/astro-project PROBE=/blog \
 ## What the script does
 
 1. Detects package manager from lockfile (npm / pnpm / yarn / bun)
-2. Kills anything listening on the port (`lsof -ti tcp:PORT -sTCP:LISTEN` — by port, not process name)
-3. Belt-and-suspenders kill of `next dev`, `vite`, `react-scripts start`
-4. Starts `$PM run dev` detached via `nohup`, logs to `/tmp/dev-server-<PORT>.log`
-5. Polls every 500ms for up to `TIMEOUT_S` (default 30s) until the port responds
-6. Smoke-tests the probe path, reports HTTP status + response size + elapsed time
-7. On 5xx, greps the log for error lines and surfaces the first 10
+2. Kills anything listening on the port (`lsof -ti tcp:PORT -sTCP:LISTEN`), and ONLY by port. It never kills by process name: other sessions' `vite`, `vitest` and `next dev` runs on other ports are left alone. A stale server of yours on a different port is not touched; pass that port.
+3. Starts `$PM run dev` detached via `nohup`, logs to `/tmp/dev-server-<PORT>.log`
+4. Polls every 500ms for up to `TIMEOUT_S` (default 30s) until the port responds
+5. Smoke-tests the probe path, reports HTTP status + response size + elapsed time
+6. On 5xx, greps the log for error lines and surfaces the first 10
+
+Tests: `bash ~/.claude/skills/dev-server-restart/restart.test.sh` (fails if a `pkill`/`killall` comes back, and proves a runner on another port survives the kill step).
 
 ## Exit codes
 

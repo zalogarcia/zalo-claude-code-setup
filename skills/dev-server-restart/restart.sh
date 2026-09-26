@@ -25,7 +25,10 @@ PM="npm"
 [ -f yarn.lock ] && PM="yarn"
 [ -f bun.lockb ] && PM="bun"
 
-# 2. Kill anything on the port (by port, not process name — more reliable)
+# 2. Kill anything on the port, and ONLY by port.
+# Never kill by process name (pkill/killall): several sessions run at once on this
+# Mac, and a name match kills their vite, vitest and next runs on other ports.
+# restart.test.sh fails if a name-based kill comes back.
 EXISTING=$(lsof -ti tcp:"$PORT" -sTCP:LISTEN 2>/dev/null || true)
 if [ -n "$EXISTING" ]; then
   echo "Killing PID(s) on :$PORT — $EXISTING"
@@ -34,12 +37,6 @@ if [ -n "$EXISTING" ]; then
   STILL=$(lsof -ti tcp:"$PORT" -sTCP:LISTEN 2>/dev/null || true)
   [ -n "$STILL" ] && kill -9 $STILL 2>/dev/null || true
 fi
-
-# Belt-and-suspenders: kill known dev runners anywhere (in case they're bound to a different port)
-pkill -f "next dev" 2>/dev/null || true
-pkill -f "vite" 2>/dev/null || true
-pkill -f "react-scripts start" 2>/dev/null || true
-sleep 1
 
 # 3. Start fresh, detached, log to /tmp
 echo "Starting '$PM run dev' in $CWD"
