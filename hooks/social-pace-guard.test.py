@@ -761,5 +761,62 @@ stdin_case("real hook: Edit on the config is blocked", {"tool_name": "Edit", "to
     "file_path": CFGP, "old_string": "40", "new_string": "400"}}, 2)
 os.remove(HUGE)
 
+print("H  independent verifier regressions (each was ALLOWED, or a false positive)")
+CFG300 = fx("fb-urls.cfg", "".join('url = "https://www.facebook.com/p%d"\n' % i
+                                   for i in range(300)))
+CFG_OK = fx("ok.cfg", 'url = "https://example.com/a"\n')
+DOC = fx("notes.md", "curl -s " + FB + " was the old way\n")
+CMD = fx("cmd.txt", "curl -s " + FB + "\n")
+HARMLESS = fx("harmless.txt", "ls -la /tmp\n")
+RV = [
+    ("cat cfg | curl -K -", "cat " + CFG300 + " | curl -s -K -", "deny"),
+    ("cat cfg | curl --config /dev/stdin", "cat " + CFG300 + " | curl -s --config /dev/stdin",
+     "deny"),
+    ("curl -K <(cat cfg)", "curl -s -K <(cat " + CFG300 + ")", "deny"),
+    ("curl -K - <<< herestring", "curl -s -K - <<< 'url = \"" + FB + "\"'", "deny"),
+    ("echo | curl -K -", "echo 'url = \"" + FB + "\"' | curl -s -K -", "deny"),
+    ("curl --config=/dev/stdin", "cat " + CFG300 + " | curl -s --config=/dev/stdin", "deny"),
+    ("curl -K a non social config", "curl -s -K " + CFG_OK, "allow"),
+    ("python requests aliased", "python3 -c \"import requests as r; print(r.get('" + FB
+     + "').status_code)\"", "deny"),
+    ("perl LWP", "perl -MLWP::Simple -e 'print get(\"" + FB + "\")'", "deny"),
+    ("ruby open-uri", "ruby -ropen-uri -e 'puts URI.open(\"" + FB + "\").read'", "deny"),
+    ("php file_get_contents", "php -r 'echo file_get_contents(\"" + FB + "\");'", "deny"),
+    ("python socket", "python3 -c \"import socket; s=socket.create_connection(("
+     "'www.facebook.com', 80))\"", "deny"),
+    ("python json naming a host (not a load)", "python3 -c \"import json; print(json.dumps("
+     "{'site': 'facebook.com'}))\"", "allow"),
+    ("python heredoc, then grep of a doc naming FB (not a load)", "python3 - <<'EOF'\n"
+     "import json\nprint(1)\nEOF\ngrep -c curl " + DOC, "allow"),
+    ("python -c exec_module + the config path (a read)", "python3 -c \"import importlib.util,"
+     "json; s=importlib.util.spec_from_file_location('au','/x/a.py'); print(json.load(open('"
+     + CFGP + "'))['routes'])\"", "allow"),
+    ("python -c subprocess cat of the config (a read)", "python3 -c \"import subprocess; "
+     "print(subprocess.run(['cat','" + CFGP + "'],capture_output=True).stdout)\"", "allow"),
+    ("python -c subprocess rm of the ledger", "python3 -c \"import subprocess; "
+     "subprocess.run(['rm','" + LEDGER + "'])\"", "deny"),
+    ("python -c os.system rm of the ledger", "python3 -c \"import os; os.system('rm "
+     + LEDGER + "')\"", "deny"),
+    ("9222 by arithmetic", "curl -s \"http://localhost:$((9000+222))/json/new?" + FB + "\"",
+     "deny"),
+    ("bash -c $(cat a loader file)", "bash -c \"$(cat " + CMD + ")\"", "deny"),
+    ("eval $(< a loader file)", "eval \"$(< " + CMD + ")\"", "deny"),
+    ("bash -c $(cat a harmless file)", "bash -c \"$(cat " + HARMLESS + ")\"", "allow"),
+    ("nc to facebook", "nc www.facebook.com 443", "deny"),
+    ("openssl s_client to facebook", "openssl s_client -connect www.facebook.com:443 -quiet",
+     "deny"),
+    ("socat to facebook", "socat - TCP:www.facebook.com:80", "deny"),
+    ("openssl rand (not a load)", "openssl rand -hex 8", "allow"),
+    ("nc -z localhost (not a load)", "nc -z localhost 5432", "allow"),
+]
+for label, cmd, want in RV:
+    allowed, msg = run_bash(cmd)
+    got = "allow" if allowed else "deny"
+    ok(got == want, "%s -> %s" % (label, want), "(got %s) %s" % (got, msg[:200]))
+ctx, gate, clk, d = fresh_ctx()
+gate.acquire(FB, "t", grant=True)
+ok(not run_bash("curl -s \"http://localhost:$((9000+222))/json/new?" + FB + "\"", ctx)[0],
+   "9222 by arithmetic is refused even with a grant waiting")
+
 print("\n%d passed, %d failed" % (PASS, FAIL))
 sys.exit(1 if FAIL else 0)

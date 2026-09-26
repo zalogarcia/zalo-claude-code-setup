@@ -67,7 +67,11 @@ Always blocked, gated or not:
   * a crontab, at, batch or launchctl entry whose command would load a social
     page (given inline, or as a file: a launchd plist, `at -f job`, `batch <
     job`), and a heredoc that writes an unpaced social loader to disk;
-  * a fetch inside a loop whose target host is computed at run time;
+  * a fetch whose target host or port is computed at run time ($(...),
+    $((...)), backticks) inside a loop or next to a social host;
+  * curl -K / --config fed by stdin, a pipe, a herestring or <(...) when the
+    command or the files it names hold social URLs; a raw TCP or TLS client
+    (nc, openssl s_client, socat, telnet) aimed at a social host;
   * a data file too large to scan (over 64 MB) handed to a fetcher, loop or
     script: presumed to be a URL list;
   * any write, move or delete of the gate's own ledger, state or config
@@ -177,6 +181,7 @@ SAFE_HEADS = {"echo", "printf", "print", "cat", "head", "tail", "grep", "egrep",
               "xmllint", "hxselect", "mlr", "csvcut", "csvgrep", "xsv", "qsv", "duckdb",
               "find", "fd", "tree", "done", "fi", "esac", "in", "case", "then", "else"}
 SCHEDULERS = {"crontab", "at", "batch", "launchctl"}
+RAW_NET = {"nc", "ncat", "netcat", "socat", "openssl", "telnet", "gnutls-cli"}
 HANDOFF_HEADS = {"tmux", "screen"}
 CURL_VALUE_FLAGS = {"-d", "--data", "--data-raw", "--data-binary", "--data-ascii",
                     "--data-urlencode", "--json", "-F", "--form", "--form-string", "-H",
@@ -223,7 +228,12 @@ NAV_CALL_RE = re.compile(
 # One liners: a fetch primitive, or anything that spawns a process or opens a URL
 ONELINER_FETCH_RE = re.compile(
     FETCH_CODE_RE.pattern + r"|subprocess|child_process|\bexec\w*\s*\(|\bsystem\s*\(|Popen"
-    r"|\bspawnSync\b|\bopen\s+location\b|\bdo shell script\b|\bspawn\s", re.IGNORECASE)
+    r"|\bspawnSync\b|\bopen\s+location\b|\bdo shell script\b|\bspawn\s"
+    # the verifier's one liners: an aliased `import requests as r`, perl LWP /
+    # HTTP::Tiny, ruby open-uri / Net::HTTP, php file_get_contents, raw sockets
+    r"|\brequests\b|\burllib|LWP|HTTP::Tiny|Net::HTTP|IO::Socket|open-uri|URI\.open"
+    r"|file_get_contents|curl_init|fsockopen|\bfopen\s*\(|\breadfile\s*\(|\bsocket\b"
+    r"|create_connection|wrap_socket|Invoke-WebRequest", re.IGNORECASE)
 SOCIAL_TOOLS = {"instaloader": "instagram", "instagram-scraper": "instagram",
                 "instagram_scraper": "instagram", "snscrape": "x", "twint": "x",
                 "facebook-scraper": "facebook", "facebook_scraper": "facebook",
@@ -746,10 +756,19 @@ def fetch_parts(head, args):
             i += 2
             continue
         if head in ("curl", "curlie"):
-            if a in CURL_CONFIG_FLAGS and i + 1 < len(args):
-                sources.append(args[i + 1])
+            cfg_val = None
+            if a in CURL_CONFIG_FLAGS:
+                # no value left: `curl -K <(cat f)` splits at the `<(`; it is stdin
+                cfg_val = args[i + 1] if i + 1 < len(args) else "-"
+                i += 1
+            elif a.startswith("--config="):
+                cfg_val = a.split("=", 1)[1]
+            elif re.match(r"^-K.", a):
+                cfg_val = a[2:]
+            if cfg_val is not None:
+                sources.append(cfg_val)
                 bulk = "curl reads its URLs from a config file or stdin"
-                i += 2
+                i += 1
                 continue
             if (a in CURL_VALUE_FLAGS or a in OUTPUT_FLAGS) and i + 1 < len(args):
                 if a in CURL_VALUE_FLAGS:
@@ -800,6 +819,18 @@ def cron_command(text):
     """Strip crontab time fields so the rest reads as a shell command."""
     return "\n".join(re.sub(r"^\s*(?:@\w+|(?:[\d*/,\-]+\s+){5})", "", line)
                      for line in text.split("\n"))
+
+
+CAT_SUBST_RE = re.compile(r"\s*(?:\$\(\s*(?:cat\s+|<\s*)([^()\s;|&`]+)\s*\)"
+                          r"|`\s*cat\s+([^`\s;|&]+)\s*`)\s*")
+
+
+def cat_file_command(text, cwd):
+    """A command string that is only `$(cat FILE)` or `$(< FILE)` runs FILE's text."""
+    m = CAT_SUBST_RE.fullmatch(text or "")
+    if not m:
+        return text
+    return read_text(resolve_path((m.group(1) or m.group(2)).strip("\"'"), cwd)) or text
 
 
 def scheduled_text(path):
@@ -904,7 +935,7 @@ def analyze(command, ctx, an=None, depth=0, env=None, aliases=None, cwd=None):
 
     segs = split_segments(tokens)
     pending_gate = None
-    for raw_seg, op_after in segs:
+    for seg_i, (raw_seg, op_after) in enumerate(segs):
         if raw_seg and os.path.basename(raw_seg[0]).lower() in LOOP_HEADS:
             an.loop = True
         seg = strip_prefixes(raw_seg, aliases)
@@ -991,6 +1022,8 @@ def analyze(command, ctx, an=None, depth=0, env=None, aliases=None, cwd=None):
         elif head in HANDOFF_HEADS:
             sub_cmds += [a for a in args if not a.startswith("-") and " " in a]
             sub_cmds.append(" ".join(a for a in args[1:] if not a.startswith("-")))
+        # bash -c "$(cat job.txt)" / eval "$(< job.txt)": the command is that file
+        sub_cmds = [cat_file_command(s, cwd) for s in sub_cmds]
         if sub_cmds or head == "eval" or head in HANDOFF_HEADS:
             for sub_cmd in sub_cmds:
                 if depth >= 3:
@@ -1038,6 +1071,10 @@ def analyze(command, ctx, an=None, depth=0, env=None, aliases=None, cwd=None):
         # -arm64 curl FB). Read it as a command of its own (QA round 3).
         if head not in SAFE_HEADS and head not in FETCH_TOOLS and head not in INTERPRETERS \
                 and head not in SCHEDULERS and head not in ("make", "gmake"):
+            if head in RAW_NET and ctx.socials(" ".join(args)):
+                # nc www.facebook.com 443, openssl s_client -connect ..., socat TCP:...
+                found.append(make_load(ctx, " ".join(a for a in args if ctx.socials(a)),
+                                       "local", "%s (a raw TCP or TLS client)" % seg_text))
             subs = [a for a in args if (" " in a or "\n" in a) and ctx.socials(a)]
             k = next((k for k, a in enumerate(args) if os.path.basename(a).lower() in (
                 FETCH_TOOLS | INTERPRETERS | LOOP_HEADS | {"xargs", "eval"})), None)
@@ -1114,13 +1151,16 @@ def analyze(command, ctx, an=None, depth=0, env=None, aliases=None, cwd=None):
                 social_t = [t for t in targets if ctx.platform_of(url_host(t))]
                 renderer_t = [t for t in targets if ctx.is_renderer(url_host(t))]
                 variable = [t for t in targets if "$" in t or "`" in t]
-                if an.loop and (re.search(r"://[^/\s\"']*(?:\$\(|`)", stripped) or any(
-                        re.search(r"://[^/]*(?:\$\(|`|\$$)", t) for t in targets)):
-                    # https://www.$(printf face)book.com/$s in a loop: the host is only
-                    # known at run time, so which site it loads cannot be read here
-                    raise Deny("a fetch inside a loop whose target HOST is computed at run "
-                               "time ($(...) or backticks in the host part); write the host "
-                               "out literally (%s)" % seg_text[:80])
+                if (an.loop or ctx.socials(full_text)) and (
+                        re.search(r"://[^/\s\"']*(?:\$\(|`)", stripped) or any(
+                            re.search(r"://[^/]*(?:\$\(|`|\$$)", t) for t in targets)):
+                    # https://www.$(printf face)book.com/$s in a loop, or
+                    # localhost:$((9000+222))/json/new?<a facebook url>: the host or port
+                    # is only known at run time, so which site (or which browser, 9222)
+                    # it loads cannot be read here
+                    raise Deny("a fetch whose target HOST or PORT is computed at run time "
+                               "($(...), $((...)) or backticks), inside a loop or next to a "
+                               "social host; write it out literally (%s)" % seg_text[:80])
                 follows = head in ("wget", "wget2") or any(
                     a in ("--location", "--location-trusted", "--follow")
                     or re.match(r"^-[a-zA-Z]*L[a-zA-Z]*$", a) for a in args) or (
@@ -1145,9 +1185,13 @@ def analyze(command, ctx, an=None, depth=0, env=None, aliases=None, cwd=None):
                                                seg_text + " (via a remote renderer)"))
                 elif sources or variable or (not targets and inner is not None):
                     reach = data_files_text(sources, cwd)
-                    if variable or inner is not None or an.loop:
+                    # curl -K from stdin, a pipe, a herestring or <(...): the URL list is
+                    # somewhere else in the command (verifier, 2026-09-26)
+                    piped_cfg = bool(bulk) and bulk.startswith("curl reads") and any(
+                        not os.path.isfile(resolve_path(s, cwd)) for s in sources)
+                    if variable or inner is not None or an.loop or piped_cfg:
                         reach += "\n" + data_files_text(tokens, cwd)
-                    if variable:
+                    if variable or piped_cfg:
                         reach += "\n" + full_text
                     if ctx.socials(reach):
                         found.append(make_load(ctx, reach, "local", seg_text, bulk or (
@@ -1168,7 +1212,8 @@ def analyze(command, ctx, an=None, depth=0, env=None, aliases=None, cwd=None):
             inline, script, j = None, None, 0
             while j < len(args):
                 a = args[j]
-                if a in ("-c", "-e", "--eval", "-p", "--print", "-m") and j + 1 < len(args):
+                if (a in ("-c", "-e", "--eval", "-p", "--print", "-m") or (
+                        a == "-r" and head == "php")) and j + 1 < len(args):
                     inline = " ".join(args[j + 1:])
                     break
                 if REDIR_RE.fullmatch(a):
@@ -1191,7 +1236,8 @@ def analyze(command, ctx, an=None, depth=0, env=None, aliases=None, cwd=None):
             if inline is not None:
                 # a one liner is a load when it names a social host AND can fetch, open
                 # or spawn something; printing a canonical link is not a load
-                if ctx.socials(inline) and ONELINER_FETCH_RE.search(inline):
+                # (the module flags count too: perl -MLWP::Simple, ruby -ropen-uri)
+                if ctx.socials(inline) and ONELINER_FETCH_RE.search(" ".join(args)):
                     route = "remote" if any(ctx.is_renderer(url_host(u)) for u in re.findall(
                         r"https?://[^\s\"'`]+", normalize(inline))) else "local"
                     found.append(make_load(ctx, inline, route, seg_text))
@@ -1212,9 +1258,15 @@ def analyze(command, ctx, an=None, depth=0, env=None, aliases=None, cwd=None):
                     found.append(make_load(ctx, " ".join(a for a in rest if ctx.platform_of(
                         url_host(a))), "local", seg_text + " (script not readable here)"))
             elif not found:
-                # `cat x.sh | bash`, `python3 -`: the code arrives on stdin, from the
-                # command itself or from a file the command names
-                reach = full_text + "\n" + data_files_text(tokens, cwd)
+                # `cat x.sh | bash`, `python3 -`: the code arrives on stdin, from this
+                # pipeline's own text or a file it names. Only THIS pipeline: a `grep`
+                # of a doc later in the command is not code fed to the interpreter
+                # (a verifier false positive, 2026-09-26)
+                k = seg_i
+                while k > 0 and segs[k - 1][1] == "|":
+                    k -= 1
+                own = [t for s, _ in segs[k:seg_i + 1] for t in s]
+                reach = " ".join(own) + "\n" + data_files_text(own, cwd)
                 if ctx.socials(reach) and (FETCH_CODE_RE.search(reach) or FETCH_TOOLS
                                            & set(re.findall(r"[a-z][\w.-]*", reach.lower()))):
                     found.append(make_load(ctx, reach, "local",
@@ -1343,8 +1395,11 @@ PROTECTED_TEXT_RE = re.compile(r"social-(?:loads|gate-state|gate\.lock|pacing)|\
 WRITE_CODE_RE = re.compile(
     r"open\s*\([^)]*['\"][rbt]*[wax+][rwabxt+]*['\"]|write_text|write_bytes|\bunlink|"
     r"\bremove\s*\(|rmtree|\brename|os\.replace|\btruncate|writeFile|appendFile|rmSync|"
-    r"unlinkSync|renameSync|copyFile|\bos\.system|subprocess|shutil\.(?:move|copy)|"
-    r"\bdo shell script\b|\bspawn|\bexec\w*\s*\(", re.IGNORECASE)
+    r"unlinkSync|renameSync|copyFile|shutil\.(?:move|copy)|"
+    # a shell write verb handed to subprocess / os.system / do shell script / spawn;
+    # a bare `subprocess` or `exec_module(` is not a write (a verifier false positive)
+    r"['\"\s\[,](?:rm|mv|cp|truncate|tee|shred|unlink|dd|trash|srm)['\"\s,\]]|"
+    r"\bsed\s+-i|\bperl\s+-p?i", re.IGNORECASE)
 
 
 def protected_kind(tok, cwd):
