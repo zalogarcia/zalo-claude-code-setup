@@ -143,13 +143,14 @@ When a script needs one of these, build it from the named ingredients — do NOT
 - Pain gets no color. Money always rolls. Red never emphasizes — it kills.
 - **Run the mute test on every beat** before rendering: with the audio off, does the motion still say what the VO says? If the answer is "it looks premium but says nothing," the beat fails the Depiction Law — replace the visual with one that acts out the script phrase.
 - When in doubt, remove words and enlarge what remains.
+- **Reading time: fast in, then hold** (from latent-spaces/brag `step-2-plan.md`). Every line the viewer must read stays settled (fully in, not yet exiting) for at least 0.8 s if it is a label of 1 to 3 words, and 0.3 s per word (1.2 s minimum) if it is a headline or sentence. Pace comes from snappy entrances and cuts, never from pulling text early. This fits the ~2 s beats and the 5-word ceiling: 5 words need 1.5 s, which is inside one beat. A line struck through while it stays on screen still counts as readable.
 
 ## How to use
 
 1. **Read the script**, split into segments (one idea cluster each, 7–9s), then each segment into beats (~2s, one idea). Per beat, write the script phrase it covers and name what the visual DEPICTS from that phrase (Depiction Law — the mute test) before picking any move. Per segment decide: which archetype comp to copy, the ONE gold payoff (if any), what dies in red, what number rolls.
 2. **Place the strike-throughs.** The Line only slashes text being negated (red). Write each strike as `LineKeyframe[]` in ABSOLUTE comp frames: born, slash (draw about 8 to 12f), hold, release (collapse w→0, `o:0`). No travel, no underline, no final settle. Beat-internal `at` values (LetterStamp/DimAt/SFX) are SEQUENCE-RELATIVE — keep a beat map comment reconciling both.
 3. **Beats on a 6-frame overlap grid**: `from` = previous from + duration − 6; final beat gets `exit={0}` and ends exactly at `durationInFrames`.
-4. **Impacts + SFX on landing frames**: `SegmentCamera impacts={[...]}` = `ImpactFlash at` frames = SFX hit frames. SFX placeholders live in `public/sfx/` (thock=stamp, slash=kill, riser=into payoff, shimmer=ignite) — place via `<Sequence from><Audio src={staticFile(...)} volume={0.4-0.9}/></Sequence>`.
+4. **Impacts + SFX on landing frames**: `SegmentCamera impacts={[...]}` = `ImpactFlash at` frames = SFX hit frames. The 4 role sounds live in `public/sfx/` (thock=stamp, slash=kill, riser=into payoff, shimmer=ignite). Place them via `<Sequence from><Audio src={staticFile(...)} volume={0.4-0.9}/></Sequence>`. See "Sound effects (Kenney CC0 library)" below for what each file is and where its peak sits.
 5. **Register** in `src/Root.tsx` (1920×1080@30; 200–280 frames/segment), then verify cheaply before committing to renders:
 
 ```bash
@@ -173,6 +174,64 @@ npx remotion render <CompId> out/<CompId>.mov --codec=prores --prores-profile=44
 # Vertical 9:16: register a second Composition (1080x1920) on the same component with defaultProps={{scale: ~0.78}}
 ```
 
+7. **Poster as frame 0 (every delivered reel, teaser and launch cut).** X, Slack, Discord and most players use frame 0 as the idle thumbnail and ignore cover-art metadata. A comp that opens on black or mid-animation therefore posts as a black box (the Leash 30 s opened at 8 of 255). After the final mix, bake a settled frame into frame 0. Only frame 0 changes: the audio is copied, and the duration and frame count stay the same. The script refuses to overwrite its input and runs its own checks, exiting 1 on any failure.
+
+```bash
+cd /Users/zalo/dev/operator-broll
+scripts/poster-frame0.sh <final.mp4> <final>-poster.mp4 --at <settled-seconds>   # or --image <poster.png>
+# prints: size/fps/frames/duration equal, audio packets md5 equal, frame 0 vs poster PSNR,
+# frames 1+ vs input min PSNR (>= 40 dB); RESULT: PASS. Also writes <final>-poster.poster.png,
+# the custom thumbnail for platforms that take an upload (YouTube, IG, TikTok, LinkedIn).
+# Proof mode: --lossless makes frames 1+ hash identical to the input (never deliver it: many phones cannot play it)
+```
+
+Pick the hook line, the hero reveal or the final logo at a SETTLED moment: text fully in, before it exits. Deliver the `-poster` file and never overwrite the original.
+
+## Beat sync (music-driven cuts)
+
+When the cut rides a music bed rather than a voiceover, measure the track and snap the reveals to it. Do not guess from the BPM.
+
+```bash
+cd /Users/zalo/dev/operator-broll
+tools/audio/beats.sh public/music/<track>.mp3 --md public/music/<track>.beats.md   # writes public/music/<track>.beats.json
+# first run builds tools/audio/.venv (uv, arm64 CPython 3.12, pinned lock; never the system python3)
+node --experimental-strip-types --no-warnings --test tools/audio/beatSync.test.ts  # helper tests
+node --experimental-strip-types --no-warnings tools/audio/snap-report.ts          # BeatLab plan: planned vs snapped vs nearest cue/beat
+```
+
+In the comp (`src/system/beatSync.ts`; the worked example is `src/beatlab/`, rendered through its own entry `src/beatlab.ts`):
+
+```tsx
+// Composition: calculateMetadata={async () => ({ props: { beatMap: await loadBeatMap(staticFile("music/x.beats.json")) } })}
+const map = placeTrack(beatMap, { trimStart: 58, until: 11 });   // same trim as <Audio trimBefore={58 * 30}>
+const { frames, warnings } = planReveals(map, [
+  { kind: "major", label: "payoff", at: 8.5 },                                   // strong cue within 0.15 s
+  { kind: "sequence", labels: ["a", "b", "c"], at: 4.0, readableText: true },    // consecutive beats within 0.10 s
+], 30);
+// frames.payoff is the LANDING frame (flash, SFX, stamp settle); subtract the move's own lead-in for `at`/`from`
+```
+
+The rules the helper enforces (adapted from latent-spaces/brag, MIT):
+- Land 1 to 3 major reveals per video within 0.15 s of a strong cue. A reveal moves at most 0.5 s (`reachS`) to reach one; with no cue in reach it keeps its planned time and says so in `warnings`.
+- Items that appear one after another go on consecutive beats, each within 0.10 s of its beat.
+- Above 110 BPM, readable text takes every other beat (`readableText: true`). Accents (flashes, dots, ticks) may hit every beat.
+- Readability and the story win. A VO-timed segment stays on the VO; beat sync is for music-led reels, teasers and launch cuts.
+
+## Sound effects (Kenney CC0 library)
+
+The role files in `public/sfx/` are CC0 Kenney sounds. Each one is level matched to the ffmpeg placeholder it replaced (same active RMS, peak capped at -1 dBFS), so existing mixes keep their balance. The placeholders are kept as `public/sfx/<role>.placeholder.wav` for A/B comparison.
+
+| Role file | Source (`public/sfx/kenney/`) | Peak lands | Place it |
+|---|---|---|---|
+| `thock.wav` (stamp) | `impact-sounds/impactSoft_medium_000.ogg`: warm, low HF risk | 11 ms | `from` = landing frame |
+| `slash.wav` (kill) | `rpg-audio/knifeSlice.ogg`: a real blade swish, bright (HF risk high) | 165 ms | `from` = strike completes minus 5 frames; keep repeated slashes at volume 0.5 or below |
+| `riser.wav` (into payoff) | `interface-sounds/maximize_005.ogg`: rising sweep, padded to peak where the old riser peaked | 885 ms | `from` = payoff frame minus 27 |
+| `shimmer.wav` (ignite) | `interface-sounds/confirmation_002.ogg`: tonal rising chime, low HF risk | 11 ms | `from` = ignite frame |
+
+- The library holds 521 rated files from 7 packs. `manifest.json` has per-file ratings (brightness, high-frequency risk, envelope, features), the top candidates per role, and the picks with the reason for each choice. `RATINGS.md` is the readable summary, `LICENSE.md` the CC0 note, `sources.json` the pack URLs and zip hashes.
+- To use a different library sound, pick by `labels.highFrequencyRisk`. Use low for anything repeated; keep high for isolated hits at low volume. Then install it with `tools/audio/.venv/bin/python tools/audio/install_sfx_picks.py --pick <role>=<pack>/<file>.ogg --why "<role>=<reason>"`, which keeps the placeholder and level matches. Re-rate after adding packs with `tools/audio/rate_sfx.py` (see its header).
+- These role levels were tuned for b-roll under a VO. Under a music bed the riser and shimmer are quiet, so lift them (volume 1.5 to 2.5 is valid in a render) and loudness-check the mix.
+
 ## Output shape
 
 Report per segment: `✓ <CompId> — <duration>s → out/<CompId>.mp4` plus one inspected still per new comp. On render failure: comp ID + last 15 log lines, never the full log.
@@ -194,8 +253,8 @@ Report per segment: `✓ <CompId> — <duration>s → out/<CompId>.mp4` plus one
 
 - **Long holds for VO** — extend the final beat; camera drift + live grain + orb breathing keep it alive.
 - **New brand/series** — clone a theme in `tokens.ts` (accent/grid/bg only).
-- **Music-synced cuts** — quantize beat `from` frames to the track BPM (frames-per-beat = 1800/BPM at 30fps); not yet a system helper.
-- **Real SFX** — swap the ffmpeg-synthesized placeholders in `public/sfx/` for licensed hits; keep filenames.
+- **Music-synced cuts**: measure the track with `tools/audio/beats.sh` and snap with `src/system/beatSync.ts` (see "Beat sync"). A BPM gives the spacing, not where the beats fall or which ones are strong, so do not quantize to 1800/BPM by hand.
+- **Real SFX**: done 2026-09-26. The role files are Kenney CC0 picks and the placeholders are kept as `*.placeholder.wav` (see "Sound effects").
 
 ## Pair with
 
