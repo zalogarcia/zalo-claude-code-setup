@@ -112,3 +112,41 @@ scanned 2026-09-22), and a folder holding only `pipeline.csv` fails closed on th
 (Zalo's file, never snapshotted), with a `config.md` stub added to the test working folders
 and to `scripts/fixtures/single-message/`.
 
+## 8. At 20 Facebook messages a day the named owner pool lasts little more than a day (opened 2026-09-26)
+
+**What it is.** A Facebook row drafts when it carries an owner name before the browser
+touches it: 16 to 19 percent of named rows verified an owner on 09-22 to 09-26 (16 of 83,
+or 14 of 89 by a stricter count; `hunting-playbook.md` speed default 2 states both methods),
+against 2 of 25 rows whose website names nobody (8 percent). On 2026-09-26 the seed had
+1,963 qualified rows that no pipeline row or research ledger had touched: 152 named (a 2F.0
+candidate or a seed `owner_name`), 1,069 with a `no_owner_reason` from the offline
+resolver, and 742 the resolver never read (an independent recount the same morning, with a
+slightly wider ledger set, got 1,954, 144, 1,069 and 741). Twenty drafts a day consume about
+105 to 127 named rows a day, so the named pool carries a little over one full day, after
+which the same 130 research minutes yield about 7 to 10 a day (87 to 127 rows at 8
+percent).
+
+**What contains it today.** The worklist order in `hunting-playbook.md` Step 2F.0 spends the
+named rows first and the empty ones last, and the report states the rows left per group.
+
+**What would close it.** More names before the browser. The owner resolver in
+`~/dev/bu-cold-outreach/tools/owner-resolver/` read 1,363 rows and named 15 percent; the 742
+rows it never read would add about 110 named rows at that rate (offline, no login, about 11
+seconds a row). Beyond that, a new tranche that carries owner names (the LinkedIn rail rows
+arrive named) is the only source that sustains 20 a day, and its spend is Zalo's call.
+
+## 9. Browser and Codex availability decide more days than research does (opened 2026-09-26)
+
+**What it is.** From 09-20 to 09-26 the Codex weekly limit blocked 09-20, 09-21 and 09-25
+and the first attempt on 09-26; Computer Use or Chrome failed on 09-23 (first attempt),
+09-24, 09-26 during research and 09-26 during the approved send (nothing sent). Research reached a
+batch on three of those seven days. The 03:45 research block adds Codex Computer Use time
+every day, so it moves the next weekly limit closer.
+
+**What contains it today.** Verified rows are written to `pipeline.csv` as they are found and
+the recovery list in Step 2b picks up anything a dead session left in `evidence/`, so a stall
+costs the minutes it wasted, not the owners already verified.
+
+**What would close it.** A Chrome health probe before each fire and a Codex usage read in
+the 03:45 run, so a day that cannot run says so at 03:45 instead of at 06:00.
+

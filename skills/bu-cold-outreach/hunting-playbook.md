@@ -37,12 +37,42 @@ session instruction says otherwise.
    09-10 to 09-12 ledgers (95 rows touched, 29 drafts, 5,013 seconds) needs 58 minutes of
    research plus 83 minutes of paced sending at the measured mean gap of 218 seconds, 2.3
    browser hours, and one session has stalled at entry 6 before (learnings, 2026-09-11).
-   One session still never exceeds its own 45; a third session does not exist.
+   One session never exceeds its own 45.
+   **Plus one research block before dawn (added 2026-09-26, Zalo: "we need more on
+   facebook at least 20 per day").** A bridge schedule fires the RUNBOOK's "Research block
+   only" message at 03:45 ET in its own fresh Codex thread. It researches from the fire
+   until 05:20 ET, about 85 minutes, and stops at 05:20 whatever state it is in, because the
+   06:00 session needs codex-bare and Chrome back. It is research and resolution ONLY: no inbox, no health
+   check beyond reading `config.md` for a Facebook hold (a hold means it researches
+   nothing), no drafts, no `notes.json`, no batch, nothing sent. Every owner it verifies is
+   written to `pipeline.csv` at `FOUND` the moment it is verified (Step 6), with the profile
+   URL and `verified YYYY-MM-DD HH:MM ET` in `notes`, and it writes
+   `evidence/YYYY-MM-DD/research-block/research-ledger.json` as it goes and
+   `reports/YYYY-MM-DD-research.md` at the end (rows, loads, minutes, verified, held by
+   reason). It stops early once the `FOUND` Facebook rows ready for a message today
+   (verified, not a pending friend request, not a held identity) reach the Facebook number
+   in `config.md`. The 06:00 session drafts those rows through Step 2b of
+   the daily loop without a second research load (a profile verified at 04:30 was seen live
+   today, which is what Step 1 asks for, and the send pass re opens every profile before it
+   types anyway), and spends its own 45 only on the rows still missing. So a day has two
+   research budgets, about 85 minutes before dawn and 45 at 06:00, and one send session;
+   never more.
+   The measured reason, with its method. Pace: the Facebook first sessions read 30 rows in
+   44:27 (09-22 session 2) and 44 rows in 44:38 (09-23). Yield on rows that carried a name
+   (a 2F.0 candidate or a seed `owner_name`): 16 of 83, 19 percent, counting the new rows
+   of 09-22 session 2, 09-23, 09-24 and 09-26 as verified when they drafted or were held
+   only for the seed `size_flag` (Step 5 no longer holds on it); 14 of 89, 16 percent,
+   counting draft outcomes only across all five ledgers of 09-22 to 09-26, 09-22 session 1
+   included. So one 45 minute budget yields 5 to 8 verified owners, and the day's 130
+   research minutes read about 87 to 127 rows and yield about 14 to 25. Twenty is reachable
+   in the faster half of that range, not guaranteed, and the report says where the day
+   landed and why.
    **A Facebook J row gets 5 loads and 6 minutes**, not 4 and 5, because the owner's
    personal profile has to be resolved from nothing (Step 2F) and the opener needs no
-   evidence load at all. Expect 6 to 8 resolved owners inside a 45 minute session, not 10.
-   The Facebook ceiling of 10 will usually not be filled by research, and that is fine:
-   send fewer, never pad, never fall back to the business page.
+   evidence load at all. Expect 5 to 8 verified owners per 45 research minutes on named
+   rows and about 3 on rows with no name (2 of 25 verified, 8 percent). The Facebook
+   number of 20 is filled by both budgets together; when it is not, that is fine: send
+   fewer, never pad, never fall back to the business page.
 3. **Re confirm the seed evidence live, every row, every time.** `prospects.csv` carries
    the hiring post (role and posted date) and the ad (offer, active count, start date),
    pulled the day the tranche was built. It tells you what to look for; it is not the
@@ -72,6 +102,20 @@ session instruction says otherwise.
    matched same name companies in other states. If the first search does not resolve to
    a profile whose headline names the company, hold the row. Never a second or third
    search.
+   **On a Facebook row the one owner search is the Facebook people search, not Google for
+   LinkedIn (2026-09-26).** While `linkedin_daily_cold_ceiling` in `config.md` is 0, a
+   closed LinkedIn profile has no lane (no invitation, and InMail needs Premium credits
+   nobody has written down), so a load spent opening one buys nothing, and `config.md`
+   already says Facebook takes the research budget first. So every row resolves on
+   Facebook first: the name comes from Step 2F.0, the seed `owner_name` or the homepage and
+   About load, the ONE owner search is `First Last City` in Facebook people search (Step
+   2F.3), and the next load is the profile (2F.4). No `"Company" owner linkedin` Google
+   search and no LinkedIn profile load on such a row. LinkedIn gets a row only after
+   Facebook has refused it (2F.5), as that row's last load, or after the Facebook number is
+   filled. Measured on 2026-09-26: nine of the twelve new rows ran `"Company" owner
+   linkedin`, five spent 20 loads and 566 seconds opening LinkedIn profiles that were all
+   closed, one row ever reached Facebook, and none drafted. On 09-23 and 09-24 the Facebook
+   first shape verified 14 owners at 2 to 4 loads each.
 7. **Read pages as text, not pixels.** `get_app_state` (the accessibility tree) is the
    default read for every page. Screenshots are for two moments only: the filled
    invitation or message field right before Send, and the sent confirmation. Both are
@@ -79,7 +123,10 @@ session instruction says otherwise.
 8. **Disqualify before you resolve.** Size, franchise and AI chat are visible on the
    homepage in seconds. Owner resolution costs a search. Do the cheap kill first.
 9. **Never revisit a held or disqualified row in the same tranche.** They are in
-   `pipeline.csv` as DEAD or in the ledger as held. Take the next unseen row.
+   `pipeline.csv` as DEAD or in the ledger as held. Take the next unseen row. The one
+   exception is the recovery list in Step 2b of the daily loop in `SKILL.md` (verified
+   owners a session lost, and rows held only for the seed's `size_flag`), which is
+   rechecked, not researched again.
 10. **Write the ledger as you go.** `evidence/YYYY-MM-DD/session-N/research-ledger.json`
     with one entry per prospect touched: id, seconds, page loads, outcome (draft, held
     with reason, dead with reason). The report's efficiency block is computed from it.
@@ -285,7 +332,13 @@ undated one says "a review on your site" and never invents "Jennifer's review fr
 and a quote flagged `dash_in_quote` contains an em dash, so it is rewritten rather than
 pasted verbatim or the note lint rejects it.
 
-The owner file in detail: `research/owner-candidates-<date>.csv` (first written 2026-09-13, keyed by `prospect_id`)
+The owner files in detail: read EVERY `research/owner-candidates-*.csv`, not only the newest
+or the first (as of 2026-09-26 there are three: `2026-09-13`, 1,397 rows; `2026-09-26`,
+802 rows the first one never read; and `2026-09-26-reread`, 1,068 of the 09-13 rows that had
+no name, read again after a link fix, so for those rows it replaces the 09-13 line;
+`fb-owner-candidates` is not one of them, see below).
+Where a `prospect_id` has a line in more than one, the line from the newest date wins.
+Each file, keyed by `prospect_id`,
 holds names mined offline from company websites, each with `owner_evidence_url` and a
 verbatim `owner_evidence_quote`, plus `owner_confidence` high or medium. A row with a
 candidate costs you a VERIFICATION, not a hunt: open the evidence URL, confirm the sentence
@@ -298,6 +351,24 @@ the row and write both names; and a `medium` candidate is a first name only, so 
 2F.3 to become a person. Measured on the 2026-09-13 seed: rows that already carried a name
 drafted at 29.4 percent against 4.3 percent for rows without one, on identical page loads,
 which is why this step is first.
+
+**The worklist order for the Facebook number follows from that (2026-09-26).** Build it
+in this order and take the rows top down: (1) the recovery list in Step 2b of the daily loop
+in `SKILL.md`; (2) rows with a name, meaning a 2F.0 candidate or a seed `owner_name`, Miami
+first per `config.md`, then higher `review_count`, whatever their tier (a named tier A or C
+row takes its tier's evidence load per Step 1, and demotes to D if the evidence is dead);
+(3) rows the resolver never read, meaning no line in any owner candidates file; (4) only
+when no row of the first three kinds is left in any metro, rows whose line carries a
+`no_owner_reason`, and for those the name hunt starts at the business Facebook page (2F.2),
+because the website is already known to name nobody. Measured, 09-22 to 09-26, new rows
+only: named rows verified an owner on 16 to 19 percent (16 of 83, or 14 of 89 by a stricter
+count; speed default 2 gives both methods), `no_owner_reason` rows on 2 of 25 (8 percent).
+On 2026-09-26 eleven of the twelve new rows were `no_owner_reason` rows (a tier C pass) and
+none drafted. A line in yesterday's report saying where "the next research starts" does not
+override this order. `research/fb-owner-candidates-2026-09-18.csv` is not a new source: its
+750 lines are candidate profile URLs for 77 prospects, and the 19 of them no session has
+touched are already named rows in (2). For those 19, open its candidate URLs (skip any
+marked `INTRO_NO_MATCH`) before the people search; each still needs 2F.4.
 
 **2F.1. The name you already have.** `prospects.csv` fills `owner_name` for many linkedin
 rail rows, and Step 0's homepage load often names him outright. A name in hand turns this
@@ -315,6 +386,18 @@ A profile with no connection to the trade or the metro is not him.
 the cover photo or a recent post has to name THIS business in THIS metro. That check is
 from Step 3.2 and it does not get relaxed for a test arm. Record the exact profile URL in
 the batch entry.
+**Research reads the profile and does not open the chat (2026-09-26).** Record whether
+the profile shows a Message button; do not click it. The Messenger chat is the heaviest
+page action in the session and the one that stalls: 23 of the 33 rows in the 09-22 to 09-26
+ledgers that opened a chat or composer carry a "Loading messages" or "recheck before send"
+caveat anyway, and on 2026-09-26 browser control failed on Facebook four times. The chat is
+opened once, by the send pass, which has to open it to type anyway (SKILL.md Step 3, "The
+send pass types and paces"); a restriction found there makes that entry `PULLED`. Measured
+cost of the move: of the 20 owners whose personal profile research verified from 09-22
+session 2 to 09-24 (18 drafted or held only for the size flag, plus these two), two had a
+chat that refused messages and were held (`fb0e4c8bef`, "You can't message this account";
+`bd932c3957`, "can't access this chat yet"). So expect about one entry in ten to be pulled
+at send time instead of held at research.
 
 **2F.5. No verified personal profile.** The Facebook channel for that row is closed. Try
 LinkedIn, then Instagram if `config.md` has it active (it is inactive as of 2026-09-12, so
@@ -444,12 +527,30 @@ notes:
   clearly dormant. This is a soft signal, not a hard rule; it only matters alongside a
   thin listing and no tech signals.
 
+**The seed's `size_flag` is not a hold (2026-09-26).** `size_flag = large` means the
+business has 801 to 1,500 Google reviews, and the seed filter KEPT those rows on purpose
+(`SEED-REPORT.md`, point 7: review count is a revenue proxy); `small` means 60 to 99. The
+size kill is the positive evidence in the list above, seen on the homepage or the profile.
+A flag alone never holds a row whose owner and channel are verified. On 2026-09-23 three
+fully verified Facebook owners (empty open composers, profiles naming the business) were
+pulled from the batch for `size_flag=large` alone; that is the mistake this line exists to
+stop, and the `learnings.md` line of that day telling the next session to inspect seed size
+warnings first is superseded by it.
+
 ## Step 6, write the row
 
 Add or update the row in `pipeline.csv` with the channel, the profile URL, the owner name,
 the tier, the variant, the side note, stage `FOUND`, and today's date in `last_touch` only
 once the message has actually gone out. Then write the batch entry per
 `templates/batch.md`.
+
+**Write the `FOUND` row the moment the owner and channel are verified, not at the end of
+the session (2026-09-26).** A session that dies after research (Chrome stops answering, a
+Codex usage limit, a context compaction) otherwise takes every verified owner with it. On
+2026-09-24 a session verified seven Facebook owners between 06:11 and 06:33 ET, recorded
+them only in its evidence folder, stopped with no batch and no report, and none of the seven
+reached `pipeline.csv`. Where one agent owns `pipeline.csv` and another researches, the
+owner writes each row as the researcher hands it over, one at a time.
 
 ## When the well runs dry
 

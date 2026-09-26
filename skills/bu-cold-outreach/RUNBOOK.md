@@ -66,6 +66,15 @@ Draft only, explicitly, even in a lane that could send:
 ~/.claude/scripts/peer-ask.sh codex-bare --timeout 1800 -m "Use the bu-cold-outreach skill. Draft today's batch only. Send nothing regardless of the approval mode."
 ```
 
+Research block only, the 03:45 ET pre dawn run (added 2026-09-26). It verifies Facebook
+owners into `pipeline.csv` at `FOUND` for the 06:00 session to draft, and nothing else; the
+rules are `hunting-playbook.md` speed default 2. Fire it with a short timeout and poll for
+`reports/YYYY-MM-DD-research.md`, the same way the 06:00 fire polls for its report:
+
+```bash
+~/.claude/scripts/peer-ask.sh codex-bare --timeout 300 -m "Use the bu-cold-outreach skill. Research block only: verify Facebook owners into pipeline.csv at FOUND for the 06:00 session, per hunting-playbook.md speed default 2. No inbox, no drafts, no batch, send nothing. Stop researching at 05:20 ET."
+```
+
 ### Rules for the caller
 
 - **Always target the exact session name printed by `tmux ls`.** tmux prefix matches

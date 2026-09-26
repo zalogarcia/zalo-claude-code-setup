@@ -365,6 +365,14 @@ printf '%s' "$MESSAGE" | shasum -a 1 | cut -d' ' -f1
 
 ## The daily loop
 
+**A "Research block only" session (the 03:45 run, added 2026-09-26) does not run this loop
+top down.** It reads `config.md` (a Facebook hold or a tripped health check recorded there
+means it researches nothing), `pipeline.csv` and the research ledgers, then runs only the
+research of Step 3 in the worklist order of `hunting-playbook.md` Step 2F.0, recovery list
+first, writing each verified owner at `FOUND` as it goes, and stops at 05:20 ET. It opens no
+inbox, runs no Step 1, 2 or 2b beyond the recovery list, drafts nothing, writes no batch and
+sends nothing. Its rules are `hunting-playbook.md` speed default 2.
+
 ### 0. Read, check, state
 
 Read `config.md`, `pipeline.csv`, `sent-log.csv`, yesterday's `batch-*.md` and yesterday's
@@ -421,6 +429,32 @@ the notes, set the row to `NO_CHANNEL` if that was the only channel, and do not 
 a send. Only escalate it to a warning event if the platform states a reason that is about
 Zalo's account.
 
+**Open Messenger folders by address, not by menu, and budget the stalls (added
+2026-09-26).** That day browser control timed out on Facebook four times: the research tab
+("Debugger unattached", then a homepage load that reset the browser, ending research about
+16 minutes into its 45), and the approved send twice at the same step, before and after a
+full Chrome relaunch, both on clicks in Messenger's settings menu on the way to Message
+requests (`DOM.resolveNode` timed out after 10000 ms; "CDP operation exceeded its deadline
+before command dispatch"). Nothing was sent. So:
+
+1. Message requests and Spam are opened by typing their address into the tab, never through
+   the settings menu. The addresses to try first are
+   `https://www.facebook.com/messages/requests/` and
+   `https://www.facebook.com/messages/filtered/`. Neither is confirmed on this account yet:
+   the first session that lands on each list writes the address that worked into
+   `learnings.md`, and a session that cannot reach one records that folder as unverified
+   and moves on.
+2. A stall is a browser tool timing out or losing its tab (a CDP deadline, "Debugger
+   unattached", a navigation that resets the browser). One stall on a row or a folder gets
+   one retry in a fresh tab, then the row or folder is left and recorded. Three stalls in
+   one session end that session's browser work: every verified row goes into
+   `pipeline.csv` (it should already be there), the ledger and the report are written with
+   the stall count and times, and the session stops. Never click the same control a third
+   time.
+3. A folder left unverified is a line in the report, not a gate on the send pass. The send
+   pass checks each recipient's own thread before typing, and that is the check the one
+   message rule needs.
+
 ### 2. Day 7 close out
 
 Date driven from `pipeline.csv`. Walk every `SENT` row and compare `last_touch` to today.
@@ -436,6 +470,32 @@ went out: an approval mode batch Zalo did not approve, a row pulled for stale ev
 LinkedIn owner who had to be connection requested first, or a tier B row Zalo created after
 his mystery call. Without this step they sit in `pipeline.csv` forever and Step 3 skips
 them, because Step 3 only takes rows that are not already in the pipeline.
+
+**First, the recovery list (added 2026-09-26).** Before walking the `FOUND` rows, read every
+research ledger under `evidence/` from the last 7 days: each `research-ledger.json`, and
+any `ledger.csv` or `root-research.json` a split session left beside it. Two kinds of row
+come back into today's batch from there, whatever `hunting-playbook.md` speed default 9
+says about held rows:
+
+1. **A verified owner a session lost:** outcome `draft` (any case) and a `prospect_id` that
+   is not in `pipeline.csv`. On 2026-09-24 a session verified seven Facebook owners between
+   06:11 and 06:33 ET, stopped with no batch and no report, and none of them reached the
+   pipeline; they were found only on 2026-09-26.
+2. **A row held ONLY for the seed's `size_flag`**, which is not a hold (`hunting-playbook.md`
+   Step 5, 2026-09-26), when its profile and composer were already verified.
+
+Each costs one load, not a new research pass: open the recorded personal profile, confirm
+the Intro or work field still names the business and a Message button is shown (the chat
+itself is opened by the send pass, `hunting-playbook.md` Step 2F.4), write the row at
+`FOUND` with `recovered from evidence/<path>` in `notes`, and draft it like any first
+touch. A profile that no longer names the business, or shows no Message button, is held
+with that reason. A tier A or C row on the list re confirms its evidence per Step 1 of the
+playbook first. These rows count against today's number like any other.
+
+**`FOUND` rows written by today's research block** (the 03:45 run, `hunting-playbook.md`
+speed default 2) are drafted straight into today's batch: their profile was seen live today,
+so they cost no research load here. The send pass re opens each profile before typing, as it
+does for every row.
 
 For each `FOUND` row:
 
@@ -492,6 +552,12 @@ it. **Order: tier A, then B, then C, then D**,
 the same order everywhere in this skill. Within a tier, prefer rows that already have an
 owner resolved (the linkedin rail), then higher `review_count`. Tier B rows exist only in
 `pipeline.csv`, never in the seed file, so they enter the batch through Step 2b below.
+**For the Facebook number the name comes before the tier (2026-09-26):** work the rows in
+the worklist order of `hunting-playbook.md` Step 2F.0 (recovered rows, then named rows of
+any tier, then rows the owner resolver never read, then `no_owner_reason` rows last). An
+unnamed tier C row is not worked ahead of a named tier D row: on 2026-09-26 a tier C first
+pass spent the session on eleven rows the resolver had already found empty and drafted
+none.
 
 For each row, per `hunting-playbook.md` and inside its speed defaults (4 page loads and 5
 minutes per prospect, 45 minutes of research per session, accessibility text not
@@ -509,10 +575,18 @@ screenshots, one quoted owner search, Indeed never opened):
    a review quote about the phone or the hours gap from the Google Business Profile
    (tier D). Dead or unconfirmable evidence means demote the tier or pull the row; never
    write around a fact that stopped being true.
-3. Resolve the owner with one quoted search for maps rail rows. Ambiguous means hold.
+3. Resolve the owner with one search. Ambiguous means hold. While
+   `linkedin_daily_cold_ceiling` in `config.md` is 0, that one search is the Facebook
+   people search `First Last City`, never `"Company" owner linkedin`
+   (`hunting-playbook.md` speed default 6, 2026-09-26).
 4. Pick the channel: LinkedIn when the owner profile exists, then the owner's PERSONAL
    Facebook profile (never the business page; a page is not a channel, Zalo 2026-09-09),
-   then Instagram.
+   then Instagram. **While `linkedin_daily_cold_ceiling` is 0 the order is Facebook
+   first** (`config.md`: Facebook takes the research budget first): a closed LinkedIn
+   profile has no lane that day, so research does not open LinkedIn profiles until the
+   Facebook number is filled, except as a row's last load after Facebook refused it
+   (Step 2F.5). Research loaded nine LinkedIn profiles 2026-09-23 to 09-26; the eight
+   whose Message button it clicked were all closed.
    **On LinkedIn, check for an open profile before defaulting to the connection request
    (added 2026-09-12).** On most profiles the Message button opens a paid Sales Navigator
    prompt and the send is a connection request with NO note (option A, 2026-09-22), and
@@ -567,7 +641,9 @@ screenshots, one quoted owner search, Indeed never opened):
    there is no note to write, and the one message is drafted in the session that sees the
    accept (Step 2b). Open profile and InMail rows carry the one message now, in the control
    shape, inside the 420 character limit the lint applies to every LinkedIn text.
-6. Append the row to the research ledger: id, seconds, page loads, outcome.
+6. Append the row to the research ledger: id, seconds, page loads, outcome. A verified row
+   also goes into `pipeline.csv` at `FOUND` right then, not at the end of the session
+   (`hunting-playbook.md` Step 6, 2026-09-26: a session that dies keeps what it verified).
 
 Stop researching when every active channel has hit its own number, or at 45 minutes of
 research, whichever comes first, and say which. One 45 minute budget covers the whole
@@ -575,7 +651,12 @@ research session, not 45 minutes per channel. Since 2026-09-12 a day may run two
 a research and resolution session and a send session, each with its own 45 minutes
 (`hunting-playbook.md`, Speed defaults, rule 2); the send session types and paces only, and
 every row it sends was drafted, linted and, on LinkedIn, checked for an open profile in the
-research session. Report the real number per channel.
+research session. Since 2026-09-26 a research block runs before dawn as well (fired 03:45
+ET, researching until 05:20, about 85 minutes, research only, rows written at `FOUND`, same
+rule 2), so the 06:00 session's
+45 minutes are for the rows the block and Step 2b did not already supply. Report the real
+number per channel, and how many of today's Facebook rows came from the block, from the
+recovery list and from this session.
 
 Write `batch-YYYY-MM-DD.md` from `templates/batch.md`, grouped by channel, tier order
 inside each channel. There is no bump section; there are no bumps.
@@ -592,6 +673,15 @@ sees the log as it stands when it runs: two batches drafted the same day can eac
 same prospect and each pass on their own, and it is the re lint after the first one's sends
 are logged that refuses the second (`OPEN-GAPS.md` #6). An entry the re lint refuses is
 `PULLED, already messaged`, never typed.
+
+**The send pass types and paces; it does not sweep inboxes (2026-09-26).** The day's 06:00
+session already read the inboxes (Step 1), so the send pass does not open Message
+requests, Spam or the settings menu again; on 2026-09-26 that repeat sweep is where both
+approved send attempts stalled before a single message was typed. Per entry it opens the
+recorded personal profile, clicks Message, waits for the thread, and checks that thread
+for a prior bubble, a reply or a restriction ("You can't message this account", "can't
+access this chat yet"). Any of those makes the entry `PULLED` with the reason; otherwise it
+types, sends, logs and paces. The stall budget in Step 1 applies to the send pass too.
 
 **Outside approval mode**, send down the list, and after every single send:
 
