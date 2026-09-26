@@ -80,7 +80,8 @@ Always blocked, gated or not:
     changes them in his own terminal.
 Normalised first: fullwidth letters, ideographic and percent encoded dots,
 userinfo (https://u@facebook.com), quote splicing, line continuations, variables
-assigned in the same command, aliases, `cd`, bash -c / eval one level down, a
+assigned in the same command, aliases, `cd`, bash -c / eval one level down, every
+$(...) and `...` body outside single quotes (X="$(curl ...)" is a load), a
 quoted command or a fetch tail handed to any other program (docker run, ssh, su,
 arch, script), wrappers with their value options (env -S, nohup, nice -n,
 timeout -s, npx, xargs...), a redirector followed with -L (google.com/url?q=<a
@@ -224,7 +225,11 @@ NAV_CALL_RE = re.compile(
     r"|window\.open\s*\(|\bfetch\s*\(|navigate\s*\(|newPage|XMLHttpRequest|\.click\s*\("
     r"|\.src\s*=(?!=)|setContent\s*\(|setAttribute\s*\(\s*['\"](?:src|href|action)['\"]"
     r"|innerHTML\s*=|outerHTML\s*=|insertAdjacentHTML|document\.write"
-    r"|\.submit\s*\(|sendBeacon|importScripts|\.reload\s*\(", re.IGNORECASE)
+    r"|\.submit\s*\(|sendBeacon|importScripts|\.reload\s*\("
+    # a URL set through a property bag, srcset, a prefetch link or a dynamic import
+    r"|createElement\s*\([^)]*\)\s*,\s*\{[^}]*\b(?:src|href|srcset|data)\s*:"
+    r"|\.srcset\s*=|\bimport\s*\(\s*['\"`]|rel\s*[:=]\s*['\"](?:prefetch|preload|prerender)",
+    re.IGNORECASE)
 # One liners: a fetch primitive, or anything that spawns a process or opens a URL
 ONELINER_FETCH_RE = re.compile(
     FETCH_CODE_RE.pattern + r"|subprocess|child_process|\bexec\w*\s*\(|\bsystem\s*\(|Popen"
@@ -233,7 +238,10 @@ ONELINER_FETCH_RE = re.compile(
     # HTTP::Tiny, ruby open-uri / Net::HTTP, php file_get_contents, raw sockets
     r"|\brequests\b|\burllib|LWP|HTTP::Tiny|Net::HTTP|IO::Socket|open-uri|URI\.open"
     r"|file_get_contents|curl_init|fsockopen|\bfopen\s*\(|\breadfile\s*\(|\bsocket\b"
-    r"|create_connection|wrap_socket|Invoke-WebRequest", re.IGNORECASE)
+    r"|create_connection|wrap_socket|Invoke-WebRequest"
+    # the re-verifier's: node require('https'), python http.client, dynamic imports
+    r"|require\s*\(\s*['\"](?:node:)?(?:https?|net|tls|undici)['\"]|HTTPS?Connection"
+    r"|from\s+http\s+import|import\s*\(\s*['\"](?:node:)?https?['\"]", re.IGNORECASE)
 SOCIAL_TOOLS = {"instaloader": "instagram", "instagram-scraper": "instagram",
                 "instagram_scraper": "instagram", "snscrape": "x", "twint": "x",
                 "facebook-scraper": "facebook", "facebook_scraper": "facebook",
@@ -821,6 +829,41 @@ def cron_command(text):
                      for line in text.split("\n"))
 
 
+def substitution_bodies(text):
+    """Bodies of $(...) and `...` command substitutions in shell text, outside single
+    quotes (where they are literal). $((...)) is arithmetic, not a command."""
+    out, i, n, sq, dq = [], 0, len(text), False, False
+    while i < n:
+        c = text[i]
+        if c == "\\" and not sq:
+            i += 2
+            continue
+        if c == "'" and not dq:
+            sq = not sq
+        elif c == '"' and not sq:
+            dq = not dq
+        elif not sq and text.startswith("$(", i) and not text.startswith("$((", i):
+            depth, j = 1, i + 2
+            while j < n and depth:
+                if text[j] == "(":
+                    depth += 1
+                elif text[j] == ")":
+                    depth -= 1
+                j += 1
+            out.append(text[i + 2:j - 1])
+            i = j
+            continue
+        elif not sq and c == "`":
+            j = text.find("`", i + 1)
+            if j < 0:
+                break
+            out.append(text[i + 1:j])
+            i = j + 1
+            continue
+        i += 1
+    return [b for b in out if b.strip()]
+
+
 CAT_SUBST_RE = re.compile(r"\s*(?:\$\(\s*(?:cat\s+|<\s*)([^()\s;|&`]+)\s*\)"
                           r"|`\s*cat\s+([^`\s;|&]+)\s*`)\s*")
 
@@ -932,6 +975,25 @@ def analyze(command, ctx, an=None, depth=0, env=None, aliases=None, cwd=None):
     full_text = " ".join(tokens)
     if re.search(r"\{\d+\.\.\d+\}|\bseq\s+\d", stripped):
         an.loop = True
+
+    # Command substitutions run whatever the head of their segment is: X="$(curl FB)",
+    # echo "$(curl FB)" | grep, a loop of them. A quoted "$(...)" is one token to the
+    # tokenizer, so each body is analysed as a command of its own here. Its loads are
+    # never paired with a gate call (verifier, 2026-09-26: the incident shape hid in one)
+    for body in substitution_bodies(stripped):
+        body = substitute(body, env)
+        if depth >= 3:
+            if ctx.socials(body):
+                raise Deny("social host nested more than three substitutions deep")
+            continue
+        sub = analyze(body, ctx, None, depth + 1, env, aliases, cwd)
+        an.loop = an.loop or sub.loop
+        an.blueprint = an.blueprint or sub.blueprint
+        an.social = an.social or sub.social
+        for ld in sub.loads:
+            if ld:
+                ld.detail = ("inside $(...): %s" % ld.detail)[:120]
+                an.loads.append(ld)
 
     segs = split_segments(tokens)
     pending_gate = None
@@ -1151,9 +1213,13 @@ def analyze(command, ctx, an=None, depth=0, env=None, aliases=None, cwd=None):
                 social_t = [t for t in targets if ctx.platform_of(url_host(t))]
                 renderer_t = [t for t in targets if ctx.is_renderer(url_host(t))]
                 variable = [t for t in targets if "$" in t or "`" in t]
+                authorities = [re.sub(r"^[a-z][a-z0-9+.\-]*://", "", t, flags=re.I).split("/")[0]
+                               for t in targets]
                 if (an.loop or ctx.socials(full_text)) and (
                         re.search(r"://[^/\s\"']*(?:\$\(|`)", stripped) or any(
-                            re.search(r"://[^/]*(?:\$\(|`|\$$)", t) for t in targets)):
+                            re.search(r"://[^/]*(?:\$\(|`|\$$)", t) for t in targets) or (
+                            ctx.socials(full_text) and any(
+                                "$" in a or "`" in a for a in authorities))):
                     # https://www.$(printf face)book.com/$s in a loop, or
                     # localhost:$((9000+222))/json/new?<a facebook url>: the host or port
                     # is only known at run time, so which site (or which browser, 9222)
@@ -1228,6 +1294,9 @@ def analyze(command, ctx, an=None, depth=0, env=None, aliases=None, cwd=None):
                 if a.startswith("-"):
                     j += 1
                     continue
+                if head == "deno" and a == "eval" and j + 1 < len(args):
+                    inline = " ".join(args[j + 1:])
+                    break
                 if head in ("deno", "bun") and a in ("run", "x", "exec"):
                     j += 1
                     continue

@@ -818,5 +818,62 @@ gate.acquire(FB, "t", grant=True)
 ok(not run_bash("curl -s \"http://localhost:$((9000+222))/json/new?" + FB + "\"", ctx)[0],
    "9222 by arithmetic is refused even with a grant waiting")
 
+print("I  re-verifier regressions (each was ALLOWED)")
+RR = [
+    ("quoted assignment X=\"$(curl FB)\"", "X=\"$(curl -s " + FB + ")\"", "deny"),
+    ("echo \"$(curl FB)\" | grep", "echo \"$(curl -s " + FB + ")\" | grep -c x", "deny"),
+    ("printf \"$(curl FB)\" > f", "printf '%s' \"$(curl -s " + FB + ")\" > /tmp/o.html", "deny"),
+    ("grep <<< \"$(curl FB)\"", "grep x <<< \"$(curl -s " + FB + ")\"", "deny"),
+    ("quoted backticks", "X=\"`curl -s " + FB + "`\"", "deny"),
+    ("a loop of quoted substitutions", "for u in a b c; do H=\"$(curl -s "
+     "https://www.facebook.com/$u)\"; echo ${#H}; done", "deny"),
+    ("a literal $(...) in single quotes (not run)", "git commit -m 'never $(curl -s " + FB
+     + ")'", "allow"),
+    ("node require https", "node -e \"require('https').get('" + FB + "', r => r.resume())\"",
+     "deny"),
+    ("node:https alias", "node -e \"const h=require('node:https'); h.get('" + FB + "')\"",
+     "deny"),
+    ("deno eval fetch", "deno eval \"await fetch('" + FB + "')\"", "deny"),
+    ("python http.client", "python3 -c \"from http import client; client.HTTPSConnection("
+     "'www.facebook.com').request('GET','/x')\"", "deny"),
+    ("9222 by $(echo), no scheme", "curl -s \"localhost:$(echo 9222)/json/new?" + FB + "\"",
+     "deny"),
+    ("9222 by P=$(echo), no scheme", "P=$(echo 9222); curl -s \"localhost:$P/json/new?" + FB
+     + "\"", "deny"),
+]
+for label, cmd, want in RR:
+    allowed, msg = run_bash(cmd)
+    got = "allow" if allowed else "deny"
+    ok(got == want, "%s -> %s" % (label, want), "(got %s) %s" % (got, msg[:200]))
+for label, cmd in (("$(echo 9222) with a grant", "curl -s \"localhost:$(echo 9222)/json/new?"
+                    + FB + "\""), ("P=$(echo 9222) with a grant", "P=$(echo 9222); curl -s "
+                                   "\"localhost:$P/json/new?" + FB + "\"")):
+    ctx, gate, clk, d = fresh_ctx()
+    gate.acquire(FB, "t", grant=True)
+    ok(not run_bash(cmd, ctx)[0], "%s is refused" % label)
+LOOPED = ("() => { for (let i = 0; i < 50; i++) document.body.appendChild(Object.assign("
+          "document.createElement('iframe'), {src: 'https://www.facebook.com/p' + i})); }")
+ONCE = ("() => document.body.appendChild(Object.assign(document.createElement('iframe'), "
+        "{src: '" + FB + "'}))")
+for label, code, want_allowed, want_slot in (
+        ("Object.assign iframe {src} in a loop", LOOPED, False, False),
+        ("Object.assign iframe {src} once", ONCE, True, True),
+        ("srcset", "() => { const i = new Image(); i.srcset = '" + FB + "'; }", True, True),
+        ("dynamic import", "() => import('https://www.facebook.com/x.js')", True, True),
+        ("prefetch link", "() => document.head.appendChild(Object.assign(document."
+         "createElement('link'), {rel: 'prefetch', href: '" + FB + "'}))", True, True),
+        ("reading links off a page (not a load)", "() => [...document.links].filter(a => "
+         "a.href.includes('facebook.com')).map(a => ({href: a.href}))", True, False)):
+    ctx, gate, clk, d = fresh_ctx()
+    allowed = hk.decide({"tool_name": "mcp__playwright__browser_evaluate", "tool_input": {
+        "function": code}}, ctx)[0]
+    ok(allowed == want_allowed and os.path.exists(gate.ledger_path) == want_slot,
+       "page code: %s -> %s, slot %s" % (label, "allow" if want_allowed else "deny",
+                                          want_slot),
+       "got allowed=%s slot=%s" % (allowed, os.path.exists(gate.ledger_path)))
+stdin_case("real hook: a loop of quoted substitutions is blocked", {
+    "tool_name": "Bash", "tool_input": {"command": "for u in a b c; do H=\"$(curl -s "
+                                        "https://www.facebook.com/$u)\"; done"}, "cwd": T}, 2)
+
 print("\n%d passed, %d failed" % (PASS, FAIL))
 sys.exit(1 if FAIL else 0)
