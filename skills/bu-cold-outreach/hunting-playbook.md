@@ -7,6 +7,25 @@ resolving the owner and the DM handle, and grabbing one extra true detail.
 
 ## Speed defaults, measured, not optional
 
+<!-- SOCIAL PACING GATE (Zalo, 2026-09-26): begin. Same rule as SKILL.md "Sending rules". -->
+**Rule 0, above every default below: the social pacing gate.** Before opening ANY page on
+facebook.com, messenger.com, instagram.com, linkedin.com, x.com, twitter.com, tiktok.com or
+threads (profile, business page, search, About tab, Messenger, Ad Library, a reload, a click
+that changes the address bar), run
+`python3 ~/.claude/scripts/social-gate.py acquire --actor astra --url "<the url about to open>"`.
+Exit 0: open that one page. Exit 3: run the same command again (it waits up to about 100
+seconds a call; a long gap takes several calls). Exit 4, 5 or 2: stop opening pages on that platform for the rest of the session and
+write `social pacing gate refused: <its line>` in the report. Gate waits do NOT count against
+a row's 5 minute budget; the load count does. Business websites and Google searches need no
+gate call. Why: on 2026-09-26 a worker loaded about 631 Facebook profiles from this Mac in one
+afternoon, and Zalo: "we cannot have hundreds of stuff, you know, pages and traffic from
+social media, as we might get banned easily because it's not human-like." What it costs: the
+gate averages about 22 loads an hour per platform (at least 45 s apart, at most 40 an hour
+and 150 a day), so a research session reads fewer Facebook rows than the 09-22 to 09-24
+sessions did (42 to 51 Facebook loads in their busiest hour, measured from Chrome History).
+Report the real row count; do not speed up anything else to make up for it.
+<!-- SOCIAL PACING GATE: end -->
+
 These are the defaults from the two sessions on 2026-09-08. Session 1 ran the long
 procedure: 46 minutes for 4 drafts, native screenshots failing and shell captures
 replacing them, ten searches for one owner name. Session 2 ran the rules below: 6 drafts

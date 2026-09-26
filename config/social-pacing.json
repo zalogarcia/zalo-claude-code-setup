@@ -1,0 +1,80 @@
+{
+  "_comment": [
+    "OWNER OWNED. The pacing budget for social media page loads from this Mac, shared by",
+    "every job (Jev, Astra, Claude workers, scripts). Read fresh on every call by",
+    "~/.claude/scripts/social-gate.py, ~/.claude/hooks/social-pace-guard.py and",
+    "~/.claude/scripts/social-load-audit.py. There is no env or flag override: changing a",
+    "number is an edit to this file, the same doctrine as peer-refresh-allow.json.",
+    "local  = anything that leaves from this Mac's IP: any browser, curl, Playwright, CDP.",
+    "remote = a renderer that fetches from its own IP (Cloudflare Browser Rendering and the",
+    "hosts in remote_renderers). Looser, still logged, still capped.",
+    "Every budget is PER PLATFORM. per_hour is a rolling 60 minutes, per_day is the local",
+    "calendar day in the Mac's system zone (/etc/localtime, never the TZ variable; an optional",
+    "day_zone key pins another). per_hour 0 means no hourly cap. min_gap_s is the floor of the gap; the",
+    "gap itself is drawn from the governor model named in gap_model, scaled so its floor",
+    "lands on min_gap_s (see social-gate.py). Proposed by M on 2026-09-26 for Zalo.",
+    "Only Zalo edits this file and the state files, in his own terminal: the hook refuses",
+    "agent writes to them (a deleted ledger would reset every cap)."
+  ],
+  "platforms": {
+    "facebook": [
+      "facebook.com",
+      "fb.com",
+      "fb.me",
+      "fb.watch",
+      "m.me",
+      "messenger.com"
+    ],
+    "instagram": ["instagram.com", "instagr.am", "ig.me"],
+    "linkedin": ["linkedin.com", "lnkd.in"],
+    "x": ["x.com", "twitter.com"],
+    "tiktok": ["tiktok.com"],
+    "threads": ["threads.net", "threads.com"]
+  },
+  "not_page_hosts": {
+    "_comment": "Authenticated platform APIs, not page loads: the BU ads check (schedule #71) and the Delta Agents Meta and WhatsApp providers call graph.facebook.com with a token. They are rate limited by the platform's API, not read as browsing. Remove a host here to pace it like a page.",
+    "hosts": [
+      "graph.facebook.com",
+      "graph-video.facebook.com",
+      "rupload.facebook.com",
+      "graph.instagram.com",
+      "api.instagram.com",
+      "graph.threads.net",
+      "api.linkedin.com",
+      "api.x.com",
+      "api.twitter.com",
+      "upload.twitter.com",
+      "open.tiktokapis.com",
+      "business-api.tiktok.com",
+      "open-api.tiktok.com"
+    ]
+  },
+  "routes": {
+    "local": { "min_gap_s": 45, "per_hour": 40, "per_day": 150 },
+    "remote": { "min_gap_s": 8, "per_hour": 0, "per_day": 300 }
+  },
+  "max_wait_s": 100,
+  "grant_ttl_s": 120,
+  "gap_model": "~/dev/bu-cold-outreach/tools/outreach-governor/governor.py",
+  "blueprint": {
+    "_comment": "The GoHighLevel browser. It NEVER loads a social host, gated or not.",
+    "port": 9222,
+    "profile_dir": "~/.blueprint-chrome-profile"
+  },
+  "remote_renderers": [
+    "api.cloudflare.com",
+    "r.jina.ai",
+    "api.firecrawl.dev",
+    "chrome.browserless.io",
+    "production-sfo.browserless.io",
+    "app.scrapingbee.com",
+    "api.scrapingbee.com",
+    "api.zenrows.com",
+    "api.scraperapi.com",
+    "api.apify.com"
+  ],
+  "audit": {
+    "chrome_user_data": "~/Library/Application Support/Google/Chrome",
+    "playwright_profiles_glob": "~/Library/Caches/ms-playwright/mcp-chrome-*"
+  }
+}

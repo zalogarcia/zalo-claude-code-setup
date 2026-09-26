@@ -818,6 +818,35 @@ prospect's one message. Log exactly what went out and report it.
 Never a burst. Connection requests and friend requests count for pacing even though they
 carry no message.
 
+<!-- SOCIAL PACING GATE (Zalo, 2026-09-26): begin. Same block in hunting-playbook.md. -->
+**The social pacing gate, before EVERY social page (Zalo, 2026-09-26).** On 2026-09-26 a
+worker loaded about 631 Facebook profiles from this Mac in one afternoon, and Zalo's words
+were: "we cannot have hundreds of stuff, you know, pages and traffic from social media, as we
+might get banned easily because it's not human-like." So one budget now covers every job on
+this Mac, and Astra spends from it. Before opening ANY page on facebook.com, messenger.com,
+instagram.com, linkedin.com, x.com, twitter.com, tiktok.com or threads (a profile, a business
+page, a search, an About tab, Messenger, the Ad Library, a friend request screen, a reload,
+and a click that changes the address bar), run in the shell:
+
+    python3 ~/.claude/scripts/social-gate.py acquire --actor astra --url "<the url about to open>"
+
+- **Exit 0:** open that ONE page now. One call, one page.
+- **Exit 3:** the paced gap has not run yet. Run the same command again; each call waits up
+  to about 100 seconds, and a long gap takes several calls. Do not open the page in between.
+- **Exit 4, 5 or 2** (the hour or the day for that platform is full, or the gate failed):
+  **stop opening pages on that platform for the rest of the session**, finish what does not
+  need a new page, and put its one printed line in the report as
+  `social pacing gate refused: <line>`. Never retry around a refusal, never open the page
+  anyway, never switch to another browser or profile to get past it.
+The gate's waits are drawn from a non uniform model (at least 45 s apart, about 22 loads an
+hour on average per platform, at most 40 an hour and 150 a day). **Time spent waiting on the
+gate does not count against a row's 5 minute budget** in `hunting-playbook.md`; the page
+load count still does. Business websites and Google searches are not social pages and need
+no gate call. Budgets live in `~/.claude/config/social-pacing.json` (Zalo's file); the ledger
+is `~/.claude/state/social-loads.jsonl`, and `social-gate.py status` prints what is left.
+<!-- SOCIAL PACING GATE: end -->
+
+
 **Never a platform automation feature.** No bulk send, no broadcast, no message sequence,
 no saved template feature, no third party sender, no browser extension. Type it and send
 it, one at a time, like a person.

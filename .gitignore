@@ -104,3 +104,6 @@ token-canary-evidence/
 queued-briefs/
 a2p-partner/
 cloudflare/
+
+# social pacing gate runtime state (the ledger names hosts and actors; never commit)
+state/social-*
