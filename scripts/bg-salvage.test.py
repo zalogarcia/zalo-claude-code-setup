@@ -18,7 +18,8 @@ import sys
 import tempfile
 import time
 
-SCRIPT = os.path.expanduser("~/.claude/scripts/bg-salvage.py")
+# The script next to this suite, so a worktree tests its own copy, not the live one.
+SCRIPT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "bg-salvage.py")
 NOTHING = "Nothing salvageable found"
 SURVIVED = "WORK SURVIVED"
 
@@ -141,6 +142,23 @@ class Layout:
         with open(os.path.join(reports, f"{key}.md"), "w") as f:
             f.write(f"# Background worker report: {key}\n\n- status: failed\n\n## Task\n\n{task_text}\n")
         return log
+
+    @property
+    def run_id(self):
+        """The bridge names a worker's files after its run log's basename."""
+        return os.path.basename(self.log_path)[: -len(".jsonl")]
+
+    def make_draft(self, text, run_id=None, age_s=None):
+        """bg-reports/<runId>.draft.md, the file BG_REPORT_DRAFT points at."""
+        reports = os.path.join(self.bridge, "bg-reports")
+        os.makedirs(reports, exist_ok=True)
+        p = os.path.join(reports, f"{run_id or self.run_id}.draft.md")
+        with open(p, "w") as f:
+            f.write(text)
+        if age_s is not None:
+            t = time.time() - age_s
+            os.utime(p, (t, t))
+        return p
 
     def make_fresh_output(self, name="render-01.png"):
         p = os.path.join(self.out, name)
@@ -374,6 +392,95 @@ def main():
     rc, out, _ = L.run()
     check("11d: a dead worker with a limit event is still flagged",
           "died on a usage/rate limit" in out and "STILL RUNNING" not in out, out[-600:])
+
+    # 12. DRAFT REPORTS (self-audit 2026-09-27, P3): 17 of 80 workers ended
+    # without a final report after a usage wall, 12 of them inside the
+    # verifier. Workers now write bg-reports/<runId>.draft.md before the
+    # verifier, and --report hands that draft back when the final is missing.
+    LIMIT_DEATH = [
+        {"type": "rate_limit_event", "rate_limit_info": {"status": "rejected"}},
+        {"type": "assistant", "message": {"content": [
+            {"type": "text", "text": "You've hit your session limit \u00b7 resets 6:20pm"}]}},
+        {"type": "result", "subtype": "success", "is_error": True,
+         "result": "You've hit your session limit \u00b7 resets 6:20pm"},
+    ]
+    DRAFT = "# Draft report\n\nShipped the handler; tests 12 of 12.\nverifier not run yet.\n"
+
+    L = Layout(brief="# TASK\nShip the handler.", log_text="Dispatching qa-agent now.",
+               extra_records=LIMIT_DEATH)
+    draft = L.make_draft(DRAFT)
+    key = list(json.load(open(os.path.join(L.bridge, "bg-inflight.json"))))[0]
+    rc, out, _ = L.run()
+    verdict = out.split("--- VERDICT ---")[-1]
+    check("12a: the listing names the draft report of a dead worker",
+          "DRAFT REPORT" in out and draft in out, out[-800:])
+    check("12b: a draft of a worker with no final report flips the verdict",
+          SURVIVED in out and NOTHING not in out and f"--report {key}" in verdict, verdict)
+    rc, out, err = L.run("--report", key)
+    written = out.split("wrote ")[1].split(" ")[0] if "wrote " in out else ""
+    body = open(written).read() if written and os.path.exists(written) else ""
+    check("12c: --report writes the draft when the worker has no final report",
+          rc == 0 and DRAFT in body, out + err)
+    check("12d: the written draft is labelled at the top, with its time",
+          body.startswith("DRAFT REPORT: this worker ended without a final report; "
+                          "below is the last draft it wrote (") and "T" in body.splitlines()[0],
+          body[:200])
+    check("12e: the limit message is not passed off as the report",
+          "hit your session limit" not in body, body[:300])
+    if written and os.path.exists(written):
+        os.remove(written)
+
+    # 12f. no run log at all, only the draft: still recoverable.
+    L = Layout(brief="# TASK\nShip the handler.", with_log=False)
+    L.make_draft(DRAFT)
+    key = list(json.load(open(os.path.join(L.bridge, "bg-inflight.json"))))[0]
+    rc, out, err = L.run("--report", key)
+    written = out.split("wrote ")[1].split(" ")[0] if "wrote " in out else ""
+    body = open(written).read() if written and os.path.exists(written) else ""
+    check("12f: a draft with no run log is still written by --report",
+          rc == 0 and body.startswith("DRAFT REPORT") and DRAFT in body, out + err)
+    if written and os.path.exists(written):
+        os.remove(written)
+
+    # 12g. a worker that FINISHED: its final report wins over the draft.
+    FINAL = "FINAL REPORT\n" + ("y" * 300)
+    L = Layout(brief="# TASK\nShip the handler.", log_text=FINAL,
+               extra_records=[{"type": "result", "subtype": "success", "is_error": False,
+                               "result": FINAL}])
+    L.make_draft(DRAFT)
+    key = list(json.load(open(os.path.join(L.bridge, "bg-inflight.json"))))[0]
+    rc, out, err = L.run("--report", key)
+    written = out.split("wrote ")[1].split(" ")[0] if "wrote " in out else ""
+    body = open(written).read() if written and os.path.exists(written) else ""
+    check("12g: a finished worker's --report is its final report, not the draft",
+          rc == 0 and body == FINAL, body[:200])
+    rc, out, _ = L.run()
+    check("12h: the listing says a finished worker's draft is superseded",
+          "DRAFT REPORT" in out and "superseded" in out, out[-600:])
+    if written and os.path.exists(written):
+        os.remove(written)
+
+    # 12i. an EMPTY draft is not a draft.
+    L = Layout(brief="# TASK\nShip the handler.", log_text="Dispatching qa-agent now.",
+               extra_records=LIMIT_DEATH)
+    L.make_draft("")
+    key = list(json.load(open(os.path.join(L.bridge, "bg-inflight.json"))))[0]
+    rc, out, _ = L.run("--report", key)
+    written = out.split("wrote ")[1].split(" ")[0] if "wrote " in out else ""
+    body = open(written).read() if written and os.path.exists(written) else ""
+    check("12i: an empty draft is ignored (the transcript tail is written as before)",
+          rc == 0 and not body.startswith("DRAFT REPORT"), body[:200])
+    if written and os.path.exists(written):
+        os.remove(written)
+
+    # 12j. a LIVE worker's draft is not a relaunch or recovery candidate.
+    L = Layout(brief="# TASK\nBuild the film.", log_text="Rendering.", pid=os.getpid())
+    L.make_draft(DRAFT)
+    key = list(json.load(open(os.path.join(L.bridge, "bg-inflight.json"))))[0]
+    rc, out, _ = L.run()
+    verdict = out.split("--- VERDICT ---")[-1]
+    check("12j: a live worker with a draft stays STILL RUNNING, no --report offered",
+          "STILL RUNNING" in out and f"--report {key}" not in verdict, verdict)
 
     for d in _dirs:
         shutil.rmtree(d, ignore_errors=True)

@@ -11,7 +11,8 @@ testing an earlier autonomous delivery, and those 63 sessions carry 83 of the 89
 post delivery defects: 1.32 real defects per session, found by hand, after a worker had
 already said "done". A worker cannot verify its own work. It has the same context and the
 same blind spot, and it has already decided the thing works. So the verification comes
-from a separate agent with fresh context, dispatched at the end of the run.
+from a separate agent with fresh context, dispatched at the end of the run, once the work
+and a draft of the report are already on disk.
 
 This is already the stated policy in `~/.claude/rules-ref/plan-verification.md` ("don't
 substitute self-critique for fresh-context dispatch") and in the `~/.claude/CLAUDE.md`
@@ -66,10 +67,27 @@ verifier chooses the command itself, from `.claude/VERIFY.md`. See Part B for wh
 ## Part B: Independent verifier (paste into the brief verbatim, slots empty)
 
 ````markdown
-## Independent verifier (the last step of your run, before you write your report)
+## Independent verifier (after your draft report is on disk, before your final report)
 
-Your run ends with ONE dispatch to a fresh context agent, and its verdict goes in your
-report word for word. Pick the agent by surface:
+Your run ends in this order:
+
+1. **Draft report.** Write your report as it stands, the full text you would send, with
+   the `## INDEPENDENT VERIFIER` block below still at its printed defaults, to a file.
+2. **Commit** the work, if this brief lets you commit.
+3. **Verifier.** ONE dispatch to a fresh context agent, described below.
+4. **Final report.** Your final message: the draft brought up to date, with the
+   verifier's verdict pasted into the block word for word.
+
+The draft comes first because the verifier is the most token heavy step of a run: in one
+week, 12 of the 17 workers that lost their whole deliverable to a usage limit died inside
+the verifier dispatch, with the report they had not written yet as its only record. With
+the draft on disk, a limit there costs the verdict, not the work. In a bridge worker the
+draft goes to the path in `$BG_REPORT_DRAFT` (the bridge sets it), `bg-salvage.py
+--report` hands it back labelled as a draft if you die, and a hook
+(`background-lane-guard`) blocks a `qa-agent`, `live-test` or `outcomes-grader` dispatch
+until that file exists, is non-empty and was written during this run.
+
+Pick the verifier by surface:
 
 - A live UI or browser surface (a page renders, a button works, a form submits) goes to
   `live-test`. Its markers are `## UI VERIFIED` / `## UI ISSUES FOUND` / `## BLOCKED`.
@@ -81,7 +99,9 @@ Dispatch them by name and nothing else. Their model pins live in their own front
 (`~/.claude/CLAUDE.md` model policy); re-pinning a model in the prompt overrides the split
 that makes the verifier a different model from the author. Their return contract,
 including what each marker means, is `~/.claude/rules/agent-contracts.md`. Read it before
-you dispatch.
+you dispatch. In a headless lane (every bridge worker) pass `run_in_background: false`:
+the Agent tool's default is a background run, which dies at turn end with its verdict
+undelivered, and the same hook blocks it.
 
 ### The dispatch prompt has exactly three parts
 
@@ -134,14 +154,18 @@ run the thing that would have caught it.
 
 Raw output, including the exit code, for every command it ran, and its own contract
 marker. A verifier that returns "looks correct", "the implementation appears complete" or
-a summary with no command output has not verified anything: re-dispatch it once with the
-instruction above quoted, and if the second return is also bare, record that in the
-`Could not verify because:` slot.
+a summary with no command output has not verified anything: re-dispatch it once (a fresh
+foreground dispatch, as below) with the instruction above quoted, and if the second return
+is also bare, record that in the `Could not verify because:` slot.
 
 ### One re-verify, then report honestly either way
 
-A failing verdict gets ONE fix and ONE re-verify. After that you report what you have,
-failing verdict included. Do not suppress it, do not summarise it away, do not soften it,
+A failing verdict gets ONE fix and ONE re-verify. Update the draft report after the fix,
+then re-verify with a FRESH foreground dispatch of the same agent
+(`run_in_background: false`): the three parts again, plus the prior verdict pasted under
+its own heading. Never `SendMessage` the old verifier: that resumes it asynchronously,
+and in a headless lane it dies at turn end with its answer undelivered. After the
+re-verify you report what you have, failing verdict included. Do not suppress it, do not summarise it away, do not soften it,
 do not re-run the verifier hoping for a different answer. A delivery that lands labelled
 broken is worth more than one that lands labelled done and is found broken by hand a day
 later, which is the 1.32 defects per session this section exists to stop.

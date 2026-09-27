@@ -80,7 +80,10 @@ DEFAULT_MODEL = MODEL_MAP["opus"]
 
 # Claude tools that simply do not exist in Codex.
 PATCH_TOOLS = {"Edit", "Write", "MultiEdit"}
-AGENT_TOOLS = {"Agent", "Task"}
+# SendMessage resumes or steers a Claude subagent; Codex has no equivalent, and
+# the hook wired on it (background-lane-guard, headless warning) belongs to the
+# Agent|Task guards that are deliberately not ported (codex/README.md).
+AGENT_TOOLS = {"Agent", "Task", "SendMessage"}
 
 # Codex rejects nothing here but warns and clamps; keep the numbers sane.
 MAX_HOOK_TIMEOUT = 600

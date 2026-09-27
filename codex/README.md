@@ -87,9 +87,11 @@ adapter is `codex/AGENTS.delta.md`; extend it rather than forking the repo file.
   every spawnable agent is a custom agent whose TOML pins its own model, and
   the guard's own logic exits 0 for custom agent types. Porting it would add a
   hook that can never fire.
-- **`background-lane-guard.py`** on the same matcher. It returns 0 for any
-  tool that is not `Bash`, so that registration is already inert in Claude
-  Code. Its live half, the `Bash` matcher, IS ported.
+- **`background-lane-guard.py`** on the same matcher, and on `SendMessage`.
+  Its Agent/Task rules (foreground dispatch in a headless lane, the draft
+  report before a verifier) and its SendMessage warning are about Claude Code
+  subagents and bridge workers, none of which Codex has; `SendMessage` is in
+  `AGENT_TOOLS` in `codex-sync.py` for that reason. Its `Bash` half IS ported.
 
 ## Known partials (ported, but not full parity)
 

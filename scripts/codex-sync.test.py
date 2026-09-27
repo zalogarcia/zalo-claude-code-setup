@@ -15,7 +15,8 @@ import subprocess
 import sys
 import tempfile
 
-SCRIPT = os.path.expanduser("~/.claude/scripts/codex-sync.py")
+# The script next to this suite, so a worktree tests its own copy, not the live one.
+SCRIPT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "codex-sync.py")
 spec = importlib.util.spec_from_file_location("codex_sync", SCRIPT)
 cs = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(cs)
@@ -325,6 +326,43 @@ def main():
         cs.SKILLS_OUT = saved
     check("64: a command skill whose source still exists is kept",
           os.path.isfile(os.path.join(skills_out, "autopilot", "SKILL.md")))
+
+    # --- SendMessage belongs to the Agent family: never projected ----------
+    # background-lane-guard warns on SendMessage in headless Claude runs
+    # (self-audit 2026-09-27, P2). Codex has no SendMessage, and the Agent|Task
+    # half of that guard is deliberately not ported (codex/README.md).
+    d = workdir()
+    fake_settings = os.path.join(d, "settings.json")
+    fake_hooks = os.path.join(d, "hooks.json")
+    with open(fake_settings, "w") as f:
+        json.dump({"hooks": {"PreToolUse": [
+            {"matcher": "SendMessage", "hooks": [
+                {"type": "command", "command": "python3 /x/background-lane-guard.py", "timeout": 10}]},
+            {"matcher": "Bash|SendMessage", "hooks": [
+                {"type": "command", "command": "python3 /x/combined-guard.py"}]},
+            {"matcher": "Bash", "hooks": [
+                {"type": "command", "command": "python3 /x/background-lane-guard.py"}]},
+        ]}}, f)
+    saved = (cs.SETTINGS, cs.HOOKS_OUT)
+    try:
+        cs.SETTINGS, cs.HOOKS_OUT = fake_settings, fake_hooks
+        s5 = cs.Sync(quiet=True)
+        cs.gen_hooks(s5)
+        with open(fake_hooks) as f:
+            pre = json.load(f)["hooks"].get("PreToolUse", [])
+    finally:
+        cs.SETTINGS, cs.HOOKS_OUT = saved
+    matchers = [e.get("matcher") or "" for e in pre]
+    check("66: SendMessage is in AGENT_TOOLS", "SendMessage" in cs.AGENT_TOOLS)
+    check("67: no projected matcher names SendMessage",
+          not any("SendMessage" in m for m in matchers))
+    check("68: a SendMessage-only entry is reported as not ported",
+          any("SendMessage" in n and "NOT ported" in n for n in s5.notes))
+    check("69: a mixed Bash|SendMessage entry keeps its Bash half",
+          any(m == "Bash" and "combined-guard" in json.dumps(e) for m, e in zip(matchers, pre)))
+    check("70: the guard's plain Bash entry is still projected",
+          any(m == "Bash" and "background-lane-guard" in json.dumps(e)
+              for m, e in zip(matchers, pre)))
 
     # --- the model map is the single point of truth ------------------------
     check("49: fable maps to the flagship at xhigh",

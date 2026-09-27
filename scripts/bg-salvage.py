@@ -30,6 +30,12 @@ came back empty.
   3. WORKER TRANSCRIPT — the run log's final assistant turn. The full report
      survives here even when the 4000-char Telegram handback truncated it, so
      this doubles as the fix for the bg-worker-report-4000-char-cap gap.
+     Plus the DRAFT REPORT (self-audit 2026-09-27, P3): workers write
+     bg-reports/<runId>.draft.md before their verifier runs ($BG_REPORT_DRAFT,
+     enforced by background-lane-guard), because 12 of 17 workers that lost
+     their deliverable to a usage wall died inside the verifier. When a dead
+     worker has no final report, `--report` writes that draft instead,
+     labelled as a draft.
   4. SUBAGENT / WORKFLOW ARTIFACTS — completed workflow results and surviving
      per-agent transcripts.
 
@@ -38,6 +44,8 @@ Usage:
     python3 ~/.claude/scripts/bg-salvage.py --since 600      # last 10 h
     python3 ~/.claude/scripts/bg-salvage.py --dump <runId>   # workflow result -> /tmp
     python3 ~/.claude/scripts/bg-salvage.py --report <lane>  # worker's full report -> /tmp
+                                                             # (its draft, labelled, when
+                                                             # it died without a final one)
 
 Test fixture: python3 ~/.claude/scripts/bg-salvage.test.py
 """
@@ -49,6 +57,7 @@ import re
 import subprocess
 import sys
 import time
+from datetime import datetime
 from pathlib import Path
 
 
@@ -436,6 +445,7 @@ def transcript_findings(worker):
     if not log or not Path(log).is_file():
         return None
     texts, died = [], False
+    has_result, result_error = False, False
     try:
         with open(log, encoding="utf-8", errors="replace") as f:
             for line in f:
@@ -446,8 +456,11 @@ def transcript_findings(worker):
                 except json.JSONDecodeError:
                     continue
                 kind = rec.get("type")
-                if kind == "result" and isinstance(rec.get("result"), str):
-                    texts.append(rec["result"])
+                if kind == "result":
+                    has_result = True
+                    result_error = bool(rec.get("is_error"))
+                    if isinstance(rec.get("result"), str):
+                        texts.append(rec["result"])
                 elif kind == "assistant":
                     msg = rec.get("message") or {}
                     for block in msg.get("content") or []:
@@ -472,7 +485,54 @@ def transcript_findings(worker):
         "limit_signal": died,
         "preview": tail[:600],
         "full": tail,
+        # A final report exists only when the run ENDED cleanly: a closing
+        # result record that is not an error. A limit death ends on an error
+        # result ("You've hit your session limit"), a killed worker on none.
+        "final_ok": has_result and not result_error and bool(tail.strip()),
     }
+
+
+def run_id_of(worker):
+    """The bridge names a worker's files after its run log's basename."""
+    log = worker.get("log")
+    return Path(log).stem if log else worker["key"]
+
+
+def draft_findings(worker):
+    """bg-reports/<runId>.draft.md when it exists as a non-empty file."""
+    for name in dict.fromkeys((run_id_of(worker), worker["key"])):
+        p = BG_REPORTS / f"{name}.draft.md"
+        try:
+            st = p.stat()
+        except OSError:
+            continue
+        if not p.is_file() or st.st_size == 0:
+            continue
+        return {"path": p, "size": st.st_size, "mtime": st.st_mtime}
+    return None
+
+
+def final_report_missing(t):
+    return t is None or not t.get("final_ok")
+
+
+def salvageable_draft(worker, t=None):
+    """The draft, when this dead worker has one and no final report."""
+    if worker.get("alive"):
+        return None
+    d = draft_findings(worker)
+    if d and final_report_missing(t if t is not None else transcript_findings(worker)):
+        return d
+    return None
+
+
+def draft_report_text(d):
+    when = datetime.fromtimestamp(d["mtime"]).astimezone().isoformat(timespec="seconds")
+    body = d["path"].read_text(encoding="utf-8", errors="replace")
+    return (
+        "DRAFT REPORT: this worker ended without a final report; below is the "
+        f"last draft it wrote ({when}).\n\n" + body
+    ), when, len(body)
 
 
 # --------------------------------------------------------------------------
@@ -606,6 +666,14 @@ def main():
         for w in workers:
             if args.report in w["key"] or args.report == w["lane"]:
                 t = transcript_findings(w)
+                d = draft_findings(w)
+                if d and final_report_missing(t):
+                    text, when, chars = draft_report_text(d)
+                    out = Path(f"/tmp/salvage-report-{w['key']}.md")
+                    out.write_text(text)
+                    print(f"wrote {out} (DRAFT report, {chars} chars, last written {when}; "
+                          "the worker ended without a final report)")
+                    return 0
                 if not t:
                     continue
                 out = Path(f"/tmp/salvage-report-{w['key']}.md")
@@ -695,6 +763,17 @@ def main():
         else:
             print("    SOURCE 3 TRANSCRIPT  no assistant output in the run log")
 
+        d = draft_findings(w)
+        if d and final_report_missing(t):
+            found_any = True
+            print(f"    SOURCE 3 DRAFT REPORT  {d['path']}  {d['size']}B  "
+                  f"(last written {human_age(d['mtime'])})")
+            print("      <-- SALVAGEABLE: the worker ended without a final report; "
+                  "this is the last draft it wrote")
+            print(f"      recover with: python3 ~/.claude/scripts/bg-salvage.py --report {w['key']}")
+        elif d:
+            print(f"    SOURCE 3 DRAFT REPORT  {d['path']}  (superseded by the final report above)")
+
     # ---- source 4: workflows + subagents ----------------------------------
     print("\nSOURCE 4 — WORKFLOW RUNS")
     if not runs:
@@ -749,7 +828,10 @@ def main():
         for r in salvageable_runs:
             print(f"  python3 ~/.claude/scripts/bg-salvage.py --dump {r['run_id']}")
         for w in workers:
-            if not w["alive"] and transcript_findings(w):
+            if w["alive"]:
+                continue
+            t = transcript_findings(w)
+            if t or salvageable_draft(w, t):
                 print(f"  python3 ~/.claude/scripts/bg-salvage.py --report {w['key']}")
         print("  git status / git diff in the repos flagged under SOURCE 1")
         print("Relaunch ONLY the remainder.")
