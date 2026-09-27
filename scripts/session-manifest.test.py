@@ -255,7 +255,9 @@ good = dict(bad, strata=[
     {"name": "deep", "population": 40, "drawn": 40, "weight": 1.0, "draw": "census"},
     {"name": "mid", "population": 129, "drawn": 20, "weight": 6.45, "draw": "seeded random"},
     {"name": "light", "population": 129, "drawn": 20, "weight": 6.45, "draw": "seeded random"},
-], bias_statement="STRATIFIED SAMPLE, NOT A CENSUS: 80 of 298. The deep band (the 40 largest) is a census.")
+], bias_statement="STRATIFIED SAMPLE, NOT A CENSUS: 80 of 298. The deep band (the 40 largest) is a census. "
+   "The mid band is a seeded random draw of 20 of 129 at weight 6.45. "
+   "The light band is a seeded random draw of 20 of 129 at weight 6.45.")
 good_sel = ([{"id": "d%d" % i, "band": "deep", "weight": 1.0, "bytes": 1} for i in range(40)]
             + [{"id": "m%d" % i, "band": "mid", "weight": 6.45, "bytes": 1} for i in range(20)]
             + [{"id": "l%d" % i, "band": "light", "weight": 6.45, "bytes": 1} for i in range(20)])
@@ -274,18 +276,35 @@ check("band counts that disagree with drawn are caught",
 tie = dict(good, population=177, selected=56, strata=[
     {"name": "deep", "population": 40, "drawn": 40, "weight": 1.0, "draw": "census"},
     {"name": "light", "population": 137, "drawn": 16, "weight": round(137 / 16, 3), "draw": "seeded random"},
-], bias_statement="STRATIFIED SAMPLE, NOT A CENSUS: 56 of 177.")
+], bias_statement="STRATIFIED SAMPLE, NOT A CENSUS: 56 of 177. "
+   "The light band is a seeded random draw of 16 of 137 at weight 8.562.")
 tie_sel = ([{"id": "d%d" % i, "band": "deep", "weight": 1.0, "bytes": 1} for i in range(40)]
            + [{"id": "l%d" % i, "band": "light", "weight": tie["strata"][1]["weight"], "bytes": 1}
               for i in range(16)])
 check("a half-even rounded weight (137/16 = 8.562) passes", check_sampling(tie, tie_sel) == [],
       json.dumps(check_sampling(tie, tie_sel)))
-tie_up = dict(tie, strata=[tie["strata"][0], dict(tie["strata"][1], weight=8.563)])
+tie_up = dict(tie, strata=[tie["strata"][0], dict(tie["strata"][1], weight=8.563)],
+              bias_statement=tie["bias_statement"].replace("8.562", "8.563"))
 check("the half-up rounding of the same ratio (8.563) passes too",
       check_sampling(tie_up, tie_sel[:40] + [dict(r, weight=8.563) for r in tie_sel[40:]]) == [])
 tie_off = dict(tie, strata=[tie["strata"][0], dict(tie["strata"][1], weight=8.564)])
 check("a weight more than half a unit off the ratio (8.564) is caught",
       any("weight" in e for e in check_sampling(tie_off, tie_sel[:40] + [dict(r, weight=8.564) for r in tie_sel[40:]])))
+
+# QA 2026-09-27 (round 2): the bias statement is checked clause by clause
+# against the strata, not only for the words "is a census".
+def _bias_mut(old, new):
+    return check_sampling(dict(good, bias_statement=good["bias_statement"].replace(old, new)), good_sel)
+check("a statement calling a sampled band 'analysed in full' is caught",
+      any("mid band complete" in e for e in _bias_mut(
+          "The mid band is a seeded random draw of 20 of 129 at weight 6.45.",
+          "The mid band (129 sessions) was analysed in full, every one at weight 1.0.")))
+check("a statement with the wrong weight for a band is caught",
+      any("mid band drew 20 of 129 at weight 1.0" in e for e in _bias_mut("20 of 129 at weight 6.45. The light",
+                                                                           "20 of 129 at weight 1.0. The light")))
+check("a statement that drops a sampled band's clause is caught",
+      any("light band's draw" in e for e in _bias_mut(
+          " The light band is a seeded random draw of 20 of 129 at weight 6.45.", "")))
 
 # QA 2026-09-27 (round 1): at population = cap + 1 the light band is drawn in
 # full; the bias statement must not call it "the N largest" or say it is

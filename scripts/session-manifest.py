@@ -406,9 +406,28 @@ def check_sampling(sampling, selected):
     census_bands = [n for n, st in by_name.items() if st.get("draw") == "census"]
     if re.search(r"\bis a census\b", stripped) and not census_bands:
         errs.append("the bias statement says census but no stratum is one")
-    for n in by_name:
-        if n not in census_bands and re.search(r"\b%s band\b[^.]*?\bis a census\b" % re.escape(str(n)), stripped):
-            errs.append("the bias statement calls the %s band a census" % n)
+    for n, st in by_name.items():
+        band = re.escape(str(n))
+        if n not in census_bands and (
+                re.search(r"\b%s band\b[^.]*?\bis a census\b" % band, stripped)
+                or re.search(r"\bThe %s band \([^)]*\) was analysed in full\b" % band, stripped)):
+            errs.append("the bias statement calls the %s band complete but it drew %s of %s"
+                        % (n, st.get("drawn"), st.get("population")))
+        # A band that must be weighted is described with its own numbers, or
+        # a reader of the header cannot weight it (QA 2026-09-27: a statement
+        # with a wrong weight, or none for the light band, passed).
+        if st.get("draw") == "seeded random":
+            m = re.search(r"\bThe %s band is a seeded random draw of (\d+) of (\d+) at weight ([0-9.]+)" % band,
+                          stripped)
+            if not m:
+                errs.append("the bias statement does not give the %s band's draw and weight" % n)
+            elif (int(m.group(1)) != st.get("drawn") or int(m.group(2)) != st.get("population")
+                  or not isinstance(st.get("weight"), (int, float))
+                  or abs(float(m.group(3).rstrip(".")) - st["weight"]) > WEIGHT_TOLERANCE):
+                errs.append("the bias statement says the %s band drew %s of %s at weight %s, "
+                            "but the stratum says %s of %s at weight %s"
+                            % (n, m.group(1), m.group(2), m.group(3).rstrip("."),
+                               st.get("drawn"), st.get("population"), st.get("weight")))
     return errs
 
 

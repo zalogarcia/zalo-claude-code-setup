@@ -1,6 +1,6 @@
 # fable-insights — Synthesis Protocol
 
-The workflow returns `{facets, stubs, failed, coverage, partial_run, sampling, taxonomy_version, manifest_counts, manifest_path, verification}`; synthesis happens in the ORCHESTRATOR (workflow scripts have no filesystem access). Follow this protocol every run: it encodes what worked in the 2026-07-19 run plus the mechanization bias adopted from the setup design review.
+The workflow returns `{facets, stubs, failed, coverage, partial_run, sampling, sampling_check, field_check, taxonomy_version, manifest_counts, manifest_path, verification}`; synthesis happens in the ORCHESTRATOR (workflow scripts have no filesystem access). Follow this protocol every run: it encodes what worked in the 2026-07-19 run plus the mechanization bias adopted from the setup design review.
 
 ## Artifacts (write all three to `~/.claude/usage-data/`)
 

@@ -113,7 +113,10 @@ other = none of the above. If you reach for this, the detail must say what categ
 // ---- schemas ------------------------------------------------------------------
 const SESSION_ITEM_SCHEMA = {
   type: "object",
-  required: ["id", "path", "transcript_dir", "start", "last_activity", "lines"],
+  // bytes, band and weight are required: without them a facet cannot be
+  // weighted and the sampling check fails the whole run after the 80-agent
+  // wave, while the relay can still retry cheaply (QA 2026-09-27).
+  required: ["id", "path", "transcript_dir", "start", "last_activity", "lines", "bytes", "band", "weight"],
   properties: {
     id: { type: "string" },
     path: { type: "string" },
@@ -541,9 +544,33 @@ function checkSampling(samp, records) {
   if (/\bis a census\b/.test(stripped) && !censusBands.length)
     errs.push("the bias statement says census but no stratum is one");
   for (const n of Object.keys(byName)) {
+    const st = byName[n];
     const esc = String(n).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    if (!censusBands.includes(n) && new RegExp(`\\b${esc} band\\b[^.]*?\\bis a census\\b`).test(stripped))
-      errs.push(`the bias statement calls the ${n} band a census`);
+    if (
+      !censusBands.includes(n) &&
+      (new RegExp(`\\b${esc} band\\b[^.]*?\\bis a census\\b`).test(stripped) ||
+        new RegExp(`\\bThe ${esc} band \\([^)]*\\) was analysed in full\\b`).test(stripped))
+    )
+      errs.push(`the bias statement calls the ${n} band complete but it drew ${st.drawn} of ${st.population}`);
+    // A band that must be weighted is described with its own numbers, or a
+    // reader of the report header cannot weight it (QA 2026-09-27). Same
+    // clause check as the script's check_sampling.
+    if (st.draw === "seeded random") {
+      const m = new RegExp(`\\bThe ${esc} band is a seeded random draw of (\\d+) of (\\d+) at weight ([0-9.]+)`).exec(stripped);
+      if (!m) errs.push(`the bias statement does not give the ${n} band's draw and weight`);
+      else {
+        const w = Number(m[3].replace(/\.+$/, ""));
+        if (
+          Number(m[1]) !== Number(st.drawn) ||
+          Number(m[2]) !== Number(st.population) ||
+          typeof st.weight !== "number" ||
+          Math.abs(w - st.weight) > WEIGHT_TOLERANCE
+        )
+          errs.push(
+            `the bias statement says the ${n} band drew ${m[1]} of ${m[2]} at weight ${m[3].replace(/\.+$/, "")}, but the stratum says ${st.drawn} of ${st.population} at weight ${st.weight}`,
+          );
+      }
+    }
   }
   return errs;
 }
@@ -592,7 +619,7 @@ python3 ${MANIFEST_SCRIPT} --days ${days} --cap ${cap}${excludeSessionId ? ` --e
 
 It scans ~/.claude/projects, computes per-session metadata, classifies substantive vs trivial, clusters machine lanes, draws the stratified sample and writes the full unabridged manifest to disk. It prints ONE line of JSON and takes a few seconds.
 
-STEP 2 - if the command exits non-zero, return the structured output with script_error set to the last 500 characters of stderr and every count set to 0. Do NOT improvise a replacement scan.
+STEP 2 - if the command exits 3, its stderr starts "SAMPLING SELF-CHECK FAILED": the summary file IS written, so do STEP 3 and STEP 4 as normal and set script_error to that stderr line (the workflow needs the sample it describes to report the contradiction). For any other non-zero exit, return the structured output with script_error set to the last 500 characters of stderr and every count set to 0. Do NOT improvise a replacement scan.
 
 STEP 3 - read the summary back:
 
@@ -700,6 +727,13 @@ const scriptCheck =
 const samplingErrors = [
   ...(scriptCheck && scriptCheck.ok === false && Array.isArray(scriptCheck.errors)
     ? scriptCheck.errors.map((e) => `script self-check: ${e}`)
+    : []),
+  // The script exits 3 on a failed self-check; if the relay passed only the
+  // stderr line, that line is still the verdict (QA 2026-09-27: a zeroed relay
+  // with an invented method used to read as an honest sample).
+  ...(/SAMPLING SELF-CHECK FAILED/.test(reconciliation.script_error) &&
+  !(scriptCheck && scriptCheck.ok === false)
+    ? [`script self-check: ${reconciliation.script_error}`]
     : []),
   ...checkSampling(sampling, selected),
 ];
@@ -976,6 +1010,7 @@ const manifest_counts = {
   relay_ok: reconciliation.relay_ok,
   relay_expected: reconciliation.relay_expected,
   relay_received: reconciliation.relay_received,
+  script_error: reconciliation.script_error,
   folded_exclusions: reconciliation.folded_exclusions,
   substantive: Number(manifest.substantive_count) || 0,
   trivial: Number(manifest.trivial_count) || 0,

@@ -348,7 +348,7 @@ console.log("fable-insights.js");
       { name: "mid", population: 5, drawn: 1, weight: 5, draw: "seeded random" },
       { name: "light", population: 4, drawn: 0, weight: null, draw: "not sampled" },
     ],
-    bias_statement: "STRATIFIED SAMPLE, NOT A CENSUS: 2 of 10. The deep band (the 1 largest) is a census.",
+    bias_statement: "STRATIFIED SAMPLE, NOT A CENSUS: 2 of 10. The deep band (the 1 largest) is a census. The mid band is a seeded random draw of 1 of 5 at weight 5.",
   };
   const agentFn = async (prompt, opts) => {
     if (opts.label.startsWith("manifest"))
@@ -471,7 +471,7 @@ console.log("fable-insights.js");
           { name: "deep", population: 1, drawn: 1, weight: 1, draw: "census" },
           { name: "light", population: 137, drawn: 16, weight: w, draw: "seeded random" },
         ],
-        bias_statement: "STRATIFIED SAMPLE, NOT A CENSUS: 17 of 138.",
+        bias_statement: `STRATIFIED SAMPLE, NOT A CENSUS: 17 of 138. The light band is a seeded random draw of 16 of 137 at weight ${w}.`,
       },
     };
   };
@@ -485,6 +485,59 @@ console.log("fable-insights.js");
     const out = await runWorkflow({ agentFn, args: { days: 7 } }).promise;
     check(`weight ${w} for 137/16 is ${honest ? "accepted" : "rejected"}`, out.sampling_check.ok === honest, JSON.stringify(out.sampling_check));
   }
+}
+{
+  // QA 2026-09-27 round 2: the bias statement is checked clause by clause.
+  const base = {
+    method: "stratified", population: 10, selected: 2, coverage_pct: 20, seed: "s",
+    strata: [
+      { name: "deep", population: 1, drawn: 1, weight: 1, draw: "census" },
+      { name: "mid", population: 5, drawn: 1, weight: 5, draw: "seeded random" },
+      { name: "light", population: 4, drawn: 0, weight: null, draw: "not sampled" },
+    ],
+  };
+  const sel = [session("aaaaaaaa-1", { band: "deep", weight: 1, bytes: 9 }), session("bbbbbbbb-2", { band: "mid", weight: 5, bytes: 3 })];
+  const run1 = async (statement) => {
+    const agentFn = async (prompt, opts) => {
+      if (opts.label.startsWith("manifest")) return manifestOf(sel, { substantive_count: 10, sampling: { ...base, bias_statement: statement } });
+      if (opts.label.startsWith("analyze:")) return { ...FACET };
+      return null;
+    };
+    return (await runWorkflow({ agentFn, args: { days: 7 } }).promise).sampling_check;
+  };
+  const head = "STRATIFIED SAMPLE, NOT A CENSUS: 2 of 10. The deep band (the 1 largest) is a census.";
+  let sc = await run1(`${head} The mid band (5 sessions) was analysed in full, every one at weight 1.0.`);
+  check("a sampled band called 'analysed in full' is caught", !sc.ok && sc.errors.some((e) => e.includes("mid band complete")), JSON.stringify(sc));
+  sc = await run1(`${head} The mid band is a seeded random draw of 1 of 5 at weight 1.0.`);
+  check("a wrong weight in the statement is caught", !sc.ok && sc.errors.some((e) => e.includes("at weight 1.0, but")), JSON.stringify(sc));
+  sc = await run1(head);
+  check("a statement that drops a sampled band is caught", !sc.ok && sc.errors.some((e) => e.includes("mid band's draw")), JSON.stringify(sc));
+  sc = await run1(`${head} The mid band is a seeded random draw of 1 of 5 at weight 5. The mid band is seeded random: multiply a count there by its weight before reading it as a week total, and never read a band analysed in full as the week's rate.`);
+  check("the script's own closing sentence is not read as a census claim", sc.ok, JSON.stringify(sc));
+}
+{
+  // QA 2026-09-27 round 2: the script exits 3 on a failed self-check. A relay
+  // that zeroes the counts and invents a method must still fail the check.
+  const agentFn = async (prompt, opts) => {
+    if (opts.label.startsWith("manifest"))
+      return manifestOf([], {
+        substantive_count: 0,
+        candidate_total: 0,
+        accounted_total: 0,
+        script_error: "SAMPLING SELF-CHECK FAILED: the deep stratum is labelled 'census of the band' but drew 40 of 99",
+        sampling: { method: "error", population: 0, selected: 0, strata: [], bias_statement: "" },
+      });
+    if (opts.label === "verify:aggregate")
+      return { trustworthy: true, saturated_fields: [], invented_slugs: [], sampling_honest: true, verdict: "clean" };
+    return null;
+  };
+  const { promise, prompts } = runWorkflow({ agentFn, args: { days: 7 } });
+  const out = await promise;
+  check("a relayed exit-3 fails the sampling check whatever method the relay wrote", out.sampling_check.ok === false && out.sampling_check.errors.some((e) => e.includes("SELF-CHECK FAILED")), JSON.stringify(out.sampling_check));
+  check("the exit-3 run is not honest or trustworthy", out.verification.sampling_honest === false && out.verification.trustworthy === false, JSON.stringify(out.verification));
+  check("the script error is in manifest_counts", String(out.manifest_counts.script_error).includes("SELF-CHECK FAILED"));
+  const m = prompts.find((p) => p.opts.label === "manifest");
+  check("the manifest agent is told to relay the summary on exit 3", m && m.prompt.includes("exits 3") && m.prompt.includes("summary file IS written"));
 }
 {
   // QA 2026-09-27 round 1: a census whose relay lost a record fails the check
