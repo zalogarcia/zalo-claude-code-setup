@@ -208,6 +208,13 @@ def main():
             "\\set ON_ERROR_STOP on\n\\echo '=== fix ==='\nupdate t set a = 1",
         "a write ended by \\g instead of a semicolon": "delete from t \\g",
     }
+    writes.update({
+        # QA 2026-09-27 round 1
+        "\\gexec runs the SQL a query generates": "select 'DELETE FROM t' \\gexec",
+        "schema-qualified setval": "SELECT pg_catalog.setval('s', 1)",
+        "lo_import creates a large object": "SELECT lo_import('/tmp/x')",
+        "net.http_get queues a request row": "SELECT net.http_get('https://example.org')",
+    })
     for label, q in writes.items():
         check(f"sql write: {label}", bool(w(q)), f"{q!r} -> {w(q)!r}")
 
@@ -286,6 +293,45 @@ def main():
         "psql -f a file this command did not write (unknown content)":
             "cat > /tmp/other.sql <<'SQL'\nselect 1;\nSQL\npsql \"$URL\" -f /tmp/migration.sql",
     }
+    # QA 2026-09-27 round 1: remote writes that the first version let through.
+    bash_writes.update({
+        "--db-url from a variable (any name is a URL there)": 'supabase db push --db-url "$PROD_DB"',
+        "--db-url from a short variable": "supabase db push --db-url $TARGET",
+        "--db-url assigned a remote URL in the same command":
+            'PROD_DB=postgresql://postgres:pw@db.abc.supabase.co:5432/postgres; supabase db push --db-url "$PROD_DB"',
+        "supabase db reset --linked=true": "supabase db reset --linked=true",
+        "supabase migration up --linked=true": "supabase migration up --linked=true",
+        "supabase migration up --db-url from a variable": 'supabase migration up --db-url "$PROD"',
+        "--db-url whose host is in the query string":
+            'supabase db push --db-url "postgresql://postgres:pw@/postgres?host=db.abc.supabase.co"',
+        "prisma with DATABASE_URL from a variable": 'DATABASE_URL="$PROD" npx prisma migrate deploy',
+        "prisma with DATABASE_URL=$VAR unquoted": "DATABASE_URL=$PROD_DB npx prisma migrate deploy",
+        "a remote URI with a $PW password": 'psql "postgresql://postgres:$PW@db.abc.supabase.co/postgres" -c "delete from t"',
+        "npm run db:seed": "npm run db:seed",
+        "docker exec psql to a prod-named variable": 'docker exec supabase_db_x psql "$PROD" -c "DELETE FROM users"',
+        "docker exec psql to a URL assigned in the same command":
+            'PROD=postgresql://postgres:pw@db.abc.supabase.co/postgres; docker exec supabase_db_x psql "$PROD" -c "DELETE FROM users"',
+        "docker exec psql with a hostaddr conninfo":
+            'docker exec supabase_db_x psql "hostaddr=34.1.2.3 dbname=postgres user=postgres" -c "DELETE FROM users"',
+        "docker exec -ePGHOST= attached": "docker exec -ePGHOST=db.abc.supabase.co supabase_db_x psql -U postgres -c 'DELETE FROM users'",
+        "docker exec psql -d a name that resolves to a remote URL":
+            'DB=postgresql://postgres:pw@db.abc.supabase.co/postgres; docker exec -i db psql -U postgres -d "$DB" -c "delete from t"',
+        "docker -H ssh:// (a remote daemon)": "docker -H ssh://prod exec db psql -c 'DELETE FROM users'",
+        "docker --context (a remote daemon)": "docker --context prod exec db psql -c 'DELETE FROM users'",
+        "DOCKER_HOST= prefix (a remote daemon)": "DOCKER_HOST=ssh://prod docker exec db psql -c 'DELETE FROM users'",
+        "ssh host psql": "ssh prod psql -c 'DELETE FROM t'",
+        "ssh host with a quoted remote command": "ssh -p 22 prod 'cd /srv && supabase db reset'",
+        "perl alarm wrapper (the rewrite shell-mechanics-guard prescribes)":
+            "perl -e 'alarm shift; exec @ARGV or die \"exec: $!\"' 600 supabase db push",
+        "perl alarm wrapper around npx": "perl -e 'alarm shift; exec @ARGV' 600 npx supabase db push",
+        "nice -n": "nice -n 10 supabase db push",
+        "sudo -u": "sudo -u zalo supabase db push",
+        "caffeinate -i -t": "caffeinate -i -t 3600 supabase db push",
+        "xargs -n": "echo x | xargs -n 1 supabase db push",
+        "npm run db:push": "npm run db:push",
+        "pnpm run migrate:deploy": "pnpm run migrate:deploy",
+        "yarn db:migrate": "yarn db:migrate",
+    })
     for label, c in bash_writes.items():
         check(f"bash write: {label}", bool(b(c)), f"{c!r} -> {b(c)!r}")
 
@@ -316,6 +362,15 @@ def main():
         "psql < a file this command wrote with a read-only heredoc":
             "cat > /tmp/r.sql <<'SQL'\nselect 1;\nSQL\npsql \"$URL\" < /tmp/r.sql",
         "which psql": "which psql && psql --version",
+        "npm run a non-db script": "npm run build && npm run test",
+        "npm run db:status is not a push": "npm run db:status",
+        "npm run lint:migrations is a lint (replay FP)": "npm run lint:migrations",
+        "pnpm run test:migrations": "pnpm run test:migrations",
+        "docker exec psql -d a name built with $$ (replay FP)":
+            'C=supabase_db_x; DB="ob_red_$$"; docker exec -i "$C" psql -U postgres -1 -d "$DB" < "$1"',
+        "perl one-liner that is not a wrapper": "perl -pi -e 's/push/pull/' supabase/config.toml",
+        "nice around a read": "nice -n 10 psql -h localhost -c 'select 1'",
+        "ssh that only reads": "ssh prod 'psql -c \"select 1\"'",
         "empty command": "",
     }
     for label, c in bash_reads.items():
@@ -344,6 +399,14 @@ def main():
             "DATABASE_URL=postgresql://postgres:postgres@localhost:5432/x npx prisma migrate deploy",
         "quoted env assignment, local migration up":
             "SUPABASE_SESSION_POOLER_URL='postgresql://x@127.0.0.1:54322/p' supabase migration up --local",
+        "--db-url assigned a loopback URL in the same command":
+            "L=postgresql://postgres:postgres@127.0.0.1:54322/postgres; supabase db push --db-url \"$L\"",
+        "docker exec psql -d a name assigned in the same command":
+            "DB=qa_rl_1; docker exec -i supabase_db_x psql -U postgres -d $DB -c 'drop table t'",
+        "docker exec -e with a local PGHOST":
+            "docker exec -e PGHOST=localhost db psql -U postgres -c 'delete from t'",
+        "supabase db reset --linked=false": "supabase db reset --linked=false",
+        "perl alarm wrapper around a local reset": "perl -e 'alarm shift; exec @ARGV' 300 supabase db reset --local",
     }
     for label, c in bash_local.items():
         check(f"bash local target passes: {label}", not b(c), f"{c!r} -> {b(c)!r}")

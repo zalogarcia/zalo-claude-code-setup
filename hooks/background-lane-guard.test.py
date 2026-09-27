@@ -277,8 +277,15 @@ case("P2+P3: draft missing AND flag omitted => BLOCK with both reasons, P3 first
      [MISSING, "run_in_background: false"], order=(MISSING, "run_in_background: false"))
 case("P2+P3: draft fresh, flag omitted => BLOCK on P2 only", BLOCK, agent(_OMIT, "qa-agent"),
      worker(FRESH), ["run_in_background: false"])
-case("P3 applies in tmux too (only BG_REPORT_DRAFT decides)", BLOCK, agent(_OMIT, "qa-agent"),
-     worker(MISSING, lane=INTERACTIVE_TMUX), [MISSING])
+# QA 2026-09-27 round 1: the tmux server's GLOBAL environment on this Mac
+# carries LEASH_LANE and CLAUDE_CODE_ENTRYPOINT from the bridge worker that
+# started it, and every pane inherits it. Once the bridge exports
+# BG_REPORT_DRAFT, a server started by a worker would hand a dead worker's
+# draft path to every interactive session. Workers never run in tmux.
+case("P3: skipped in tmux (a draft path inherited from the tmux server)", ALLOW,
+     agent(_OMIT, "qa-agent"), worker(MISSING, lane=INTERACTIVE_TMUX))
+case("P3: skipped in tmux even with LEASH_LANE inherited too", ALLOW,
+     agent(False, "qa-agent"), worker(MISSING, lane=dict(BG, TMUX=TMUX_VAL)))
 
 
 def main():

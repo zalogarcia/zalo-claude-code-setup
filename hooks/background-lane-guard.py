@@ -50,8 +50,10 @@ a fresh foreground Agent with the prior verdict pasted.
 them during the verifier dispatch, the most token heavy step, which the brief
 template placed between the work and its only record. The bridge exports
 $BG_REPORT_DRAFT (the worker's draft report path) and $BG_RUN_STARTED_AT
-(epoch ms). When $BG_REPORT_DRAFT is set and subagent_type is qa-agent,
-live-test or outcomes-grader, the dispatch is BLOCKED unless that file exists,
+(epoch ms). When $BG_REPORT_DRAFT is set, $TMUX is unset (a tmux server's
+global environment can carry a dead worker's path into every pane), and
+subagent_type is qa-agent, live-test or outcomes-grader, the dispatch is
+BLOCKED unless that file exists,
 is non-empty, and was modified during this run (1 s of slack; with no
 parsable start time, exists and non-empty is enough). Skipped inside a
 subagent (payload carries agent_id): the draft is the worker's own report and
@@ -202,6 +204,12 @@ def _parse_started_s(raw):
 def _draft_rule(payload, tool_input, env, stat_fn=os.stat):
     draft = env.get("BG_REPORT_DRAFT")
     if not draft:
+        return None
+    if env.get("TMUX"):
+        # Bridge workers never run in tmux, but the tmux server's global
+        # environment keeps whatever the process that started it had (on this
+        # Mac it carries LEASH_LANE from a worker), so a draft path seen here
+        # is a dead worker's, not this session's (QA 2026-09-27).
         return None
     sub = tool_input.get("subagent_type")
     if not isinstance(sub, str) or sub.strip().lower() not in VERIFIER_TYPES:

@@ -266,6 +266,14 @@ ALLOW_CASES = [
     ("env prefix, not a shell variable", 'VAR="a b" env; for x in $VAR; do echo; done'),
     ("reassigned to an array before the loop", 'V="a b"; V=(a b); for x in $V; do echo; done'),
     ("one-line substitution (| head -1)", "F=$(ls -t /tmp/*.log | head -1); for f in $F; do echo $f; done"),
+    # QA 2026-09-27 round 1: false blocks found in the replay
+    ("several single-value vars in one list (replay FP)",
+     "IPH=$(cat /tmp/a.id); IPD=$(cat /tmp/b.id); for S in $IPH $IPD; do echo $S; done"),
+    ("one-word substitution: date", "START=$(date +%s); for t in $START; do echo $t; done"),
+    ("one-word substitution: git rev-parse", "SHA=$(git rev-parse HEAD); for s in $SHA; do git show --stat $s; done"),
+    ("one-word substitution: cat of an .id file", "ID=$(cat /tmp/sim.id); for d in $ID; do echo $d; done"),
+    ("one-word substitution: basename", 'B=$(basename "$f"); for x in $B; do echo $x; done'),
+    ("=[ is literal in zsh", "echo =["),
     # --- 6. sed N,+M: BSD sed on this Mac ACCEPTS it (probed 2026-09-27) ---------------
     ("sed -n N,+Mp works on macOS 26 sed", "sed -n '10,+5p' /tmp/x"),
     ("sed -n with a computed start", "sed -n \"$(grep -n foo /tmp/x | head -1 | cut -d: -f1),+30p\" /tmp/x"),
@@ -326,6 +334,24 @@ def _check_messages(passed, failed):
         else:
             failed += 1
             print(f"FAIL | message for {shape}: missing {missing}, dash={bad_dash}")
+    return passed, failed
+
+
+def _check_perf(passed, failed):
+    """QA 2026-09-27 round 1: 20,000 `setopt` words took 63 s (a lazy regex
+    scanned to the end of the line from every one). Bounded now."""
+    import time
+    for label, cmd in (("20k setopt words then a glob option", "setopt " * 20000 + " --x=*"),
+                       ("20k set -o words", "set -o " * 20000 + " --x=*")):
+        t = time.perf_counter()
+        smg.find_blocks(cmd)
+        dt = time.perf_counter() - t
+        if dt < 2.0:
+            passed += 1
+            print(f"PASS | perf: {label} in {dt:.2f}s")
+        else:
+            failed += 1
+            print(f"FAIL | perf: {label} took {dt:.2f}s")
     return passed, failed
 
 
@@ -428,6 +454,7 @@ def main():
 
     passed, failed = _check_pure(passed, failed)
     passed, failed = _check_messages(passed, failed)
+    passed, failed = _check_perf(passed, failed)
     passed, failed = _check_fuzz(passed, failed)
 
     # --- MALFORMED input: must exit 0 and stay silent -------------------------

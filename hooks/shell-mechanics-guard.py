@@ -188,15 +188,26 @@ _TIMEOUT_GUARDED_RE = re.compile(
 _ONE_LINE_SUBST_RE = re.compile(
     r"\|\s*(?:(?:head|tail)\s+-(?:n\s*)?1|wc\s+-[lcwm])\s*\)\s*\"?\Z"
 )
+# a command substitution whose whole output is one word by construction
+# (QA 2026-09-27 replay: `START=$(date +%s)`, `SHA=$(git rev-parse HEAD)`,
+# `IPH=$(cat /tmp/verify-sim-iphone.id)` were blocked and would have worked)
+_ONE_WORD_SUBST_RE = re.compile(
+    r"\$\(\s*(?:date|pwd|basename|dirname|mktemp|uuidgen|whoami|hostname|uname"
+    r"|id\s+-[ug]|git\s+rev-parse|git\s+branch\s+--show-current|git\s+rev-list\s+--count"
+    r"|cat\s+[^\s|;&()`]+\.(?:id|pid|sha))(?![\w.-])[^|;&()`]*\)\s*\"?\Z"
+)
+# The option lists are bounded ({0,300}): an unbounded lazy span re-scanned the
+# rest of the line from every `setopt`, and 20,000 of them took 63 s (QA
+# 2026-09-27). No real setopt line is longer.
 _NOMATCH_OFF_RE = re.compile(
-    r"\b(?:setopt\s+[^;\n&|]*?\b(?:no_?nomatch|null_?glob|csh_?null_?glob)\b"
+    r"\b(?:setopt\s+[^;\n&|]{0,300}?\b(?:no_?nomatch|null_?glob|csh_?null_?glob)\b"
     r"|unsetopt\s+[^;\n&|]*?\bno_?match\b"
     r"|set\s+\+o\s+no_?match\b"
     r"|emulate\s+(?:-\w+\s+)*(?:sh|ksh|bash)\b)",
     re.I,
 )
 _WORDSPLIT_ON_RE = re.compile(
-    r"\b(?:setopt\s+[^;\n&|]*?\bsh_?word_?split\b|set\s+-o\s+sh_?word_?split\b"
+    r"\b(?:setopt\s+[^;\n&|]{0,300}?\bsh_?word_?split\b|set\s+-o\s+sh_?word_?split\b"
     r"|emulate\s+(?:-\w+\s+)*(?:sh|ksh|bash)\b)",
     re.I,
 )
@@ -736,7 +747,8 @@ def _equals_bad(p):
     if r == "=":
         return True
     # `=name` / `=/path` / `=$var` may resolve to a real command: fail open.
-    return not (r.isalnum() or r in "_./" or r == _Q or r == _X)
+    # `=[` is left literal by zsh (probed 2026-09-27).
+    return not (r.isalnum() or r in "_./[" or r == _Q or r == _X)
 
 
 def _installed(name):
@@ -761,7 +773,9 @@ def _classify_value(word):
         return "other"  # `+=`: appends, kind unknown
     value = word.val[m.end():]
     if word.subst:
-        return "single" if _ONE_LINE_SUBST_RE.search(word.raw) else "multi"
+        if _ONE_LINE_SUBST_RE.search(word.raw) or _ONE_WORD_SUBST_RE.search(word.raw):
+            return "single"
+        return "multi"
     if any(ch in value for ch in " \t\n"):
         return "multi"
     return "single"
@@ -832,8 +846,12 @@ def _analyse(command, lx):
                         kinds[w.plain] = "other"
             elif cmd == "for" and len(words) > first + 2 and words[first + 2].plain == "in":
                 var = words[first + 1].plain
-                if "for_scalar" not in hits and not wordsplit_on:
-                    for w in words[first + 3:]:
+                items = [w for w in words[first + 3:] if w.plain != "do"]
+                # Two or more items (`for S in $IPH $IPD`) is an enumeration of
+                # one value per variable: the replay's only certain false
+                # blocks had that shape (QA 2026-09-27).
+                if "for_scalar" not in hits and not wordsplit_on and len(items) == 1:
+                    for w in items:
                         m = _PARAM_WORD_RE.match(w.raw)
                         if not m:
                             continue
@@ -927,10 +945,12 @@ def _shape_message(shape, ev):
         var, name, raw = ev
         return (
             "[for_scalar] `for %s in %s` loops over `%s`, which this command "
-            "assigned as a multi-word SCALAR. zsh does not word-split unquoted "
-            "scalars (SH_WORD_SPLIT is off), so the loop runs ONCE with the whole "
-            "string.\n"
-            "  Rewrite: `for %s in ${=%s}` (split on whitespace), make it an array "
+            "assigned a SCALAR that can hold several words (a string with spaces "
+            "or a command's output). zsh does not word-split unquoted scalars "
+            "(SH_WORD_SPLIT is off), so when it holds several words the loop "
+            "runs ONCE with the whole string.\n"
+            "  Rewrite: `for %s in ${=%s}` (split on whitespace; also correct "
+            "when it holds one word, so it is always safe), make it an array "
             "(`%s=(a b c)`, or `%s=(${(f)\"$(cmd)\"})` for lines), or loop over "
             "the command directly: `for %s in $(cmd)`."
             % (var, raw, name, var, name, name, name, var)
