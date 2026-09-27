@@ -344,7 +344,9 @@ def _check_perf(passed, failed):
     for label, cmd in (("20k setopt words then a glob option", "setopt " * 20000 + " --x=*"),
                        ("20k set -o words", "set -o " * 20000 + " --x=*"),
                        ("20k unsetopt words then ==", "unsetopt " * 20000 + " echo =="),
-                       ("20k for-in words", "for x in " * 20000 + "$y")):
+                       ("20k for-in words", "for x in " * 20000 + "$y"),
+                       ("25k --a= with no space", "echo " + "--a=" * 25000),
+                       ("25k --a= then a glob", "echo " + "--a=" * 25000 + "*")):
         t = time.perf_counter()
         smg.find_blocks(cmd)
         dt = time.perf_counter() - t

@@ -165,8 +165,11 @@ _Q = "\x00"  # a quoted or escaped literal character in Word.plain
 _X = "\x01"  # one expansion ($v, ${..}, $(..), `..`, $((..))) in plain/val
 
 # Cheap gate: the lexer only runs when one of these substrings is present.
+# The glob-option branch is anchored to a word start and its run is atomic (a
+# lookahead captured and consumed whole): unanchored, `--x=` repeated 25,000
+# times without a space took 12 s, past the hook timeout (QA 2026-09-27).
 _PREFILTER = re.compile(
-    r"==|(?:^|[\s;&|(`{])=[^\s(]|timeout|--[\w.-]+=\S*[*?]|PIPESTATUS"
+    r"==|(?:^|[\s;&|(`{])=[^\s(]|timeout|(?:^|[\s;&|(`{])--[\w.-]+=(?=([^\s*?]*))\1[*?]|PIPESTATUS"
     r"|\bfor\s+[A-Za-z_]\w*\s+in\b[^;\n]{0,2000}?\$"
 )
 _NAME_RE = re.compile(r"[A-Za-z_]\w*")

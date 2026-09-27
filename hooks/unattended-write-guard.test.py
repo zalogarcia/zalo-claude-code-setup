@@ -406,6 +406,10 @@ def main():
         "sudo --user long flag": "sudo --user postgres psql -h db.abc.supabase.co -c 'delete from t'",
         "script -q FILE cmd": "script -q /dev/null supabase db push",
         "env --chdir long flag": "env --chdir /x supabase db push",
+        "a write chained after a heredoc whose delimiter has a dash (QA hooks round 3)":
+            "git commit -m \"$(cat <<'END-MSG'\nZalo's fix\nEND-MSG\n)\" && supabase db push --linked",
+        "the same with an unquoted dashed delimiter":
+            "git commit -m \"$(cat <<END-MSG\nZalos (fix\nEND-MSG\n)\" && supabase db push --linked",
         "a psql write on the next line after that heredoc":
             "git commit -m \"$(cat <<'EOF'\nZalo's (note\nEOF\n)\"\npsql -h db.abc.supabase.co -c 'delete from t'",
         "an APPENDED heredoc cannot vouch for the file":

@@ -420,7 +420,8 @@ _REDIR = re.compile(r"(\d*)(<<<|<<-|<<|&>>|&>|>>|>&|<&|<>|>\||>|<)")
 _ASSIGN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*(\[[^\]]*\])?\+?=")
 
 
-_HEREDOC_OPEN = re.compile(r"""<<(-?)[ \t]*(['"]?)([A-Za-z_][A-Za-z0-9_]*)\2""")
+# The delimiter is a whole shell word (`'END-MSG'`, `"EOF"`, `END_OF.SQL`).
+_HEREDOC_OPEN = re.compile(r"""<<(-?)[ \t]*(?:'([^'\n]+)'|"([^"\n]+)"|([^\s;&|<>()'"]+))""")
 
 
 def _subst_end(cmd, i):
@@ -448,7 +449,7 @@ def _subst_end(cmd, i):
         if c == "<" and cmd.startswith("<<", j) and not cmd.startswith("<<<", j):
             m = _HEREDOC_OPEN.match(cmd, j)
             if m:
-                pending.append((m.group(1) == "-", m.group(3)))
+                pending.append((m.group(1) == "-", m.group(2) or m.group(3) or m.group(4)))
                 j = m.end()
                 continue
         if c == "#" and cmd[j - 1] in " \t\n;(|&":
