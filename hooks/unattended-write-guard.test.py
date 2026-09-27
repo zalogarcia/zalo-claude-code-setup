@@ -214,6 +214,12 @@ def main():
         "schema-qualified setval": "SELECT pg_catalog.setval('s', 1)",
         "lo_import creates a large object": "SELECT lo_import('/tmp/x')",
         "net.http_get queues a request row": "SELECT net.http_get('https://example.org')",
+        # QA 2026-09-27 hooks round 1: the replay's 15 write functions called from a SELECT
+        "a public write function (set_)": "SELECT public.set_user_plan_service('4137ea16'::uuid, NULL)",
+        "a public ingest function": "SELECT public.sales_challenge_ingest() AS rows_written",
+        "a public sweep function": "select public.sweep_demo_gptlive_calls()",
+        "a public reconcile function": "select public.reconcile_demo_gptlive_recordings()",
+        "an unqualified write function": "select sweep_demo_gptlive_calls()",
     })
     for label, q in writes.items():
         check(f"sql write: {label}", bool(w(q)), f"{q!r} -> {w(q)!r}")
@@ -247,6 +253,11 @@ def main():
         "psql meta-commands around reads": "\\pset pager off\n\\echo 'update t'\nselect 1;\n\\x on\nselect 2",
         "a read ended by \\gset": "select count(*) as n from t \\gset",
         "empty query": "",
+        "builtin set_config is a session setting": "select set_config('search_path', 'public', false)",
+        "jsonb_set is a value function": "select jsonb_set(data, '{a}', '1') from t",
+        "a public read function": "select public.get_tenant_summary('x')",
+        "log() math": "select log(10)",
+        "count and now": "select count(*), now() from t",
     }
     for label, q in reads.items():
         check(f"sql read: {label}", not w(q), f"{q!r} -> {w(q)!r}")
@@ -332,6 +343,40 @@ def main():
         "pnpm run migrate:deploy": "pnpm run migrate:deploy",
         "yarn db:migrate": "yarn db:migrate",
     })
+    # QA 2026-09-27 hooks round 1
+    bash_writes.update({
+        "--db-url from an unquoted $(...)": "supabase db push --db-url $(cat ~/.prod-db-url)",
+        "psql -h from an unquoted $(...) then -c": "psql -h $(cat /tmp/host) -U postgres -c 'delete from users'",
+        "psql -h from backticks then -c": "psql -h `cat /tmp/host` -c 'delete from users'",
+        "a write inside an unquoted $(...)": "echo $(supabase db push)",
+        "a write inside a quoted $(...)": 'echo "done: $(supabase db push)"',
+        "docker run psql to a remote URL (the prescribed route, psql is not installed)":
+            "docker run --rm postgres:16-alpine psql 'postgresql://postgres:pw@db.abcdefgh.supabase.co:5432/postgres' -c 'delete from users'",
+        "docker run -e PGHOST= psql": "docker run --rm -e PGHOST=db.abc.supabase.co postgres:16 psql -U postgres -c 'delete from t'",
+        "docker run --entrypoint psql": "docker run --rm --entrypoint psql postgres:16 -h db.abc.supabase.co -c 'delete from t'",
+        "docker run psql with no host (unknown, not the local container)":
+            "docker run --rm -i postgres:16 psql -U postgres -c 'delete from t'",
+        "psql -c from a variable assigned a write":
+            "SQL='delete from users'; psql -h db.abc.supabase.co -c \"$SQL\"",
+        "psql -c from an unassigned variable": 'psql -h db.abc.supabase.co -c "$SQL"',
+        "psql -c from a command substitution": 'psql -h db.abc.supabase.co -c "$(cat /tmp/fix.sql)"',
+        "gunzip | psql (a restore)": "gunzip -c backup.sql.gz | psql -h db.abc.supabase.co -d postgres",
+        "python | psql": "python3 gen_sql.py | psql -h db.abc.supabase.co",
+        "pg_restore to a remote host": "pg_restore -h db.abc.supabase.co -d postgres --clean dump.custom",
+        "supabase migration down --linked": "supabase migration down --linked",
+        "supabase migration repair (remote history by default)": "supabase migration repair --status applied 20260101000000",
+        "prisma db execute": "npx prisma db execute --file x.sql",
+        "prisma db seed": "npx prisma db seed",
+        "pnpm db:push (run-less)": "pnpm db:push",
+        "supabase with two global value flags": "supabase --workdir /a --profile b db push",
+        "docker exec -e PGHOST (value from the outer env)": "docker exec -e PGHOST db psql -U postgres -c 'delete from t'",
+        "docker exec --env-file": "docker exec --env-file .env.prod db psql -U postgres -c 'delete from t'",
+        "sudo sudo chain": "sudo sudo supabase db push",
+        "an APPENDED heredoc cannot vouch for the file":
+            "cat >> /tmp/q.sql <<'SQL'\nselect 1;\nSQL\npsql -h db.abc.supabase.co -f /tmp/q.sql",
+        "a basename match does not vouch on this Mac":
+            "cat > /tmp/q.sql <<'SQL'\nselect 1;\nSQL\npsql -h db.abc.supabase.co -f ~/migrations/q.sql",
+    })
     for label, c in bash_writes.items():
         check(f"bash write: {label}", bool(b(c)), f"{c!r} -> {b(c)!r}")
 
@@ -371,6 +416,13 @@ def main():
         "perl one-liner that is not a wrapper": "perl -pi -e 's/push/pull/' supabase/config.toml",
         "nice around a read": "nice -n 10 psql -h localhost -c 'select 1'",
         "ssh that only reads": "ssh prod 'psql -c \"select 1\"'",
+        "npm run db:up starts a local container": "npm run db:up",
+        "xargs grep -l psql is a grep": "cat list | xargs grep -l psql",
+        "psql -c with a variable inside the SQL text": 'psql -h db.abc.supabase.co -c "select * from t where id = $ID"',
+        "psql -c from a variable assigned a read": "Q='select 1'; psql -h db.abc.supabase.co -c \"$Q\"",
+        "$(...) that only reads": "echo $(psql -h db.abc.supabase.co -c 'select 1')",
+        "pg_restore --list only reads": "pg_restore --list dump.custom",
+        "docker run of something that is not a db tool": "docker run --rm -v $PWD:/w alpine ls /w",
         "empty command": "",
     }
     for label, c in bash_reads.items():
@@ -403,6 +455,10 @@ def main():
             "L=postgresql://postgres:postgres@127.0.0.1:54322/postgres; supabase db push --db-url \"$L\"",
         "docker exec psql -d a name assigned in the same command":
             "DB=qa_rl_1; docker exec -i supabase_db_x psql -U postgres -d $DB -c 'drop table t'",
+        "docker run psql to host.docker.internal (the Mac)":
+            "docker run --rm postgres:16 psql -h host.docker.internal -p 54322 -U postgres -c 'delete from t'",
+        "pg_restore into the local container": "docker exec -i supabase_db_x pg_restore -U postgres -d scratch < dump.custom",
+        "gunzip | docker exec local psql": "gunzip -c b.sql.gz | docker exec -i supabase_db_x psql -U postgres -d scratch",
         "docker exec -e with a local PGHOST":
             "docker exec -e PGHOST=localhost db psql -U postgres -c 'delete from t'",
         "supabase db reset --linked=false": "supabase db reset --linked=false",
@@ -419,6 +475,26 @@ def main():
             check(f"HOLD_LOCAL_TARGETS=True holds: {label}", bool(b(c)), f"{c!r} -> {b(c)!r}")
     finally:
         m.HOLD_LOCAL_TARGETS = saved
+
+    # QA 2026-09-27 hooks round 1: adversarial inputs stay fast (a hook runs
+    # before every Bash call; the harness gives it 10 s and then fails open).
+    import time
+    slow = {
+        "2,000 sudo words": "sudo " * 2000 + "supabase db push",
+        "5,000 timeout 1 words": "timeout 1 " * 5000 + "supabase db push",
+        "20,000 docker -e flags": "docker exec " + "-e A=1 " * 20000 + "db psql -c 'delete from t'",
+        "deep $(": "echo " + "$(" * 2000 + "x" + ")" * 2000,
+    }
+    for label, c in slow.items():
+        t0 = time.perf_counter()
+        b(c)
+        dt = time.perf_counter() - t0
+        check(f"perf: {label} in {dt:.2f}s (< 2 s)", dt < 2.0)
+
+    # The hold message makes the approval Zalo's alone.
+    code, err = m.decide({"tool_name": "mcp__supabase__apply_migration", "tool_input": {"name": "x"}}, SCHEDULE)
+    check("the hold message says the approval is Zalo's alone",
+          code == 2 and "Only Zalo can approve it" in err and "never pass --allow-write" in err, err)
 
     return finish()
 

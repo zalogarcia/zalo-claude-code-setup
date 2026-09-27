@@ -526,13 +526,16 @@ def salvageable_draft(worker, t=None):
     return None
 
 
-def draft_report_text(d):
+def draft_report_text(d, live=False):
     when = datetime.fromtimestamp(d["mtime"]).astimezone().isoformat(timespec="seconds")
     body = d["path"].read_text(encoding="utf-8", errors="replace")
-    return (
-        "DRAFT REPORT: this worker ended without a final report; below is the "
-        f"last draft it wrote ({when}).\n\n" + body
-    ), when, len(body)
+    if live:
+        head = ("DRAFT SO FAR, worker STILL RUNNING: this is the report it has "
+                f"written so far ({when}), not a final one. Do not relaunch it.")
+    else:
+        head = ("DRAFT REPORT: this worker ended without a final report; below is the "
+                f"last draft it wrote ({when}).")
+    return head + "\n\n" + body, when, len(body)
 
 
 # --------------------------------------------------------------------------
@@ -667,6 +670,17 @@ def main():
             if args.report in w["key"] or args.report == w["lane"]:
                 t = transcript_findings(w)
                 d = draft_findings(w)
+                if d and final_report_missing(t) and w.get("alive"):
+                    # A LIVE worker has not ended: its draft is work in
+                    # progress, never "ended without a final report" (QA
+                    # 2026-09-27; the 09-25 learned mistake was a live
+                    # worker read as dead and a second one sent onto its job).
+                    text, when, chars = draft_report_text(d, live=True)
+                    out = Path(f"/tmp/salvage-report-{w['key']}.md")
+                    out.write_text(text)
+                    print(f"wrote {out} (DRAFT so far, {chars} chars, last written {when}; "
+                          "the worker is STILL RUNNING, do not relaunch it)")
+                    return 0
                 if d and final_report_missing(t):
                     text, when, chars = draft_report_text(d)
                     out = Path(f"/tmp/salvage-report-{w['key']}.md")

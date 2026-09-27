@@ -481,6 +481,16 @@ def main():
     verdict = out.split("--- VERDICT ---")[-1]
     check("12j: a live worker with a draft stays STILL RUNNING, no --report offered",
           "STILL RUNNING" in out and f"--report {key}" not in verdict, verdict)
+    # 12k. QA 2026-09-27: --report on that LIVE worker must not say it ended.
+    rc, out, err = L.run("--report", key)
+    written = out.split("wrote ")[1].split(" ")[0] if "wrote " in out else ""
+    body = open(written).read() if written and os.path.exists(written) else ""
+    check("12k: --report on a live worker labels the draft STILL RUNNING, never ended",
+          rc == 0 and "ended without a final report" not in (body + out)
+          and "STILL RUNNING" in (body.splitlines()[0] if body else "") and DRAFT in body,
+          (out + err + body[:200]))
+    if written and os.path.exists(written):
+        os.remove(written)
 
     for d in _dirs:
         shutil.rmtree(d, ignore_errors=True)

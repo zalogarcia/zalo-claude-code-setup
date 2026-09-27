@@ -342,7 +342,9 @@ def _check_perf(passed, failed):
     scanned to the end of the line from every one). Bounded now."""
     import time
     for label, cmd in (("20k setopt words then a glob option", "setopt " * 20000 + " --x=*"),
-                       ("20k set -o words", "set -o " * 20000 + " --x=*")):
+                       ("20k set -o words", "set -o " * 20000 + " --x=*"),
+                       ("20k unsetopt words then ==", "unsetopt " * 20000 + " echo =="),
+                       ("20k for-in words", "for x in " * 20000 + "$y")):
         t = time.perf_counter()
         smg.find_blocks(cmd)
         dt = time.perf_counter() - t

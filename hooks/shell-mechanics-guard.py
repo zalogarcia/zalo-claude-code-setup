@@ -167,7 +167,7 @@ _X = "\x01"  # one expansion ($v, ${..}, $(..), `..`, $((..))) in plain/val
 # Cheap gate: the lexer only runs when one of these substrings is present.
 _PREFILTER = re.compile(
     r"==|(?:^|[\s;&|(`{])=[^\s(]|timeout|--[\w.-]+=\S*[*?]|PIPESTATUS"
-    r"|\bfor\s+[A-Za-z_]\w*\s+in\b[^;\n]*\$"
+    r"|\bfor\s+[A-Za-z_]\w*\s+in\b[^;\n]{0,2000}?\$"
 )
 _NAME_RE = re.compile(r"[A-Za-z_]\w*")
 _BRACE_NAME_RE = re.compile(r"(?:\([^)]*\))?[#!^=~+]*([A-Za-z_]\w*)")
@@ -201,7 +201,7 @@ _ONE_WORD_SUBST_RE = re.compile(
 # 2026-09-27). No real setopt line is longer.
 _NOMATCH_OFF_RE = re.compile(
     r"\b(?:setopt\s+[^;\n&|]{0,300}?\b(?:no_?nomatch|null_?glob|csh_?null_?glob)\b"
-    r"|unsetopt\s+[^;\n&|]*?\bno_?match\b"
+    r"|unsetopt\s+[^;\n&|]{0,300}?\bno_?match\b"
     r"|set\s+\+o\s+no_?match\b"
     r"|emulate\s+(?:-\w+\s+)*(?:sh|ksh|bash)\b)",
     re.I,

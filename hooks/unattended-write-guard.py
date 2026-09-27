@@ -186,7 +186,9 @@ def strip_sql(sql):
     return "".join(out)
 
 
-_SQL_TOKEN = re.compile(r"\\[A-Za-z_]+|[A-Za-z_][A-Za-z0-9_$]*|[();.]")
+# The comma is a token so an alias before a parenthesised expression
+# (`AS charge_count, (SELECT ...)`) never reads as a call `charge_count(`.
+_SQL_TOKEN = re.compile(r"\\[A-Za-z_]+|[A-Za-z_][A-Za-z0-9_$]*|[();.,]")
 _META_LINE = re.compile(r"\\[A-Za-z_][^\n]*")
 
 WRITE_FIRST = {
@@ -215,6 +217,48 @@ MUTATING_FUNCTIONS = {
 # The unqualified names above also match when schema qualified
 # (`pg_catalog.setval(...)`, found by QA 2026-09-27).
 _UNQUALIFIED_MUTATING = {f for f in MUTATING_FUNCTIONS if "." not in f}
+
+# A project's own functions called from a SELECT: the 60-day replay found 15
+# writes shaped `SELECT public.set_user_plan_service(...)`, `...ingest()`,
+# `...sweep_...()`, `...reconcile_...()` (QA 2026-09-27). A function whose name
+# carries one of these verbs is held: any word of the name when it is schema
+# qualified outside the system schemas, the FIRST word when unqualified (so the
+# builtins jsonb_set, array_remove, ... pass; the few builtins that start with
+# one are listed).
+WRITE_VERBS = {
+    "SET", "INSERT", "UPDATE", "DELETE", "UPSERT", "CREATE", "DROP", "INGEST", "SWEEP",
+    "RECONCILE", "APPLY", "GRANT", "REVOKE", "RESET", "PURGE", "BACKFILL", "SYNC", "MARK",
+    "RECORD", "ENQUEUE", "DEQUEUE", "CLAIM", "ASSIGN", "ARCHIVE", "ROTATE", "REFRESH",
+    "REBUILD", "MIGRATE", "SEED", "IMPORT", "MERGE", "CLEANUP", "PRUNE", "EXPIRE", "CANCEL",
+    "APPROVE", "REJECT", "SEND", "NOTIFY", "BUMP", "INCREMENT", "DECREMENT", "AWARD",
+    "CREDIT", "DEBIT", "CHARGE", "REFUND", "PROVISION", "DEPROVISION", "ENROLL", "UNENROLL",
+    "ATTACH", "DETACH", "LINK", "UNLINK", "ADD", "REMOVE", "SAVE", "STORE", "WRITE", "PUT",
+    "TOUCH", "TRIGGER", "PROCESS", "HANDLE", "RELEASE", "CONSUME", "REGISTER", "UNREGISTER",
+    "SUBSCRIBE", "UNSUBSCRIBE", "TRANSFER", "SETTLE", "RESTORE", "TRUNCATE", "ALTER",
+    "EXECUTE", "RUN", "INVOKE", "DISPATCH", "ACTIVATE", "DEACTIVATE", "ENABLE", "DISABLE",
+    "BLOCK", "UNBLOCK", "BAN", "UNBAN", "CONFIRM", "COMPLETE", "FINALIZE", "FLUSH", "CLEAR",
+    "EVICT", "REPAIR", "FIX", "REASSIGN", "UPGRADE", "DOWNGRADE",
+}
+_SYSTEM_SCHEMAS = {"PG_CATALOG", "INFORMATION_SCHEMA", "EXTENSIONS", "PG_TEMP", "PG_TOAST"}
+_READ_BUILTINS_WITH_VERB = {"SET_CONFIG", "SET_BIT", "SET_BYTE", "SET_MASKLEN", "SETSEED",
+                            "CLOCK_TIMESTAMP"}
+
+
+def _write_verb_function(name):
+    """True when a called function's name says it writes (see WRITE_VERBS)."""
+    schema, dot, fn = name.rpartition(".")
+    if fn in _READ_BUILTINS_WITH_VERB or schema in _SYSTEM_SCHEMAS:
+        return False
+    words = [w for w in fn.split("_") if w]
+    if not words:
+        return False
+    # The verb leads (set_user_plan_service) or closes (sales_challenge_ingest)
+    # a function's name; a verb in the middle is usually a noun
+    # (hourly_send_governor_status). Qualified names get both ends, unqualified
+    # ones the first word only, so builtins like jsonb_set pass.
+    if dot:
+        return words[0] in WRITE_VERBS or words[-1] in WRITE_VERBS
+    return words[0] in WRITE_VERBS
 
 
 def _tokens(stripped):
@@ -250,7 +294,7 @@ def _split_statements(toks):
 def _mutating_call(stmt):
     words = [t for t, _ in stmt]
     for i, t in enumerate(words):
-        if t in ("(", ")", ".", ";"):
+        if t in ("(", ")", ".", ";", ","):
             continue
         name = t
         j = i + 1
@@ -265,6 +309,8 @@ def _mutating_call(stmt):
             name in MUTATING_FUNCTIONS or name.rsplit(".", 1)[-1] in _UNQUALIFIED_MUTATING
         ):
             return f"{name.lower()}() (a side-effecting function)"
+        if j < len(words) and words[j] == "(" and _write_verb_function(name):
+            return f"{name.lower()}() (a function whose name says it writes)"
     return None
 
 
@@ -343,20 +389,82 @@ def sql_write_reason(sql):
 # ===========================================================================
 # Bash
 # ===========================================================================
-_OPS = ("&&", "||", "|&", ";;", ";", "|", "&", "(", ")", "`")
+_OPS = ("&&", "||", "|&", ";;", ";", "|", "&", "(", ")")
 _REDIR = re.compile(r"(\d*)(<<<|<<-|<<|&>>|&>|>>|>&|<&|<>|>\||>|<)")
 _ASSIGN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*(\[[^\]]*\])?\+?=")
 
 
-def _read_word(cmd, i):
+def _subst_end(cmd, i):
+    """Index just past the `$(...)` (or `$((...))`) starting at i, counting
+    parentheses and skipping quoted text; len(cmd) when unterminated."""
+    n = len(cmd)
+    depth, j = 0, i + 1
+    while j < n:
+        c = cmd[j]
+        if c == "\\":
+            j += 2
+            continue
+        if c == "'":
+            k = cmd.find("'", j + 1)
+            j = n if k < 0 else k + 1
+            continue
+        if c == '"':
+            k = j + 1
+            while k < n and cmd[k] != '"':
+                k += 2 if cmd[k] == "\\" else 1
+            j = k + 1
+            continue
+        if c == "(":
+            depth += 1
+        elif c == ")":
+            depth -= 1
+            if depth == 0:
+                return j + 1
+        j += 1
+    return n
+
+
+def _backtick_end(cmd, i):
+    """Index just past the backtick substitution starting at i."""
+    n = len(cmd)
+    j = i + 1
+    while j < n and cmd[j] != "`":
+        j += 2 if cmd[j] == "\\" else 1
+    return min(j + 1, n)
+
+
+def _take_subst(cmd, i, subs):
+    """(raw text, next index) of the substitution at i, recording the command
+    text inside it in `subs` so it is read as a command in its own right."""
+    if cmd[i] == "`":
+        end = _backtick_end(cmd, i)
+        inner = cmd[i + 1:end - 1]
+    else:
+        end = _subst_end(cmd, i)
+        arith = cmd.startswith("$((", i)
+        inner = "" if arith else cmd[i + 2:end - 1]
+    if subs is not None and inner.strip():
+        subs.append(inner)
+    return cmd[i:end], end
+
+
+def _read_word(cmd, i, subs=None):
     """(value, quoted, next_index) for the shell word starting at i. `quoted`
     means the word STARTS with a quote: `"then"` is not a keyword, while
-    `FOO='x'` is still an assignment."""
+    `FOO='x'` is still an assignment. A `$(...)` or backtick substitution is
+    PART of the word (its raw text stays in the value, so a value built from
+    one reads as unknown), and the command inside it goes to `subs` (QA
+    2026-09-27: splitting the command at `$(` let `psql -h $(cat f) -c
+    'delete ...'` orphan its -c)."""
     n = len(cmd)
     buf, quoted = [], False
     while i < n:
         c = cmd[i]
-        if c in " \t\n;&|()<>`":
+        if c == "`" or (c == "$" and i + 1 < n and cmd[i + 1] == "("):
+            raw, i = _take_subst(cmd, i, subs)
+            buf.append(raw)
+            continue
+        if c in " \t\n;&|()<>":
             break
         if c == "\\":
             if i + 1 < n:
@@ -393,21 +501,24 @@ def _read_word(cmd, i):
                         part.append(cmd[j + 1])
                     j += 2
                     continue
+                if cmd[j] == "`" or (cmd[j] == "$" and j + 1 < n and cmd[j + 1] == "("):
+                    raw, j = _take_subst(cmd, j, subs)
+                    part.append(raw)
+                    continue
                 part.append(cmd[j])
                 j += 1
             buf.append("".join(part))
             i = j + 1
             continue
-        if c == "$" and i + 1 < n and cmd[i + 1] == "(":
-            break  # command substitution starts a new command context
         buf.append(c)
         i += 1
     return "".join(buf), quoted, i
 
 
-def _scan(cmd):
+def _scan(cmd, subs=None):
     """Tokens: ("w", value, quoted) | ("op", op) | ("redir", op, target) |
-    ("heredoc", op, body) | ("herestr", op, value)."""
+    ("heredoc", op, body) | ("herestr", op, value). The command text inside
+    every substitution goes to `subs`."""
     toks = []
     pending = []  # (delimiter, strip_tabs, index into toks)
     i, n = 0, len(cmd)
@@ -438,10 +549,6 @@ def _scan(cmd):
             j = cmd.find("\n", i)
             i = n if j < 0 else j
             continue
-        if c == "$" and i + 1 < n and cmd[i + 1] == "(":
-            toks.append(("op", "("))
-            i += 2
-            continue
         m = _REDIR.match(cmd, i)
         if m:
             op = m.group(2)
@@ -451,7 +558,7 @@ def _scan(cmd):
             if op in (">&", "<&") and i < n and (cmd[i].isdigit() or cmd[i] == "-"):
                 i += 1
                 continue
-            word, _, i = _read_word(cmd, i)
+            word, _, i = _read_word(cmd, i, subs)
             if op in ("<<", "<<-"):
                 toks.append(("heredoc", op, ""))
                 pending.append((word, op == "<<-", len(toks) - 1))
@@ -469,7 +576,7 @@ def _scan(cmd):
                 break
         if matched:
             continue
-        word, quoted, j = _read_word(cmd, i)
+        word, quoted, j = _read_word(cmd, i, subs)
         if j == i:  # defensive: never loop in place
             i += 1
             continue
@@ -513,7 +620,7 @@ _TIMEOUT_WRAPPERS = {"timeout", "gtimeout"}
 _RUNNERS = {"npx", "bunx", "pnpx"}
 _TWO_WORD_RUNNERS = {("pnpm", "dlx"), ("pnpm", "exec"), ("yarn", "dlx"), ("yarn", "exec"),
                      ("npm", "exec"), ("bun", "x")}
-_DB_TOOLS = {"supabase", "prisma", "drizzle-kit", "psql"}
+_DB_TOOLS = {"supabase", "prisma", "drizzle-kit", "psql", "pg_restore"}
 _SHELLS = {"bash", "sh", "zsh", "dash"}
 _DOCKER_VALUE_FLAGS = {"-u", "--user", "-e", "--env", "-w", "--workdir", "--env-file",
                        "--detach-keys"}
@@ -525,7 +632,7 @@ _DOCKER_REMOTE_FLAGS = {"-H", "--host", "--context", "-c"}
 _SSH_VALUE_FLAGS = set("bcDEeFIiJLlmOopQRSWw")
 # What a wrapper (nice, sudo, xargs, the perl alarm line ...) may be running:
 # the first of these after it is the real program.
-_WRAPPED_TARGETS = ({"supabase", "prisma", "drizzle-kit", "psql", "docker", "ssh", "eval",
+_WRAPPED_TARGETS = ({"supabase", "prisma", "drizzle-kit", "psql", "pg_restore", "docker", "ssh", "eval",
                      "npm", "pnpm", "yarn", "bun"} | {"npx", "bunx", "pnpx"}
                     | {"bash", "sh", "zsh", "dash"})
 # Package scripts whose NAME says they migrate or push a database: a
@@ -536,7 +643,8 @@ _SCRIPT_READONLY = {"lint", "test", "tests", "check", "status", "list", "ls", "d
                     "gen", "create", "new", "dry", "dryrun", "validate", "verify", "print",
                     "show", "types", "typecheck", "squash", "info", "help", "format", "fmt"}
 _SCRIPT_MIGRATE = {"migrate", "migration", "migrations", "dbpush", "dbreset", "dbmigrate", "dbseed"}
-_SCRIPT_DB_VERBS = {"push", "reset", "deploy", "seed", "apply", "up"}
+# not "up": `db:up` starts a local database container
+_SCRIPT_DB_VERBS = {"push", "reset", "deploy", "seed", "apply"}
 
 
 def _db_script(name):
@@ -624,20 +732,54 @@ def _perl_exec_wrapper(words, i):
     return False
 
 
-def _find_wrapped(words, start, env):
-    """Index of the first unquoted known program at or after `start`,
-    recording NAME=value words on the way into `env`; None when there is
-    none (then the wrapper runs something this hook does not read)."""
-    for k in range(start, len(words)):
+# Flags that take a value, per wrapper, so the value is not read as the program
+# (`sudo -u zalo supabase`, `xargs -I {} psql`). Other flags are switches.
+_WRAPPER_VALUE_FLAGS = {
+    "sudo": {"-u", "-g", "-U", "-C", "-h", "-p", "-r", "-t", "-D", "-R", "-T"},
+    "doas": {"-u", "-C"},
+    "xargs": {"-I", "-J", "-L", "-n", "-P", "-R", "-S", "-s", "-E", "-d", "-a"},
+    "nice": {"-n"},
+    "caffeinate": {"-t", "-w"},
+    "stdbuf": {"-i", "-o", "-e"},
+    "env": {"-u", "-S", "-P", "-C"},
+    "timeout": {"-s", "-k"},
+    "gtimeout": {"-s", "-k"},
+    "ionice": {"-c", "-n", "-p"},
+    "taskpolicy": {"-c", "-b", "-t", "-l"},
+    "arch": {"-arch"},
+    "script": {"-t", "-F"},
+}
+_WRAPPER_WORDS = _FLAGGED_WRAPPERS | _TIMEOUT_WRAPPERS | {"perl"}
+
+
+def _find_wrapped(words, start, env, wrapper=""):
+    """Index of the program a wrapper runs: the first word at or after
+    `start` that is not one of the wrapper's own flags, flag values,
+    durations or NAME=value assignments (recorded into `env`), provided it is
+    a program this hook reads or another wrapper. None otherwise, and then
+    the wrapper runs something this hook does not read (QA 2026-09-27: a
+    forward scan that jumped over words read `xargs grep -l psql` as psql)."""
+    value_flags = _WRAPPER_VALUE_FLAGS.get(wrapper, set())
+    k = start
+    while k < len(words):
         w, q = words[k]
         if q:
+            k += 1  # the perl alarm line's script, a quoted flag value
+            continue
+        if w in value_flags:
+            k += 2
+            continue
+        if w.startswith("-") or w.isdigit() or w == "{}" or re.fullmatch(r"\d+[smhd]?", w):
+            k += 1
             continue
         if _ASSIGN.match(w):
             name, _, val = w.partition("=")
             env[name.rstrip("+")] = val
+            k += 1
             continue
-        if _name(w) in _WRAPPED_TARGETS:
+        if _name(w) in _WRAPPED_TARGETS or w in _WRAPPER_WORDS or w in _PREFIX_WORDS:
             return k
+        return None
     return None
 
 
@@ -667,7 +809,7 @@ def _argv(words):
             # -n 1`, the perl alarm line's script and seconds) are skipped
             # whatever they are (QA 2026-09-27: `nice -n 10 supabase db push`
             # read `10` as the program).
-            j = _find_wrapped(words, i + 1, env)
+            j = _find_wrapped(words, i + 1, env, w)
             if j is not None:
                 i = j
                 continue
@@ -707,48 +849,85 @@ def _argv(words):
     return argv, env
 
 
+# `docker run` options that take a value (the rest are switches).
+_DOCKER_RUN_VALUE_FLAGS = {
+    "-e", "--env", "--env-file", "-v", "--volume", "--name", "--network", "--net", "-p",
+    "--publish", "-w", "--workdir", "-u", "--user", "--entrypoint", "--platform", "-m",
+    "--memory", "--add-host", "--mount", "-l", "--label", "--label-file", "--cpus", "--pull",
+    "--restart", "-h", "--hostname", "--cidfile", "--log-driver", "--log-opt", "--gpus",
+    "--shm-size", "--ulimit", "--tmpfs", "--device", "--dns", "--ipc", "--pid", "--cap-add",
+    "--cap-drop", "--security-opt", "--stop-signal", "--stop-timeout", "--expose", "--link",
+    "--volumes-from", "--runtime", "--memory-swap", "--cpuset-cpus", "--health-cmd",
+    "--detach-keys", "--attach", "-a",
+}
+_UNKNOWN_HOST = "$UNKNOWN_HOST"
+
+
 def _docker_exec_inner(argv, outer_env=None):
-    """(argv, env, remote_daemon) of the command a `docker exec` / `docker
-    compose exec` runs inside the container, or None. `remote_daemon` is True
-    when -H/--host/--context/-c or $DOCKER_HOST/$DOCKER_CONTEXT pick another
-    daemon: that container is not on this Mac (QA 2026-09-27)."""
-    rest = argv[1:]
-    remote = bool((outer_env or {}).get("DOCKER_HOST") or (outer_env or {}).get("DOCKER_CONTEXT"))
-    while rest and rest[0][0].startswith("-"):
-        flag, eq, _ = rest[0][0].partition("=")
-        rest = rest[1:]
+    """(argv, env, remote_daemon, in_container) of the command a `docker
+    exec`, `docker compose exec` or `docker run IMAGE cmd` runs, or None.
+    `remote_daemon` is True when -H/--host/--context/-c or $DOCKER_HOST /
+    $DOCKER_CONTEXT pick another daemon: that container is not on this Mac.
+    `in_container` is False for `docker run`: a fresh container has no
+    database of its own, so its psql reaches whatever host it names (psql is
+    not installed on this Mac and briefs prescribe `docker run ... psql`)."""
+    words = argv
+    n = len(words)
+    k = 1
+    oe = outer_env or {}
+    remote = bool(oe.get("DOCKER_HOST") or oe.get("DOCKER_CONTEXT"))
+    while k < n and words[k][0].startswith("-"):
+        flag, eq, _ = words[k][0].partition("=")
+        k += 1
         if flag in _DOCKER_REMOTE_FLAGS:
             remote = True
-        if flag in _DOCKER_GLOBAL_VALUE_FLAGS and not eq and rest:
-            rest = rest[1:]
-    if rest and rest[0][0] == "compose":
-        rest = rest[1:]
-        while rest and rest[0][0].startswith("-"):
-            rest = rest[1:]
-    if not rest or rest[0][0] != "exec":
+        if flag in _DOCKER_GLOBAL_VALUE_FLAGS and not eq and k < n:
+            k += 1
+    if k < n and words[k][0] == "compose":
+        k += 1
+        while k < n and words[k][0].startswith("-"):
+            k += 1
+    if k >= n or words[k][0] not in ("exec", "run"):
         return None
-    rest = rest[1:]
+    is_run = words[k][0] == "run"
+    value_flags = _DOCKER_RUN_VALUE_FLAGS if is_run else _DOCKER_VALUE_FLAGS
+    k += 1
     env = {}
-    while rest and rest[0][0].startswith("-"):
-        flag, _, inline = rest[0][0].partition("=")
+    entrypoint = None
+    while k < n and words[k][0].startswith("-"):
+        raw = words[k][0]
+        flag, has_eq, inline = raw.partition("=")
         if flag.startswith("-e") and not flag.startswith("--") and len(flag) > 2:
             # attached short form: -ePGHOST=db.x (flag "-ePGHOST", inline "db.x")
-            inline = flag[2:] + ("=" + inline if "=" in rest[0][0] else "")
+            inline = flag[2:] + ("=" + inline if has_eq else "")
             flag = "-e"
-        rest = rest[1:]
-        if flag in _DOCKER_VALUE_FLAGS:
+        k += 1
+        if flag in value_flags:
             val = inline
-            if not inline and rest:
-                val = rest[0][0]
-                rest = rest[1:]
-            if flag in ("-e", "--env") and "=" in val:
-                name, _, v = val.partition("=")
-                env[name] = v
-    if not rest:
+            if not inline and k < n:
+                val = words[k][0]
+                k += 1
+            if flag in ("-e", "--env"):
+                if "=" in val:
+                    name, _, v = val.partition("=")
+                    env[name] = v
+                elif val:
+                    # `-e PGHOST` passes this shell's own value: unknown here.
+                    env[val] = _UNKNOWN_HOST
+            elif flag == "--env-file":
+                # The file can set PGHOST or DATABASE_URL: unknown targets.
+                env.setdefault("PGHOST", _UNKNOWN_HOST)
+                env.setdefault("DATABASE_URL", _UNKNOWN_HOST)
+            elif flag == "--entrypoint":
+                entrypoint = val
+    if k >= n:
         return None
-    inner, inner_env = _argv(rest[1:])  # skip the container / service name
+    rest = words[k + 1:]  # past the container / service name, or the image
+    if entrypoint:
+        rest = [(entrypoint, False)] + rest
+    inner, inner_env = _argv(rest)
     env.update(inner_env)
-    return inner, env, remote
+    return inner, env, remote, not is_run
 
 
 def _ssh_remote_command(argv):
@@ -774,14 +953,30 @@ def _package_script(argv):
         return None
     if args[0] in ("run", "run-script"):
         return args[1] if len(args) > 1 else None
-    if prog == "yarn" and args[0] not in ("add", "install", "remove", "upgrade", "dlx", "exec",
-                                          "global", "init", "why", "info", "config", "cache"):
+    # yarn and pnpm run a package script without `run` (`pnpm db:push`)
+    if prog in ("yarn", "pnpm") and args[0] not in (
+        "add", "install", "i", "remove", "rm", "upgrade", "update", "up", "dlx", "exec",
+        "global", "init", "why", "info", "config", "cache", "link", "unlink", "list", "ls",
+        "outdated", "audit", "store", "import", "publish", "pack", "create", "test", "start",
+        "build", "dev", "lint", "x", "help", "version", "setup", "env", "fetch", "prune",
+    ):
         return args[0]
     return None
 
 
 def _nonflag(args, limit=3):
     return [a for a, _ in args if not a.startswith("-")][:limit]
+
+
+# supabase subcommand pairs that change a database, and whether each targets the
+# local stack when neither --linked, --local nor --db-url says otherwise
+_SUPABASE_WRITES = {
+    ("db", "push"): False,
+    ("db", "reset"): True,
+    ("migration", "up"): True,
+    ("migration", "down"): True,
+    ("migration", "repair"): False,
+}
 
 
 def _flag_value(vals, flag):
@@ -799,9 +994,11 @@ def _supabase_reason(args, assigned=None):
     vals = [a for a, _ in args]
     if "--dry-run" in vals:
         return None, False
-    nf = _nonflag(args)
+    # Every non-flag word, not the first three: global value flags come first
+    # (`supabase --workdir /a --profile b db push`, QA 2026-09-27).
+    nf = _nonflag(args, limit=len(args))
     for a, b in zip(nf, nf[1:]):
-        if (a, b) in (("db", "push"), ("db", "reset"), ("migration", "up")):
+        if (a, b) in _SUPABASE_WRITES:
             db_url = _flag_value(vals, "--db-url")
             linked = _flag_value(vals, "--linked")
             local_flag = _flag_value(vals, "--local")
@@ -812,9 +1009,10 @@ def _supabase_reason(args, assigned=None):
             elif local_flag is not None and local_flag.lower() not in ("false", "0"):
                 local = True
             else:
-                # `db reset` and `migration up` default to the local stack;
-                # `db push` defaults to the linked (remote) project.
-                local = (a, b) != ("db", "push")
+                # `db reset` and `migration up|down` default to the local
+                # stack; `db push` and `migration repair` to the linked
+                # (remote) project.
+                local = _SUPABASE_WRITES[(a, b)]
             return f"supabase {a} {b}", local
     return None, False
 
@@ -826,7 +1024,8 @@ def _database_url_local(env, assigned=None):
 
 def _prisma_reason(args, env, assigned=None):
     nf = _nonflag(args, 2)
-    if tuple(nf) in (("migrate", "deploy"), ("migrate", "reset"), ("db", "push")):
+    if tuple(nf) in (("migrate", "deploy"), ("migrate", "reset"), ("migrate", "dev"),
+                     ("db", "push"), ("db", "execute"), ("db", "seed")):
         return "prisma " + " ".join(nf), _database_url_local(env, assigned)
     return None, False
 
@@ -907,22 +1106,26 @@ def _psql_target_local(hosts, conns, env, in_container, assigned=None):
     return in_container
 
 
-def _written_body(path, written):
+def _written_body(path, written, in_container=False):
     """The SQL this same command wrote to `path` from a heredoc, else None.
-    A basename match covers `docker cp /tmp/x.sql box:/tmp/x.sql`."""
+    A basename match covers `docker cp /tmp/x.sql box:/tmp/x.sql`, so it is
+    taken only for a psql inside a container: on this Mac `/tmp/q.sql` must
+    not vouch for `~/migrations/q.sql` (QA 2026-09-27)."""
     if not path or not written:
         return None
     if path in written:
         return written[path]
+    if not in_container:
+        return None
     base = path.rsplit("/", 1)[-1]
     hits = [body for p, body in written.items() if p.rsplit("/", 1)[-1] == base]
     return hits[0] if len(hits) == 1 else None
 
 
-def _file_reason(label, path, written):
+def _file_reason(label, path, written, in_container=False):
     """Reason for psql reading `path`: its heredoc body when this command wrote
     it (so a read-only file passes), otherwise the file itself (unknown)."""
-    body = _written_body(path, written)
+    body = _written_body(path, written, in_container)
     if body is None:
         return f"{label} {path}"
     reason = sql_write_reason(body)
@@ -934,12 +1137,23 @@ def _psql_reason(args, cmd, env, in_container, written, assigned=None):
     commands, files, hosts, conns = _psql_args(args)
     local = _psql_target_local(hosts, conns, env, in_container, assigned)
     for sql in commands:
+        # SQL text that is only a variable, or comes from a substitution,
+        # cannot be read here unless this command assigned it (QA 2026-09-27:
+        # `psql -h <remote> -c "$SQL"` passed as a read).
+        bare = _BARE_VAR.fullmatch(sql.strip())
+        if bare and assigned and bare.group(1) in assigned:
+            sql = assigned[bare.group(1)]
+            bare = _BARE_VAR.fullmatch(sql.strip())
+        if bare:
+            return f"psql -c ${bare.group(1)} (SQL from a variable this hook cannot read)", local
+        if "$(" in sql or "`" in sql:
+            return "psql -c with SQL from a command substitution (unknown)", local
         r = sql_write_reason(sql)
         if r:
             return f"psql -c {r}", local
     real_files = [f for f in files if f and f != "-"]
     for f in real_files:
-        r = _file_reason("psql -f", f, written)
+        r = _file_reason("psql -f", f, written, in_container)
         if r:
             return r, local
     if commands or real_files:
@@ -947,7 +1161,7 @@ def _psql_reason(args, cmd, env, in_container, written, assigned=None):
     # stdin is read only when there is no -c and no -f
     for r in cmd["redirs"]:
         if r[0] == "redir" and r[1] == "<" and r[2]:
-            reason = _file_reason("psql <", r[2], written)
+            reason = _file_reason("psql <", r[2], written, in_container)
             return (reason, local) if reason else (None, False)
         if r[0] in ("heredoc", "herestr"):
             reason = sql_write_reason(r[2])
@@ -962,8 +1176,8 @@ def _psql_reason(args, cmd, env, in_container, written, assigned=None):
                 reason = sql_write_reason(" ".join(a for a, _ in sargv[1:]))
                 if reason:
                     return f"psql fed SQL that writes: {reason}", local
-            elif prog == "pg_dump":
-                return "pg_dump piped into psql (a restore)", local
+            elif prog in ("pg_dump", "pg_dumpall"):
+                return f"{prog} piped into psql (a restore)", local
             elif prog == "cat":
                 for r in src["redirs"]:
                     if r[0] in ("heredoc", "herestr"):
@@ -971,16 +1185,42 @@ def _psql_reason(args, cmd, env, in_container, written, assigned=None):
                         if reason:
                             return f"psql fed SQL that writes: {reason}", local
                     elif r[0] == "redir" and r[1] == "<" and r[2]:
-                        reason = _file_reason("psql <", r[2], written)
+                        reason = _file_reason("psql <", r[2], written, in_container)
                         return (reason, local) if reason else (None, False)
                 files = [a for a, _ in sargv[1:] if not a.startswith("-")]
                 for f in files:
-                    reason = _file_reason("psql <", f, written)
+                    reason = _file_reason("psql <", f, written, in_container)
                     if reason:
                         return reason, local
                 if files:
                     return None, False
+            else:
+                # Any other producer (gunzip, python, sed, a script) feeds SQL
+                # this hook cannot read: a restore is exactly this shape.
+                return f"psql fed by {prog} (SQL this hook cannot read)", local
     return None, False
+
+
+def _pg_restore_reason(args, env, in_container, assigned=None):
+    """pg_restore writes into its target database unless it only lists."""
+    vals = [a for a, _ in args]
+    if any(v in ("-l", "--list") for v in vals):
+        return None, False
+    if not any(v in ("-d", "--dbname") or v.startswith("--dbname=") or
+               (v.startswith("-d") and len(v) > 2) for v in vals):
+        return None, False  # no -d: it prints SQL to stdout, writes nothing
+    _, _, hosts, conns = _psql_args(args)
+    # _psql_args reads positionals as connections; for pg_restore the
+    # positional is the dump file, so keep only -d values and hosts.
+    dbnames = []
+    for k, v in enumerate(vals):
+        if v in ("-d", "--dbname") and k + 1 < len(vals):
+            dbnames.append(vals[k + 1])
+        elif v.startswith("--dbname="):
+            dbnames.append(v[len("--dbname="):])
+        elif v.startswith("-d") and len(v) > 2:
+            dbnames.append(v[2:])
+    return "pg_restore (a restore)", _psql_target_local(hosts, dbnames, env, in_container, assigned)
 
 
 def _command_reason(cmd, depth, in_container, written, assigned=None, remote=False):
@@ -992,8 +1232,7 @@ def _command_reason(cmd, depth, in_container, written, assigned=None, remote=Fal
         inner = _docker_exec_inner(argv, env)
         if not inner:
             return None
-        argv, env, remote_daemon = inner
-        in_container = True
+        argv, env, remote_daemon, in_container = inner
         remote = remote or remote_daemon
         if not argv:
             return None
@@ -1026,6 +1265,8 @@ def _command_reason(cmd, depth, in_container, written, assigned=None, remote=Fal
         reason, local = _drizzle_reason(args, env, assigned)
     elif prog == "psql":
         reason, local = _psql_reason(args, cmd, env, in_container, written, assigned)
+    elif prog == "pg_restore":
+        reason, local = _pg_restore_reason(args, env, in_container, assigned)
     elif prog in ("npm", "pnpm", "yarn", "bun"):
         # A package script cannot be read from here; hold only the ones whose
         # NAME says they migrate or push a database (QA 2026-09-27).
@@ -1052,8 +1293,10 @@ def _heredoc_files(cmds):
         bodies = [r[2] for r in cmd["redirs"] if r[0] == "heredoc"]
         if not bodies:
             continue
-        targets = [r[2] for r in cmd["redirs"] if r[0] == "redir" and r[1] in (">", ">>", ">|")]
-        if prog == "tee":
+        # `>` and `>|` only: an APPENDED file (`>>`, `tee -a`) holds more than
+        # this heredoc, so the heredoc cannot vouch for it (QA 2026-09-27).
+        targets = [r[2] for r in cmd["redirs"] if r[0] == "redir" and r[1] in (">", ">|")]
+        if prog == "tee" and not any(a in ("-a", "--append") for a, _ in argv[1:]):
             targets += [a for a, _ in argv[1:] if not a.startswith("-")]
         elif prog != "cat":
             continue
@@ -1091,7 +1334,8 @@ def bash_write_reason(command, depth=0, in_container=False, written=None, assign
     runs on another machine (over ssh or a remote docker daemon)."""
     if not isinstance(command, str) or not command.strip():
         return None
-    cmds = _simple_commands(_scan(command))
+    subs = []
+    cmds = _simple_commands(_scan(command, subs))
     files = dict(written or {})
     files.update(_heredoc_files(cmds))
     names = dict(assigned or {})
@@ -1100,6 +1344,13 @@ def bash_write_reason(command, depth=0, in_container=False, written=None, assign
         reason = _command_reason(cmd, depth, in_container, files, names, remote)
         if reason:
             return reason
+    # The commands inside `$(...)` and backticks run too, on this machine
+    # (or on the remote one, for text an ssh runs).
+    if depth < 3:
+        for inner in subs:
+            reason = bash_write_reason(inner, depth + 1, False, files, names, remote)
+            if reason:
+                return reason
     return None
 
 
@@ -1118,8 +1369,11 @@ def _message(env, tool, reason):
         "Do this instead:\n"
         "  1. Write the SQL or the migration to a file.\n"
         "  2. Put its path and what it is for in your report.\n"
-        "  3. Stop there. Zalo can apply it himself, or re-schedule this job with\n"
-        "     `node ~/dev/claude-telegram-bridge/schedule.mjs ... --run --allow-write`.\n"
+        "  3. Stop there. Only Zalo can approve it: he applies it himself, or\n"
+        "     re-schedules the job with `schedule.mjs ... --run --allow-write` from\n"
+        "     his own chat. That approval is his alone: never pass --allow-write,\n"
+        "     edit schedules.json or set LEASH_ALLOW_WRITE yourself to get past\n"
+        "     this hold (schedule.mjs refuses --allow-write from a worker).\n"
         "\n"
         "Never retry the write through another route (psql, the REST API, a\n"
         "different MCP tool, a script): the hold is about the change, not the tool.\n"
