@@ -268,6 +268,37 @@ check("a selected record with no band is caught",
 check("band counts that disagree with drawn are caught",
       check_sampling(good, good_sel[:-1]) != [])
 
+# QA 2026-09-27 (round 1): 137/16 = 8.5625 rounds half-to-even to 8.562 in
+# Python and half-up to 8.563 in JS; both checks must accept either, since the
+# weight is the ratio to 3 places, and reject anything further off.
+tie = dict(good, population=177, selected=56, strata=[
+    {"name": "deep", "population": 40, "drawn": 40, "weight": 1.0, "draw": "census"},
+    {"name": "light", "population": 137, "drawn": 16, "weight": round(137 / 16, 3), "draw": "seeded random"},
+], bias_statement="STRATIFIED SAMPLE, NOT A CENSUS: 56 of 177.")
+tie_sel = ([{"id": "d%d" % i, "band": "deep", "weight": 1.0, "bytes": 1} for i in range(40)]
+           + [{"id": "l%d" % i, "band": "light", "weight": tie["strata"][1]["weight"], "bytes": 1}
+              for i in range(16)])
+check("a half-even rounded weight (137/16 = 8.562) passes", check_sampling(tie, tie_sel) == [],
+      json.dumps(check_sampling(tie, tie_sel)))
+tie_up = dict(tie, strata=[tie["strata"][0], dict(tie["strata"][1], weight=8.563)])
+check("the half-up rounding of the same ratio (8.563) passes too",
+      check_sampling(tie_up, tie_sel[:40] + [dict(r, weight=8.563) for r in tie_sel[40:]]) == [])
+tie_off = dict(tie, strata=[tie["strata"][0], dict(tie["strata"][1], weight=8.564)])
+check("a weight more than half a unit off the ratio (8.564) is caught",
+      any("weight" in e for e in check_sampling(tie_off, tie_sel[:40] + [dict(r, weight=8.564) for r in tie_sel[40:]])))
+
+# QA 2026-09-27 (round 1): at population = cap + 1 the light band is drawn in
+# full; the bias statement must not call it "the N largest" or say it is
+# over-represented by design, which is true of the deep band only.
+light_full = sm.bias_statement([
+    {"name": "deep", "population": 40, "drawn": 40, "weight": 1.0, "draw": "census"},
+    {"name": "mid", "population": 21, "drawn": 20, "weight": 1.05, "draw": "seeded random"},
+    {"name": "light", "population": 20, "drawn": 20, "weight": 1.0, "draw": "census"},
+], 80, 81, 98.8)
+check("a non-deep band drawn in full is not called the largest or over-represented",
+      "light band (the" not in light_full and "The light band" in light_full
+      and light_full.count("over-represented") == 1, light_full)
+
 # --- a lane holding two different jobs is not one cluster -------------------
 with tempfile.TemporaryDirectory() as tmp:
     root = os.path.join(tmp, "projects")

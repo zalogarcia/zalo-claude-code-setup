@@ -290,11 +290,18 @@ def bias_statement(strata, selected, population, pct):
         "({pct}%).".format(sel=selected, pop=population, pct=pct)
     ]
     for st in strata:
-        if st["draw"] == "census":
+        if st["draw"] == "census" and st["name"] == "deep":
             parts.append(
                 "The {n} band (the {p} largest transcripts by bytes) is a census, "
                 "every one analysed at weight 1.0, and is over-represented by "
                 "design because defects concentrate there.".format(n=st["name"], p=st["population"])
+            )
+        elif st["draw"] == "census":
+            # Only the deep band is the largest by design; a smaller band drawn
+            # in full (population = cap + 1) is simply complete.
+            parts.append(
+                "The {n} band ({p} sessions) was analysed in full, every one at "
+                "weight 1.0.".format(n=st["name"], p=st["population"])
             )
         elif st["draw"] == "seeded random":
             parts.append(
@@ -317,6 +324,11 @@ def bias_statement(strata, selected, population, pct):
             )
         )
     return " ".join(parts)
+
+
+# A stratum's weight is population/drawn rounded to 3 places, so an honest
+# weight is within half a unit of the exact ratio (plus float slack).
+WEIGHT_TOLERANCE = 0.0005 + 1e-9
 
 
 def check_sampling(sampling, selected):
@@ -356,7 +368,10 @@ def check_sampling(sampling, selected):
                         % (name, label, drawn, pop, expected))
         if drawn:
             want = round(pop / drawn, 3)
-            if not isinstance(w, (int, float)) or abs(w - want) > 0.001:
+            # Compared with the exact ratio, half a unit either way: Python
+            # rounds 137/16 = 8.5625 half-to-even (8.562), JS half-up (8.563),
+            # and both are honest (QA 2026-09-27).
+            if not isinstance(w, (int, float)) or abs(w - pop / drawn) > WEIGHT_TOLERANCE:
                 errs.append("the %s stratum has weight %s, but %s of %s means %s"
                             % (name, w, drawn, pop, want))
         elif w is not None:

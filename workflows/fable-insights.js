@@ -478,6 +478,9 @@ const drawLabel = (population, drawn) =>
         ? "not sampled"
         : "seeded random";
 
+// A weight is population/drawn to 3 places: honest within half a unit.
+const WEIGHT_TOLERANCE = 0.0005 + 1e-9;
+
 function checkSampling(samp, records) {
   const errs = [];
   const strata = Array.isArray(samp && samp.strata) ? samp.strata : [];
@@ -503,7 +506,10 @@ function checkSampling(samp, records) {
       errs.push(`the ${st.name} stratum is labelled "${st.draw}" but drew ${drawn} of ${pop}, which is "${want}"`);
     if (drawn > 0) {
       const w = Math.round((1000 * pop) / drawn) / 1000;
-      if (typeof st.weight !== "number" || Math.abs(st.weight - w) > 0.001)
+      // Against the exact ratio, half a unit either way, exactly as the
+      // script checks: Python rounds 137/16 = 8.5625 half-to-even to 8.562
+      // and this would say 8.563; both are honest (QA 2026-09-27).
+      if (typeof st.weight !== "number" || Math.abs(st.weight - pop / drawn) > WEIGHT_TOLERANCE)
         errs.push(`the ${st.name} stratum has weight ${st.weight}, but ${drawn} of ${pop} means ${w}`);
     } else if (st.weight !== null && st.weight !== undefined) {
       errs.push(`the ${st.name} stratum drew nothing but carries weight ${st.weight}`);
@@ -934,6 +940,9 @@ coverage.complete =
   lostStubs === 0 &&
   coverage.facet_coverage_pct === 100 &&
   coverage.stub_coverage_pct === 100 &&
+  // A census whose record contradicts what was delivered is not complete
+  // either, whatever the counts say (QA 2026-09-27).
+  sampling_check.ok &&
   sampling.method === "census";
 const partial_run = !coverage.complete;
 if (partial_run) {

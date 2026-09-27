@@ -455,6 +455,49 @@ console.log("fable-insights.js");
   };
   const out = await runWorkflow({ agentFn, args: { days: 7 } }).promise;
   check("a failed script self-check is carried into the check", out.sampling_check.ok === false && out.sampling_check.errors.some((e) => e.includes("40 of 99")), JSON.stringify(out.sampling_check));
+  check("a census run whose sampling check failed is not complete", out.coverage.complete === false && out.partial_run === true, JSON.stringify(out.coverage));
+}
+{
+  // QA 2026-09-27 round 1: 137/16 = 8.5625. Python writes 8.562 (half-to-even),
+  // a JS rounding would say 8.563; both are honest and neither may fail.
+  const mk = (w) => {
+    const selected = [session("dddddddd-0", { band: "deep", weight: 1 })];
+    for (let i = 0; i < 16; i += 1) selected.push(session(`llllllll-${i}`, { band: "light", weight: w }));
+    return {
+      selected,
+      sampling: {
+        method: "stratified", population: 138, selected: 17, coverage_pct: 12.3, seed: "s",
+        strata: [
+          { name: "deep", population: 1, drawn: 1, weight: 1, draw: "census" },
+          { name: "light", population: 137, drawn: 16, weight: w, draw: "seeded random" },
+        ],
+        bias_statement: "STRATIFIED SAMPLE, NOT A CENSUS: 17 of 138.",
+      },
+    };
+  };
+  for (const [w, honest] of [[8.562, true], [8.563, true], [8.564, false]]) {
+    const { selected, sampling } = mk(w);
+    const agentFn = async (prompt, opts) => {
+      if (opts.label.startsWith("manifest")) return manifestOf(selected, { substantive_count: 138, sampling });
+      if (opts.label.startsWith("analyze:")) return { ...FACET };
+      return null;
+    };
+    const out = await runWorkflow({ agentFn, args: { days: 7 } }).promise;
+    check(`weight ${w} for 137/16 is ${honest ? "accepted" : "rejected"}`, out.sampling_check.ok === honest, JSON.stringify(out.sampling_check));
+  }
+}
+{
+  // QA 2026-09-27 round 1: a census whose relay lost a record fails the check
+  // and must not call itself complete.
+  const sampling = { method: "census", population: 3, selected: 2, coverage_pct: 100, seed: "s", strata: [], bias_statement: "Census." };
+  const agentFn = async (prompt, opts) => {
+    if (opts.label.startsWith("manifest"))
+      return manifestOf([session("aaaaaaaa-1"), session("bbbbbbbb-2")], { substantive_count: 3, sampling });
+    if (opts.label.startsWith("analyze:")) return { ...FACET };
+    return null;
+  };
+  const out = await runWorkflow({ agentFn, args: { days: 7 } }).promise;
+  check("a census that fails its sampling check is not complete", out.sampling_check.ok === false && out.coverage.complete === false && out.partial_run === true, JSON.stringify({ sc: out.sampling_check, cov: out.coverage }));
 }
 
 // 6d. 2026-09-27 P1: empty_fields flagged 80 of 80 rows because two keys carry
