@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """PreToolUse guard: hold migrations and database writes in UNATTENDED runs.
 
-Wired on `Bash|mcp__supabase__apply_migration|mcp__supabase__execute_sql`.
+Wired on `Bash|mcp__supabase__apply_migration|mcp__supabase__execute_sql|Write|Edit|MultiEdit`.
+Attended runs exit 0 before reading stdin's payload, so the file tools cost
+nothing outside an unattended run.
 
 Why this exists (self-audit 2026-09-27, P5; first proposed 09-19)
 ------------------------------------------------------------------
@@ -55,6 +57,11 @@ What it holds (exit 2)
 
 Reads (SELECT, EXPLAIN, SHOW, `\\d`) pass.
 
+The owner's write approval is also guarded (QA 2026-09-27): `schedule.mjs
+--allow-write`, and any write to the bridge's schedules.json, bg-queue.json
+or bg-held.json (Bash redirect, tee, cp, mv, sed -i, or Write/Edit), are held
+in an unattended run, so the run cannot approve itself.
+
 A Bash write whose target is PROVEN local passes: psql run through `docker
 exec` with no remote host or URL, psql or `--db-url` pointed at a loopback
 host or a socket, `supabase ... --local`, `supabase db reset` and `supabase
@@ -89,6 +96,7 @@ import re
 import sys
 
 APPLY_MIGRATION = "mcp__supabase__apply_migration"
+FILE_TOOLS = ("Write", "Edit", "MultiEdit", "NotebookEdit")
 EXECUTE_SQL = "mcp__supabase__execute_sql"
 
 
@@ -188,7 +196,7 @@ def strip_sql(sql):
 
 # The comma is a token so an alias before a parenthesised expression
 # (`AS charge_count, (SELECT ...)`) never reads as a call `charge_count(`.
-_SQL_TOKEN = re.compile(r"\\[A-Za-z_]+|[A-Za-z_][A-Za-z0-9_$]*|[();.,]")
+_SQL_TOKEN = re.compile(r"\\[A-Za-z_]+|[A-Za-z_][A-Za-z0-9_$]*|[();.,]|[=<>!+*/|%^~&:-]+")
 _META_LINE = re.compile(r"\\[A-Za-z_][^\n]*")
 
 WRITE_FIRST = {
@@ -291,6 +299,24 @@ def _split_statements(toks):
     return stmts
 
 
+def _is_cte_head(words, i, j):
+    """`WITH sync_rows(id) AS (` names a CTE and its columns, it calls
+    nothing: the name follows WITH, RECURSIVE or a comma, and its parenthesis
+    closes into `AS (` (a table function's alias is `AS name`, not `AS (`)."""
+    if i == 0 or words[i - 1] not in ("WITH", "RECURSIVE", ","):
+        return False
+    depth, k = 0, j
+    while k < len(words):
+        if words[k] == "(":
+            depth += 1
+        elif words[k] == ")":
+            depth -= 1
+            if depth == 0:
+                break
+        k += 1
+    return k + 2 < len(words) and words[k + 1] == "AS" and words[k + 2] == "("
+
+
 def _mutating_call(stmt):
     words = [t for t, _ in stmt]
     for i, t in enumerate(words):
@@ -309,7 +335,7 @@ def _mutating_call(stmt):
             name in MUTATING_FUNCTIONS or name.rsplit(".", 1)[-1] in _UNQUALIFIED_MUTATING
         ):
             return f"{name.lower()}() (a side-effecting function)"
-        if j < len(words) and words[j] == "(" and _write_verb_function(name):
+        if j < len(words) and words[j] == "(" and _write_verb_function(name) and not _is_cte_head(words, i, j):
             return f"{name.lower()}() (a function whose name says it writes)"
     return None
 
@@ -394,13 +420,41 @@ _REDIR = re.compile(r"(\d*)(<<<|<<-|<<|&>>|&>|>>|>&|<&|<>|>\||>|<)")
 _ASSIGN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*(\[[^\]]*\])?\+?=")
 
 
+_HEREDOC_OPEN = re.compile(r"""<<(-?)[ \t]*(['"]?)([A-Za-z_][A-Za-z0-9_]*)\2""")
+
+
 def _subst_end(cmd, i):
     """Index just past the `$(...)` (or `$((...))`) starting at i, counting
-    parentheses and skipping quoted text; len(cmd) when unterminated."""
+    parentheses and skipping quoted text, comments and heredoc bodies (a
+    commit message `"$(cat <<'EOF' ... Zalo's ... EOF)"` must not read its
+    apostrophe as a quote and swallow the rest of the command, QA
+    2026-09-27); len(cmd) when unterminated."""
     n = len(cmd)
     depth, j = 0, i + 1
+    pending = []  # heredoc delimiters whose bodies start at the next newline
     while j < n:
         c = cmd[j]
+        if c == "\n" and pending:
+            j += 1
+            for strip_tabs, delim in pending:
+                while j < n:
+                    k = cmd.find("\n", j)
+                    line = cmd[j:] if k < 0 else cmd[j:k]
+                    j = n if k < 0 else k + 1
+                    if (line.lstrip("\t") if strip_tabs else line) == delim:
+                        break
+            pending = []
+            continue
+        if c == "<" and cmd.startswith("<<", j) and not cmd.startswith("<<<", j):
+            m = _HEREDOC_OPEN.match(cmd, j)
+            if m:
+                pending.append((m.group(1) == "-", m.group(3)))
+                j = m.end()
+                continue
+        if c == "#" and cmd[j - 1] in " \t\n;(|&":
+            k = cmd.find("\n", j)
+            j = n if k < 0 else k
+            continue
         if c == "\\":
             j += 2
             continue
@@ -549,6 +603,15 @@ def _scan(cmd, subs=None):
             j = cmd.find("\n", i)
             i = n if j < 0 else j
             continue
+        if c in "<>" and i + 1 < n and cmd[i + 1] == "(":
+            # a process substitution `<(cmd)` is a WORD (a file name psql can
+            # read), and the command inside it runs too
+            end = _subst_end(cmd, i)
+            if subs is not None and cmd[i + 2:end - 1].strip():
+                subs.append(cmd[i + 2:end - 1])
+            toks.append(("w", cmd[i:end], False))
+            i = end
+            continue
         m = _REDIR.match(cmd, i)
         if m:
             op = m.group(2)
@@ -558,9 +621,17 @@ def _scan(cmd, subs=None):
             if op in (">&", "<&") and i < n and (cmd[i].isdigit() or cmd[i] == "-"):
                 i += 1
                 continue
-            word, _, i = _read_word(cmd, i, subs)
+            if cmd.startswith("<(", i) or cmd.startswith(">(", i):
+                # `psql < <(cmd)`: the target is a process substitution
+                end = _subst_end(cmd, i)
+                if subs is not None and cmd[i + 2:end - 1].strip():
+                    subs.append(cmd[i + 2:end - 1])
+                word, _, i = cmd[i:end], False, end
+            else:
+                word, _, i = _read_word(cmd, i, subs)
             if op in ("<<", "<<-"):
-                toks.append(("heredoc", op, ""))
+                # op carries whether the delimiter was quoted (no expansion)
+                toks.append(("heredoc", op + ("'" if _ else ""), ""))
                 pending.append((word, op == "<<-", len(toks) - 1))
             elif op == "<<<":
                 toks.append(("herestr", op, word))
@@ -633,7 +704,7 @@ _SSH_VALUE_FLAGS = set("bcDEeFIiJLlmOopQRSWw")
 # What a wrapper (nice, sudo, xargs, the perl alarm line ...) may be running:
 # the first of these after it is the real program.
 _WRAPPED_TARGETS = ({"supabase", "prisma", "drizzle-kit", "psql", "pg_restore", "docker", "ssh", "eval",
-                     "npm", "pnpm", "yarn", "bun"} | {"npx", "bunx", "pnpx"}
+                     "npm", "pnpm", "yarn", "bun", "node", "deno"} | {"npx", "bunx", "pnpx"}
                     | {"bash", "sh", "zsh", "dash"})
 # Package scripts whose NAME says they migrate or push a database: a
 # migrate/migration segment, or db with push/reset/deploy/seed/apply/up, and no
@@ -735,15 +806,19 @@ def _perl_exec_wrapper(words, i):
 # Flags that take a value, per wrapper, so the value is not read as the program
 # (`sudo -u zalo supabase`, `xargs -I {} psql`). Other flags are switches.
 _WRAPPER_VALUE_FLAGS = {
-    "sudo": {"-u", "-g", "-U", "-C", "-h", "-p", "-r", "-t", "-D", "-R", "-T"},
+    "sudo": {"-u", "-g", "-U", "-C", "-h", "-p", "-r", "-t", "-D", "-R", "-T", "--user",
+             "--group", "--other-user", "--close-from", "--host", "--prompt", "--role",
+             "--type", "--chdir", "--chroot", "--command-timeout"},
     "doas": {"-u", "-C"},
-    "xargs": {"-I", "-J", "-L", "-n", "-P", "-R", "-S", "-s", "-E", "-d", "-a"},
-    "nice": {"-n"},
+    "xargs": {"-I", "-J", "-L", "-n", "-P", "-R", "-S", "-s", "-E", "-d", "-a", "--max-args",
+              "--max-procs", "--replace", "--delimiter", "--arg-file", "--max-lines", "--eof",
+              "--max-chars"},
+    "nice": {"-n", "--adjustment"},
     "caffeinate": {"-t", "-w"},
     "stdbuf": {"-i", "-o", "-e"},
-    "env": {"-u", "-S", "-P", "-C"},
-    "timeout": {"-s", "-k"},
-    "gtimeout": {"-s", "-k"},
+    "env": {"-u", "-S", "-P", "-C", "--unset", "--chdir", "--split-string"},
+    "timeout": {"-s", "-k", "--signal", "--kill-after"},
+    "gtimeout": {"-s", "-k", "--signal", "--kill-after"},
     "ionice": {"-c", "-n", "-p"},
     "taskpolicy": {"-c", "-b", "-t", "-l"},
     "arch": {"-arch"},
@@ -761,6 +836,8 @@ def _find_wrapped(words, start, env, wrapper=""):
     forward scan that jumped over words read `xargs grep -l psql` as psql)."""
     value_flags = _WRAPPER_VALUE_FLAGS.get(wrapper, set())
     k = start
+    # `script [-q] FILE cmd ...`: its first plain word is the typescript file
+    file_arg = wrapper == "script"
     while k < len(words):
         w, q = words[k]
         if q:
@@ -779,6 +856,10 @@ def _find_wrapped(words, start, env, wrapper=""):
             continue
         if _name(w) in _WRAPPED_TARGETS or w in _WRAPPER_WORDS or w in _PREFIX_WORDS:
             return k
+        if file_arg:
+            file_arg = False
+            k += 1
+            continue
         return None
     return None
 
@@ -933,15 +1014,15 @@ def _docker_exec_inner(argv, outer_env=None):
 def _ssh_remote_command(argv):
     """The command text `ssh [opts] host cmd...` runs on the remote host, or
     None (an interactive login runs nothing this hook can read)."""
-    rest = argv[1:]
-    while rest and rest[0][0].startswith("-") and rest[0][0] != "-":
-        flag = rest[0][0]
-        rest = rest[1:]
-        if len(flag) == 2 and flag[1] in _SSH_VALUE_FLAGS and rest:
-            rest = rest[1:]
-    if len(rest) < 2:
+    k, n = 1, len(argv)
+    while k < n and argv[k][0].startswith("-") and argv[k][0] != "-":
+        flag = argv[k][0]
+        k += 1
+        if len(flag) == 2 and flag[1] in _SSH_VALUE_FLAGS and k < n:
+            k += 1
+    if n - k < 2:
         return None
-    return " ".join(a for a, _ in rest[1:])
+    return " ".join(a for a, _ in argv[k + 1:])
 
 
 def _package_script(argv):
@@ -1106,6 +1187,10 @@ def _psql_target_local(hosts, conns, env, in_container, assigned=None):
     return in_container
 
 
+def _body_of(entry):
+    return entry[0] if isinstance(entry, tuple) else entry
+
+
 def _written_body(path, written, in_container=False):
     """The SQL this same command wrote to `path` from a heredoc, else None.
     A basename match covers `docker cp /tmp/x.sql box:/tmp/x.sql`, so it is
@@ -1114,11 +1199,11 @@ def _written_body(path, written, in_container=False):
     if not path or not written:
         return None
     if path in written:
-        return written[path]
+        return _body_of(written[path])
     if not in_container:
         return None
     base = path.rsplit("/", 1)[-1]
-    hits = [body for p, body in written.items() if p.rsplit("/", 1)[-1] == base]
+    hits = [_body_of(body) for p, body in written.items() if p.rsplit("/", 1)[-1] == base]
     return hits[0] if len(hits) == 1 else None
 
 
@@ -1130,6 +1215,29 @@ def _file_reason(label, path, written, in_container=False):
         return f"{label} {path}"
     reason = sql_write_reason(body)
     return f"{label} {path} (written above, {reason})" if reason else None
+
+
+def _unread_sql(text, assigned=None, expands=True):
+    """A reason when SQL text reaching psql cannot be read here: only a
+    variable (not assigned in this command), or built by a substitution.
+    `expands` is False for a quoted heredoc, whose body is literal."""
+    if not expands:
+        return None
+    t = (text or "").strip()
+    bare = _BARE_VAR.fullmatch(t)
+    if bare and not (assigned and bare.group(1) in assigned):
+        return f"SQL from ${bare.group(1)}, a variable this hook cannot read"
+    if "$(" in t or "`" in t:
+        return "SQL from a command substitution (unknown)"
+    return None
+
+
+def _resolve_sql(text, assigned=None):
+    t = (text or "").strip()
+    bare = _BARE_VAR.fullmatch(t)
+    if bare and assigned and bare.group(1) in assigned:
+        return assigned[bare.group(1)]
+    return text
 
 
 def _psql_reason(args, cmd, env, in_container, written, assigned=None):
@@ -1164,7 +1272,11 @@ def _psql_reason(args, cmd, env, in_container, written, assigned=None):
             reason = _file_reason("psql <", r[2], written, in_container)
             return (reason, local) if reason else (None, False)
         if r[0] in ("heredoc", "herestr"):
-            reason = sql_write_reason(r[2])
+            expands = not (r[0] == "heredoc" and r[1].endswith("'"))
+            unread = _unread_sql(r[2], assigned, expands)
+            if unread:
+                return f"psql fed {unread}", local
+            reason = sql_write_reason(_resolve_sql(r[2], assigned) if expands else r[2])
             if reason:
                 return f"psql fed SQL that writes: {reason}", local
     src = cmd.get("piped_from")
@@ -1173,7 +1285,14 @@ def _psql_reason(args, cmd, env, in_container, written, assigned=None):
         if sargv:
             prog = _name(sargv[0][0])
             if prog in ("echo", "printf"):
-                reason = sql_write_reason(" ".join(a for a, _ in sargv[1:]))
+                words = [a for a, _ in sargv[1:] if not (prog == "echo" and a in ("-e", "-n", "-E"))]
+                if prog == "printf" and len(words) > 1 and "%" in words[0]:
+                    words = words[1:]  # the format string is not the SQL
+                text = " ".join(words)
+                unread = _unread_sql(text, assigned)
+                if unread:
+                    return f"psql fed {unread}", local
+                reason = sql_write_reason(_resolve_sql(text, assigned))
                 if reason:
                     return f"psql fed SQL that writes: {reason}", local
             elif prog in ("pg_dump", "pg_dumpall"):
@@ -1181,6 +1300,10 @@ def _psql_reason(args, cmd, env, in_container, written, assigned=None):
             elif prog == "cat":
                 for r in src["redirs"]:
                     if r[0] in ("heredoc", "herestr"):
+                        expands = not (r[0] == "heredoc" and r[1].endswith("'"))
+                        unread = _unread_sql(r[2], assigned, expands)
+                        if unread:
+                            return f"psql fed {unread}", local
                         reason = sql_write_reason(r[2])
                         if reason:
                             return f"psql fed SQL that writes: {reason}", local
@@ -1221,6 +1344,53 @@ def _pg_restore_reason(args, env, in_container, assigned=None):
         elif v.startswith("-d") and len(v) > 2:
             dbnames.append(v[2:])
     return "pg_restore (a restore)", _psql_target_local(hosts, dbnames, env, in_container, assigned)
+
+
+# The bridge's schedule and queue files: the write approval lives in the first,
+# and a queued job's mark in the other two. An unattended run that edits them
+# directly could approve itself (QA 2026-09-27), so they are held like a write.
+BRIDGE_STATE_FILES = {"schedules.json", "bg-queue.json", "bg-held.json"}
+BRIDGE_DIR_MARK = "claude-telegram-bridge"
+
+
+def _is_bridge_state(path):
+    """A bridge state file by name, in a path that names the bridge's
+    directory (a scratch copy in /tmp/sched-audit is a test, not the queue)."""
+    p = str(path or "")
+    return p.rsplit("/", 1)[-1] in BRIDGE_STATE_FILES and BRIDGE_DIR_MARK in p
+
+
+def _grants_write_approval(args):
+    vals = [a for a, _ in args]
+    if not any(v.rsplit("/", 1)[-1] == "schedule.mjs" for v in vals):
+        return False
+    for k, v in enumerate(vals):
+        if v == "--allow-write":
+            nxt = vals[k + 1] if k + 1 < len(vals) else ""
+            return nxt != "false"
+        if v.startswith("--allow-write="):
+            return v.split("=", 1)[1] != "false"
+    return False
+
+
+def _bridge_state_target(cmd):
+    """The bridge state file this simple command writes by redirect, tee, cp
+    or mv, or None."""
+    targets = [r[2] for r in cmd["redirs"] if r[0] == "redir" and r[1] in (">", ">>", ">|", "&>", "&>>")]
+    argv, _ = _argv(cmd["words"])
+    if argv:
+        prog = _name(argv[0][0])
+        plain = [a for a, _ in argv[1:] if not a.startswith("-")]
+        if prog == "tee":
+            targets += plain
+        elif prog in ("cp", "mv", "install", "ln", "rsync") and plain:
+            targets.append(plain[-1])
+        elif prog in ("sed", "gsed", "perl") and any(a.startswith("-i") or a.startswith("-pi") for a, _ in argv[1:]):
+            targets += plain
+    for t in targets:
+        if t and _is_bridge_state(t):
+            return t
+    return None
 
 
 def _command_reason(cmd, depth, in_container, written, assigned=None, remote=False):
@@ -1267,6 +1437,8 @@ def _command_reason(cmd, depth, in_container, written, assigned=None, remote=Fal
         reason, local = _psql_reason(args, cmd, env, in_container, written, assigned)
     elif prog == "pg_restore":
         reason, local = _pg_restore_reason(args, env, in_container, assigned)
+    elif prog in ("node", "bun", "deno") and _grants_write_approval(args):
+        return "schedule.mjs --allow-write (the owner's write approval; an unattended run cannot grant it)"
     elif prog in ("npm", "pnpm", "yarn", "bun"):
         # A package script cannot be read from here; hold only the ones whose
         # NAME says they migrate or push a database (QA 2026-09-27).
@@ -1281,29 +1453,45 @@ def _command_reason(cmd, depth, in_container, written, assigned=None, remote=Fal
     return reason
 
 
-def _heredoc_files(cmds):
-    """{path: body} for every `cat > path <<EOF ... EOF` (or `>>`, or tee) in
-    this command, so psql -f of a file written right above can be read."""
-    out = {}
-    for cmd in cmds:
+def _heredoc_files(cmds, base=0):
+    """{path: (body, index)} for every `cat > path <<EOF ... EOF` (or tee) in
+    this command, so a psql -f of a file written ABOVE it can be read. A path
+    written any other way too (`>>`, a second `>`, `tee -a`, `sed -i`, a
+    cp/mv/install target) holds more than this heredoc and is dropped
+    (QA 2026-09-27: `cat > f <<SQL select SQL; cat >> f <<SQL delete SQL`)."""
+    vouched, dropped, seen = {}, set(), {}
+    for idx, cmd in enumerate(cmds):
         argv, _ = _argv(cmd["words"])
-        if not argv:
-            continue
-        prog = _name(argv[0][0])
+        prog = _name(argv[0][0]) if argv else ""
+        args = [a for a, _ in argv[1:]]
         bodies = [r[2] for r in cmd["redirs"] if r[0] == "heredoc"]
-        if not bodies:
-            continue
-        # `>` and `>|` only: an APPENDED file (`>>`, `tee -a`) holds more than
-        # this heredoc, so the heredoc cannot vouch for it (QA 2026-09-27).
-        targets = [r[2] for r in cmd["redirs"] if r[0] == "redir" and r[1] in (">", ">|")]
-        if prog == "tee" and not any(a in ("-a", "--append") for a, _ in argv[1:]):
-            targets += [a for a, _ in argv[1:] if not a.startswith("-")]
-        elif prog != "cat":
-            continue
-        for t in targets:
+        full = [r[2] for r in cmd["redirs"] if r[0] == "redir" and r[1] in (">", ">|", "&>")]
+        other = [r[2] for r in cmd["redirs"] if r[0] == "redir" and r[1] in (">>", "&>>")]
+        if prog == "tee":
+            if any(a in ("-a", "--append") for a in args):
+                other += [a for a in args if not a.startswith("-")]
+            else:
+                full += [a for a in args if not a.startswith("-")]
+        elif prog in ("sed", "perl", "gsed") and any(a.startswith("-i") or a.startswith("-pi") for a in args):
+            other += [a for a in args if not a.startswith("-")]
+        elif prog in ("cp", "mv", "install", "rsync", "ln", "dd"):
+            plain = [a for a in args if not a.startswith("-")]
+            if plain:
+                other.append(plain[-1])
+            other += [a[3:] for a in args if a.startswith("of=")]
+        vouch = bool(bodies) and prog in ("cat", "tee")
+        for t in full:
+            if not t:
+                continue
+            seen[t] = seen.get(t, 0) + 1
+            if vouch and seen[t] == 1:
+                vouched[t] = (bodies[-1], base + idx)
+            else:
+                dropped.add(t)
+        for t in other:
             if t:
-                out[t] = bodies[-1]
-    return out
+                dropped.add(t)
+    return {p: v for p, v in vouched.items() if p not in dropped}
 
 
 _DECLARE_WORDS = {"export", "declare", "typeset", "local", "readonly"}
@@ -1336,14 +1524,23 @@ def bash_write_reason(command, depth=0, in_container=False, written=None, assign
         return None
     subs = []
     cmds = _simple_commands(_scan(command, subs))
-    files = dict(written or {})
-    files.update(_heredoc_files(cmds))
+    outer = {p: (_body_of(v), -1) for p, v in (written or {}).items()}
+    mine = _heredoc_files(cmds)
     names = dict(assigned or {})
     names.update(_assignments(cmds))
     for cmd in cmds:
+        state = _bridge_state_target(cmd)
+        if state:
+            return f"a direct write to {state} (the bridge's schedule or queue, where the write approval lives)"
+    for idx, cmd in enumerate(cmds):
+        # A heredoc vouches only for commands AFTER the one that wrote it.
+        files = dict(outer)
+        files.update({p: v for p, v in mine.items() if v[1] < idx})
         reason = _command_reason(cmd, depth, in_container, files, names, remote)
         if reason:
             return reason
+    files = dict(outer)
+    files.update(mine)
     # The commands inside `$(...)` and backticks run too, on this machine
     # (or on the remote one, for text an ssh runs).
     if depth < 3:
@@ -1403,6 +1600,10 @@ def decide(payload, env):
     elif tool == "Bash":
         if isinstance(tool_input, dict):
             reason = bash_write_reason(tool_input.get("command"))
+    elif tool in FILE_TOOLS:
+        path = tool_input.get("file_path") or tool_input.get("notebook_path") if isinstance(tool_input, dict) else None
+        if isinstance(path, str) and _is_bridge_state(path):
+            reason = f"{tool} {path} (the bridge's schedule or queue, where the write approval lives)"
     if not reason:
         return 0, ""
     return 2, _message(env, tool, reason)

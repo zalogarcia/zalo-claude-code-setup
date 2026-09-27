@@ -220,6 +220,7 @@ def main():
         "a public sweep function": "select public.sweep_demo_gptlive_calls()",
         "a public reconcile function": "select public.reconcile_demo_gptlive_recordings()",
         "an unqualified write function": "select sweep_demo_gptlive_calls()",
+        "a write function in FROM with an alias": "select * from public.sync_users() as s",
     })
     for label, q in writes.items():
         check(f"sql write: {label}", bool(w(q)), f"{q!r} -> {w(q)!r}")
@@ -257,6 +258,12 @@ def main():
         "jsonb_set is a value function": "select jsonb_set(data, '{a}', '1') from t",
         "a public read function": "select public.get_tenant_summary('x')",
         "log() math": "select log(10)",
+        # QA 2026-09-27 hooks round 2: `column op (` is not a call
+        "run_id = (subquery)": "SELECT * FROM prompt_run_steps WHERE run_id = (SELECT id FROM prompt_runs ORDER BY created_at DESC LIMIT 1)",
+        "send_attempts >= (subquery)": "select * from jobs where send_attempts >= (select max_attempts from cfg)",
+        "a CTE named with a verb": "WITH sync_rows(id) AS (SELECT 1) SELECT * FROM sync_rows",
+        "a second CTE named with a verb": "WITH a AS (SELECT 1), refund_totals(x) AS (SELECT 2) SELECT * FROM refund_totals",
+        "cast with ::": "select run_id::text from t",
         "count and now": "select count(*), now() from t",
     }
     for label, q in reads.items():
@@ -372,6 +379,35 @@ def main():
         "docker exec -e PGHOST (value from the outer env)": "docker exec -e PGHOST db psql -U postgres -c 'delete from t'",
         "docker exec --env-file": "docker exec --env-file .env.prod db psql -U postgres -c 'delete from t'",
         "sudo sudo chain": "sudo sudo supabase db push",
+        "a write chained after a commit heredoc with an apostrophe (QA hooks round 2)":
+            "git commit -m \"$(cat <<'EOF'\nfix: Zalo's approval\nEOF\n)\" && supabase db push --linked",
+        # QA 2026-09-27 hooks round 2
+        "> then >> into the same file: the first heredoc cannot vouch":
+            "cat > /tmp/q.sql <<'SQL'\nselect 1;\nSQL\ncat >> /tmp/q.sql <<'SQL'\ndelete from users;\nSQL\npsql -h db.abc.supabase.co -f /tmp/q.sql",
+        "echo >> after the heredoc": "cat > /tmp/q.sql <<'SQL'\nselect 1;\nSQL\necho 'delete from t;' >> /tmp/q.sql; psql -h db.abc.supabase.co -f /tmp/q.sql",
+        "sed -i after the heredoc": "cat > /tmp/q.sql <<'SQL'\nselect 1;\nSQL\nsed -i '' 's/select 1/delete from t/' /tmp/q.sql; psql -h db.abc.supabase.co -f /tmp/q.sql",
+        "psql -f BEFORE the heredoc writes the file": "psql -h db.abc.supabase.co -f /tmp/q.sql; cat > /tmp/q.sql <<'SQL'\nselect 1;\nSQL",
+        "echo $SQL | psql": 'echo "$SQL" | psql -h db.abc.supabase.co',
+        "printf of $SQL | psql": "printf '%s\\n' \"$SQL\" | psql -h db.abc.supabase.co",
+        "here-string from a substitution": 'psql -h db.abc.supabase.co <<< "$(cat migration.sql)"',
+        "unquoted heredoc carrying $SQL": "psql -h db.abc.supabase.co <<EOF\n$SQL\nEOF",
+        "psql -f a process substitution": "psql -h db.abc.supabase.co -f <(cat fix.sql)",
+        "psql < a process substitution": "psql -h db.abc.supabase.co < <(cat fix.sql)",
+        "a write inside a process substitution": "diff <(supabase db push) /dev/null",
+        # the owner's approval cannot be minted by the run it would release
+        "schedule.mjs --allow-write, even with TMUX=x in front":
+            "LEASH_LANE=bg TMUX=x node ~/dev/claude-telegram-bridge/schedule.mjs update 8 --allow-write",
+        "schedule.mjs add --allow-write behind env -u":
+            "env -u LEASH_LANE -u LEASH_TRIGGER node schedule.mjs add daily 04:00 --run --allow-write 'x'",
+        "--allow-write=true": "node ~/dev/claude-telegram-bridge/schedule.mjs update 8 --allow-write=true",
+        "a redirect into bg-queue.json": "echo '[{\"text\":\"x\",\"scheduleId\":8,\"allowWrite\":true}]' > ~/dev/claude-telegram-bridge/bg-queue.json",
+        "cp over schedules.json": "cp /tmp/s.json ~/dev/claude-telegram-bridge/schedules.json",
+        "sed -i on schedules.json": "sed -i '' 's/\"run\": true/\"run\": true, \"allowWrite\": true/' ~/dev/claude-telegram-bridge/schedules.json",
+        "sudo --user long flag": "sudo --user postgres psql -h db.abc.supabase.co -c 'delete from t'",
+        "script -q FILE cmd": "script -q /dev/null supabase db push",
+        "env --chdir long flag": "env --chdir /x supabase db push",
+        "a psql write on the next line after that heredoc":
+            "git commit -m \"$(cat <<'EOF'\nZalo's (note\nEOF\n)\"\npsql -h db.abc.supabase.co -c 'delete from t'",
         "an APPENDED heredoc cannot vouch for the file":
             "cat >> /tmp/q.sql <<'SQL'\nselect 1;\nSQL\npsql -h db.abc.supabase.co -f /tmp/q.sql",
         "a basename match does not vouch on this Mac":
@@ -417,6 +453,20 @@ def main():
         "nice around a read": "nice -n 10 psql -h localhost -c 'select 1'",
         "ssh that only reads": "ssh prod 'psql -c \"select 1\"'",
         "npm run db:up starts a local container": "npm run db:up",
+        "schedule.mjs list": "node ~/dev/claude-telegram-bridge/schedule.mjs list",
+        "schedule.mjs revoking the approval": "node ~/dev/claude-telegram-bridge/schedule.mjs update 8 --allow-write false",
+        "reading schedules.json": "cat ~/dev/claude-telegram-bridge/schedules.json | python3 -m json.tool",
+        "a scratch schedules.json in a test dir (replay FP)":
+            "cd /tmp/sched-audit && echo '{\"nextId\":0,\"items\":[]}' > schedules.json && node schedule.mjs list",
+        "quoted heredoc with a literal $SQL line is literal": "psql -h db.abc.supabase.co <<'EOF'\nselect '$SQL' as x;\nEOF",
+        "echo of a read into psql": "echo 'select 1' | psql -h db.abc.supabase.co",
+        "echo $Q assigned a read": "Q='select 1'; echo \"$Q\" | psql -h db.abc.supabase.co",
+        "diff of two process substitutions": "diff <(ls a) <(ls b)",
+        "commit message heredoc in $(...) with an apostrophe and the command text":
+            "git commit -m \"$(cat <<'EOF'\nfix: don't hold it\nsupabase db push\npsql -c 'delete from t'\nEOF\n)\" && echo ok",
+        "unquoted commit heredoc in $(...)":
+            "git commit -m $(cat <<'EOF'\nsupabase db push\nEOF\n) && echo ok",
+        "a comment with an apostrophe inside $(...)": "echo $(ls # it's fine\n) && echo ok",
         "xargs grep -l psql is a grep": "cat list | xargs grep -l psql",
         "psql -c with a variable inside the SQL text": 'psql -h db.abc.supabase.co -c "select * from t where id = $ID"',
         "psql -c from a variable assigned a read": "Q='select 1'; psql -h db.abc.supabase.co -c \"$Q\"",
@@ -490,6 +540,20 @@ def main():
         b(c)
         dt = time.perf_counter() - t0
         check(f"perf: {label} in {dt:.2f}s (< 2 s)", dt < 2.0)
+
+    # File tools on the bridge's state files (wired on Write|Edit|MultiEdit too)
+    for tool in ("Write", "Edit", "MultiEdit"):
+        payload = {"tool_name": tool, "tool_input": {"file_path": "/Users/zalo/dev/claude-telegram-bridge/schedules.json"}}
+        code, _ = m.decide(payload, SCHEDULE)
+        check(f"{tool} on schedules.json in a scheduled run is held", code == 2)
+        code, _ = m.decide(payload, {"TMUX": TMUX_VAL, "LEASH_TRIGGER": "schedule"})
+        check(f"{tool} on schedules.json in tmux passes", code == 0)
+    code, _ = m.decide({"tool_name": "Write", "tool_input": {"file_path": "/tmp/sched-audit/schedules.json"}}, SCHEDULE)
+    check("Write to a scratch schedules.json outside the bridge passes", code == 0)
+    code, _ = m.decide({"tool_name": "Write", "tool_input": {"file_path": "/tmp/notes.md"}}, SCHEDULE)
+    check("Write to any other file in a scheduled run passes", code == 0)
+    code, _ = m.decide({"tool_name": "Edit", "tool_input": {"file_path": "/x/bg-queue.json"}}, dict(SCHEDULE, LEASH_ALLOW_WRITE="1"))
+    check("an approved run may edit the queue", code == 0)
 
     # The hold message makes the approval Zalo's alone.
     code, err = m.decide({"tool_name": "mcp__supabase__apply_migration", "tool_input": {"name": "x"}}, SCHEDULE)
