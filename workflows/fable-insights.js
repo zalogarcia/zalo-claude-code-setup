@@ -128,6 +128,14 @@ const SESSION_ITEM_SCHEMA = {
     },
     lines: { type: "integer" },
     bytes: { type: "integer" },
+    band: {
+      type: "string",
+      description: "the stratum this session was drawn from (deep, mid, light, or all on a census)",
+    },
+    weight: {
+      type: "number",
+      description: "its stratum's weight: population / drawn, 1.0 in a census stratum",
+    },
     user_msgs: { type: "integer" },
     typed_msgs: { type: "integer" },
     repos_touched: { type: "array", items: { type: "string" } },
@@ -210,6 +218,14 @@ const MANIFEST_SCHEMA = {
         type: "object",
         required: ["id", "reason"],
         properties: { id: { type: "string" }, reason: { type: "string" } },
+      },
+    },
+    sampling_check: {
+      type: "object",
+      description: "the script's own check of its sampling record against the sample",
+      properties: {
+        ok: { type: "boolean" },
+        errors: { type: "array", items: { type: "string" } },
       },
     },
     script_error: {
@@ -447,6 +463,115 @@ function deriveVerificationQuality(f) {
   };
 }
 
+// ---- sampling check: the record must describe the sample it came with -----------
+// Mirrors check_sampling() in scripts/session-manifest.py and runs on what the
+// relay DELIVERED, so a regression in the script or a relay that rewrote a
+// record is caught deterministically. 2026-09-27: the deep stratum was labelled
+// "census of the band" at weight 2.475 while only 40 of its 99 sessions were
+// drawn; only the LLM verifier noticed, and it could have flattered it.
+const drawLabel = (population, drawn) =>
+  population === 0
+    ? "empty"
+    : drawn === population
+      ? "census"
+      : drawn === 0
+        ? "not sampled"
+        : "seeded random";
+
+function checkSampling(samp, records) {
+  const errs = [];
+  const strata = Array.isArray(samp && samp.strata) ? samp.strata : [];
+  if (!samp || samp.method === "census") {
+    if (samp && Number.isFinite(Number(samp.population)) && records.length !== Number(samp.population))
+      errs.push(`census of ${samp.population} sessions delivered ${records.length} records`);
+    return errs;
+  }
+  if (samp.method !== "stratified") return errs;
+  if (!strata.length) return ["a stratified sample with no strata cannot be weighted"];
+  const sum = (k) => strata.reduce((a, st) => a + (Number(st[k]) || 0), 0);
+  if (sum("drawn") !== Number(samp.selected))
+    errs.push(`strata drew ${sum("drawn")} but the record says ${samp.selected} selected`);
+  if (sum("population") !== Number(samp.population))
+    errs.push(`strata cover ${sum("population")} sessions but the population is ${samp.population}`);
+  const byName = {};
+  for (const st of strata) {
+    byName[st.name] = st;
+    const pop = Number(st.population) || 0;
+    const drawn = Number(st.drawn) || 0;
+    const want = drawLabel(pop, drawn);
+    if (String(st.draw || "") !== want)
+      errs.push(`the ${st.name} stratum is labelled "${st.draw}" but drew ${drawn} of ${pop}, which is "${want}"`);
+    if (drawn > 0) {
+      const w = Math.round((1000 * pop) / drawn) / 1000;
+      if (typeof st.weight !== "number" || Math.abs(st.weight - w) > 0.001)
+        errs.push(`the ${st.name} stratum has weight ${st.weight}, but ${drawn} of ${pop} means ${w}`);
+    } else if (st.weight !== null && st.weight !== undefined) {
+      errs.push(`the ${st.name} stratum drew nothing but carries weight ${st.weight}`);
+    }
+  }
+  const counts = {};
+  // Per-record problems are grouped by kind: 80 identical sentences bury the
+  // one stratum error that matters.
+  const perKind = {};
+  const note = (kind, r) => (perKind[kind] = perKind[kind] || []).push(String(r.id || "").slice(0, 8));
+  for (const r of records) {
+    const st = byName[r.band];
+    if (!st) {
+      note("no valid band, so it cannot be weighted", r);
+      continue;
+    }
+    counts[r.band] = (counts[r.band] || 0) + 1;
+    if (typeof r.weight !== "number" || typeof st.weight !== "number" || Math.abs(r.weight - st.weight) > 0.001)
+      note("a weight that disagrees with its stratum", r);
+    if (!Number.isInteger(r.bytes)) note("no bytes", r);
+  }
+  for (const [kind, ids] of Object.entries(perKind))
+    errs.push(`${ids.length} of ${records.length} selected records carry ${kind} (first: ${ids.slice(0, 3).join(", ")})`);
+  for (const [name, st] of Object.entries(byName))
+    if ((counts[name] || 0) !== (Number(st.drawn) || 0))
+      errs.push(`the ${name} stratum says ${st.drawn} drawn but ${counts[name] || 0} selected records name it`);
+  const stripped = String(samp.bias_statement || "").replace(/NOT A CENSUS/g, "");
+  const censusBands = Object.keys(byName).filter((n) => byName[n].draw === "census");
+  if (/\bis a census\b/.test(stripped) && !censusBands.length)
+    errs.push("the bias statement says census but no stratum is one");
+  for (const n of Object.keys(byName)) {
+    const esc = String(n).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    if (!censusBands.includes(n) && new RegExp(`\\b${esc} band\\b[^.]*?\\bis a census\\b`).test(stripped))
+      errs.push(`the bias statement calls the ${n} band a census`);
+  }
+  return errs;
+}
+
+// ---- field check: which analyst fields came back empty or missing -------------
+// 2026-09-27: the old empty_fields listed every key holding "", [] or null, so
+// it flagged 80 of 80 rows on two keys that carry "" BY DESIGN and could not
+// see a required key that was missing altogether. Manifest-side keys (repos)
+// are not analysis output; an empty friction list is a clean session.
+const EMPTY_BY_DESIGN = new Set([
+  "verification_quality_repaired",
+  "validates_prior_work",
+  "friction",
+]);
+const ANALYST_KEYS = () => Object.keys(FACET_SCHEMA.properties || {});
+function fieldCheck(facetList) {
+  const required = FACET_SCHEMA.required || [];
+  const analyst = ANALYST_KEYS();
+  const rows = [];
+  for (const f of facetList) {
+    const absent = required.filter((k) => !(k in f) || f[k] === undefined);
+    const empty = analyst.filter((k) => {
+      if (EMPTY_BY_DESIGN.has(k) || !(k in f)) return false;
+      const v = f[k];
+      return v === null || v === "" || (Array.isArray(v) && v.length === 0);
+    });
+    // Only required keys count as empty-and-wrong; optional ones may be blank.
+    const emptyRequired = empty.filter((k) => required.includes(k));
+    if (absent.length || emptyRequired.length)
+      rows.push({ session_id: f.session_id, absent, empty: emptyRequired });
+  }
+  return rows;
+}
+
 // ---- Phase 1: Manifest ----------------------------------------------------------
 // Workflow scripts cannot touch the filesystem, so ONE agent runs the scan
 // script and relays its summary. The scan itself is deterministic Python: on
@@ -559,6 +684,23 @@ if (reconciliation.script_error) {
 if (reconciliation.candidate_total === 0) {
   log(
     "EMPTY SCAN: the manifest reports zero candidate transcripts. That is a broken scan, not a quiet week, and nothing below is coverage.",
+  );
+}
+
+const scriptCheck =
+  manifest.sampling_check && typeof manifest.sampling_check === "object"
+    ? manifest.sampling_check
+    : null;
+const samplingErrors = [
+  ...(scriptCheck && scriptCheck.ok === false && Array.isArray(scriptCheck.errors)
+    ? scriptCheck.errors.map((e) => `script self-check: ${e}`)
+    : []),
+  ...checkSampling(sampling, selected),
+];
+const sampling_check = { ok: samplingErrors.length === 0, errors: samplingErrors };
+if (!sampling_check.ok) {
+  log(
+    `SAMPLING CONTRADICTS MANIFEST: ${samplingErrors.join("; ")}. No count from this run can be weighted to a week total, and the Verify stage will report sampling_honest false whatever the verifier says.`,
   );
 }
 
@@ -717,6 +859,9 @@ const facets = await pipeline(selected, async (s) => {
     carried_over: Boolean(s.carried_over),
     in_progress: Boolean(s.in_progress),
     bytes: s.bytes,
+    // band and weight make each facet weightable on its own (09-27 P1).
+    band: s.band,
+    weight: s.weight,
   };
   const attempts = [];
   for (const model of [PRIMARY_MODEL, FALLBACK_MODEL]) {
@@ -857,6 +1002,7 @@ log(
 // cross-model second opinion on the aggregate. Per ~/.claude/CLAUDE.md the model
 // that verifies should differ from the model that authored.
 phase("Verify");
+const field_check = fieldCheck(cleanFacets);
 const verifyPayload = {
   counts: manifest_counts,
   coverage,
@@ -882,18 +1028,8 @@ const verifyPayload = {
   friction_types: cleanFacets.flatMap((f) =>
     Array.isArray(f.friction) ? f.friction.map((x) => x && x.type) : [],
   ),
-  empty_fields: cleanFacets.map((f) => ({
-    session_id: f.session_id,
-    empty: Object.keys(f).filter((k) => {
-      const v = f[k];
-      return (
-        v === null ||
-        v === undefined ||
-        v === "" ||
-        (Array.isArray(v) && v.length === 0)
-      );
-    }),
-  })),
+  field_check,
+  sampling_check,
 };
 
 const VERIFY_SCHEMA = {
@@ -955,7 +1091,8 @@ Both have been changed: verification_quality is now DERIVED from two counts per 
 - Friction types outside the pinned taxonomy (version ${TAXONOMY_VERSION}): ${FRICTION_TYPES.join(", ")}. Anything else is an invented slug and it breaks week-over-week deltas.
 - other_bucket_pct: what share of frictions landed in "other"? Above 10% means the taxonomy is still missing a category; name what the residue looks like if you can tell.
 - sampling_honest: the run must state its own sampling bias (sampling.bias_statement) AND reconcile its counts (counts.reconciliation_ok true, counts.folded_exclusions empty). If a count does not add up or a record stands in for a group, say it in the first sentence.
-- Facets with empty required fields. An empty facet is a failed analysis that did not report itself as failed.
+- sampling_check is DETERMINISTIC: it compares every stratum's label and weight with what was drawn, and every selected record's band and weight with its stratum. If sampling_check.ok is false, sampling_honest is false and the run is not trustworthy; the workflow enforces that after you answer, so spend your verdict on what the contradiction means.
+- field_check lists facets with a required key ABSENT or a required analyst field empty ("" or []), with the by-design empty keys (validates_prior_work, verification_quality_repaired, an empty friction list) already excluded. Each row there is a failed analysis that did not report itself as failed.
 
 ## The data
 ${JSON.stringify(verifyPayload).slice(0, 60000)}
@@ -968,7 +1105,18 @@ const verifyGot = await tryAgent(verifyPrompt, {
   schema: VERIFY_SCHEMA,
   model: FALLBACK_MODEL,
 });
-const verification = verifyGot.result;
+let verification = verifyGot.result;
+if (!sampling_check.ok) {
+  // The deterministic check outranks the verifier: a record that contradicts
+  // its own sample is not honest however the verdict reads.
+  const lead = `SAMPLING CONTRADICTS MANIFEST (deterministic check, overrides the verifier): ${sampling_check.errors.join("; ")}.`;
+  verification = {
+    ...(verification || { unavailable: true, error_class: verifyGot.error_class }),
+    trustworthy: false,
+    sampling_honest: false,
+    verdict: `${lead} ${verification && verification.verdict ? verification.verdict : ""}`.trim(),
+  };
+}
 
 if (verification && verification.trustworthy === false) {
   log(`Verify: NOT trustworthy. ${verification.verdict || "no verdict"}`);
@@ -991,5 +1139,7 @@ return {
   manifest_counts,
   manifest_path: manifestPath,
   verification: verification || { unavailable: true, error_class: verifyGot.error_class },
+  sampling_check,
+  field_check,
   synthesis_protocol: "~/.claude/workflows/fable-insights-synthesis.md",
 };

@@ -289,7 +289,10 @@ console.log("fable-insights.js");
 // 6. DEFECT 1: a sampled run states its bias, is never called complete, and
 //    names what it did not look at.
 {
-  const selected = [session("aaaaaaaa-1"), session("bbbbbbbb-2")];
+  const selected = [
+    session("aaaaaaaa-1", { band: "deep", weight: 1 }),
+    session("bbbbbbbb-2", { band: "mid", weight: 5 }),
+  ];
   const sampling = {
     method: "stratified",
     population: 10,
@@ -297,12 +300,12 @@ console.log("fable-insights.js");
     coverage_pct: 20,
     seed: "2026-09-19",
     strata: [
-      { name: "deep", population: 4, drawn: 1, weight: 4, draw: "census of the band" },
-      { name: "mid", population: 3, drawn: 1, weight: 3, draw: "seeded random" },
-      { name: "light", population: 3, drawn: 0, weight: null, draw: "seeded random" },
+      { name: "deep", population: 1, drawn: 1, weight: 1, draw: "census" },
+      { name: "mid", population: 5, drawn: 1, weight: 5, draw: "seeded random" },
+      { name: "light", population: 4, drawn: 0, weight: null, draw: "not sampled" },
     ],
     bias_statement:
-      "STRATIFIED SAMPLE, NOT A CENSUS: 2 of 10 substantive sessions (20%). The deep band is a census and is over-represented by design.",
+      "STRATIFIED SAMPLE, NOT A CENSUS: 2 of 10 substantive sessions (20%). The deep band (the 1 largest transcripts by bytes) is a census, every one analysed at weight 1.0.",
   };
   const agentFn = async (prompt, opts) => {
     if (opts.label.startsWith("manifest"))
@@ -325,6 +328,158 @@ console.log("fable-insights.js");
   check("the unanalysed sessions are named, not silently dropped", out.manifest_counts.skipped_ids.length === 8);
   check("skipped_by_sampling reconciles with the population", out.manifest_counts.skipped_by_sampling === 8);
   check("the PARTIAL RUN line states the sample coverage", logs.some((l) => l.startsWith("PARTIAL RUN:") && l.includes("20%")), logs.filter((l) => l.startsWith("PARTIAL RUN:")).join(""));
+}
+
+// 6b. 2026-09-27 P1: every facet carries bytes, band and weight, so the week
+//     total can be rebuilt from the facets file alone.
+{
+  const selected = [
+    session("aaaaaaaa-1", { band: "deep", weight: 1, bytes: 9000000 }),
+    session("bbbbbbbb-2", { band: "mid", weight: 5, bytes: 300000 }),
+  ];
+  const sampling = {
+    method: "stratified",
+    population: 10,
+    selected: 2,
+    coverage_pct: 20,
+    seed: "s",
+    strata: [
+      { name: "deep", population: 1, drawn: 1, weight: 1, draw: "census" },
+      { name: "mid", population: 5, drawn: 1, weight: 5, draw: "seeded random" },
+      { name: "light", population: 4, drawn: 0, weight: null, draw: "not sampled" },
+    ],
+    bias_statement: "STRATIFIED SAMPLE, NOT A CENSUS: 2 of 10. The deep band (the 1 largest) is a census.",
+  };
+  const agentFn = async (prompt, opts) => {
+    if (opts.label.startsWith("manifest"))
+      return manifestOf(selected, { substantive_count: 10, sampling, not_selected_ids: ["s3", "s4", "s5", "s6", "s7", "s8", "s9", "s10"] });
+    if (opts.label.startsWith("analyze:")) return { ...FACET };
+    if (opts.label === "verify:aggregate")
+      return { trustworthy: true, saturated_fields: [], invented_slugs: [], sampling_honest: true, verdict: "clean" };
+    return null;
+  };
+  const { promise, logs } = runWorkflow({ agentFn, args: { days: 7 } });
+  const out = await promise;
+  check(
+    "every facet carries bytes, band and weight",
+    out.facets.length === 2 &&
+      out.facets.every((f) => Number.isInteger(f.bytes) && typeof f.band === "string" && typeof f.weight === "number"),
+    JSON.stringify(out.facets.map((f) => ({ id: f.session_id, bytes: f.bytes, band: f.band, weight: f.weight }))),
+  );
+  check("an honest stratified record passes the sampling check", out.sampling_check.ok === true, JSON.stringify(out.sampling_check));
+  check("an honest record leaves the verifier's verdict alone", out.verification.trustworthy === true && out.verification.sampling_honest === true);
+  check("no SAMPLING CONTRADICTS line on an honest record", !logs.some((l) => l.startsWith("SAMPLING CONTRADICTS MANIFEST")));
+}
+
+// 6c. 2026-09-27 P1: the deep stratum said "census of the band" at weight 2.475
+//     while 40 of its 99 sessions were drawn. The check is deterministic and
+//     overrides a verifier that calls the sampling honest.
+{
+  const selected = [];
+  for (let i = 0; i < 4; i += 1) selected.push(session(`dddddddd-${i}`, { band: "deep", weight: 2.475 }));
+  for (let i = 0; i < 2; i += 1) selected.push(session(`mmmmmmmm-${i}`, { band: "mid", weight: 4.95 }));
+  for (let i = 0; i < 2; i += 1) selected.push(session(`llllllll-${i}`, { band: "light", weight: 5 }));
+  const sampling = {
+    method: "stratified",
+    population: 30,
+    selected: 8,
+    coverage_pct: 26.7,
+    seed: "s",
+    strata: [
+      { name: "deep", population: 10, drawn: 4, weight: 2.5, draw: "census of the band" },
+      { name: "mid", population: 10, drawn: 2, weight: 5, draw: "seeded random" },
+      { name: "light", population: 10, drawn: 2, weight: 5, draw: "seeded random" },
+    ],
+    bias_statement: "STRATIFIED SAMPLE, NOT A CENSUS: 8 of 30. The deep band (the 4 largest transcripts by bytes) is a census.",
+  };
+  const agentFn = async (prompt, opts) => {
+    if (opts.label.startsWith("manifest")) return manifestOf(selected, { substantive_count: 30, sampling });
+    if (opts.label.startsWith("analyze:")) return { ...FACET };
+    if (opts.label === "verify:aggregate")
+      return { trustworthy: true, saturated_fields: [], invented_slugs: [], sampling_honest: true, verdict: "all clean" };
+    return null;
+  };
+  const { promise, logs, prompts } = runWorkflow({ agentFn, args: { days: 7 } });
+  const out = await promise;
+  check("a census label on a partial draw fails the sampling check", out.sampling_check.ok === false && out.sampling_check.errors.some((e) => e.includes("deep")), JSON.stringify(out.sampling_check));
+  check("a weight that disagrees with its stratum is named", out.sampling_check.errors.some((e) => e.includes("weight")), JSON.stringify(out.sampling_check.errors));
+  check("the contradiction is logged loudly at manifest time", logs.some((l) => l.startsWith("SAMPLING CONTRADICTS MANIFEST")), logs.join(" | ").slice(0, 300));
+  check("the verifier sees the deterministic check", prompts.some((p) => p.opts.label === "verify:aggregate" && p.prompt.includes("sampling_check")));
+  check("the check overrides a verifier that called the sampling honest", out.verification.sampling_honest === false && out.verification.trustworthy === false, JSON.stringify(out.verification));
+  check("the overridden verdict leads with the contradiction", String(out.verification.verdict).startsWith("SAMPLING CONTRADICTS MANIFEST"), String(out.verification.verdict).slice(0, 120));
+}
+{
+  // the same contradiction with the verifier dead: still loud, never clean
+  const selected = [session("dddddddd-0", { band: "deep", weight: 2 }), session("mmmmmmmm-0", { band: "mid", weight: 2 })];
+  const sampling = {
+    method: "stratified", population: 4, selected: 2, coverage_pct: 50, seed: "s",
+    strata: [
+      { name: "deep", population: 2, drawn: 1, weight: 2, draw: "census of the band" },
+      { name: "mid", population: 2, drawn: 1, weight: 2, draw: "seeded random" },
+    ],
+    bias_statement: "STRATIFIED SAMPLE, NOT A CENSUS: 2 of 4. The deep band is a census.",
+  };
+  const agentFn = async (prompt, opts) => {
+    if (opts.label.startsWith("manifest")) return manifestOf(selected, { substantive_count: 4, sampling });
+    if (opts.label.startsWith("analyze:")) return { ...FACET };
+    return null;
+  };
+  const out = await runWorkflow({ agentFn, args: { days: 7 } }).promise;
+  check("with the verifier dead, a contradiction still marks the run untrustworthy", out.verification.trustworthy === false && out.verification.sampling_honest === false, JSON.stringify(out.verification));
+}
+{
+  // stratified records without band or weight cannot be weighted
+  const sampling = {
+    method: "stratified", population: 4, selected: 1, coverage_pct: 25, seed: "s",
+    strata: [
+      { name: "deep", population: 1, drawn: 1, weight: 1, draw: "census" },
+      { name: "mid", population: 3, drawn: 0, weight: null, draw: "not sampled" },
+    ],
+    bias_statement: "STRATIFIED SAMPLE, NOT A CENSUS: 1 of 4. The deep band (the 1 largest) is a census.",
+  };
+  const agentFn = async (prompt, opts) => {
+    if (opts.label.startsWith("manifest")) return manifestOf([session("aaaaaaaa-1")], { substantive_count: 4, sampling });
+    if (opts.label.startsWith("analyze:")) return { ...FACET };
+    return null;
+  };
+  const out = await runWorkflow({ agentFn, args: { days: 7 } }).promise;
+  check("a stratified record with no band fails the check", out.sampling_check.ok === false && out.sampling_check.errors.some((e) => e.includes("band")), JSON.stringify(out.sampling_check));
+}
+{
+  // the script's own self-check result is carried and honoured
+  const agentFn = async (prompt, opts) => {
+    if (opts.label.startsWith("manifest"))
+      return manifestOf([session("aaaaaaaa-1")], { sampling_check: { ok: false, errors: ["the deep stratum is labelled 'census' but drew 40 of 99"] } });
+    if (opts.label.startsWith("analyze:")) return { ...FACET };
+    return null;
+  };
+  const out = await runWorkflow({ agentFn, args: { days: 7 } }).promise;
+  check("a failed script self-check is carried into the check", out.sampling_check.ok === false && out.sampling_check.errors.some((e) => e.includes("40 of 99")), JSON.stringify(out.sampling_check));
+}
+
+// 6d. 2026-09-27 P1: empty_fields flagged 80 of 80 rows because two keys carry
+//     "" by design. The field check ignores the sentinels and reports required
+//     keys that are ABSENT, which the old check could not see.
+{
+  const noFriction = { ...FACET };
+  delete noFriction.friction;
+  const agentFn = async (prompt, opts) => {
+    if (opts.label.startsWith("manifest"))
+      return manifestOf([session("aaaaaaaa-1"), session("bbbbbbbb-2"), session("cccccccc-3", { primary_repo: "", repos_touched: [] })]);
+    if (opts.label.includes("aaaaaaaa")) return { ...FACET };
+    if (opts.label.includes("bbbbbbbb")) return noFriction;
+    if (opts.label.includes("cccccccc")) return { ...FACET, goal: "" };
+    return null;
+  };
+  const { promise, prompts } = runWorkflow({ agentFn, args: { days: 7 } });
+  const out = await promise;
+  const rows = out.field_check;
+  const byId = Object.fromEntries(rows.map((r) => [r.session_id, r]));
+  check("a clean facet with the two by-design empty strings is not flagged", !byId["aaaaaaaa-1"], JSON.stringify(rows));
+  check("a facet missing a required key is flagged as absent", byId["bbbbbbbb-2"] && byId["bbbbbbbb-2"].absent.includes("friction"), JSON.stringify(rows));
+  check("a genuinely empty analyst field is flagged", byId["cccccccc-3"] && byId["cccccccc-3"].empty.includes("goal"), JSON.stringify(rows));
+  check("manifest-side empty repos are not an analysis failure", byId["cccccccc-3"] && !byId["cccccccc-3"].empty.includes("primary_repo"), JSON.stringify(rows));
+  check("the verifier gets the field check, not the old empty_fields", prompts.some((p) => p.opts.label === "verify:aggregate" && p.prompt.includes("field_check") && !p.prompt.includes("empty_fields")));
 }
 
 // 7. DEFECT 2a: counts that do not reconcile are loud and make the run partial.

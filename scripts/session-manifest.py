@@ -166,7 +166,7 @@ def draw(pool, k, seed):
 
 
 def select(substantive, cap, seed, census_share):
-    """Stratified sample: census the deep band, random-sample the rest.
+    """Stratified sample: census the top `cap * census_share`, random-sample the rest.
 
     Returns (selected, sampling record). Every stratum carries the weight
     population/drawn so a week-level estimate can be reconstructed from an
@@ -190,6 +190,9 @@ def select(substantive, cap, seed, census_share):
             ),
         }
     if len(ordered) <= cap:
+        for s in ordered:
+            s["band"] = "all"
+            s["weight"] = 1.0
         return ordered, {
             "method": "census",
             "cap": cap,
@@ -198,22 +201,30 @@ def select(substantive, cap, seed, census_share):
             "coverage_pct": 100.0 if ordered else 0.0,
             "seed": seed,
             "strata": [{"name": "all", "population": len(ordered),
-                        "drawn": len(ordered), "weight": 1.0}],
+                        "drawn": len(ordered), "weight": 1.0, "draw": "census"}],
             "bias_statement": (
                 "Census: every substantive session in the window was analysed. "
                 "No sampling bias."
             ),
         }
 
-    third = max(1, len(ordered) // 3)
+    # The deep band is EXACTLY the slots it gets, so it really is a census.
+    # 2026-09-27: the band was the top third (99 sessions) but only its top 40
+    # were taken, under the label "census of the band" at weight 2.475. That
+    # is a size-skewed head, not a census and not a random draw, so no weight
+    # could expand it. Now: the top `deep_slots` by rank are the deep band and
+    # all of them are analysed (weight 1.0); everything below is split in half
+    # by rank into mid and light, and each half is a seeded random draw.
+    deep_slots = min(len(ordered), max(1, int(round(cap * census_share))))
+    rest = ordered[deep_slots:]
+    half = (len(rest) + 1) // 2
     bands = [
-        ("deep", ordered[:third]),
-        ("mid", ordered[third: 2 * third]),
-        ("light", ordered[2 * third:]),
+        ("deep", ordered[:deep_slots]),
+        ("mid", rest[:half]),
+        ("light", rest[half:]),
     ]
-    deep_slots = min(len(bands[0][1]), max(1, int(round(cap * census_share))))
     rest_slots = cap - deep_slots
-    rest_pop = len(bands[1][1]) + len(bands[2][1])
+    rest_pop = len(rest)
     mid_slots = int(round(rest_slots * (len(bands[1][1]) / rest_pop))) if rest_pop else 0
     mid_slots = min(mid_slots, len(bands[1][1]))
     light_slots = min(rest_slots - mid_slots, len(bands[2][1]))
@@ -229,31 +240,25 @@ def select(substantive, cap, seed, census_share):
     for name, pool in bands:
         k = plan[name]
         if name == "deep":
-            taken = pool[:k]
+            taken = list(pool)
         else:
             taken, _ = draw(pool, k, seed)
-        selected.extend(taken)
-        strata.append({
+        stratum = {
             "name": name,
             "population": len(pool),
             "drawn": len(taken),
             "weight": round(len(pool) / len(taken), 3) if taken else None,
             "band_bytes": [rank_key(pool[0])[0], rank_key(pool[-1])[0]] if pool else [],
-            "draw": "census of the band" if name == "deep" else "seeded random",
-        })
+            # Derived from what was drawn, never from the band's name.
+            "draw": draw_label(len(pool), len(taken)),
+        }
+        for s in pool:
+            s["band"] = name
+        for s in taken:
+            s["weight"] = stratum["weight"]
+        selected.extend(taken)
+        strata.append(stratum)
     pct = round(100.0 * len(selected) / len(ordered), 1)
-    bias = (
-        "STRATIFIED SAMPLE, NOT A CENSUS: {sel} of {pop} substantive sessions "
-        "({pct}%). The deep band (the {d} largest transcripts by bytes) is a "
-        "census and is over-represented by design, because "
-        "defects concentrate there. The mid and light bands are seeded random "
-        "draws at weights {wm} and {wl}. Multiply a mid or light band count by "
-        "its weight before reading it as a week total, and never read a deep "
-        "band rate as the week's rate."
-    ).format(
-        sel=len(selected), pop=len(ordered), pct=pct, d=strata[0]["drawn"],
-        wm=strata[1]["weight"], wl=strata[2]["weight"],
-    )
     return selected, {
         "method": "stratified",
         "cap": cap,
@@ -263,8 +268,133 @@ def select(substantive, cap, seed, census_share):
         "seed": seed,
         "census_share": census_share,
         "strata": strata,
-        "bias_statement": bias,
+        "bias_statement": bias_statement(strata, len(selected), len(ordered), pct),
     }
+
+
+def draw_label(population, drawn):
+    """The one place a stratum's draw is named, from the counts alone."""
+    if population == 0:
+        return "empty"
+    if drawn == population:
+        return "census"
+    if drawn == 0:
+        return "not sampled"
+    return "seeded random"
+
+
+def bias_statement(strata, selected, population, pct):
+    """Built from the stratum records, so it cannot call a draw a census."""
+    parts = [
+        "STRATIFIED SAMPLE, NOT A CENSUS: {sel} of {pop} substantive sessions "
+        "({pct}%).".format(sel=selected, pop=population, pct=pct)
+    ]
+    for st in strata:
+        if st["draw"] == "census":
+            parts.append(
+                "The {n} band (the {p} largest transcripts by bytes) is a census, "
+                "every one analysed at weight 1.0, and is over-represented by "
+                "design because defects concentrate there.".format(n=st["name"], p=st["population"])
+            )
+        elif st["draw"] == "seeded random":
+            parts.append(
+                "The {n} band is a seeded random draw of {d} of {p} at weight {w}.".format(
+                    n=st["name"], d=st["drawn"], p=st["population"], w=st["weight"])
+            )
+        elif st["draw"] == "not sampled":
+            parts.append(
+                "The {n} band ({p} sessions) was NOT sampled; nothing about it is "
+                "in this run.".format(n=st["name"], p=st["population"])
+            )
+    random_bands = [st["name"] for st in strata if st["draw"] == "seeded random"]
+    if random_bands:
+        parts.append(
+            "The {b} {verb} seeded random: multiply a count there by its weight "
+            "before reading it as a week total, and never read a band analysed "
+            "in full as the week's rate.".format(
+                b=" and ".join(random_bands) + (" bands" if len(random_bands) > 1 else " band"),
+                verb="are" if len(random_bands) > 1 else "is",
+            )
+        )
+    return " ".join(parts)
+
+
+def check_sampling(sampling, selected):
+    """Every way the sampling record can contradict the sample it describes.
+
+    Returns a list of plain sentences; empty means consistent. The workflow's
+    Verify stage runs the same checks on what the relay delivered, so a
+    contradiction is caught here AND after the relay (2026-09-27: a stratum
+    labelled census had drawn 40 of 99, and only the LLM verifier noticed).
+    """
+    errs = []
+    method = sampling.get("method")
+    strata = sampling.get("strata") or []
+    if method == "census":
+        if len(selected) != sampling.get("population"):
+            errs.append("census of %s sessions delivered %d records"
+                        % (sampling.get("population"), len(selected)))
+        return errs
+    if method != "stratified":
+        return errs
+    if not strata:
+        return ["a stratified sample with no strata cannot be weighted"]
+    if sum(st.get("drawn") or 0 for st in strata) != sampling.get("selected"):
+        errs.append("strata drew %d but the record says %s selected"
+                    % (sum(st.get("drawn") or 0 for st in strata), sampling.get("selected")))
+    if sum(st.get("population") or 0 for st in strata) != sampling.get("population"):
+        errs.append("strata cover %d sessions but the population is %s"
+                    % (sum(st.get("population") or 0 for st in strata), sampling.get("population")))
+    by_name = {}
+    for st in strata:
+        name, pop, drawn, w = st.get("name"), st.get("population"), st.get("drawn"), st.get("weight")
+        by_name[name] = st
+        label = str(st.get("draw") or "")
+        expected = draw_label(pop or 0, drawn or 0)
+        if label != expected:
+            errs.append("the %s stratum is labelled %r but drew %s of %s, which is %r"
+                        % (name, label, drawn, pop, expected))
+        if drawn:
+            want = round(pop / drawn, 3)
+            if not isinstance(w, (int, float)) or abs(w - want) > 0.001:
+                errs.append("the %s stratum has weight %s, but %s of %s means %s"
+                            % (name, w, drawn, pop, want))
+        elif w is not None:
+            errs.append("the %s stratum drew nothing but carries weight %s" % (name, w))
+    counts = {}
+    # Per-record problems are grouped by kind: 80 identical sentences bury
+    # the one stratum error that matters.
+    per_kind = {}
+
+    def note(kind, rec):
+        per_kind.setdefault(kind, []).append(str(rec.get("id"))[:8])
+
+    for rec in selected:
+        band = rec.get("band")
+        if band not in by_name:
+            note("no valid band, so it cannot be weighted", rec)
+            continue
+        counts[band] = counts.get(band, 0) + 1
+        w = by_name[band].get("weight")
+        if not isinstance(rec.get("weight"), (int, float)) or w is None or abs(rec["weight"] - w) > 0.001:
+            note("a weight that disagrees with its stratum", rec)
+        if not isinstance(rec.get("bytes"), int):
+            note("no bytes", rec)
+    for kind, ids in per_kind.items():
+        errs.append("%d of %d selected records carry %s (first: %s)"
+                    % (len(ids), len(selected), kind, ", ".join(ids[:3])))
+    for name, st in by_name.items():
+        if counts.get(name, 0) != (st.get("drawn") or 0):
+            errs.append("the %s stratum says %s drawn but %d selected records name it"
+                        % (name, st.get("drawn"), counts.get(name, 0)))
+    stripped = str(sampling.get("bias_statement") or "").replace("NOT A CENSUS", "")
+    census_bands = [n for n, st in by_name.items() if st.get("draw") == "census"]
+    if re.search(r"\bis a census\b", stripped) and not census_bands:
+        errs.append("the bias statement says census but no stratum is one")
+    for n in by_name:
+        if n not in census_bands and re.search(r"\b%s band\b[^.]*?\bis a census\b" % re.escape(str(n)), stripped):
+            errs.append("the bias statement calls the %s band a census" % n)
+    return errs
 
 
 def cluster_trivial(trivial, seed):
@@ -412,10 +542,14 @@ def main():
         "trivial_count": len(back["trivial"]),
         "excluded": back["excluded"],
         "selected": [
-            {k: s[k] for k in ("id", "path", "transcript_dir", "start",
-                               "last_activity", "lines", "user_msgs",
-                               "typed_msgs", "repos_touched", "primary_repo",
-                               "in_progress", "carried_over")}
+            # bytes, band and weight travel with every record: without them no
+            # facet can say which stratum it came from, and the synthesis
+            # weighting rule is not executable from the facets file (09-27).
+            {k: s.get(k) for k in ("id", "path", "transcript_dir", "start",
+                                   "last_activity", "lines", "bytes", "band",
+                                   "weight", "user_msgs", "typed_msgs",
+                                   "repos_touched", "primary_repo",
+                                   "in_progress", "carried_over")}
             for s in back["substantive"] if s["id"] in sel_ids
         ],
         "not_selected_ids": not_selected_ids,
@@ -427,11 +561,20 @@ def main():
         "sampling": sampling,
         "scan_seconds": round(time.time() - now_ts, 1),
     }
+    # Checked on what was read back off the file, the same way the counts are.
+    errors = check_sampling(sampling, summary["selected"])
+    summary["sampling_check"] = {"ok": not errors, "errors": errors}
     text = json.dumps(summary)
     if a.summary_out:
         with open(a.summary_out, "w") as fh:
             fh.write(text)
     print(text)
+    if errors:
+        # Loud and non-zero: the workflow's manifest agent turns a non-zero
+        # exit into script_error, so a self-contradicting sample never feeds
+        # an 80-agent analysis wave as if it were honest.
+        sys.stderr.write("SAMPLING SELF-CHECK FAILED: %s\n" % "; ".join(errors))
+        return 3
     return 0
 
 
