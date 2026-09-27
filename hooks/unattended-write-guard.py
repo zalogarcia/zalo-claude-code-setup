@@ -5,6 +5,13 @@ Wired on `Bash|mcp__supabase__apply_migration|mcp__supabase__execute_sql|Write|E
 Attended runs exit 0 before reading stdin's payload, so the file tools cost
 nothing outside an unattended run.
 
+KNOWN PARTIAL (2026-09-27): the bridge passes the scheduled run mark
+(LEASH_TRIGGER) to Claude workers only. A scheduled `--run` job routed to
+Codex (the bg lane switched with `/engine bg codex`, or a `codex:` prefix)
+carries no mark, and Codex's projected hooks predate this guard, so such a
+run is NOT held. Until the bridge passes the mark to Codex children and the
+Codex projection is regenerated, route scheduled jobs that may write to Claude.
+
 Why this exists (self-audit 2026-09-27, P5; first proposed 09-19)
 ------------------------------------------------------------------
 `~/.claude/CLAUDE.md` (Git and Deployment): "Pushing, deploying and migrations
@@ -1374,9 +1381,36 @@ def _grants_write_approval(args):
     return False
 
 
-def _bridge_state_target(cmd):
-    """The bridge state file this simple command writes by redirect, tee, cp
-    or mv, or None."""
+_INTERPRETERS = {"python", "python3", "node", "perl", "ruby", "deno", "bun", "osascript"}
+_STATE_PATH_RE = re.compile(r"claude-telegram-bridge[^'\"\s]*/(?:schedules|bg-queue|bg-held)\.json")
+_SCRIPT_WRITE_RE = re.compile(
+    r"open\([^)]*['\"][wax+]|writeFile|appendFile|json\.dump\(|write_text\(|\.write\(|os\.replace\(|"
+    r"os\.rename\(|renameSync\(|shutil\.(?:copy|move)|File\.write|IO\.write|>\s*\$")
+
+
+def _interpreter_state_write(cmd):
+    """An interpreter (python, node, perl ...) whose inline code or heredoc
+    names a bridge state file and writes something (QA 2026-09-27: a `python3
+    -c "json.dump(..., open('.../schedules.json','w'))"` approved itself)."""
+    argv, _ = _argv(cmd["words"])
+    if not argv or _name(argv[0][0]).rstrip("0123456789.") not in _INTERPRETERS:
+        return None
+    text = " ".join(a for a, _ in argv[1:]) + "\n" + "\n".join(
+        r[2] for r in cmd["redirs"] if r[0] in ("heredoc", "herestr"))
+    m = _STATE_PATH_RE.search(text)
+    if m and _SCRIPT_WRITE_RE.search(text):
+        return m.group(0)
+    return None
+
+
+def _bridge_state_target(cmd, in_bridge=False):
+    """The bridge state file this simple command writes by redirect, tee, cp,
+    mv, sed -i or an interpreter's inline code, or None. `in_bridge`: an
+    earlier `cd` in this command entered the bridge directory, so a relative
+    `schedules.json` is the real one."""
+    script = _interpreter_state_write(cmd)
+    if script:
+        return script
     targets = [r[2] for r in cmd["redirs"] if r[0] == "redir" and r[1] in (">", ">>", ">|", "&>", "&>>")]
     argv, _ = _argv(cmd["words"])
     if argv:
@@ -1389,7 +1423,8 @@ def _bridge_state_target(cmd):
         elif prog in ("sed", "gsed", "perl") and any(a.startswith("-i") or a.startswith("-pi") for a, _ in argv[1:]):
             targets += plain
     for t in targets:
-        if t and _is_bridge_state(t):
+        if t and (_is_bridge_state(t) or (
+                in_bridge and "/" not in t and t in BRIDGE_STATE_FILES)):
             return t
     return None
 
@@ -1529,8 +1564,12 @@ def bash_write_reason(command, depth=0, in_container=False, written=None, assign
     mine = _heredoc_files(cmds)
     names = dict(assigned or {})
     names.update(_assignments(cmds))
+    in_bridge = False
     for cmd in cmds:
-        state = _bridge_state_target(cmd)
+        argv, _ = _argv(cmd["words"])
+        if argv and argv[0][0] in ("cd", "pushd") and len(argv) > 1:
+            in_bridge = BRIDGE_DIR_MARK in argv[1][0]
+        state = _bridge_state_target(cmd, in_bridge)
         if state:
             return f"a direct write to {state} (the bridge's schedule or queue, where the write approval lives)"
     for idx, cmd in enumerate(cmds):

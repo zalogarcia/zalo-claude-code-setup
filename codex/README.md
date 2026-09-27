@@ -95,6 +95,14 @@ adapter is `codex/AGENTS.delta.md`; extend it rather than forking the repo file.
 
 ## Known partials (ported, but not full parity)
 
+- **`unattended-write-guard.py`** (2026-09-27) decides "unattended" from the
+  env the bridge gives a worker (`LEASH_TRIGGER=schedule`). The bridge gives
+  that mark to Claude workers only (`worker-env.mjs`: a Codex child gets no
+  key), so a scheduled `--run` job routed to Codex (the bg lane on Codex via
+  `/engine bg codex`, or a `codex:` prefix) is never held, whatever this
+  projection says. Until the bridge passes the mark to Codex children, route
+  scheduled jobs that may write a database to Claude.
+
 - **`continue-if-incomplete.py`** (Stop hook) works, but weaker than in Claude.
   Its strongest signal is "the turn ended on a tool call with no summary text",
   read from the trailing content-block type. The shim's transcript projection

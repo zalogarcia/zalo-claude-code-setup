@@ -403,6 +403,15 @@ def main():
         "a redirect into bg-queue.json": "echo '[{\"text\":\"x\",\"scheduleId\":8,\"allowWrite\":true}]' > ~/dev/claude-telegram-bridge/bg-queue.json",
         "cp over schedules.json": "cp /tmp/s.json ~/dev/claude-telegram-bridge/schedules.json",
         "sed -i on schedules.json": "sed -i '' 's/\"run\": true/\"run\": true, \"allowWrite\": true/' ~/dev/claude-telegram-bridge/schedules.json",
+        # independent verifier 2026-09-27: interpreter writes and a relative path after cd
+        "python -c writing schedules.json":
+            "python3 -c \"import json; d=json.load(open('/Users/zalo/dev/claude-telegram-bridge/schedules.json')); d['items'][0]['allowWrite']=True; json.dump(d, open('/Users/zalo/dev/claude-telegram-bridge/schedules.json','w'))\"",
+        "node -e writeFileSync on bg-queue.json":
+            "node -e \"require('fs').writeFileSync('/Users/zalo/dev/claude-telegram-bridge/bg-queue.json', '[]')\"",
+        "python heredoc writing schedules.json":
+            "python3 - <<'PY'\nimport json\np='/Users/zalo/dev/claude-telegram-bridge/schedules.json'\nd=json.load(open(p))\nopen(p,'w').write(json.dumps(d))\nPY",
+        "cd into the bridge then mv over a relative schedules.json":
+            "cd ~/dev/claude-telegram-bridge && jq '.items[0].allowWrite=true' schedules.json > /tmp/s && mv /tmp/s schedules.json",
         "sudo --user long flag": "sudo --user postgres psql -h db.abc.supabase.co -c 'delete from t'",
         "script -q FILE cmd": "script -q /dev/null supabase db push",
         "env --chdir long flag": "env --chdir /x supabase db push",
@@ -460,6 +469,9 @@ def main():
         "schedule.mjs list": "node ~/dev/claude-telegram-bridge/schedule.mjs list",
         "schedule.mjs revoking the approval": "node ~/dev/claude-telegram-bridge/schedule.mjs update 8 --allow-write false",
         "reading schedules.json": "cat ~/dev/claude-telegram-bridge/schedules.json | python3 -m json.tool",
+        "python reading schedules.json only":
+            "python3 -c \"import json; print(len(json.load(open('/Users/zalo/dev/claude-telegram-bridge/schedules.json'))['items']))\"",
+        "a relative schedules.json outside the bridge": "cd /tmp/sched-audit && mv /tmp/s schedules.json",
         "a scratch schedules.json in a test dir (replay FP)":
             "cd /tmp/sched-audit && echo '{\"nextId\":0,\"items\":[]}' > schedules.json && node schedule.mjs list",
         "quoted heredoc with a literal $SQL line is literal": "psql -h db.abc.supabase.co <<'EOF'\nselect '$SQL' as x;\nEOF",
