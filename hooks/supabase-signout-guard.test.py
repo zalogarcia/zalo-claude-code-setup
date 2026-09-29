@@ -550,7 +550,7 @@ _mod = _ilu.module_from_spec(_spec)
 try:
     _spec.loader.exec_module(_mod)
     _linear = getattr(_mod, "split_words_linear", None)
-except Exception:
+except BaseException:  # a hook (or stub) that calls sys.exit() at import must not end the suite
     _linear = None
 
 
