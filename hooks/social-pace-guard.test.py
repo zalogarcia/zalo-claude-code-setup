@@ -90,6 +90,12 @@ fx("lib-api.mjs", "export const run = (q) => fetch('https://api.apify.com/v2/x?q
 MERGE = fx("merge.mjs", "import { li } from './lib-norm.mjs';\nimport { run } from './lib-api.mjs';\n")
 MAILER = fx("mailer.py", "import urllib.request\nFREE = {'gmail.com', 'x.com'}\n"
             "OWNER = 'someone@linkedin.com'\nurllib.request.urlopen('https://example.com')\n")
+# a review file that NAMES social homepages as findings (the 2026-09-28 amiron REVIEW.md):
+# prose + URLs, no code. Sending it or editing it is not a page load.
+fx("REVIEW.md", "CRO review. They point to the bare homepages https://facebook.com "
+   "https://instagram.com https://x.com https://linkedin.com https://tiktok.com and "
+   "https://www.threads.net/@acct as findings.\n")
+DASH = os.path.expanduser("~/.claude/scripts/dash-check.sh")
 
 CASES = []
 
@@ -319,6 +325,149 @@ case("at job", "echo \"curl -s " + FB + "\" | at now + 1 hour", "deny")
 case("LaunchAgent plist by heredoc", "cat > ~/Library/LaunchAgents/com.x.fb.plist <<'EOF'\n"
      "<string>curl -s " + FB + "</string>\nEOF", "deny")
 case("launchctl submit", "launchctl submit -l fb -- curl -s " + FB, "deny")
+
+# ---------------------------------------------------------------- allowed: two fixes 09-28
+# (1) An upload to a sink host (Telegram Bot API) does not read a file passed as a body /
+# multipart field as a URL list. Each of these was BLOCKED by the old hook (the ${TOK}
+# variable made it read every command token as a data file, and REVIEW.md named 7 socials).
+# (2) An offline script (no network / process / dynamic-loading capability) is not a load
+# just because it holds social URL strings.
+case("SINK: telegram upload of a file naming socials (block 1)",
+     'curl -s -F document=@REVIEW.md -F caption="numbers match REVIEW.md" '
+     '"https://api.telegram.org/bot${TOK}/sendDocument"', "allow")
+case("SINK: telegram -T upload of a social-naming file",
+     'curl -s -T REVIEW.md -F caption="see REVIEW.md" '
+     '"https://api.telegram.org/bot${TOK}/sendDocument"', "allow")
+case("SINK: telegram --data-binary @file, literal host",
+     "curl -s --data-binary @REVIEW.md https://api.telegram.org/bot123:ABC/sendDocument",
+     "allow")
+case("SINK: telegram media group, two -F @png plus a caption naming REVIEW.md",
+     "curl -s -F 'media=[{\"type\":\"photo\",\"media\":\"attach://a\",\"caption\":\"list in "
+     "REVIEW.md\"}]' -F a=@REVIEW.md \"https://api.telegram.org/bot${TOK}/sendMediaGroup\"",
+     "allow")
+case("OFFLINE: heredoc rewrites a review naming socials, then greps and dash-checks it (block 2)",
+     "python3 - <<'EOF'\ns=open('REVIEW.md').read()\n"
+     "for a,b in [('https://facebook.com','Facebook'),('https://instagram.com','Instagram'),"
+     "('https://x.com','X'),('https://linkedin.com','LinkedIn'),('https://tiktok.com','TikTok')]:\n"
+     "    s=s.replace(a,b)\nopen('REVIEW-phone.md','w').write(s)\nEOF\n"
+     "grep -c -i facebook REVIEW-phone.md; bash " + DASH + " REVIEW-phone.md | tail -1", "allow")
+case("OFFLINE: python -c editing a file naming socials", "python3 -c \"s=open('REVIEW.md')"
+     ".read().replace('https://facebook.com','FB'); open('REVIEW-phone.md','w').write(s)\"",
+     "allow")
+
+# ---------------------------------------------------------- the sink allowance stays narrow
+case("SINK guard: the same upload shape to a NON sink host is still covered",
+     'curl -s -F document=@REVIEW.md -F caption="numbers match REVIEW.md" '
+     '"https://render.example.com/bot${TOK}/x"', "deny")
+case("SINK guard: a sink host through an unresolved variable is not trusted",
+     'curl -s -F document=@REVIEW.md -F caption="see REVIEW.md" '
+     '"https://${SINK}/bot${TOK}/sendDocument"', "deny")
+case("SINK guard: --resolve host remap disables the sink allowance",
+     'curl -s --resolve api.telegram.org:443:1.2.3.4 -F document=@REVIEW.md '
+     '-F caption="numbers match REVIEW.md" "https://api.telegram.org/bot${TOK}/sendDocument"',
+     "deny")
+case("SINK guard: a telegram upload AND a social destination in one command",
+     'curl -s -F document=@REVIEW.md -F caption="match REVIEW.md" '
+     '"https://api.telegram.org/bot${TOK}/sendDocument" ' + FB, "deny")
+case("SINK guard: -K config of social urls even with a telegram target",
+     "curl -s -K " + URLS + " https://api.telegram.org/bot1/sendMessage", "deny")
+
+# ------------------------------------------------ the offline allowance stays capability-gated
+case("OFFLINE guard: heredoc __import__ builds a fetch",
+     "python3 - <<'EOF'\n__import__('urllib.request').urlopen('" + FB + "')\nEOF", "deny")
+case("OFFLINE guard: heredoc exec of fetch code",
+     "python3 - <<'EOF'\nexec(\"import urllib.request as u; u.urlopen('" + FB + "')\")\nEOF",
+     "deny")
+case("OFFLINE guard: heredoc importlib import_module fetch",
+     "python3 - <<'EOF'\nimport importlib\nimportlib.import_module('urllib.request')"
+     ".urlopen('" + FB + "')\nEOF", "deny")
+case("OFFLINE guard: heredoc subprocess.run curl",
+     "python3 - <<'EOF'\nimport subprocess\nsubprocess.run(['curl','" + FB + "'])\nEOF", "deny")
+case("OFFLINE guard: heredoc os.system curl",
+     "python3 - <<'EOF'\nimport os\nos.system('curl " + FB + "')\nEOF", "deny")
+case("OFFLINE guard: offline heredoc writes a URL list, then wget -i reads it (virtual)",
+     "python3 - <<'EOF'\nopen('u.txt','w').write('" + FB + "\\n" + FB2 + "')\nEOF\nwget -i u.txt",
+     "deny")
+case("OFFLINE guard: offline heredoc writes a curl config, then curl -K reads it (virtual)",
+     "python3 - <<'EOF'\nopen('c.txt','w').write('url = \"" + FB + "\"')\nEOF\ncurl -s -K c.txt",
+     "deny")
+case("OFFLINE guard: offline heredoc writes a loader shell script, then runs it (virtual)",
+     "python3 - <<'EOF'\nopen('l.sh','w').write('curl -s " + FB + "')\nEOF\nbash l.sh", "deny")
+# QA 2026-09-29 CRITICALs: a write to a path the guard cannot resolve is untrackable, and a
+# split fetch word reaches offline_code() yet writes a working loader. Both must fail closed.
+case("OFFLINE guard: computed write name (concat) then wget -i (untrackable)",
+     "python3 - <<'EOF'\nn='u'+'.txt'\nopen(n,'w').write('" + FB + "')\nEOF\nwget -i u.txt",
+     "deny")
+case("OFFLINE guard: f-string write path then curl -K (untrackable)",
+     "python3 - <<'EOF'\ni=1\nopen(f'c{i}.txt','w').write('url = \"" + FB + "\"')\nEOF\n"
+     "curl -s -K c1.txt", "deny")
+case("OFFLINE guard: os.path.join write path then source (untrackable)",
+     "python3 - <<'EOF'\nimport os\nd='.'\nopen(os.path.join(d,'ld.sh'),'w').write('cur'+'l -s "
+     + FB + "')\nEOF\nsource ld.sh", "deny")
+case("OFFLINE guard: split fetch word, literal path, then bash (poison, not the body)",
+     "python3 - <<'EOF'\nopen('l.sh','w').write('cur'+'l -s " + FB + "')\nEOF\nbash l.sh", "deny")
+case("OFFLINE guard: rename to a computed target then wget -i (untrackable)",
+     "python3 - <<'EOF'\nimport os\nopen('t','w').write('" + FB + "')\nos.rename('t','o'+'.txt')\n"
+     "EOF\nwget -i o.txt", "deny")
+case("OFFLINE guard: node computed writeFileSync then wget -i (untrackable)",
+     "node <<'EOF'\nconst fs=require('fs');const n='u'+'.txt';fs.writeFileSync(n,'" + FB + "')\n"
+     "EOF\nwget -i u.txt", "deny")
+# QA 2026-09-29 round 2 (independent verifier): the literal-path tracking was leaky by six
+# routes. The fix poisons ANY not-on-disk path a later stage runs/fetches once an offline
+# social-naming program has run, so all six close the same way. Each was DENY on the pre-fix
+# hook of this same commit series and must stay DENY.
+case("OFFLINE guard: header redirect > writes the loader, print builds it, then bash",
+     "python3 - > l.sh <<'EOF'\nprint('open " + FB + "')\nEOF\nbash l.sh", "deny")
+case("OFFLINE guard: | tee writes the loader then bash",
+     "python3 - <<'EOF' | tee l.sh\nprint('cur'+'l -s " + FB + "')\nEOF\nbash l.sh", "deny")
+case("OFFLINE guard: os.chdir moves where the write lands, then bash",
+     "python3 - <<'EOF'\nimport os\nos.chdir('/tmp')\nopen('l.sh','w').write('cur'+'l -s "
+     + FB + "')\nEOF\nbash /tmp/l.sh", "deny")
+case("OFFLINE guard: os.open + os.write (uncounted write) then bash",
+     "python3 - <<'EOF'\nimport os\nfd=os.open('l.sh',os.O_WRONLY|os.O_CREAT)\n"
+     "os.write(fd,b'cur'+b'l -s " + FB + "')\nEOF\nbash l.sh", "deny")
+case("OFFLINE guard: case-folded write name (L.SH) then bash l.sh",
+     "python3 - <<'EOF'\nopen('L.SH','w').write('cur'+'l -s " + FB + "')\nEOF\nbash l.sh", "deny")
+case("OFFLINE guard: subshell cd then write then bash",
+     "(cd sub && python3 - <<'EOF'\nopen('l.sh','w').write('cur'+'l -s " + FB + "')\n"
+     "EOF\nbash l.sh)", "deny")
+case("OFFLINE guard: python -c writes a loader then bash (inline offline)",
+     "python3 -c \"open('l.sh','w').write('cur'+'l -s " + FB + "')\" && bash l.sh", "deny")
+case("OFFLINE guard: node -e writes a loader then bash (inline offline)",
+     "node -e \"require('fs').writeFileSync('l.sh','cur'+'l -s " + FB + "')\" && bash l.sh",
+     "deny")
+# QA 2026-09-29 round 3: a loader NAMED after a PATH executable (grep, node, sed) still runs
+# from cwd via `bash grep` / `source ./grep`; the PATH-executable carve-out on poison must not
+# apply to an execution / fetch TARGET (only to a bare command name a broad scan picks up).
+case("OFFLINE guard: loader named after a PATH command, run by bash",
+     "python3 - <<'EOF'\nopen('grep','w').write('cur'+'l -s " + FB + "')\nEOF\nbash grep", "deny")
+case("OFFLINE guard: loader named after a PATH command, sourced",
+     "python3 - <<'EOF'\nopen('node','w').write('cur'+'l -s " + FB + "')\nEOF\nsource ./node",
+     "deny")
+case("OFFLINE guard: URL list named after a PATH command, wget -i",
+     "python3 - <<'EOF'\nopen('sed','w').write('" + FB + "')\nEOF\nwget -i sed", "deny")
+# QA 2026-09-29 round 4: the PATH-name loader also reaches an interpreter through a PIPE
+# (cat grep | bash) and a fan out (cat grep | xargs curl); every broad file scan now drops
+# the command HEAD and reads the ARG tokens strict=True, so a PATH-named data/loader file is
+# still poisoned while the command name is not.
+case("OFFLINE guard: PATH-named loader piped into a shell (cat grep | bash)",
+     "python3 - <<'EOF'\nopen('grep','w').write('curl -s " + FB + "')\nEOF\ncat grep | bash",
+     "deny")
+case("OFFLINE guard: PATH-named loader piped into sh (cat sed | sh)",
+     "python3 - <<'EOF'\nopen('sed','w').write('curl -s " + FB + "')\nEOF\ncat sed | sh", "deny")
+case("OFFLINE guard: PATH-named URL list through a fan out (cat grep | xargs curl)",
+     "python3 - <<'EOF'\nopen('grep','w').write('" + FB + "')\nEOF\ncat grep | xargs -I{} "
+     "curl -s {}", "deny")
+# and the carve-out still works: an offline program followed by a harmless command whose head
+# is a PATH executable reading nothing off disk is not blocked (no false positive)
+case("OFFLINE: offline heredoc then a harmless echo|xargs echo (command names not poisoned)",
+     "python3 - <<'EOF'\nopen('out.md','w').write(open('REVIEW.md').read().replace('" + FB
+     + "','x'))\nEOF\necho hi | xargs echo", "allow")
+# and the allowance still stands: an offline program's output consumed only as DATA by an
+# existing no-fetch tool (grep is safe; a scanned script with no fetch of its own) is allowed
+case("OFFLINE: offline heredoc output consumed as a data arg by an existing no-fetch script",
+     "python3 - <<'EOF'\nopen('out.md','w').write(open('REVIEW.md').read().replace('"
+     + FB + "','x'))\nEOF\ngrep -c x out.md; wc -l out.md", "allow")
 
 
 def fresh_ctx(**overrides):

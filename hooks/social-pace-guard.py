@@ -56,6 +56,22 @@ A LOAD passes only when it is paired, in the same command, as
 
 (the real gate path, `&&` directly between them, same platform and route, one
 social URL), or when it is the only load in the command and a grant is waiting.
+Two narrow allowances, neither a page load (Zalo, 2026-09-28):
+  * an UPLOAD to a sink host: a curl whose every target is a named sink (SINK_HOSTS,
+    the Telegram Bot API today), the host literal (no $ or ` in the authority), no
+    proxy / --resolve remap, no redirect, and not reading its URLs from a config file,
+    does not treat a file passed as a multipart field (-F f=@file) or request body
+    (--data-binary @file, -d @file, -T file) as a URL list: the sink STORES what we send
+    and never fetches the links inside it. A social host as a destination, any other
+    host (a remote renderer IS a fetcher), or a fan out fails this and stays covered;
+  * an OFFLINE inline program (heredoc code, python3 -c, node -e): code with NO network,
+    process, dynamic-loading or browser capability (offline_code(): a match of NONE of
+    CAPABILITY_RE) is not a load just because it holds social URL strings. Because such a
+    program can WRITE a file (a loader, a URL list) at a name the guard cannot see, once one
+    has run every later stage that RUNS, sources, schedules, pipes or fetches a path that is
+    not on disk at hook time is judged a social load (_STATE poisons the read). A path that
+    already exists reads its real content, so a data argument to an existing no-fetch tool
+    (the review-file edit that started this) stays allowed.
 Always blocked, gated or not:
   * port 9222 (or the Blueprint profile dir) in an executing part of the command
     (a fetch, an interpreter, a script, an executed heredoc) together with a
@@ -102,6 +118,12 @@ LIMITS, stated plainly
     (~/.claude/scripts/social-load-audit.py) are the layers for those.
   * Astra's Computer Use clicks in Codex are not tool calls this hook sees. The
     audit counts them; the bu-cold-outreach skill tells Astra to call the gate.
+  * The offline-write POISON rule keys on a path being ABSENT at hook time. If an
+    earlier command created a benign file and an offline program in a LATER command
+    overwrites THAT existing path with a loader and runs it in the same command, the
+    hook reads the benign hook-time bytes and allows it (QA 2026-09-29 pass 3, MEDIUM,
+    deferred). It needs a pre-created file plus a deliberate same-command overwrite; the
+    audit is the backstop for browser loads.
   * An offline test file (tests/, test_*, *.test.*, *.spec.*, without live, real,
     prod or e2e in its name) is judged on its command line and data files only,
     because its own code names social URLs as fixtures. A script that merely
@@ -155,6 +177,16 @@ FETCH_TOOLS = {"curl", "curlie", "wget", "wget2", "http", "https", "httpie", "xh
                "agent-browser", "safaridriver", "firefox", "brave", "microsoft edge",
                "httpx", "monolith", "single-file", "lighthouse", "xidel"}
 PLAIN_HTTP = {"curl", "curlie", "wget", "wget2", "http", "https", "httpie", "xh"}
+# Upload sinks: hosts that STORE what we send them and never fetch a URL written inside
+# it. The Telegram Bot API stores the message or the uploaded document from this Mac; it
+# does not visit the links in a document. So a file handed to one of these as a multipart
+# field or a request body is a payload, not a URL list (Zalo, 2026-09-28). A named
+# allowlist ONLY: a remote renderer or any other host is a fetcher and stays covered.
+SINK_HOSTS = {"api.telegram.org"}
+# curl flags that could point the request somewhere other than the literal target host,
+# so a sink target reached through one of them is not trusted as a sink.
+HOST_REMAP_FLAGS = {"-x", "--proxy", "--preproxy", "--socks4", "--socks4a", "--socks5",
+                    "--socks5-hostname", "--connect-to", "--resolve", "--noproxy"}
 WRAPPERS = {"env", "sudo", "nohup", "command", "exec", "time", "caffeinate", "stdbuf",
             "setsid", "timeout", "gtimeout", "nice", "unbuffer", "npx", "bunx", "pnpx",
             "doas", "builtin", "noglob", "then", "else", "do", "!", "{", "}", "if", "elif",
@@ -242,6 +274,45 @@ ONELINER_FETCH_RE = re.compile(
     # the re-verifier's: node require('https'), python http.client, dynamic imports
     r"|require\s*\(\s*['\"](?:node:)?(?:https?|net|tls|undici)['\"]|HTTPS?Connection"
     r"|from\s+http\s+import|import\s*\(\s*['\"](?:node:)?https?['\"]", re.IGNORECASE)
+# Every capability that lets inline code reach the network, spawn a process, load a native
+# library, or run text as code. Used by offline_code(): a body that matches NONE of these
+# is provably incapable of a load, so its social URL strings are data, not a page load
+# (Zalo, 2026-09-28). This is a SUPERSET of ONELINER_FETCH_RE, and it is only consulted for
+# inline bodies that ALREADY hold social URLs and were about to be blocked, so a broader
+# pattern can only keep something blocked, never newly allow it. "If in doubt, blocked."
+CAPABILITY_RE = re.compile(
+    ONELINER_FETCH_RE.pattern
+    # dynamic loading / running text as code
+    + r"|__import__|\bimportlib\b|\brunpy\b|\bctypes\b|\bcdll\b|\bwindll\b|\boledll\b"
+    r"|\beval\s*\(|\bcompile\s*\(|\bgetattr\s*\(|\bFunction\s*\(|\bWebAssembly\b"
+    r"|\bglobals\s*\(\s*\)\s*\[|\bvars\s*\(\s*\)\s*\["
+    # process / concurrency that can spawn
+    r"|\bpty\b|\bmultiprocessing\b|\basyncio\b|\bos\s*\.\s*(?:exec|spawn|fork|posix_spawn|popen|startfile)"
+    r"|\bcommands\s*\.\s*(?:getoutput|getstatusoutput)|\bpexpect\b|\bpopen\d?\b"
+    r"|worker_threads|\bcluster\b"
+    # more networking / browser modules not already in ONELINER_FETCH_RE
+    r"|\bwebbrowser\b|\bsmtplib\b|\bftplib\b|\bpoplib\b|\bimaplib\b|\btelnetlib\b|\bssl\b"
+    r"|TCPSocket|UDPSocket|TCPServer|SSLSocket|OpenSSL|Socket\s*\.\s*(?:new|tcp|open)"
+    r"|\bsocketserver\b|\bparamiko\b|\bpycurl\b|\bhttplib\b|\bxmlrpc\b|\bwebsocket\b"
+    r"|\bselenium\b|\bplaywright\b|\bpyppeteer\b|\bpuppeteer\b|\bmechanize\b"
+    # node builtin net / native modules by require() or import()
+    r"|(?:require\s*\(|import\s*\(|from)\s*['\"](?:node:)?(?:https?|net|tls|dgram|dns|http2|"
+    r"quic|inspector|vm|module|repl|worker_threads|child_process|cluster)['\"]"
+    r"|\bDeno\s*\.\s*(?:Command|run|dlopen|connect|listen|serve|open)|\bBun\s*\.\s*(?:spawn|connect|serve|listen|dlopen)"
+    r"|process\s*\.\s*(?:binding|dlopen|_linkedBinding)",
+    re.IGNORECASE)
+# What a nonexistent file RUN or FETCHED after an offline program is treated as: a social
+# loader (see _STATE). It carries a fetch primitive (curl) and a social URL literal, so
+# every existing check (scan_script, a URL list, a cron entry) reads it as a social load.
+POISON = "curl https://www.facebook.com/__offline_write__"
+
+
+def offline_code(body):
+    """True when inline code holds NO network, process, dynamic loading or browser
+    capability: it cannot load a page, so social URL strings in it are data."""
+    return not CAPABILITY_RE.search(body or "")
+
+
 SOCIAL_TOOLS = {"instaloader": "instagram", "instagram-scraper": "instagram",
                 "instagram_scraper": "instagram", "snscrape": "x", "twint": "x",
                 "facebook-scraper": "facebook", "facebook_scraper": "facebook",
@@ -395,6 +466,11 @@ class Ctx:
         host = (host or "").lower()
         return any(host == r or host.endswith("." + r) for r in self.renderers)
 
+    def is_sink(self, host):
+        """An upload sink (Telegram Bot API): it stores what we send, never fetches a URL
+        inside it. Exact host only, so api.telegram.org.evil.com is not a sink."""
+        return (host or "").lower().rstrip(".") in SINK_HOSTS
+
 
 class Deny(Exception):
     pass
@@ -471,12 +547,13 @@ def heredoc_openers(line):
     return out
 
 
-def split_heredocs(command):
+def split_heredocs(command, with_prefix=False):
     """(text without bodies, [(kind, body, header line)]).
 
     kind: shell | code (an interpreter reads it) | fetch (a fetch tool or a loop
     reads it as data) | text. An opener inside quotes is not an opener, and a body
     that never meets its terminator is not a heredoc: its lines stay commands.
+    with_prefix adds a 4th element: the command text before the header line.
     """
     lines = command.split("\n")
     kept, bodies, i = [], [], 0
@@ -484,14 +561,21 @@ def split_heredocs(command):
         line = lines[i]
         kept.append(line)
         i += 1
+        consumed = []
         for delim in heredoc_openers(line):
             j = i
             while j < len(lines) and lines[j].strip() != delim:
                 j += 1
             if j >= len(lines):
                 break  # unterminated: not a heredoc, keep the lines as commands
-            bodies.append((heredoc_target(line), "\n".join(lines[i:j]), line))
+            b = (heredoc_target(line), "\n".join(lines[i:j]), line)
+            bodies.append(b + ("\n".join(kept[:-1]),) if with_prefix else b)
             i = j + 1
+            consumed.append(delim)
+        # drop the `<<DELIM` operator from the KEPT header once its body is extracted, so the
+        # delimiter word (EOF) does not linger as a token that reads as a file/redirect target
+        for d in consumed:
+            kept[-1] = re.sub(r"\d*<<-?\s*(['\"]?)" + re.escape(d) + r"\1", " ", kept[-1])
     return "\n".join(kept), bodies
 
 
@@ -567,9 +651,41 @@ def resolve_path(tok, cwd):
     return t
 
 
-def read_text(path):
+# Set once an allowed OFFLINE heredoc / -c / -e program (no fetch or process capability,
+# see offline_heredoc branch) runs in this command. That program can WRITE a file we cannot
+# see the name of (a computed path, a `>` redirect of its stdout, os.write, a rename, a case
+# fold), so once one has run, ANY later stage that RUNS, sources, schedules, pipes or fetches
+# a path that is NOT on disk at hook time is treated as loading that written file: read_text
+# and scheduled_text return a POISON social loader for a nonexistent path, and is_file reports
+# it present, so the existing script / URL-list / cron checks judge it a social load. Tracking
+# the exact written path was leaky (six escape routes, QA 2026-09-29); this needs no path.
+# Reset per decision. A path that DOES exist reads its real content, so a data argument to an
+# existing no-fetch tool (grep, dash-check.sh) is unaffected: that is the block-2 shape.
+_STATE = {"offline_wrote": False}
+
+
+def _poison_path(path, strict=True):
+    """A not-on-disk path that an offline program in this command may have written: it
+    reads as a social loader. strict=True (the default, and every EXECUTION or FETCH target:
+    a bash/source script arg, a `<`/`-i`/`-K` file) poisons it whatever its name, because the
+    shell runs the cwd file, not a PATH binary of the same name (QA 2026-09-29 pass 3). Only
+    a broad token scan that may pick up a bare COMMAND name (python3, grep) passes strict=
+    False, so a command head is not mistaken for a written file."""
+    if not (_STATE["offline_wrote"] and not os.path.exists(path)):
+        return False
+    return strict or not shutil.which(os.path.basename(path))
+
+
+def is_file(path, strict=True):
+    return os.path.isfile(path) or _poison_path(path, strict)
+
+
+def read_text(path, strict=True):
     try:
-        if not os.path.isfile(path) or os.path.getsize(path) > MAX_FILE:
+        exists = os.path.isfile(path)
+        if not exists:
+            return POISON if _poison_path(path, strict) else None
+        if os.path.getsize(path) > MAX_FILE:
             return None
         with open(path, "rb") as fh:
             data = fh.read()
@@ -631,8 +747,10 @@ def words_of(tokens):
                 yield w
 
 
-def data_files_text(tokens, cwd, skip=None):
-    """Text of existing files named on the command line (URL lists, payloads)."""
+def data_files_text(tokens, cwd, skip=None, strict=True):
+    """Text of existing files named on the command line (URL lists, payloads). strict=False
+    for a BROAD token scan that includes command heads (so `grep`/`python3` are not poisoned
+    as if they were written files); the specific URL-list / payload reads keep strict=True."""
     out, seen = [], set()
     for w in words_of(tokens):
         p = resolve_path(w, cwd)
@@ -643,12 +761,22 @@ def data_files_text(tokens, cwd, skip=None):
         if real in seen or (skip and real in skip) or real in EXEMPT:
             continue
         seen.add(real)
-        txt = read_text(p)
+        txt = read_text(p, strict)
         if txt is None:
             txt = big_file_text(p)
         if txt is not None:
             out.append(txt)
     return "\n".join(out)
+
+
+def arg_tokens(tokens, aliases):
+    """Every token EXCEPT each segment's command HEAD. A broad file scan uses this so a
+    loader named after a PATH executable (a data/URL-list arg) is still read strict=True,
+    while a bare command name (python3, grep, cat) is never mistaken for a written file."""
+    out = []
+    for raw, _ in split_segments(tokens):
+        out += strip_prefixes(raw, aliases)[1:]
+    return out
 
 
 BIG_LINE_RX = re.compile(rb"facebook|fb\.|messenger|instagr|ig\.me|linkedin|lnkd|x\.com"
@@ -759,7 +887,8 @@ def fetch_parts(head, args):
     while i < len(args):
         a = args[i]
         if REDIR_RE.fullmatch(a):
-            if "<" in a and i + 1 < len(args):
+            # a single `<` reads a file (a URL list); `<<`/`<<<` name a delimiter, not a file
+            if re.fullmatch(r"\d*<", a) and i + 1 < len(args):
                 sources.append(args[i + 1])
             i += 2
             continue
@@ -879,6 +1008,8 @@ def cat_file_command(text, cwd):
 def scheduled_text(path):
     """The command a scheduler file would run: a launchd plist's Program and
     ProgramArguments, else the file read as a crontab or an at/batch job."""
+    if _poison_path(path):
+        return cron_command(POISON)  # an offline program may have written this job
     try:
         with open(path, "rb") as fh:
             head = fh.read(64)
@@ -924,8 +1055,17 @@ def analyze(command, ctx, an=None, depth=0, env=None, aliases=None, cwd=None):
                 analyze(body, ctx, an, depth + 1, env, aliases, cwd)
         elif kind == "code":
             an.social = True
-            if not GATE_REF_RE.search(body) and (ctx.url_literals(body) or
-                                                 FETCH_CODE_RE.search(body)):
+            if GATE_REF_RE.search(body):
+                pass  # paces itself through the gate
+            elif offline_code(body):
+                # inline code with no fetch or process capability: the social URLs are
+                # data, not a page load. But this program can WRITE a file (a review copy,
+                # or a loader) at a name we cannot see, so from here on any RUN / source /
+                # schedule / fetch of a not-on-disk path is judged a social load (_STATE
+                # poisons it). A path that already exists reads its real content, so a data
+                # argument to an existing no-fetch tool stays allowed (QA 2026-09-29).
+                _STATE["offline_wrote"] = True
+            elif ctx.url_literals(body) or FETCH_CODE_RE.search(body):
                 route = "remote" if any(ctx.is_renderer(url_host(u)) for u in re.findall(
                     r"https?://[^\s\"'`]+", normalize(body))) else "local"
                 an.loads.append(make_load(ctx, body, route, "heredoc code: " + header.strip()))
@@ -1060,7 +1200,7 @@ def analyze(command, ctx, an=None, depth=0, env=None, aliases=None, cwd=None):
         # whole command counts, not only this segment: `echo FB | xargs curl` gets its
         # URLs from the echo segment before the pipe (QA round 3 HIGH).
         if inner is not None:
-            fan = data_files_text(tokens, cwd) + "\n" + full_text
+            fan = data_files_text(arg_tokens(tokens, aliases), cwd) + "\n" + full_text
             if ctx.socials(fan) and head not in SAFE_HEADS:
                 an.social = True
                 an.loads.append(make_load(ctx, fan, "local", raw_text, "a fan out (xargs, "
@@ -1123,7 +1263,7 @@ def analyze(command, ctx, an=None, depth=0, env=None, aliases=None, cwd=None):
             names = [mk] if mk else ["GNUmakefile", "makefile", "Makefile"]
             for nm in names:
                 p = resolve_path(nm, cwd)
-                if os.path.isfile(p):
+                if is_file(p):
                     found += scan_script(ctx, an, p, [], seg_text, cwd)
                     break
 
@@ -1167,7 +1307,7 @@ def analyze(command, ctx, an=None, depth=0, env=None, aliases=None, cwd=None):
 
         if head in ("source", ".") and args:
             p = resolve_path(args[0], cwd)
-            if os.path.isfile(p):
+            if is_file(p):
                 found += scan_script(ctx, an, p, args[1:], seg_text, cwd)
 
         if head in SCHEDULERS:
@@ -1188,7 +1328,7 @@ def analyze(command, ctx, an=None, depth=0, env=None, aliases=None, cwd=None):
                         names = []
                     cands += [scheduled_text(os.path.join(p, n)) for n in names
                               if n.endswith(".plist")]
-                elif os.path.isfile(p):
+                elif is_file(p):
                     cands.append(scheduled_text(p))
             # the job file may only reach its place when the command runs (cp x.plist
             # ~/Library/LaunchAgents/ && launchctl load ...): read every existing file
@@ -1196,7 +1336,7 @@ def analyze(command, ctx, an=None, depth=0, env=None, aliases=None, cwd=None):
             seen_sched = set()
             for w in list(words_of(tokens))[:200]:
                 p = resolve_path(w, cwd)
-                if p not in seen_sched and os.path.isfile(p):
+                if p not in seen_sched and is_file(p):
                     seen_sched.add(p)
                     cands.append(scheduled_text(p))
             for cand in cands:
@@ -1231,6 +1371,21 @@ def analyze(command, ctx, an=None, depth=0, env=None, aliases=None, cwd=None):
                     a in ("--location", "--location-trusted", "--follow")
                     or re.match(r"^-[a-zA-Z]*L[a-zA-Z]*$", a) for a in args) or (
                     head in ("http", "https", "httpie", "xh") and "-F" in args)
+                # An upload to a sink host (Telegram Bot API): every target is that sink,
+                # named literally (no $ or ` in the authority), no proxy or host remap, no
+                # redirect, and it does not read its URLs from a config file. The sink
+                # STORES the body we hand it; a file passed as a multipart field or a
+                # request body is a payload, not a URL list, so it is not read as one. A
+                # social host as a destination, any other host, or a fan out (inner) fails
+                # this and stays covered (Zalo, 2026-09-28).
+                remap = any(a in HOST_REMAP_FLAGS or a.split("=", 1)[0] in HOST_REMAP_FLAGS
+                            for a in args)
+                sink_t = [t for t in targets if ctx.is_sink(url_host(t))
+                          and not re.search(r"[$`]", authorities[targets.index(t)])]
+                sink_upload = (inner is None and targets and len(sink_t) == len(targets)
+                               and not social_t and not renderer_t and not follows
+                               and not remap
+                               and not (bool(bulk) and bulk.startswith("curl reads")))
                 embedded = [unquote(t.split("?", 1)[1]) for t in targets if "?" in t
                             and not social_t and ctx.url_literals(unquote(t.split("?", 1)[1]))]
                 if follows and embedded and not renderer_t:
@@ -1249,6 +1404,8 @@ def analyze(command, ctx, an=None, depth=0, env=None, aliases=None, cwd=None):
                     if ctx.socials(body):
                         found.append(make_load(ctx, body, "remote",
                                                seg_text + " (via a remote renderer)"))
+                elif sink_upload:
+                    pass  # a pure upload to a sink host: body files are payload, not URLs
                 elif sources or variable or (not targets and inner is not None):
                     reach = data_files_text(sources, cwd)
                     # curl -K from stdin, a pipe, a herestring or <(...): the URL list is
@@ -1256,7 +1413,7 @@ def analyze(command, ctx, an=None, depth=0, env=None, aliases=None, cwd=None):
                     piped_cfg = bool(bulk) and bulk.startswith("curl reads") and any(
                         not os.path.isfile(resolve_path(s, cwd)) for s in sources)
                     if variable or inner is not None or an.loop or piped_cfg:
-                        reach += "\n" + data_files_text(tokens, cwd)
+                        reach += "\n" + data_files_text(arg_tokens(tokens, aliases), cwd)
                     if variable or piped_cfg:
                         reach += "\n" + full_text
                     if ctx.socials(reach):
@@ -1269,7 +1426,7 @@ def analyze(command, ctx, an=None, depth=0, env=None, aliases=None, cwd=None):
                     for a in args:
                         p = resolve_path(a, cwd)
                         if (a.lower().endswith(SCRIPT_EXTS) or a.startswith(("/", "./", "~"))) \
-                                and os.path.isfile(p):
+                                and is_file(p):
                             found += scan_script(ctx, an, p, [], seg_text, cwd)
                 if social_a:
                     found.append(make_load(ctx, " ".join(social_a), "local", seg_text))
@@ -1283,7 +1440,9 @@ def analyze(command, ctx, an=None, depth=0, env=None, aliases=None, cwd=None):
                     inline = " ".join(args[j + 1:])
                     break
                 if REDIR_RE.fullmatch(a):
-                    if "<" in a and j + 1 < len(args):
+                    # a SINGLE `<` reads a file; `<<`/`<<<` are a heredoc/herestring whose
+                    # body is already extracted, and their delimiter is not a file
+                    if re.fullmatch(r"\d*<", a) and j + 1 < len(args):
                         found += scan_script(ctx, an, resolve_path(args[j + 1], cwd), [],
                                              seg_text, cwd)
                     j += 2
@@ -1310,12 +1469,17 @@ def analyze(command, ctx, an=None, depth=0, env=None, aliases=None, cwd=None):
                     route = "remote" if any(ctx.is_renderer(url_host(u)) for u in re.findall(
                         r"https?://[^\s\"'`]+", normalize(inline))) else "local"
                     found.append(make_load(ctx, inline, route, seg_text))
+                elif ctx.socials(inline) and offline_code(inline):
+                    # an offline -c / -e that names socials can still WRITE a loader; treat
+                    # any later run / fetch of a not-on-disk path as a load (same as the
+                    # heredoc offline branch, _STATE below).
+                    _STATE["offline_wrote"] = True
                 # a one liner that runs a script file (do shell script "bash x.sh",
                 # spawn bash x.sh, subprocess.run(['node', 'x.mjs'])): read that file
                 for w in re.findall(r"[\w~./-]+", inline):
                     if w.lower().endswith(SCRIPT_EXTS):
                         p = resolve_path(w, cwd)
-                        if os.path.isfile(p):
+                        if is_file(p):
                             found += scan_script(ctx, an, p, [], seg_text, cwd)
             elif script:
                 p = resolve_path(script, cwd)
@@ -1335,7 +1499,13 @@ def analyze(command, ctx, an=None, depth=0, env=None, aliases=None, cwd=None):
                 while k > 0 and segs[k - 1][1] == "|":
                     k -= 1
                 own = [t for s, _ in segs[k:seg_i + 1] for t in s]
-                reach = " ".join(own) + "\n" + data_files_text(own, cwd)
+                # the code piped into the interpreter comes from the ARG tokens (cat FILE |
+                # bash reads FILE); the segment HEADS are command names, never written files.
+                # Scan the args strict=True so a loader named after a PATH exec (cat grep |
+                # bash) is still poisoned, and drop the heads so `python3`/`cat` are not (QA
+                # 2026-09-29 pass 4).
+                own_args = [t for s, _ in segs[k:seg_i + 1] for t in strip_prefixes(s, aliases)[1:]]
+                reach = " ".join(own) + "\n" + data_files_text(own_args, cwd)
                 if ctx.socials(reach) and (FETCH_CODE_RE.search(reach) or FETCH_TOOLS
                                            & set(re.findall(r"[a-z][\w.-]*", reach.lower()))):
                     found.append(make_load(ctx, reach, "local",
@@ -1343,7 +1513,7 @@ def analyze(command, ctx, an=None, depth=0, env=None, aliases=None, cwd=None):
 
         elif os.sep in head_raw or head_raw.startswith("~"):
             p = resolve_path(head_raw, cwd)
-            if os.path.isfile(p):
+            if is_file(p):
                 found += scan_script(ctx, an, p, args, seg_text, cwd)
 
         elif head not in SAFE_HEADS:
@@ -1609,6 +1779,7 @@ def protected_msg(reason):
 def decide_bash(command, ctx):
     if not command.strip():
         return True, ""
+    _STATE["offline_wrote"] = False  # scoped to this decision (see _STATE)
     reason = protected_write(command, ctx.cwd)
     if reason:
         return False, protected_msg(reason)
