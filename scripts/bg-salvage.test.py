@@ -196,7 +196,7 @@ class Layout:
 # M relaunched it saying nothing had reached production, and told Zalo so.
 # --------------------------------------------------------------------------
 SID = "96d09d99-14a5-4e7d-9648-f8a56f5e5a41"
-PROD = "xbwcziymjfsobaxmanlo"
+PROD = "prodrefabcdefghijklm"
 
 
 def use(tid, name, inp, ts="2026-09-29T17:57:50.271Z"):
@@ -242,8 +242,8 @@ def production_writes():
     # 13a. execute_sql UPDATE that succeeded: flagged ok, with the project.
     L, rc, out, err, s = writes_of(
         sql("t1", "WITH upd AS (UPDATE tenant_agents SET config = jsonb_set(config, '{soul}', "
-                  "to_jsonb($o1$new prompt$o1$)) WHERE id = '9b28c3ed' RETURNING id) SELECT * FROM upd;"),
-        result("t1", '{"result":"[{\\"id\\":\\"9b28c3ed\\"}]"}'))
+                  "to_jsonb($o1$new prompt$o1$)) WHERE id = 'a9e10000' RETURNING id) SELECT * FROM upd;"),
+        result("t1", '{"result":"[{\\"id\\":\\"a9e10000\\"}]"}'))
     check("13a: a succeeded execute_sql UPDATE is flagged ok with its project",
           "PRODUCTION WRITES (1 of 1 tool calls scanned)" in s
           and any(l.startswith("ok") and "execute_sql" in l and f"project={PROD}" in l
@@ -678,7 +678,7 @@ def production_writes():
         bash("b1", "curl -X POST https://api.acme-vendor.com/a -d '{\"api_key\":\"abc123def456ghi789\","
                    "\"twilio_auth_token\":\"0123456789abcdef0123456789abcdef\"}'"), result("b1", "{}"),
         sql("t1", "INSERT INTO i (t, twilio_auth_token) VALUES "
-                  "('9b28c3ed-e855-448e-8db2-60c525b65fe6', 'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6');"),
+                  "('00000000-0000-4000-8000-00000000a9e1', 'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6');"),
         result("t1", "[]"),
         bash("b2", "curl -X POST https://ACa1b2c3:fedcba9876543210fedcba9876543210@api.twilio.com/2010/x"),
         result("b2", "{}"),
@@ -690,7 +690,7 @@ def production_writes():
                                          "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6",
                                          "fedcba9876543210fedcba9876543210",
                                          "supersecretvalue0123456789"))
-          and "9b28c3ed-e855-448e-8db2-60c525b65fe6" in s, s or out[-900:])
+          and "00000000-0000-4000-8000-00000000a9e1" in s, s or out[-900:])
 
     # 15e. the tool-output overflow envelope means the call RAN: a landed
     # UPDATE ... RETURNING * must not read as failed.
