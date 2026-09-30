@@ -918,7 +918,13 @@ _GH_WRITES = {("pr", "merge"), ("workflow", "run"), ("workflow", "enable"), ("wo
               ("run", "rerun"), ("run", "cancel"), ("release", "create"), ("release", "delete"),
               ("release", "upload"), ("release", "edit"), ("repo", "delete"), ("repo", "archive"),
               ("repo", "edit"), ("repo", "rename"), ("secret", "set"), ("secret", "delete"),
-              ("variable", "set"), ("variable", "delete"), ("cache", "delete")}
+              ("variable", "set"), ("variable", "delete"), ("cache", "delete"),
+              # a relaunch after an unlisted `gh pr create` opens a duplicate PR
+              # (independent verifier: 46 real calls were unlisted)
+              ("pr", "create"), ("pr", "close"), ("pr", "reopen"), ("pr", "comment"),
+              ("pr", "review"), ("pr", "edit"), ("pr", "ready"), ("issue", "create"),
+              ("issue", "close"), ("issue", "reopen"), ("issue", "comment"), ("issue", "edit"),
+              ("issue", "delete"), ("label", "create"), ("label", "edit"), ("label", "delete")}
 
 
 def _gh(args):
@@ -1004,7 +1010,7 @@ _AWS_GLOBAL_VALUE = {"--region", "--profile", "--output", "--query", "--endpoint
                      "--ca-bundle", "--cli-read-timeout", "--cli-connect-timeout",
                      "--cli-binary-format"}
 _AWS_WRITE_OP = re.compile(
-    r"^(put|create|delete|update|run|send|invoke|register|deregister|terminate|modify|set|stop|"
+    r"^(put|create|delete|update|deploy|run|send|invoke|register|deregister|terminate|modify|set|stop|"
     r"start|execute|remove|add|tag|untag|rotate|cancel|reset|enable|disable|import|associate|"
     r"disassociate|replace|attach|detach|publish|reboot|restore|batch-write|batch-delete|"
     r"batch-put|copy|upload|restart|purge|change|force|admin-)")
@@ -1602,14 +1608,24 @@ def _bash_hits(command, written, g, depth=0):
     return hits + ([guard_hit] if guard_hit else [])
 
 
+# A worker's own test file (tests/x.py, test_x.py, x.test.ts ...) run again
+# and again: its fixtures carry write shapes. The verifier measured one worker
+# at 74 such rows burying its real ones, so they are tagged and sorted last,
+# never dropped.
+_TEST_SCRIPT = re.compile(r"(?:^|[\s/])(?:tests?|__tests__)/|(?:^|[\s/])test_[\w.-]+\.py\b"
+                          r"|[\w-]+\.(?:test|spec)\.(?:[cm]?[jt]sx?|py)\b|[\w-]+_test\.py\b")
+
+
 def classify_bash(command, written):
-    """(labels, text) for the live-system writes one shell command makes, or
-    None. One row per tool call, every write in it named: `git push origin dev
-    ; supabase functions deploy demo-chat ...`."""
+    """(labels, text, test_only) for the live-system writes one shell command
+    makes, or None. One row per tool call, every write in it named: `git push
+    origin dev ; supabase functions deploy demo-chat ...`. test_only is True
+    when every write in it comes from a test file's code."""
     hits = _bash_hits(command, written, write_guard())
     if not hits:
         return None
-    return "; ".join(h[0] for h in hits), " ; ".join(dict.fromkeys(h[1] for h in hits))
+    return ("; ".join(h[0] for h in hits), " ; ".join(dict.fromkeys(h[1] for h in hits)),
+            all(_TEST_SCRIPT.search(h[0]) for h in hits))
 
 
 # ---- MCP tools ------------------------------------------------------------
@@ -1641,10 +1657,11 @@ def _mcp_detail(inp, text_key=None):
 
 
 def classify_call(name, inp, written):
-    """(tool label, detail) when this tool call writes to a live system."""
+    """(tool label, detail[, test file only]) when this tool call writes to a
+    live system."""
     if name == "Bash":
         hit = classify_bash(inp.get("command"), written)
-        return ("Bash", hit[1]) if hit else None
+        return ("Bash", hit[1], hit[2]) if hit else None
     if not name.startswith("mcp__"):
         return None
     parts = name.split("__", 2)
@@ -1687,7 +1704,7 @@ _REDACTIONS = [
     (re.compile(r"\b\d{6,12}:[A-Za-z0-9_\-]{30,}"), "[REDACTED_TG_TOKEN]"),
     # not `demo-gptlive-token --project-ref ...`: the word must stand alone
     # a credential carries a digit or is a $VAR; "Basic Monthly" is a plan name
-    (re.compile(r"(?i)(?<![\w-])(Bearer|Basic)\s+(?!\[REDACTED)(?=[A-Za-z0-9._~+/=\-${}]*[\d$])"
+    (re.compile(r"(?i)(?<![\w-])(Bearer|Basic|Token)\s+(?!\[REDACTED)(?=[A-Za-z0-9._~+/=\-${}]*[\d$])"
                 r"[A-Za-z0-9._~+/=\-${}]{6,}"), r"\1 [REDACTED]"),
     (re.compile(r"\bpit-[0-9a-fA-F-]{20,}"), "pit-[REDACTED]"),
     # the key may be JSON-quoted: {"twilio_auth_token":"..."} (QA round 2)
@@ -1695,9 +1712,11 @@ _REDACTIONS = [
     (re.compile(r"""(?i)(password["']?\s*[=:]\s*)""" + _VAL), r"\1[REDACTED]"),
     # any name ENDING in a secret word: twilio_auth_token = '...', ghl_api_key: ...
     (re.compile(r"(?i)(\b\w*(?:api[_-]?key|apikey|secret|token|service[_-]?role(?:[_-]?key)?|"
-                r"""private[_-]?key|passwd|pwd)["']?\s*[=:]\s*)""" + _VAL), r"\1[REDACTED]"),
-    (re.compile(r"(?i)(--(?:token|password|api-key|apikey|secret|auth-token)(?:\s+|=))" + _VAL),
+                r"""private[_-]?key|secret[_-]?access[_-]?key|passwd|pwd)["']?\s*[=:]\s*)""" + _VAL),
      r"\1[REDACTED]"),
+    # `aws ssm put-parameter --value`, `secretsmanager --secret-string` (verifier)
+    (re.compile(r"(?i)(--(?:token|password|api-key|apikey|secret|auth-token|value|secret-string)"
+                r"(?:\s+|=))" + _VAL), r"\1[REDACTED]"),
     (re.compile(r"(?i)(postgres(?:ql)?://[^:/@\s]+:)[^@\s]+@"), r"\1[REDACTED]@"),
     # user:password@ in any URL (https://AC...:<auth token>@api.twilio.com)
     (re.compile(r"""(?i)(\b[a-z][a-z0-9+.-]*://[^:/@\s'"]+:)[^@\s/'"]+@"""), r"\1[REDACTED]@"),
@@ -1880,7 +1899,9 @@ def scan_transcripts(paths):
             failures += 1
             continue
         if hit:
-            writes.append({"id": cid, "seq": seq, "tool": hit[0], "detail": one_line(hit[1]),
+            test = len(hit) > 2 and bool(hit[2])
+            writes.append({"id": cid, "seq": seq, "tool": hit[0], "test": test,
+                           "detail": one_line(("(test file) " if test else "") + hit[1]),
                            "outcome": _outcome(results.get(cid)), "epoch": _epoch(c["ts"])})
     return {"writes": writes, "scanned": len(order), "recognised": recognised or bool(order),
             "unclassified": failures}
@@ -1965,8 +1986,11 @@ def format_writes(scan, partial=False):
     elif unknown:
         out.append(f"  !! {unknown} write(s) have NO result: the worker died inside the call, "
                    "so it may or may not have landed. Check these FIRST.")
-    rows = sorted(scan["writes"], key=lambda w: (w["outcome"] != "unknown",
+    rows = sorted(scan["writes"], key=lambda w: (w["outcome"] != "unknown", bool(w.get("test")),
                                                  -(w["epoch"] or 0), -w["seq"]))
+    tests = sum(1 for w in rows if w.get("test"))
+    if tests:
+        out.append(f"  ({tests} row(s) come from the worker's own test files; they are listed last)")
     for w in rows:
         when = (datetime.fromtimestamp(w["epoch"]).strftime("%H:%M:%S")
                 if w["epoch"] is not None else "--:--:--")

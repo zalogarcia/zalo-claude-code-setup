@@ -742,6 +742,49 @@ def production_writes():
         bash("b1", "python3 /tmp/bgsalv-fixture/tg.py"), result("b1", "ok"))
     check("16c: a Telegram sendDocument from Python is not flagged",
           "PRODUCTION WRITES: none seen (0 of 2 tool calls scanned)" in out, s or out[-900:])
+
+    # Independent verifier (2026-09-29).
+    # 17a. opening a PR or commenting on an issue is a write (46 real
+    # `gh pr create` calls were unlisted); viewing one is not.
+    L, rc, out, err, s = writes_of(
+        bash("b1", "gh pr create --title x --body y --base dev"), result("b1", "https://github.com/o/r/pull/7"),
+        bash("b2", "gh issue comment 5 --body z"), result("b2", "ok"),
+        bash("b3", "gh pr view 7 --json state"), result("b3", "{}"))
+    check("17a: gh pr create and gh issue comment are flagged, gh pr view is not",
+          "(2 of 3 tool calls scanned)" in s and "gh pr create" in s and "gh issue comment" in s,
+          s or out[-900:])
+
+    # 17b. a CloudFormation deploy is a write.
+    L, rc, out, err, s = writes_of(
+        bash("b1", "aws cloudformation deploy --template-file t.yml --stack-name s"), result("b1", "ok"))
+    check("17b: aws cloudformation deploy is flagged", "(1 of 1 tool calls scanned)" in s, s or out[-900:])
+
+    # 17c. an AWS secret key, an SSM --value and a `Token` auth header are redacted.
+    L, rc, out, err, s = writes_of(
+        bash("b1", "AWS_SECRET_ACCESS_KEY=wJalrXUtnFEMIK7MDENGbPxRfiCYEXAMPLEKEY1 aws s3 cp f s3://b/f"),
+        result("b1", "ok"),
+        bash("b2", "aws ssm put-parameter --name /da/fcm --value 'Zq9v8Kp2Lm4Nw7Rt1Yb3' --overwrite"),
+        result("b2", "ok"),
+        bash("b3", "curl -X POST https://api.acme-vendor.com/x -H 'Authorization: Token key_1a2b3c4d5e6f7g8h'"),
+        result("b3", "{}"))
+    check("17c: AWS secret keys, --value and Token credentials are redacted, the names are not",
+          "(3 of 3 tool calls scanned)" in s and "/da/fcm" in s
+          and not any(x in out for x in ("wJalrXUtnFEMIK7MDENGbPxRfiCYEXAMPLEKEY1", "Zq9v8Kp2Lm4Nw7Rt1Yb3",
+                                         "key_1a2b3c4d5e6f7g8h")), s or out[-900:])
+
+    # 17d. a worker-written test file run over and over is still listed, but
+    # tagged and sorted after the real writes so one real write stays visible.
+    L, rc, out, err, s = writes_of(
+        bash("b0", "git push origin dev", ts="2026-09-29T17:00:00.000Z"), result("b0", "ok"),
+        use("w1", "Write", {"file_path": "/tmp/bgsalv-fixture/tests/test_lane.py",
+                            "content": "import requests\nrequests.post('https://www.acme-vendor.com/x')\n"}),
+        result("w1", "written"),
+        bash("b1", "python3 /tmp/bgsalv-fixture/tests/test_lane.py", ts="2026-09-29T17:30:00.000Z"),
+        result("b1", "ok"))
+    rows = [l for l in s.splitlines() if l.startswith(("ok", "error", "UNKNOWN"))]
+    check("17d: a test-file row is tagged and listed after the real write",
+          len(rows) == 2 and "git push origin dev" in rows[0] and "(test file)" in rows[1],
+          s or out[-900:])
     shutil.rmtree("/tmp/bgsalv-fixture", ignore_errors=True)
 
 
