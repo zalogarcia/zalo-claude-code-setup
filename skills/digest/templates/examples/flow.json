@@ -1,0 +1,94 @@
+{
+  "template": "flow",
+  "title": "How a Black Umbrella trial signup flows today",
+  "subtitle": "From the ad page to GHL and the Operator Base bell. As of 2 Oct 2026.",
+  "rows": [
+    [
+      {
+        "id": "page",
+        "label": "/trial page",
+        "sub": "blackumbrella.app/trial",
+        "detail": "A visitor sends the form. The page posts it to Operator Base on the server.",
+        "tone": "purple"
+      }
+    ],
+    [
+      {
+        "id": "api",
+        "label": "Operator Base onboarding API",
+        "sub": "POST /functions/v1/onboarding-api",
+        "detail": "Makes a pre-filled onboarding session in the Black Umbrella agency.",
+        "tone": "blue"
+      }
+    ],
+    [
+      {
+        "id": "setup",
+        "label": "Setup page",
+        "sub": "operatorbase.app/onboard/<code>",
+        "detail": "The client answers the questions, then submits.",
+        "tone": "blue"
+      }
+    ],
+    [
+      {
+        "id": "events",
+        "label": "Webhook events",
+        "chips": ["created", "started", "completed"],
+        "detail": "A cron job sends them every minute. `created` goes once per session.",
+        "tone": "yellow"
+      },
+      {
+        "id": "bell",
+        "label": "Bell notices",
+        "sub": "Operator Base, System tab",
+        "detail": "The agency owner sees \"started\" and \"completed\". No push, no email.",
+        "tone": "blue"
+      }
+    ],
+    [
+      {
+        "id": "ghl",
+        "label": "GHL: Trial Reminders Black Umbrella DFY",
+        "sub": "aaaa1111 · v7 · trigger bbbb2222",
+        "detail": "Every event enters. The If/Else lets only `created` through. No reminder waits yet.",
+        "tone": "green",
+        "branches": [
+          {
+            "when": "If event = onboarding.created",
+            "then": ["Create contact", "Add tag bu trial dfy", "SMS", "Email"],
+            "tone": "green"
+          },
+          {
+            "when": "Else: started, completed",
+            "then": ["END"],
+            "tone": "grey"
+          }
+        ]
+      }
+    ],
+    [
+      {
+        "id": "gap",
+        "kind": "gap",
+        "label": "Open gap: Onboarding Submitted URL",
+        "sub": "GHL trigger cccc3333",
+        "detail": "On submit, Operator Base calls this URL. No workflow holds the trigger, so a finished onboarding starts nothing in GHL. A stop-reminders path would go here. Your call."
+      }
+    ]
+  ],
+  "edges": [
+    { "from": "page", "to": "api", "label": "form data" },
+    { "from": "api", "to": "setup", "label": "redirect" },
+    { "from": "setup", "to": "events", "label": "session events" },
+    { "from": "setup", "to": "bell", "label": "start, submit" },
+    {
+      "from": "events",
+      "to": "ghl",
+      "label": "all 3 events",
+      "tone": "yellow"
+    },
+    { "from": "events", "to": "gap", "tone": "red", "dashed": true }
+  ],
+  "footer": "Sources: memory bu-trial-page.md and ob-onboarding-bell-notices.md, worker report bg76 (2 Oct 2026)."
+}

@@ -1,0 +1,17 @@
+INPUT: 1790268071550_photo_18080.jpg
+Edit this real photograph of a rolling whiteboard. Keep the photo exactly as it is: same camera angle, framing and lighting, the black board frame, the black rolling stand with its wheels, the four markers lying in the tray (blue, red, green, black), the black eraser with the blue edge on the left side of the board, the white wall, the small black wall outlet under the board, the grey wood-look floor tiles, the wooden door edge on the far left, and the soft ceiling light reflections and faint reflected silhouette on the glossy board. Do not redraw, restyle, clean up or beautify the photo. The black frame around the writing surface stays complete and unbroken on all four sides. The ONLY change: hand-drawn dry-erase marker drawings added onto the white writing surface, inside the black frame, following the board's slight perspective, with a clear margin from the frame edges.
+
+DRAWING STYLE: real dry-erase marker strokes on a glossy whiteboard, as if a non-artist sketched it quickly in 3 minutes. Slightly wobbly, uneven lines of even marker width; simple stick figures, boxes, arrows and simple icons, all drawn as outlines; plain handwritten block capital letters. No shading, no fills, no gradients, no clip art, no printed or digital look, no fancy lettering. Leave lots of empty white space. Use ONLY four marker colors: blue, red, green and black.
+
+FIT: the board keeps its exact size and shape from the photo. Do not enlarge, stretch or extend the writing surface. The bottom black frame bar stays one straight, unbroken black bar running from the left post all the way to the right post, exactly where it is in the photo, and nothing is drawn on it or below it. The whole drawing fits inside the white surface; the lowest drawing (<LOWEST ELEMENT, e.g. the green row with "BOOKED">) sits clearly above the bottom frame bar, with white space between it and the bar. Keep the drawings modest in size so everything fits.
+
+LAYOUT (the board teaches: <ONE SENTENCE OF WHAT THE BOARD TEACHES>). It reads <left to right / top to bottom>.
+1. <Where on the board, what is drawn, in which color, with the exact quoted word if any>. A small <color> circled number "1" at the upper left of <element>.
+2. <...>
+<For any list of rows: "three rows ... forming aligned columns: the icons start at the same left edge, and the words start at the same left edge.">
+
+TEXT: the only writing on the board is exactly "<WORD 1>", "<WORD 2>", plus the small circled numbers 1, 2, 3. Spell each word exactly, letter by letter: <W-O-R-D>. No title, no caption, no other words, letters or numbers anywhere (none on the phone, the box or the icons), no amounts, no logos, no watermark.
+
+COLORS: <every element named once with its marker color, following the key: black = the business and structure, blue = the customer and the call, red = the problem or money lost, green = the fix or booked>.
+
+AVOID: any marker color other than blue, red, green and black; neat vector or printed-looking graphics; colored or grey fills inside any shape; robot faces, eyes or logos; extra icons, arrows, people, numbers or words; any change to the stand, frame, tray markers, eraser, wall, outlet or floor; a broken, gapped, shifted or extended bottom frame bar; any drawing or writing below the bottom frame bar. <OPTIONAL EXTRA AVOID ITEMS>

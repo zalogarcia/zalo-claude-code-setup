@@ -1,0 +1,234 @@
+{
+  "kind": "plan",
+  "kicker": "WHITEBOARD FILMING PLAN",
+  "date_label": "Friday, October 2, 2026",
+  "intro": "Today's 3, in the order you picked: #7, #11, #8. Each reel is filmed right after its long form, on the same board.",
+  "videos": [
+    {
+      "num": 7,
+      "code": "LF7",
+      "folder": "video-07-where-ai-goes",
+      "title": "If I Owned a Home Service Business in 2026, This Is Where I'd Put AI",
+      "formula": "If I Started [Topic] in [Year], This Is What I Would Do (1.0M views a month, title-structures.md)",
+      "alt_titles": [
+        "Stop Using AI Everywhere. Put It Here Instead.",
+        "The Real Reason AI Isn't Making You Money Yet"
+      ],
+      "research": "#7 \"How can AI help a business like mine?\"",
+      "why": "The biggest search cluster in the research: Google #1 with 158 organic searches like \"how can i use ai for my hvac business\", plus 55 more for \"what can ai do for my business\", YouTube autocomplete, and 22 Reddit \"what are you actually using AI for\" posts. Every owner asks it and no owner channel draws the answer.",
+      "hook": "Everyone tells you to use AI everywhere. Don't. Put it where your money leaks.",
+      "beats": [
+        {
+          "t": "LEADS: leads come in every day: calls, forms, texts",
+          "s": "①"
+        },
+        {
+          "t": "The pipe: your business turns leads into paid jobs. That's all it does",
+          "s": "②"
+        },
+        {
+          "t": "LEAKS: money drips out in three places: the call nobody answers, the quote nobody follows up, the lead that comes in after hours",
+          "s": "③"
+        },
+        {
+          "t": "Plug the leaks: AI goes on the leaks, biggest first. Not on writing your Instagram captions",
+          "s": "④"
+        },
+        {
+          "t": "PAID: the same leads, more paid jobs at the end. No new ad spend",
+          "s": "⑤"
+        }
+      ],
+      "close": "Start with the first leak, the phone. Our AI demo is that first plug, trained on your own website. Link below.",
+      "reel_headline": "Don't use AI everywhere. Plug the leaks.",
+      "reel_idea": "Draw the pipe, the three drips, then the three plugs. One line per leak.",
+      "length": "about 8 minutes",
+      "board_words": "LEADS · LEAKS · PAID",
+      "draw": [
+        {
+          "step": "①",
+          "what": "\"LEADS\" on the left with three arrows pointing right",
+          "marker": "blue",
+          "during": "Leads come in"
+        },
+        {
+          "step": "②",
+          "what": "A long pipe across the middle (two lines, open ends)",
+          "marker": "black",
+          "during": "The pipe"
+        },
+        {
+          "step": "③",
+          "what": "Drips under the pipe in three spots, a phone, a paper and a moon under them, \"LEAKS\" under the middle one",
+          "marker": "red",
+          "during": "The three leaks"
+        },
+        {
+          "step": "④",
+          "what": "A small plug on each leak",
+          "marker": "green",
+          "during": "Plug the leaks"
+        },
+        {
+          "step": "⑤",
+          "what": "An arrow out of the right end to a big $, \"PAID\" under it",
+          "marker": "green",
+          "during": "Paid, then the close"
+        }
+      ],
+      "notes": [],
+      "short": "Where I'd put AI",
+      "board_note": "Idea for Zalo to pick, 2026-10-02. One board, `board.png` = attempt 1 of 2 (first round; the prompt is `board-prompt-attempt-1.txt`, identical to the other attempt). Attempt 2 broke the bottom frame bar under LEAKS, so it was rejected. Every word on it was read back: LEADS · LEAKS · PAID, plus the circled step numbers."
+    },
+    {
+      "num": 11,
+      "code": "LF11",
+      "folder": "video-11-ai-and-the-trades",
+      "title": "You've Been Lied to About AI Replacing the Trades",
+      "formula": "You've Been Lied to About [Topic] (975K views a month, title-structures.md)",
+      "alt_titles": [
+        "AI Won't Fix Your Furnace. Here's What It Will Do.",
+        "The Honest Truth About AI and the Trades"
+      ],
+      "research": "#16 \"Will AI replace my trade?\"",
+      "why": "Google: 51 searches like \"will ai replace plumbers\" and \"can ai replace hvac technicians\". 12 Reddit posts (\"Will AI take over plumbing?\"). The most discussed owner video in the sample, \"AI Will Make Plumbers Earn More Than Lawyers!\", has 1.9M views and 7,356 comments; its top comment, \"If no one has a job who's gonna pay the plumbers?\", has 2,900 likes.",
+      "hook": "A video about AI and plumbers got 1.9 million views. The top comment: if no one has a job, who's gonna pay the plumbers?",
+      "beats": [
+        {
+          "t": "Draw a line down the middle: there are two kinds of work in your business",
+          "s": "①"
+        },
+        {
+          "t": "HANDS: diagnosing, fixing, installing, being trusted inside someone's home. AI is not coming for that",
+          "s": "②"
+        },
+        {
+          "t": "PAPERWORK: the phone, the schedule, the invoice, the follow up. That is what AI takes",
+          "s": "③"
+        },
+        {
+          "t": "The arrow back: every hour the paperwork stops eating goes to paid jobs",
+          "s": "④"
+        },
+        {
+          "t": "Who actually loses: not the trade. The shop that lets the phone ring out while the one down the street answers",
+          "s": ""
+        }
+      ],
+      "close": "AI won't fix the furnace. It answers the phone about the furnace. Hear it on our demo, link below.",
+      "reel_headline": "AI won't take your trade. It takes your paperwork.",
+      "reel_idea": "The line, the wrench, the three icons, the arrow back with the $.",
+      "length": "about 7 minutes",
+      "board_words": "HANDS · PAPERWORK",
+      "draw": [
+        {
+          "step": "①",
+          "what": "A line straight down the middle of the board",
+          "marker": "black",
+          "during": "Two kinds of work"
+        },
+        {
+          "step": "②",
+          "what": "Left: a stick figure holding up a wrench, \"HANDS\" under it",
+          "marker": "black",
+          "during": "Hands"
+        },
+        {
+          "step": "③",
+          "what": "Right: a phone, a calendar with a check, an invoice, \"PAPERWORK\" under them",
+          "marker": "green",
+          "during": "Paperwork"
+        },
+        {
+          "step": "④",
+          "what": "A curved arrow from the icons over the line to the wrench, a $ on top",
+          "marker": "green",
+          "during": "The arrow back, who loses, the close"
+        }
+      ],
+      "notes": [
+        "Name the 1.9M video only as \"a video\"; do not repeat its claim about plumbers out earning lawyers."
+      ],
+      "short": "AI and the trades",
+      "board_note": "Idea for Zalo to pick, 2026-10-02. One board, `board.png` = attempt 1 of 2 (first round; the prompt is `board-prompt-attempt-1.txt`, identical to the other attempt). Attempt 2 was also clean; attempt 1 leaves more room above the bottom frame bar. Every word on it was read back: HANDS · PAPERWORK, plus the circled step numbers."
+    },
+    {
+      "num": 8,
+      "code": "LF8",
+      "folder": "video-08-worst-calls",
+      "title": "What Actually Happens When Owners Throw Their Worst Calls at an AI",
+      "formula": "What Actually Happens When You [Action] (863K views a month, title-structures.md)",
+      "alt_titles": [
+        "Owners Threw Nearly 500 Nightmare Calls at Our AI",
+        "Can AI Handle Your Hardest Calls? Owners Tested It"
+      ],
+      "research": "#14 \"Can it handle my calls? Mine are complicated.\"",
+      "why": "About 570 data points, mostly his own: across all demo tenants, owners threw emergencies and after hours calls at the demo in 368 sessions, angry complaints in 43 and off topic trick questions in 57 (\"will it rain today in dallas\", \"What model are you trained on?\"). A radio host trying to break an AI receptionist got 85k views. Nobody else has this data.",
+      "hook": "When owners test our AI, they don't ask nice questions. They throw their worst calls at it.",
+      "beats": [
+        {
+          "t": "The AI is your business on the phone",
+          "s": "①"
+        },
+        {
+          "t": "EMERGENCY: \"water everywhere, it's 9 pm\". A good AI hears it's urgent, gets the address and gets it to you now (368 emergency and after hours tests, our own demo data)",
+          "s": "②"
+        },
+        {
+          "t": "ANGRY: a customer yelling about a bad job. A good AI stays calm, never argues, never promises a refund, takes the note and hands it to you (43 tests)",
+          "s": "③"
+        },
+        {
+          "t": "WEIRD: \"will it rain today in Dallas?\", \"what model are you?\". A good AI answers in one line and steers back to booking (57 tests)",
+          "s": "④"
+        },
+        {
+          "t": "The checks: three different calls, one rule. It knows what it is allowed to do and when to hand off",
+          "s": ""
+        }
+      ],
+      "close": "Your turn. Throw your worst call at our demo, link below, and grade it yourself.",
+      "reel_headline": "Owners threw their worst calls at our AI",
+      "reel_idea": "Three bolts, three checks, one line each on what a good AI does.",
+      "length": "about 8 minutes",
+      "board_words": "EMERGENCY · ANGRY · WEIRD",
+      "draw": [
+        {
+          "step": "①",
+          "what": "A box with a phone handset inside, middle of the board (the AI)",
+          "marker": "black",
+          "during": "The AI is your business"
+        },
+        {
+          "step": "②",
+          "what": "\"EMERGENCY\" top left, a lightning bolt into the box, then a green arrow and check on the right",
+          "marker": "red, then green check",
+          "during": "Emergency"
+        },
+        {
+          "step": "③",
+          "what": "\"ANGRY\" middle left, a bolt into the box, then its green check",
+          "marker": "red, then green check",
+          "during": "Angry"
+        },
+        {
+          "step": "④",
+          "what": "\"WEIRD\" bottom left, a bolt into the box, then its green check",
+          "marker": "red, then green check",
+          "during": "Weird"
+        },
+        {
+          "step": "none",
+          "what": "Point at the three checks",
+          "marker": "",
+          "during": "One rule, then the close"
+        }
+      ],
+      "notes": [
+        "The counts are keyword match counts across all demo tenants, so say \"about\" and \"our own demo data\". We have counts of tests, not pass rates: teach what a good answer looks like, do not claim it aced all of them."
+      ],
+      "short": "Worst calls at an AI",
+      "board_note": "Idea for Zalo to pick, 2026-10-02. One board, `board.png` = attempt 1 of 2 (first round; the prompt is `board-prompt-attempt-1.txt`, identical to the other attempt). Attempt 2 was also clean; attempt 1 leaves more room above the bottom frame bar. Every word on it was read back: EMERGENCY · ANGRY · WEIRD, plus the circled step numbers."
+    }
+  ]
+}

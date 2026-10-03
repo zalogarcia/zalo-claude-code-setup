@@ -1,0 +1,10 @@
+{
+  "template": "compare",
+  "title": "Trial Reminders workflow: before and after the fixes",
+  "subtitle": "GHL workflow aaaa1111, 2 Oct 2026",
+  "before": { "title": "Before", "sub": "until v6", "items": ["Every Operator Base event enrolled the workflow.", "One signup got the welcome SMS twice.", "Add Tag sat before Create contact, so it never applied."] },
+  "after": { "title": "After", "sub": "v7, live", "items": ["An If/Else lets only `created` through.", "One welcome text per signup.", "Add Tag runs after Create contact, so the tag applies."] },
+  "rowLabels": ["Which events enter", "Welcome texts", "The tag"],
+  "verdict": "Two fixes in one workflow: v6 added the If/Else, v7 moved the tag step.",
+  "footer": "Source: memory bu-trial-page.md (2 Oct 2026)."
+}

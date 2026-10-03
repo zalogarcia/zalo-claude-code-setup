@@ -39,8 +39,13 @@ curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendDocument"
 curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendPhoto" \
   -F "chat_id=${TELEGRAM_CHAT_ID}" \
   -F "photo=@/path/to/image.png" \
-  -F "caption=Optional caption here"
+  --form-string "caption=$(cat /tmp/caption.txt)"
 ```
+
+Text fields (`caption`, `text`) go through `--form-string`, never `-F`: curl's `-F` treats a `;`
+in the value as a field-parameter separator and silently drops everything after it (message
+21478 on 2026-10-02 lost its last three lines at "web live; the app"). Write the caption to a
+file first so no `$` in it is expanded either. Read `result.caption` back from the response.
 
 ## Before you send: honour the shared cooldown
 

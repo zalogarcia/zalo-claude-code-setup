@@ -58,7 +58,7 @@ Use sendDocument instead:
   curl -s -X POST "https://api.telegram.org/bot${TOK}/sendDocument" \\
     -F "chat_id=${CID}" \\
     -F "document=@/path/to/clip.mp4" \\
-    -F "caption=P2 A2P - v11" \\
+    --form-string 'caption=P2 A2P - v11' \\
     -F "disable_content_type_detection=true"
 
 Stills (sendPhoto) and audio (sendAudio) are unaffected — only video is.

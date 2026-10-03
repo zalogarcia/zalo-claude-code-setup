@@ -1,0 +1,21 @@
+{
+  "template": "sequence",
+  "title": "One trial signup, message by message",
+  "subtitle": "Who sends what, in time order. Time runs down.",
+  "lanes": [
+    { "id": "visitor", "label": "Visitor", "sub": "phone", "tone": "purple" },
+    { "id": "ob", "label": "Operator Base", "sub": "onboarding", "tone": "blue" },
+    { "id": "ghl", "label": "GHL", "sub": "trigger bbbb2222", "tone": "green" }
+  ],
+  "messages": [
+    { "from": "visitor", "to": "ob", "label": "sends the /trial form" },
+    { "from": "ob", "to": "ob", "label": "makes the session", "tone": "blue" },
+    { "from": "ob", "to": "visitor", "label": "redirect to the setup link" },
+    { "from": "ob", "to": "ghl", "label": "`created`", "detail": "cron, within a minute", "tone": "yellow" },
+    { "from": "visitor", "to": "ob", "label": "first answer" },
+    { "from": "ob", "to": "ghl", "label": "`started`", "detail": "stops at the If/Else", "dashed": true },
+    { "from": "visitor", "to": "ob", "label": "submit" },
+    { "from": "ob", "to": "ghl", "label": "`completed`", "detail": "stops at the If/Else", "dashed": true }
+  ],
+  "footer": "Source: memory bu-trial-page.md (2 Oct 2026)."
+}

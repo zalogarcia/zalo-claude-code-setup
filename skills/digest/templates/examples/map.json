@@ -1,0 +1,86 @@
+{
+  "template": "map",
+  "title": "Where the trial signup lives",
+  "subtitle": "Three systems, and what talks to what.",
+  "zones": [
+    {
+      "id": "site",
+      "label": "Site",
+      "sub": "blackumbrella.app",
+      "tone": "purple",
+      "nodes": [
+        {
+          "id": "trial",
+          "label": "/trial page",
+          "detail": "the ad page",
+          "tone": "purple"
+        }
+      ]
+    },
+    {
+      "id": "ob",
+      "label": "Operator Base",
+      "tone": "blue",
+      "nodes": [
+        {
+          "id": "bell",
+          "label": "bell trigger",
+          "detail": "owner notices",
+          "tone": "blue"
+        },
+        {
+          "id": "api",
+          "label": "onboarding-api",
+          "detail": "makes the session",
+          "tone": "blue"
+        },
+        {
+          "id": "cron",
+          "label": "webhook cron",
+          "detail": "every minute",
+          "tone": "yellow"
+        }
+      ]
+    },
+    {
+      "id": "ghl",
+      "label": "GHL",
+      "sub": "Black Umbrella App",
+      "tone": "green",
+      "nodes": [
+        {
+          "id": "wf",
+          "label": "Trial Reminders",
+          "sub": "aaaa1111",
+          "tone": "green"
+        },
+        {
+          "id": "gap",
+          "label": "Submitted URL",
+          "sub": "cccc3333, no workflow",
+          "kind": "gap"
+        }
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "from": "trial",
+      "to": "api",
+      "label": "form data"
+    },
+    {
+      "from": "cron",
+      "to": "wf",
+      "label": "3 events",
+      "tone": "yellow"
+    },
+    {
+      "from": "cron",
+      "to": "gap",
+      "tone": "red",
+      "dashed": true
+    }
+  ],
+  "footer": "Source: memory bu-trial-page.md (2 Oct 2026)."
+}

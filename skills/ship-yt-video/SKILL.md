@@ -81,6 +81,7 @@ Keep it Private/Unlisted until: 3 thumbnails loaded into Test & Compare, lead ti
 ## Phase 6 — Post-ship (the waterfall)
 
 - Log the ship + chosen title/thumbnail into `videos/NN-slug.md` §2 and (day-11) `process/multiplier-log.csv`.
+- Land the final in `~/dev/videos`: `~/.claude/scripts/video-library-add.sh zalo-kabche youtube "YYYY-MM-DD slug" <final> --cover <thumb 1> --cover <thumb 2> --cover <thumb 3> --text "description.txt=<deliverable>/YouTube Description.txt" --status posted:youtube:<date>` (APFS clones, no extra disk; the deliverable folder stays the working copy).
 - Run the reels waterfall (`process/reels-pipeline.md`): mine 5-8 golden moments, batch the month's reels.
 - When Test & Compare concludes, log the winning thumbnail as an `OWN TEST` row in the thumbnail outliers table.
 

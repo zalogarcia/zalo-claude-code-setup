@@ -35,6 +35,16 @@ Skip for: reel cover frames (reel template in `design/visual-spec.md` §6, diffe
 
 Every film block batches new clean stills (2-3 setups): **append them here as they land**; fresher real stills beat AI renders for the final ship. **Registry gap (narrowed 2026-07-15):** the real photos still share ONE wardrobe (denim over hoodie). Wardrobe variety comes from the restyle clause in the prompt (next section), and film-block stills in 2-3 outfits remain the real fix.
 
+## Expression gate on every face source (Zalo, 2026-10-02: "My face looks weird")
+
+Frames grabbed from his own footage are real photos and often the best source (the whiteboard videos), but a video frame can catch him mid blink or mid word. The LF5 "How much?" c2 shipped with half closed eyes and an open mid word mouth, and he looked sleepy. So before ANY still (a video frame or a registry photo) becomes the identity input or a composited plate:
+
+- **Screen it mechanically, never by eye alone:** run `swift ~/.claude/skills/yt-thumbnail/scripts/face-screen.swift <image> [<image> ...]` (Apple Vision; prints head yaw, eye openness per eye and mouth openness per file and PASS or REJECT; exit 0 all PASS, 1 any REJECT, 2 read error). Reject a blink, a droopy lid, a mid word mouth or a head turned more than 20 degrees; a face under 80 px also REJECTs, so screen the full size source too. Pull 20 or more candidate frames per video and keep only PASSes, then pick the most engaged expression (eyes open into the lens, confident, intense or a slight knowing smile, mouth closed or deliberate).
+- **Prefer compositing the real still** (clean cut out) over letting gpt-image-2 redraw the face: a redraw both drifts identity and can soften the expression.
+  - The proven rail (whiteboard thumbnails v2, 2026-10-02): `scripts/segment.swift <still> <mask.png>` cuts him out with Vision person segmentation, `scripts/composite-thumb.py` places the cut out on the gpt-image-2 plate (real-frame header mode, background fill, label re-layout, mic and stray-hand cleanup; run with `--help`), then `scripts/face-screen.swift` re-checks the final. Weak mask edges leave ghost streaks: threshold them out.
+- **Audit check (7) below** re checks the expression on the FINAL thumbnail, because a regeneration can change it.
+- The same gate applies to reel covers (`yt-video-edit`) and any other image that shows his face.
+
 ## Wardrobe rotation (Zalo, 2026-07-15 — "not the same jacket always")
 
 Identity = **face, hair, beard, earring ONLY** — clothing is a free variable. The prompt's face-preservation clause silently drags the reference outfit along unless you restyle it explicitly, so every comp states a wardrobe: e.g. "dress him in a plain black crew-neck tee" / "olive work shirt, sleeves rolled" / "charcoal flannel overshirt" / "plain grey crewneck sweatshirt". Stay in his real register — workwear and plain basics, no suits, no costumes, no visible logos. Across a split-test set, no two comps wear the same outfit unless the scene demands it. Audit check: outfit changed AND face still matches the reference.
@@ -163,7 +173,9 @@ Read each PNG and check: (1) every quoted string verbatim; (2) display title ≤
 (3) EXACTLY one orange word; (4) the face matches the reference photo — Read the
 reference too and compare; a stranger must recognize the same man; (5) the face carries
 NO paper grain / sepia / illustration style; (6) no invented extra text, arrows, or fake
-metrics. Any failure → regenerate with the failing element strengthened in the prompt.
+metrics; (7) the EXPRESSION reads well: both eyes fully open, no mid word mouth, no
+sleepy or odd look (run swift ~/.claude/skills/yt-thumbnail/scripts/face-screen.swift on the final too). Any failure →
+regenerate with the failing element strengthened in the prompt, or swap the source still.
 Return: file paths, attempt counts, audit table per image (check → PASS/DEFECT).
 ```
 

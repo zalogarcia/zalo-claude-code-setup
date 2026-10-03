@@ -230,6 +230,8 @@ One line per variant: path, duration, dimensions, gate result. Then the overlay
 schedule (what appears when, and the spoken line it lands on). Report any spec
 conflict you hit. Never paste full ffmpeg logs.
 
+Library: once he approves a final, also land it in `~/dev/videos` with `~/.claude/scripts/video-library-add.sh zalo-kabche reels "YYYY-MM-DD slug" <final.mp4> [--video <other variant>] [--cover <f>] [--text caption.txt] --status ready` (APFS clones, no extra disk; once posted, `video-library-add.sh --set-status "zalo-kabche/reels/YYYY-MM-DD slug" posted:<platform>:<date>` changes only the status). Working files stay in `~/Documents/Zalo Content/`.
+
 ## Anti-patterns
 
 - ❌ **Writing the brief from scratch.** The specs exist. This is the failure the skill was created to stop.

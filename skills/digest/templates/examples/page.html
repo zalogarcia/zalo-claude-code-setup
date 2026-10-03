@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<title>How a Black Umbrella trial signup flows today</title>
+<!--
+  digest page (rung 3). One self-contained file: no CDN, no external fonts, no network calls.
+  The interaction kit (tokens, the signal trace, tap-to-open steps, Play/Next/Back, <details>
+  sections) lives in the <style> and <script> blocks; the content lives in <main>.
+  To make a new page, copy this file and replace the content. Check it with:
+    node ~/.claude/skills/digest/scripts/page-check.mjs <file.html> <shot.png>
+-->
+<style>
+  :root {
+    --bg: #090c11; --bg2: #0f141b; --card: #131a23; --card-hi: #19222e; --rule: #233041;
+    --ink: #eef2f8; --soft: #b7c0cd; --muted: #8692a3;
+    --blue: #58c4dd; --green: #83c167; --yellow: #f4d345; --red: #fc6255; --purple: #b98be0;
+    --display: "Avenir Next Condensed", "Avenir Next", "Avenir", "Helvetica Neue", Arial, sans-serif;
+    --body: "Avenir Next", "Avenir", "Helvetica Neue", Arial, sans-serif;
+    --mono: "SF Mono", "Menlo", "Consolas", monospace;
+    --ease: cubic-bezier(.22, .8, .26, 1);
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink); font: 17px/1.55 var(--body);
+    -webkit-font-smoothing: antialiased;
+    background-image:
+      radial-gradient(circle at 50% -10%, rgba(88, 196, 221, .10), transparent 55%),
+      radial-gradient(rgba(150, 170, 200, .07) 1px, transparent 1.4px);
+    background-size: auto, 22px 22px;
+  }
+  main { max-width: 640px; margin: 0 auto; padding: 28px 18px 64px; }
+  code { font: 500 .86em var(--mono); background: #1d2632; color: var(--soft); padding: .08em .35em; border-radius: 6px; }
+
+  /* header: the answer first */
+  .kicker { font: 700 13px var(--body); color: var(--blue); letter-spacing: .08em; text-transform: uppercase; }
+  h1 { font: 800 clamp(34px, 9vw, 46px)/1.02 var(--display); letter-spacing: -.01em; margin: 10px 0 14px; }
+  .answer {
+    font-size: 18px; color: var(--soft); margin: 0 0 20px;
+    border-left: 3px solid var(--yellow); padding: 2px 0 2px 14px;
+  }
+  .answer b { color: var(--ink); }
+  .counts { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 26px; }
+  .count {
+    flex: 1 1 0; min-width: 0; background: var(--card); border: 1px solid var(--rule); border-radius: 14px;
+    padding: 12px 14px;
+  }
+  .count strong { display: block; font: 800 30px/1 var(--display); }
+  .count span { font-size: 13px; line-height: 1.3; color: var(--muted); display: block; margin-top: 4px; }
+  .count.gap strong { color: var(--red); }
+
+  /* controls */
+  .controls {
+    position: sticky; top: 0; z-index: 5; display: flex; gap: 8px; align-items: center;
+    padding: 10px 0; margin: 0 0 8px; background: linear-gradient(var(--bg) 70%, transparent);
+  }
+  button {
+    font: 700 15px var(--body); color: var(--ink); background: var(--card-hi); border: 1px solid var(--rule);
+    border-radius: 12px; padding: 10px 14px; cursor: pointer; touch-action: manipulation; white-space: nowrap;
+  }
+  button.primary { background: var(--blue); color: #061017; border-color: transparent; }
+  button:disabled { opacity: .35; cursor: default; }
+  button:focus-visible, .step-head:focus-visible, summary:focus-visible { outline: 2px solid var(--yellow); outline-offset: 2px; }
+  .where { margin-left: auto; font: 600 13px var(--body); color: var(--muted); white-space: nowrap; }
+
+  /* the signal trace: a line that runs through every step and breaks at the gap */
+  .flow { position: relative; list-style: none; margin: 0; padding: 0 0 0 34px; }
+  .flow::before {
+    content: ""; position: absolute; left: 11px; top: 18px; bottom: 60px; width: 2px;
+    background: linear-gradient(var(--purple), var(--blue) 25%, var(--yellow) 55%, var(--green) 80%, var(--rule));
+    opacity: .55;
+  }
+  .pulse {
+    position: absolute; left: 5px; top: 10px; width: 14px; height: 14px; border-radius: 50%;
+    background: var(--ink); box-shadow: 0 0 0 4px rgba(238, 242, 248, .12), 0 0 18px 4px var(--t, var(--blue));
+    transition: top .7s var(--ease), box-shadow .4s; pointer-events: none; z-index: 2;
+  }
+  .step { position: relative; margin: 0 0 12px; --t: var(--blue); }
+  .step[data-tone="purple"] { --t: var(--purple); } .step[data-tone="yellow"] { --t: var(--yellow); }
+  .step[data-tone="green"] { --t: var(--green); } .step[data-tone="red"] { --t: var(--red); }
+  .dot {
+    position: absolute; left: -31px; top: 16px; width: 18px; height: 18px; border-radius: 50%;
+    background: var(--bg); border: 3px solid var(--t);
+  }
+  .card {
+    background: var(--card); border: 1px solid var(--rule); border-radius: 16px; overflow: hidden;
+    transition: border-color .3s, background .3s, transform .3s var(--ease);
+  }
+  .step.on .card { border-color: var(--t); background: var(--card-hi); }
+  .step.lit .dot { background: var(--t); }
+  .step-head {
+    display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: start; width: 100%;
+    text-align: left; background: none; border: 0; border-radius: 0; padding: 14px 14px 14px 16px; font: inherit;
+    white-space: normal;
+  }
+  .n { font: 800 22px/1.2 var(--display); color: var(--t); min-width: 1ch; }
+  .step-head > span:nth-child(2) { min-width: 0; }
+  .title { font: 700 18px/1.3 var(--body); display: block; }
+  .one { display: block; color: var(--soft); font-size: 15.5px; font-weight: 500; margin-top: 3px; overflow-wrap: break-word; }
+  .chev { color: var(--muted); font-size: 18px; transition: transform .3s var(--ease); margin-top: 2px; }
+  .step.open .chev { transform: rotate(90deg); color: var(--t); }
+  .more { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .35s var(--ease); }
+  .step.open .more { grid-template-rows: 1fr; }
+  .more > div { overflow: hidden; }
+  .more p, .more ul { margin: 0 16px 12px 46px; color: var(--soft); font-size: 15.5px; }
+  .more ul { padding-left: 1.1em; }
+  .more p:first-child { margin-top: 2px; }
+  .chain { display: flex; flex-wrap: wrap; gap: 6px; margin: 2px 16px 14px 46px; align-items: center; }
+  .chain span { background: #1d2632; border: 1px solid var(--rule); border-radius: 9px; padding: 3px 9px; font-size: 14px; font-weight: 600; }
+  .chain i { font-style: normal; color: var(--t); font-weight: 800; }
+  .step.gap .card { border-style: dashed; border-color: rgba(252, 98, 85, .55); background: linear-gradient(rgba(252, 98, 85, .07), rgba(252, 98, 85, .02)), var(--card); }
+  .step.gap .dot { border-style: dashed; }
+  .break {
+    margin: -2px 0 14px 34px; font: 700 13px var(--body); color: var(--red); display: flex; gap: 8px; align-items: center;
+  }
+  .break::before { content: ""; width: 26px; border-top: 2px dashed var(--red); }
+
+  /* sections */
+  details { background: var(--bg2); border: 1px solid var(--rule); border-radius: 14px; margin: 12px 0; }
+  summary { cursor: pointer; padding: 14px 16px; font: 700 16px var(--body); list-style: none; display: flex; justify-content: space-between; }
+  summary::-webkit-details-marker { display: none; }
+  summary::after { content: "+"; color: var(--muted); font-weight: 800; }
+  details[open] summary::after { content: "\2212"; }
+  .ids { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; padding: 0 16px 16px; font-size: 14.5px; }
+  .ids dt { color: var(--muted); }
+  .ids dd { margin: 0; overflow-wrap: anywhere; }
+  .fix { padding: 0 16px 6px; color: var(--soft); font-size: 15.5px; }
+  .fix ol { padding-left: 1.2em; margin: 0 0 12px; }
+  footer { margin-top: 26px; font-size: 13px; color: var(--muted); }
+
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<main>
+  <div class="kicker">digest · 2 Oct 2026</div>
+  <h1>How a Black Umbrella trial signup flows today</h1>
+  <p class="answer"><b>7 steps, 1 open gap.</b> The signup reaches GHL and the bell. A finished onboarding reaches nothing in GHL.</p>
+  <div class="counts">
+    <div class="count"><strong>3</strong><span>systems</span></div>
+    <div class="count"><strong>3</strong><span>events per session</span></div>
+    <div class="count gap"><strong>1</strong><span>open gap</span></div>
+  </div>
+
+  <div class="controls" role="toolbar" aria-label="Step through the flow">
+    <button class="primary" id="play" type="button">Play</button>
+    <button id="back" type="button" disabled>Back</button>
+    <button id="next" type="button">Next</button>
+    <span class="where" id="where" aria-live="polite">tap a step</span>
+  </div>
+
+  <ol class="flow" id="flow">
+    <li class="pulse" id="pulse" aria-hidden="true"></li>
+    <li class="step" data-tone="purple"><span class="dot"></span><div class="card">
+      <button class="step-head" type="button" aria-expanded="false"><span class="n">1</span><span><span class="title">/trial page</span><span class="one">A visitor sends the form on blackumbrella.app/trial.</span></span><span class="chev">&#8250;</span></button>
+      <div class="more"><div>
+        <p>The ad page ("We take all of your calls.") is live since 1 Oct 2026.</p>
+        <p>The page posts the form on the server to <code>POST /functions/v1/onboarding-api</code>.</p>
+      </div></div></div></li>
+    <li class="step" data-tone="blue"><span class="dot"></span><div class="card">
+      <button class="step-head" type="button" aria-expanded="false"><span class="n">2</span><span><span class="title">Onboarding API</span><span class="one">Operator Base makes a pre-filled onboarding session.</span></span><span class="chev">&#8250;</span></button>
+      <div class="more"><div>
+        <p>The session lives in the Black Umbrella agency. It copies the template (row <code>eeee5555</code>) when it is made.</p>
+        <p>So a template change reaches new sessions only.</p>
+      </div></div></div></li>
+    <li class="step" data-tone="blue"><span class="dot"></span><div class="card">
+      <button class="step-head" type="button" aria-expanded="false"><span class="n">3</span><span><span class="title">Setup page</span><span class="one">The visitor goes to operatorbase.app/onboard/<wbr>&lt;code&gt;.</span></span><span class="chev">&#8250;</span></button>
+      <div class="more"><div>
+        <p>The client answers the questions, then submits.</p>
+        <p>Since 2 Oct, the "Book kickoff call" button on the thank-you screen opens the Tech Support calendar (new sessions only).</p>
+      </div></div></div></li>
+    <li class="step" data-tone="yellow"><span class="dot"></span><div class="card">
+      <button class="step-head" type="button" aria-expanded="false"><span class="n">4</span><span><span class="title">Webhook events</span><span class="one">"created", "started" and "completed" go to one GHL trigger.</span></span><span class="chev">&#8250;</span></button>
+      <div class="more"><div>
+        <div class="chain"><span>created</span><i>&rarr;</i><span>started: first answer</span><i>&rarr;</i><span>completed: submit</span></div>
+        <p>The cron job <code>onboarding-webhook-dispatch</code> sends them every minute. The first proof landed 49.2 s after the session was made.</p>
+        <p>Each session sends "created" once, ever. The target is GHL inbound webhook trigger <code>bbbb2222</code>.</p>
+      </div></div></div></li>
+    <li class="step" data-tone="blue"><span class="dot"></span><div class="card">
+      <button class="step-head" type="button" aria-expanded="false"><span class="n">5</span><span><span class="title">Bell notices</span><span class="one">The agency owner sees "started" and "completed" in the System tab.</span></span><span class="chev">&#8250;</span></button>
+      <div class="more"><div>
+        <p>A database trigger fires when the client starts or submits. It uses the same rule as the webhook, so the bell and the webhook never disagree.</p>
+        <p>Only the agency owner gets it, once per session per event. No push and no email. Live since 2 Oct (PR #166).</p>
+      </div></div></div></li>
+    <li class="step" data-tone="green"><span class="dot"></span><div class="card">
+      <button class="step-head" type="button" aria-expanded="false"><span class="n">6</span><span><span class="title">GHL workflow</span><span class="one">Only "created" passes the If/Else. Then the contact, the tag, the SMS and the email.</span></span><span class="chev">&#8250;</span></button>
+      <div class="more"><div>
+        <p>"Trial Reminders Black Umbrella DFY" <code>aaaa1111</code>, v7, published 2 Oct at 16:08 UTC.</p>
+        <p>GHL inbound webhook triggers have no filter, so every event enters. The If/Else "Trial created only" passes <code>onboarding.created</code>.</p>
+        <div class="chain"><span>Create contact</span><i>&rarr;</i><span>Add tag bu trial dfy</span><i>&rarr;</i><span>SMS</span><i>&rarr;</i><span>Email</span></div>
+        <p>"started" and "completed" go to END. The workflow has no reminder waits yet.</p>
+      </div></div></div></li>
+    <li class="break" aria-hidden="true">the trace breaks here</li>
+    <li class="step gap" data-tone="red"><span class="dot"></span><div class="card">
+      <button class="step-head" type="button" aria-expanded="false"><span class="n">7</span><span><span class="title">Open gap: Onboarding Submitted URL</span><span class="one">On submit, Operator Base calls a URL that no workflow holds.</span></span><span class="chev">&#8250;</span></button>
+      <div class="more"><div>
+        <p>The URL names GHL trigger <code>cccc3333</code>. No workflow holds it (58 of 58 checked).</p>
+        <p>"Onboarding Submitted Operator Base" <code>dddd4444</code> is a draft with no steps and no trigger. So a finished onboarding starts nothing in GHL.</p>
+      </div></div></div></li>
+  </ol>
+
+  <details>
+    <summary>How to close the gap (your call)</summary>
+    <div class="fix"><ol>
+      <li>Build the "Onboarding Submitted" workflow in GHL: a trigger plus steps.</li>
+      <li>Point the Operator Base Submitted URL at the new trigger.</li>
+      <li>Put the "stop the reminders" path there, once the trial workflow has reminder waits.</li>
+    </ol></div>
+  </details>
+  <details>
+    <summary>Ids and names</summary>
+    <dl class="ids">
+      <dt>Trial workflow</dt><dd><code>aaaa1111</code></dd>
+      <dt>Its trigger</dt><dd><code>bbbb2222</code></dd>
+      <dt>Gap trigger</dt><dd><code>cccc3333</code></dd>
+      <dt>Draft workflow</dt><dd><code>dddd4444</code></dd>
+      <dt>Template row</dt><dd><code>eeee5555</code></dd>
+      <dt>Webhook cron</dt><dd><code>onboarding-webhook-dispatch</code></dd>
+      <dt>Bell trigger</dt><dd><code>trg_onboarding_submissions_notify_agency</code></dd>
+    </dl>
+  </details>
+
+  <footer>Sources: memory bu-trial-page.md and ob-onboarding-bell-notices.md, worker report bg76 (2 Oct 2026). Nothing here is hosted; this file runs offline.</footer>
+</main>
+<script>
+(function () {
+  var steps = Array.prototype.slice.call(document.querySelectorAll(".step"));
+  var pulse = document.getElementById("pulse");
+  var where = document.getElementById("where");
+  var back = document.getElementById("back"), next = document.getElementById("next"), play = document.getElementById("play");
+  var cur = -1, timer = null;
+
+  function setOpen(step, open) {
+    step.classList.toggle("open", open);
+    step.querySelector(".step-head").setAttribute("aria-expanded", String(open));
+  }
+  function go(i, scroll) {
+    cur = Math.max(0, Math.min(steps.length - 1, i));
+    steps.forEach(function (s, k) {
+      s.classList.toggle("on", k === cur);
+      s.classList.toggle("lit", k <= cur);
+      setOpen(s, k === cur);
+    });
+    var s = steps[cur];
+    pulse.style.top = (s.offsetTop + 14) + "px";
+    pulse.style.setProperty("--t", getComputedStyle(s).getPropertyValue("--t"));
+    where.textContent = "step " + (cur + 1) + " of " + steps.length;
+    back.disabled = cur === 0;
+    next.disabled = cur === steps.length - 1;
+    if (scroll) s.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+  function stop() { if (timer) { clearInterval(timer); timer = null; play.textContent = "Play"; } }
+
+  steps.forEach(function (s, k) {
+    s.querySelector(".step-head").addEventListener("click", function () {
+      stop();
+      if (s.classList.contains("open")) { setOpen(s, false); return; }
+      go(k, false);
+    });
+  });
+  next.addEventListener("click", function () { stop(); go(cur + 1, true); });
+  back.addEventListener("click", function () { stop(); go(cur - 1, true); });
+  play.addEventListener("click", function () {
+    if (timer) { stop(); return; }
+    go(0, true);
+    play.textContent = "Pause";
+    timer = setInterval(function () {
+      if (cur >= steps.length - 1) { stop(); return; }
+      go(cur + 1, true);
+    }, 2600);
+  });
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "ArrowDown" || e.key === "ArrowRight") { stop(); go(cur + 1, true); }
+    if (e.key === "ArrowUp" || e.key === "ArrowLeft") { stop(); go(cur - 1, true); }
+  });
+  window.addEventListener("resize", function () { if (cur >= 0) go(cur, false); });
+})();
+</script>
+</body>
+</html>
