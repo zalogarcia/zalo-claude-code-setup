@@ -43,7 +43,7 @@ Turns "send me N more video ideas" into a text he can pick from on his phone, th
 
 ## Stage 2: after he picks (only the picked ideas)
 
-1. **Linear comment:** `linear.sh comment CON-N "Picked by Zalo YYYY-MM-DD, shooting today"` for each pick. The rest stay in Idea.
+1. **Linear comment:** `linear.sh comment ABC-N "Picked by Zalo YYYY-MM-DD, shooting today"` for each pick. The rest stay in Idea.
 2. **Complete the picks in the spec:** `folder, short, formula, alt_titles, research, beats[{t, s}], close, reel_idea, length, board_words, draw[{step, what, marker, during}], notes`, and later `board_note`. Optional `board` overrides `<folder>/board.png` (a path relative to the spec dir).
 3. **Board prompts.** Copy `board-prompt-template.txt` per pick to `<folder>/board-prompt-attempt-1.txt` and `-2.txt`, filling LAYOUT, TEXT, COLORS and the FIT block's lowest element. Quote every word exactly and spell it letter by letter.
 4. **Generate 2 attempts per board in parallel** in ONE foreground command (12 calls took 102 s on 2026-10-02):
@@ -63,7 +63,7 @@ Turns "send me N more video ideas" into a text he can pick from on his phone, th
    ```
    Expect one page per pick plus the cover; a pick spilling onto 2 pages means its beats are too long.
 7. **Telegram:** the PDF via sendDocument (caption like "Today's 3: #7, #11, #8. Filming plan with boards."), then each board as a photo captioned "#N Title".
-8. **Linear status:** `linear.sh status CON-N "Boards ready"` for each pick, only once its board passed the audit and was sent.
+8. **Linear status:** `linear.sh status ABC-N "Boards ready"` for each pick, only once its board passed the audit and was sent.
 
 `contact-sheet.py <spec> <out.png> [--cols N]` exists for when he asks to see several boards at once; it is not part of either stage by default.
 

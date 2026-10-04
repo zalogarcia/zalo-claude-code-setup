@@ -1024,5 +1024,218 @@ stdin_case("real hook: a loop of quoted substitutions is blocked", {
     "tool_name": "Bash", "tool_input": {"command": "for u in a b c; do H=\"$(curl -s "
                                         "https://www.facebook.com/$u)\"; done"}, "cwd": T}, 2)
 
+print("J  Codex Computer Use (mcp__codex-cu__js): page code that drives the logged in Chrome")
+CU = "mcp__codex-cu__js"
+
+
+def cu(ctx, code):
+    return hk.decide({"tool_name": CU, "tool_input": {"code": code, "title": "t"},
+                      "session_id": "cu123456"}, ctx)
+
+
+def slots(gate):
+    return len(open(gate.ledger_path).read().splitlines()) if os.path.exists(
+        gate.ledger_path) else 0
+
+
+ok(hk.BROWSER_TOOL_RE.match(CU) and hk.CODE_TOOL_RE.search(CU),
+   "codex-cu js is classified as a browser code tool")
+ok(hk.BROWSER_TOOL_RE.match("mcp__codex-cu__js_reset") and not hk.CODE_TOOL_RE.search(
+    "mcp__codex-cu__js_reset"), "js_reset is a browser tool but not a code tool")
+ctx, gate, clk, d = fresh_ctx()
+ok(cu(ctx, 'const t = await cua.createBrowserTab("chrome", "' + FB + '");')[0]
+   and slots(gate) == 1, "createBrowserTab to a social URL is gated: it takes a slot")
+allowed, msg = cu(ctx, 'await tab.goto("' + FB2 + '");')
+ok(not allowed and "WAIT" in msg and slots(gate) == 1,
+   "a goto to a social URL right after is blocked, and writes nothing", msg[:160])
+ok(not cu(fresh_ctx()[0], 'const t = await cua.createBrowserTab("chrome", "https://example.com");'
+          ' await t.goto("' + FB + '");')[0],
+   "createBrowserTab plus goto in one call (two navigations) is blocked even with budget free")
+ctx, gate, clk, d = fresh_ctx()
+ok(cu(ctx, 'let c = await cua.getApp("Google Chrome"); await c.typeText("' + FB + '");'
+           ' await c.pressKey("Return");')[0] and slots(gate) == 1,
+   "typeText of a social URL into Chrome is gated: it takes a slot")
+ok(not cu(ctx, 'await c.typeText("' + FB2 + '"); await c.pressKey("Return");')[0],
+   "a second typeText of a social URL right away is blocked")
+ctx, gate, clk, d = fresh_ctx()
+ok(cu(ctx, 'await c.typeText("facebook.com/joe.smith");')[0] and slots(gate) == 1,
+   "typeText of a BARE social host (no scheme) is gated too")
+for label, code in (
+        ("paste", 'await c.paste("' + LI + '");'),
+        ("setValue into the address bar", 'await c.setValue(10, "' + LI + '");')):
+    ctx, gate, clk, d = fresh_ctx()
+    first = cu(ctx, code)[0]
+    second = cu(ctx, code)[0]
+    ok(first and slots(gate) == 1 and not second,
+       "%s of a social URL takes a slot, the same call again right away is blocked" % label,
+       "first %s slots %d second %s" % (first, slots(gate), second))
+for label, code in (
+        ("a for loop over social URLs", 'for (const u of ["' + FB + '", "' + FB2 + '"]) '
+         'await cua.createBrowserTab("chrome", u);'),
+        ("one call naming two social URLs", 'await c.typeText("' + FB + '"); '
+         'await c.typeText("' + FB2 + '");'),
+        ("a timer", 'setInterval(() => c.typeText("' + FB + '"), 60000);')):
+    ok(not cu(fresh_ctx()[0], code)[0], "codex-cu bulk: %s is blocked" % label)
+ctx, gate, clk, d = fresh_ctx()
+ok(cu(ctx, 'let app = await cua.getApp("Calculator"); await app.click(9); '
+           'await app.typeText("123+456"); await app.getAXState();')[0] and slots(gate) == 0,
+   "Calculator code passes and takes no slot")
+ok(cu(ctx, 'const t = await cua.createBrowserTab("chrome", "https://example.com", '
+           '{sessionName: "test"});')[0] and slots(gate) == 0,
+   "createBrowserTab to example.com passes and takes no slot")
+ok(cu(ctx, 'await c.getAXState(); // the tab title says facebook.com')[0] and slots(gate) == 0,
+   "code that only reads state while naming a social host passes (no navigation verb)")
+ok(cu(ctx, 'await c.typeText(atob("aHR0cHM6Ly93d3cuZmFjZWJvb2suY29tL3g="));')[0],
+   "a URL built at run time (base64) passes: stated limit, the hook cannot see it")
+for label, code in (
+        ("a pressKey loop over bare hosts (no listed verb)", 'const app = await cua.getApp('
+         '"Google Chrome"); for (const u of ["facebook.com/a","facebook.com/b"]) { await '
+         'app.pressKey("cmd+l"); for (const ch of u) await app.pressKey(ch); }'),
+        ("a list of social URLs parked in REPL state (no verb yet)",
+         'globalThis.q = ["' + FB + '", "' + FB2 + '"];')):
+    ok(not cu(fresh_ctx()[0], code)[0], "QA round 1: %s is blocked" % label)
+ctx, gate, clk, d = fresh_ctx()
+ok(hk.decide({"tool_name": CU, "tool_input": {
+    "code": '// open ' + FB + '\nawait tab.goto("' + FB + '");',
+    "title": "Open " + FB}}, ctx)[0] and slots(gate) == 1,
+   "QA round 1: one goto whose title and comment repeat the URL is one paced load")
+for label, code in (
+        ("prose typed into TextEdit", 'const app = await cua.getApp("TextEdit"); await '
+         'app.typeText("Find me on instagram.com/zalokabche and x.com/zalo");'),
+        ("prose in a mail draft", 'await m.typeText("see the thread on x.com today.");'),
+        ("tab form typeText into a page field", 'await tab.typeText(12, "' + LI + '");'),
+        ("tab form paste into a page field", 'await tab.paste(null, "' + LI + '");')):
+    ctx, gate, clk, d = fresh_ctx()
+    ok(cu(ctx, code)[0] and slots(gate) == 0,
+       "QA round 1: %s passes and takes no slot" % label)
+for label, code in (
+        ("bracket access", 'await app["paste"]("' + FB + '");'),
+        ("typeText.call", 'const {typeText} = app; await typeText.call(app, "' + FB + '");'),
+        ("node fetch", 'await fetch("' + FB + '");'),
+        ("an escaped space does not make a URL prose", 'await c.typeText("facebook.com/x '
+         '\\u0020");')):
+    ctx, gate, clk, d = fresh_ctx()
+    allowed = cu(ctx, code)[0]
+    ok(not allowed or slots(gate) == 1,
+       "QA round 1: %s is caught: it takes a slot or is refused, never a free pass" % label)
+ctx, gate, clk, d = fresh_ctx()
+ok(cu(ctx, 'let tab = await cua.getTab({url: "' + LI + '"}, {browser: "chrome"});')[0]
+   and slots(gate) == 0, "QA round 2: getTab only binds an open tab: no load, no slot")
+ok(cu(ctx, 'let tab = await cua.getTab({url: "' + LI + '"}); await tab.click(4);')[0]
+   and slots(gate) == 1, "QA round 2: getTab then a click on that tab is gated")
+for label, code in (
+        ("a search URL with spaces in goto",
+         'await tab.goto("https://www.facebook.com/search/top?q=roofing companies miami");'),
+        ("a LinkedIn search URL with spaces in createBrowserTab",
+         'await cua.createBrowserTab("chrome", "https://www.linkedin.com/search/results/'
+         'people/?keywords=marketing agency owner");'),
+        ("a URL then words typed into the address bar",
+         'await c.typeText("https://www.facebook.com/joe go now"); await c.pressKey("Return");'),
+        ("a verb word in a comment before one goto",
+         '// navigate to the profile\nawait tab.goto("' + FB + '");'),
+        ("a verb word in a block comment before one paste",
+         '/* paste the profile URL into the address bar */ await c.paste("' + FB + '"); '
+         'await c.pressKey("Return");'),
+        ("a multi line template before a typeText",
+         'const msg = `Hey Joe,\ngreat post!`; await c.click(3); await c.typeText(`' + FB
+         + '\\n`);')):
+    ctx, gate, clk, d = fresh_ctx()
+    ok(cu(ctx, code)[0] and slots(gate) == 1,
+       "QA round 2: %s is ONE paced load: it takes exactly one slot" % label,
+       "slots %d" % slots(gate))
+for label, code in (
+        ("an escaped newline", 'globalThis.q = "' + FB + '\\n' + FB2 + '".split("\\n");'),
+        ("a pipe", 'globalThis.q = "' + FB + '|' + FB2 + '".split("|");'),
+        ("a semicolon", 'globalThis.q = "' + FB + ';' + FB2 + '".split(";");')):
+    ok(not cu(fresh_ctx()[0], code)[0],
+       "QA round 2: a list joined by %s is several URLs: blocked" % label)
+ctx9, _, _, _ = fresh_ctx()
+ok(not cu(ctx9, 'const ws = "ws://127.0.0.1:9222/devtools"; await c.typeText("' + FB
+          + '");')[0],
+   "codex-cu code that names the Blueprint port 9222 with a social host is blocked")
+stdin_case("real hook: codex-cu Calculator code passes", {
+    "tool_name": CU, "tool_input": {"code": 'let app = await cua.getApp("Calculator");'}}, 0)
+r = stdin_case("real hook: codex-cu code opening two facebook pages is blocked", {
+    "tool_name": CU, "tool_input": {"code": 'await cua.createBrowserTab("chrome", "' + FB
+                                    + '"); await cua.createBrowserTab("chrome", "' + FB2 + '");'}},
+    2)
+ok("BLOCKED (social-pace-guard)" in r.stderr, "with a readable reason", r.stderr[:160])
+
+print("K  the computer use app allow list is Zalo's (config/computer-use-apps.json)")
+CUA = os.path.expanduser("~/.claude/config/computer-use-apps.json")
+ok(os.path.realpath(hk.CU_APPS_PATH) == os.path.realpath(CUA), "the hook protects the real path")
+for tool in ("Write", "Edit", "MultiEdit"):
+    ok(not hk.decide({"tool_name": tool, "tool_input": {"file_path": CUA, "content": "{}"}},
+                     fresh_ctx()[0])[0], "%s on computer-use-apps.json is refused" % tool)
+for label, cmd in (
+        ("a redirect", "echo '{\"apps\":[]}' > ~/.claude/config/computer-use-apps.json"),
+        ("sed -i", "sed -i '' 's/Preview/Google Chrome/' ~/.claude/config/computer-use-apps.json"),
+        ("jq into a temp then mv", "jq '.apps += [{\"name\":\"Google Chrome\"}]' "
+         "~/.claude/config/computer-use-apps.json > /tmp/x.json && mv /tmp/x.json "
+         "~/.claude/config/computer-use-apps.json"),
+        ("cp over it", "cp /tmp/mine.json /Users/zalo/.claude/config/computer-use-apps.json"),
+        ("rm", "rm ~/.claude/config/computer-use-apps.json"),
+        ("a bare name from inside the config dir", "cd ~/.claude/config && tee "
+         "computer-use-apps.json < /tmp/x"),
+        ("python writing it", "python3 -c \"open('/Users/zalo/.claude/config/"
+         "computer-use-apps.json','w').write('{}')\"")):
+    allowed, msg = run_bash(cmd)
+    ok(not allowed and "computer-use-apps.json" in msg and "his call" in msg,
+       "Bash %s on the allow list is refused with the reason" % label, msg[:160])
+for label, cmd in (
+        ("echo after cd", "cd ~/.claude/config && echo '{}' > computer-use-apps.json"),
+        ("cat heredoc after cd", "cd ~/.claude/config && cat > computer-use-apps.json <<'EOF'\n"
+         "{}\nEOF"),
+        ("printf into a relative path after cd", "cd ~/.claude && printf x > "
+         "config/computer-use-apps.json"),
+        ("the pacing config after cd (same gap, same fix)", "cd ~/.claude/config && "
+         "echo '{}' >| social-pacing.json"),
+        ("plutil -insert", "plutil -insert apps.4 -json '{\"name\":\"Google Chrome\"}' "
+         "~/.claude/config/computer-use-apps.json"),
+        ("patch", "patch ~/.claude/config/computer-use-apps.json /tmp/add-chrome.diff"),
+        ("ed", "printf ',s/Preview/Chrome/\\nw\\n' | ed ~/.claude/config/computer-use-apps.json"),
+        ("a hard link", "ln ~/.claude/config/computer-use-apps.json /tmp/h"),
+        ("git checkout of the file", "cd ~/.claude && git checkout -- "
+         "config/computer-use-apps.json"),
+        ("git restore of the file", "git -C ~/.claude restore "
+         "/Users/zalo/.claude/config/computer-use-apps.json"),
+        ("git -C with a pathspec relative to -C", "cd ~/dev && git -C ~/.claude restore "
+         "config/computer-use-apps.json"),
+        ("git -C into the config dir", "git -C ~/.claude/config checkout HEAD -- "
+         "computer-use-apps.json"),
+        ("/bin/link (a hard link)", "link ~/.claude/config/computer-use-apps.json /tmp/x"),
+        ("python os.link", "python3 -c \"import os; os.link('/Users/zalo/.claude/config/"
+         "computer-use-apps.json', '/tmp/x')\""),
+        ("a write to the Computer Use approvals store", "echo '{\"approvedBundleIdentifiers\":"
+         "[\"com.google.Chrome\"]}' > \"$HOME/Library/Group Containers/2DC432GLL2.com.openai."
+         "sky.CUAService/Library/Application Support/Software/ComputerUseAppApprovals.json\"")):
+    allowed, msg = run_bash(cmd)
+    ok(not allowed, "QA 10-03: Bash %s on a protected file is refused" % label, msg[:160])
+for label, cmd in (("cat", "cat ~/.claude/config/computer-use-apps.json"),
+                   ("jq read", "jq -r '.apps[].name' ~/.claude/config/computer-use-apps.json"),
+                   ("jq read into a temp file", "jq . ~/.claude/config/computer-use-apps.json "
+                    "> /tmp/apps-copy.json"),
+                   ("plutil -p (print)", "plutil -p ~/.claude/config/computer-use-apps.json"),
+                   ("a symlink (writes through it resolve to the real path)",
+                    "ln -s ~/.claude/config/computer-use-apps.json /tmp/apps-link"),
+                   ("git add and commit by name", "cd ~/.claude && git add "
+                    "config/computer-use-apps.json && git commit -m x"),
+                   ("cd then a write elsewhere", "cd ~/.claude/config && echo x > /tmp/y.txt")):
+    ok(run_bash(cmd)[0], "reading the allow list (%s) passes" % label)
+ok(not hk.decide({"tool_name": "Write", "tool_input": {"file_path": hk.CU_STORE_PATH,
+                                                       "content": "{}"}}, fresh_ctx()[0])[0],
+   "a Write to the Computer Use approvals store is refused")
+ok(run_bash("cat \"$HOME/Library/Group Containers/2DC432GLL2.com.openai.sky.CUAService/Library/"
+            "Application Support/Software/ComputerUseAppApprovals.json\"")[0],
+   "reading the approvals store passes")
+ok(run_bash("git -C ~/.claude log --oneline -3 -- config/computer-use-apps.json")[0],
+   "git -C log of the allow list passes")
+ok(not hk.decide({"tool_name": "Write", "tool_input": {"file_path": "/tmp/apps-link",
+                                                       "content": "{}"}}, fresh_ctx()[0])[0]
+   if os.path.islink("/tmp/apps-link") else True,
+   "a Write through a symlink to the allow list resolves to it and is refused")
+r = stdin_case("real hook: a Write to the allow list is blocked", {
+    "tool_name": "Write", "tool_input": {"file_path": CUA, "content": "{}"}}, 2)
+
 print("\n%d passed, %d failed" % (PASS, FAIL))
 sys.exit(1 if FAIL else 0)

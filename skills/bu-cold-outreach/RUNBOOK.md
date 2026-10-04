@@ -118,6 +118,14 @@ Wait for the composer placeholder ("Ask Codex to do anything") to appear before 
 anything. `peer-ask.sh` already waits on that string as its idle marker, so a call fired
 too early will time out rather than land silently.
 
+**The model is pinned in that launcher (2026-10-04, Zalo: "the outreach needs to be moved to
+6.1 Sol").** It runs `codex -m gpt-6.1-sol --dangerously-bypass-approvals-and-sandbox`
+(`CODEX_MODEL` near the end of the script; the pre-pin copy is
+`launch-codex-bare.sh.bak-20261004-sol` beside it). The script is not in a git repo, so this
+paragraph is its record. Only codex-bare reads it: the bridge's Codex engine and
+`computer-use.sh` set their own models. To prove the model after a relaunch, read the pane
+footer (`GPT-6.1-Sol`) or the process arguments of the pane's codex.
+
 **Refreshing codex-bare without Zalo (authorized 2026-09-11).** When the ping exits 2 (no
 session) or the reply contains "This application session has been explicitly stopped by the
 user for this turn" (the TUI answers but its Computer Use app session is stuck), run

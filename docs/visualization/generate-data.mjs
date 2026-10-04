@@ -14,6 +14,37 @@ const __dirname = path.dirname(__filename);
 const REPO_ROOT = path.resolve(__dirname, '..', '..');
 const OUT_DIR = __dirname;
 
+// Only files git tracks may reach the published graph. A fresh clone of the public repo is
+// the main guard against private primitives; this is the second one: an untracked skill,
+// rule, command or agent in a working copy is never read. Refuses to run outside a git
+// checkout rather than fall back to reading everything.
+function loadTrackedFiles() {
+  try {
+    const out = execFileSync('git', ['ls-files', '-z'], {
+      cwd: REPO_ROOT,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe'],
+      maxBuffer: 64 * 1024 * 1024,
+    });
+    return new Set(out.split('\0').filter(Boolean));
+  } catch (err) {
+    console.error(`generate-data: \`git ls-files\` failed in ${REPO_ROOT}: ${err.message.split('\n')[0]}`);
+    console.error('Run it inside a git clone of the setup repo: it only reads tracked files.');
+    process.exit(1);
+  }
+}
+const TRACKED = loadTrackedFiles();
+if (!TRACKED.has('docs/visualization/generate-data.mjs')) {
+  // e.g. an untracked copy of the tree sitting inside some other repository
+  console.error(`generate-data: ${REPO_ROOT} is not a checkout of the setup repo (this script is not tracked in it).`);
+  console.error('Run it inside a git clone of the setup repo: it only reads tracked files.');
+  process.exit(1);
+}
+
+function isTracked(absPath) {
+  return TRACKED.has(path.relative(REPO_ROOT, absPath).split(path.sep).join('/'));
+}
+
 const AGENT_NAMES = new Set([
   'brainstorm',
   'bug-fix',
@@ -94,7 +125,9 @@ const CANONICAL_FLOWS = {
 
 // ---------- utilities ----------
 
+// Reads a file only when git tracks it (see isTracked).
 function readIfExists(p) {
+  if (!isTracked(p)) return null;
   try {
     return fs.readFileSync(p, 'utf8');
   } catch {
@@ -108,6 +141,7 @@ function listMdFiles(dir) {
       .readdirSync(dir, { withFileTypes: true })
       .filter((d) => d.isFile() && d.name.endsWith('.md'))
       .map((d) => path.join(dir, d.name))
+      .filter((p) => isTracked(p))
       .sort();
   } catch {
     return [];
@@ -130,9 +164,18 @@ function extractFrontmatter(text) {
   const m = text.match(/^---\n([\s\S]*?)\n---\n/);
   if (!m) return {};
   const fm = {};
-  for (const line of m[1].split('\n')) {
-    const kv = line.match(/^([a-zA-Z0-9_-]+):\s*(.*)$/);
-    if (kv) fm[kv[1]] = kv[2].replace(/^['"]|['"]$/g, '');
+  const lines = m[1].split('\n');
+  for (let i = 0; i < lines.length; i++) {
+    const kv = lines[i].match(/^([a-zA-Z0-9_-]+):\s*(.*)$/);
+    if (!kv) continue;
+    // YAML block scalar (`key: >` or `key: |`): the value is the indented lines below it.
+    if (/^[>|][-+]?$/.test(kv[2].trim())) {
+      const block = [];
+      while (i + 1 < lines.length && /^(\s+\S|\s*$)/.test(lines[i + 1])) block.push(lines[++i].trim());
+      fm[kv[1]] = block.filter(Boolean).join(' ');
+      continue;
+    }
+    fm[kv[1]] = kv[2].replace(/^['"]|['"]$/g, '');
   }
   return fm;
 }
@@ -300,6 +343,7 @@ function scanCommands() {
     if (!entry.name.endsWith('.md') && !entry.name.endsWith('.sh')) continue;
     const name = path.basename(entry.name, path.extname(entry.name));
     const file = path.join(dir, entry.name);
+    if (!isTracked(file)) continue;
     const text = fs.readFileSync(file, 'utf8');
     const fm = extractFrontmatter(text);
     out.push({
@@ -325,6 +369,7 @@ function scanSkills() {
       readIfExists(path.join(dir, name, 'SKILL.md')) ||
       readIfExists(path.join(dir, name, `${name}.md`)) ||
       '';
+    if (!skillMd) continue; // no tracked SKILL.md: not a published skill
     const fm = extractFrontmatter(skillMd);
     out.push({
       id: `skill.${name}`,
@@ -412,6 +457,66 @@ function scanMeta() {
       'The main conversation thread. Routes requests, reads rules, dispatches fresh-context subagents, and owns the user relationship. Never does heavy lifting itself.',
   });
   return out;
+}
+
+// ---------- count text ----------
+
+// The title, the hero and the List label in index.html carry data-count-text and
+// data-count-aria templates such as "{agent:Word} Agents" or "{total} pieces". --inline
+// fills them from the graph it just built, and the page fills them again at render time
+// from the data it loaded, so no count in the copy can go stale. Keep these helpers in
+// step with fillCountTemplate() in index.html.
+const NUMBER_WORDS = [
+  'zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten',
+  'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen',
+  'nineteen',
+];
+const TENS_WORDS = ['', '', 'twenty', 'thirty', 'forty', 'fifty', 'sixty', 'seventy', 'eighty', 'ninety'];
+
+function numberWord(n) {
+  if (n < 20) return NUMBER_WORDS[n];
+  if (n < 100) return TENS_WORDS[Math.floor(n / 10)] + (n % 10 ? '-' + NUMBER_WORDS[n % 10] : '');
+  return String(n);
+}
+
+function fillCountTemplate(template, graph) {
+  const counts = { total: graph.nodes.length };
+  for (const n of graph.nodes) counts[n.kind] = (counts[n.kind] || 0) + 1;
+  return template.replace(/\{([a-z-]+)(?::(word|Word))?\}/g, (m, key, form) => {
+    const n = counts[key] || 0;
+    if (!form) return String(n);
+    const w = numberWord(n);
+    return form === 'Word' ? w.charAt(0).toUpperCase() + w.slice(1) : w;
+  });
+}
+
+function escapeHtml(s) {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+}
+
+function applyCountTemplates(html, graph) {
+  const expected = (html.match(/\sdata-count-(?:text|aria)="/g) || []).length;
+  let filled = 0;
+  html = html.replace(
+    /<([a-z0-9]+)(\s[^>]*?\bdata-count-text="([^"]*)"[^>]*)>([^<]*)<\/\1\s*>/g,
+    (m, tag, attrs, tpl) => {
+      filled++;
+      return `<${tag}${attrs}>${escapeHtml(fillCountTemplate(tpl, graph))}</${tag}>`;
+    },
+  );
+  html = html.replace(/<[a-z0-9]+\s[^>]*\bdata-count-aria="([^"]*)"[^>]*>/g, (tag, tpl) => {
+    filled++;
+    return tag.replace(/\baria-label="[^"]*"/, `aria-label="${escapeHtml(fillCountTemplate(tpl, graph))}"`);
+  });
+  if (filled !== expected) {
+    // A template the patterns above cannot fill would keep a stale count in the copy.
+    console.error(`generate-data: count text: filled ${filled} of ${expected} data-count templates in index.html.`);
+    console.error('A data-count element must hold plain text only. Nothing was written.');
+    process.exit(1);
+  }
+  if (!filled) console.warn('count text: no data-count templates found in index.html');
+  else console.log(`count text: filled ${filled} of ${expected} templates`);
+  return html;
 }
 
 // ---------- build ----------
@@ -546,11 +651,13 @@ function writeOutputs(graph, flows) {
   fs.writeFileSync(path.join(OUT_DIR, 'flows.json'), JSON.stringify(flows, null, 2) + '\n');
 }
 
-function inlineIntoHtml(graph, flows) {
+// Builds the inlined page without writing it, so a refusal (an unfillable count template)
+// happens before any output file is touched.
+function buildInlinedHtml(graph, flows) {
   const htmlPath = path.join(OUT_DIR, 'index.html');
   if (!fs.existsSync(htmlPath)) {
     console.warn('index.html not found — skipping --inline (run after Step 2)');
-    return;
+    return null;
   }
   let html = fs.readFileSync(htmlPath, 'utf8');
 
@@ -572,10 +679,10 @@ function inlineIntoHtml(graph, flows) {
     );
   }
 
+  html = applyCountTemplates(html, graph);
   html = replaceSentinel(html, 'graph-data', JSON.stringify(graph));
   html = replaceSentinel(html, 'flow-data', JSON.stringify(flows));
-  fs.writeFileSync(htmlPath, html);
-  console.log('Inlined graph → #graph-data, flows → #flow-data');
+  return { htmlPath, html };
 }
 
 // ---------- main ----------
@@ -611,9 +718,13 @@ function main() {
     process.exit(1);
   }
 
+  const inlined = inline ? buildInlinedHtml(graph, flows) : null;
   writeOutputs(graph, flows);
   printStats(graph, flows);
-  if (inline) inlineIntoHtml(graph, flows);
+  if (inlined) {
+    fs.writeFileSync(inlined.htmlPath, inlined.html);
+    console.log('Inlined graph → #graph-data, flows → #flow-data');
+  }
 }
 
 main();

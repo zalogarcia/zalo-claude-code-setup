@@ -1,0 +1,25 @@
+{
+  "_comment": "Apps the computer-use rail (scripts/computer-use.sh, GPT-6.1 Sol through Codex Computer Use) may drive. Matched on the bundle id the approval prompt names. Adding an app is Zalo's call, in his own terminal: social-pace-guard blocks agent writes to this file. Never add a browser, a messaging app, Mail, Notes, System Settings or Terminal without his explicit OK.",
+  "apps": [
+    {
+      "name": "Calculator",
+      "bundle_id": "com.apple.calculator"
+    },
+    {
+      "name": "TextEdit",
+      "bundle_id": "com.apple.TextEdit"
+    },
+    {
+      "name": "Finder",
+      "bundle_id": "com.apple.finder"
+    },
+    {
+      "name": "Preview",
+      "bundle_id": "com.apple.Preview"
+    },
+    {
+      "name": "Google Chrome",
+      "bundle_id": "com.google.Chrome"
+    }
+  ]
+}

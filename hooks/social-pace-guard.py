@@ -29,6 +29,14 @@ Browser tools (Playwright MCP, a Chrome MCP, WebFetch):
   * page code (browser_run_code, browser_evaluate) that navigates to a social
     host counts as one load; code that navigates more than once, names several
     social URLs, loops, reduces, recurses or sets timers is blocked as bulk.
+  * Codex Computer Use (`mcp__codex-cu__js`, the ChatGPT app's cua_repl) is page
+    code too: it drives the logged in Chrome as an app, so createBrowserTab,
+    goto, and a social URL typed, pasted or set into a field (the address
+    bar) are navigations (comments and prose strings are not); a list of several social URLs or a loop is
+    bulk even with no verb, because the REPL keeps state across calls. Stated
+    limits: a URL the code builds at run time (concatenation, base64, a value
+    read from the screen) or one stored in REPL state by an earlier call is
+    invisible; the Chrome History audit is the backstop.
 
 Bash, deny by default. A command is a social LOAD when a fetch or browse
 primitive meets a social host:
@@ -93,7 +101,9 @@ Always blocked, gated or not:
   * any write, move or delete of the gate's own ledger, state or config
     (~/.claude/state/social-*, ~/.claude/config/social-pacing.json), from Bash
     or from Write / Edit / MultiEdit: those files ARE the budget, and Zalo
-    changes them in his own terminal.
+    changes them in his own terminal. The same holds for his computer use app
+    allow list (~/.claude/config/computer-use-apps.json, read by
+    scripts/computer-use.sh): adding Chrome to it would reach his socials.
 Normalised first: fullwidth letters, ideographic and percent encoded dots,
 userinfo (https://u@facebook.com), quote splicing, line continuations, variables
 assigned in the same command, aliases, `cd`, bash -c / eval one level down, every
@@ -149,6 +159,16 @@ from urllib.parse import unquote
 HOME = os.path.expanduser("~")
 GATE_PATH = os.path.join(HOME, ".claude", "scripts", "social-gate.py")
 CONFIG_PATH = os.path.join(HOME, ".claude", "config", "social-pacing.json")
+# Zalo's allow list for the computer-use rail (scripts/computer-use.sh): which Mac apps
+# GPT-6.1 Sol may drive. Adding Chrome to it would open his logged in socials, so it
+# is protected exactly like the pacing config: only he edits it.
+CU_APPS_PATH = os.path.join(HOME, ".claude", "config", "computer-use-apps.json")
+# macOS Computer Use's own "Always allow" store: an app in it is approved with no prompt,
+# so writing it is the same as editing the allow list (QA 10-03). Zalo grants there by
+# clicking "Always allow" in Codex, never through an agent's write.
+CU_STORE_PATH = os.path.join(
+    HOME, "Library", "Group Containers", "2DC432GLL2.com.openai.sky.CUAService", "Library",
+    "Application Support", "Software", "ComputerUseAppApprovals.json")
 GATE_CMD = "python3 ~/.claude/scripts/social-gate.py"
 CLAUDE_JSON = os.path.join(HOME, ".claude.json")
 
@@ -1622,19 +1642,22 @@ def deny_text(ctx, reason, extra=""):
 
 STATE_DIR = os.path.join(HOME, ".claude", "state")
 PROTECTED_NAMES = ("social-loads.jsonl", "social-gate-state.json", "social-gate.lock",
-                   "social-pacing.json")
+                   "social-pacing.json", "computer-use-apps.json",
+                   "ComputerUseAppApprovals.json")
 PROTECTED_PARENTS = {os.path.realpath(p) for p in (
     HOME, os.path.join(HOME, ".claude"), STATE_DIR, os.path.dirname(CONFIG_PATH))}
 REMOVE_HEADS = {"rm", "unlink", "mv", "trash", "srm", "shred", "truncate", "tee", "sponge"}
 DEST_HEADS = {"cp", "ln", "install", "rsync", "ditto", "gcp"}
 INPLACE_HEADS = {"sed", "gsed", "perl", "ruby", "awk", "gawk"}
-PROTECT_PREFILTER_RE = re.compile(r"social-|\.claude|\bstate\b|~|HOME|/Users/|\bconfig\b")
+PROTECT_PREFILTER_RE = re.compile(r"social-|\.claude|\bstate\b|~|HOME|/Users/|\bconfig\b"
+                                  r"|computer-use-apps|ComputerUseAppApprovals")
 PROTECTED_TEXT_RE = re.compile(r"social-(?:loads|gate-state|gate\.lock|pacing)|\.claude/state"
+                               r"|computer-use-apps|ComputerUseAppApprovals"
                                r"|\.claude/config|\bstate/\*|config/\*", re.IGNORECASE)
 WRITE_CODE_RE = re.compile(
     r"open\s*\([^)]*['\"][rbt]*[wax+][rwabxt+]*['\"]|write_text|write_bytes|\bunlink|"
     r"\bremove\s*\(|rmtree|\brename|os\.replace|\btruncate|writeFile|appendFile|rmSync|"
-    r"unlinkSync|renameSync|copyFile|shutil\.(?:move|copy)|"
+    r"unlinkSync|renameSync|copyFile|shutil\.(?:move|copy)|\bos\.link\b|linkSync|"
     # a shell write verb handed to subprocess / os.system / do shell script / spawn;
     # a bare `subprocess` or `exec_module(` is not a write (a verifier false positive)
     r"['\"\s\[,](?:rm|mv|cp|truncate|tee|shred|unlink|dd|trash|srm)['\"\s,\]]|"
@@ -1659,7 +1682,8 @@ def protected_kind(tok, cwd):
         real = os.path.realpath(p)
     except (OSError, ValueError):
         return None
-    if real == os.path.realpath(CONFIG_PATH) or (
+    if real in (os.path.realpath(CONFIG_PATH), os.path.realpath(CU_APPS_PATH),
+                os.path.realpath(CU_STORE_PATH)) or (
             os.path.dirname(real) == os.path.realpath(STATE_DIR)
             and os.path.basename(real).startswith("social-")):
         return "file"
@@ -1695,6 +1719,10 @@ def protected_write(command, cwd, depth=0):
                 and protected_kind(tokens[k + 1], cwd) == "file":
             return "a redirection writes %s" % tokens[k + 1]
     for raw, _ in split_segments(tokens):
+        for k, t in enumerate(raw):  # again per segment: `cd ~/.claude/config && echo > x`
+            if REDIR_RE.fullmatch(t) and ">" in t and "&" != t[-1:] and k + 1 < len(raw) \
+                    and protected_kind(raw[k + 1], cwd) == "file":
+                return "a redirection writes %s" % raw[k + 1]
         seg = strip_prefixes(raw, {})
         if not seg:
             continue
@@ -1739,13 +1767,28 @@ def protected_write(command, cwd, depth=0):
             return "%s edits %s in place" % (head, files[0])
         if head == "dd" and files:
             return "dd writes %s" % files[0]
+        if files and (head in ("patch", "ed", "ex") or (head == "plutil" and any(
+                a in ("-insert", "-replace", "-remove", "-convert", "-create") for a in args))):
+            return "%s edits %s in place" % (head, files[0])
+        if head in ("ln", "link") and files and not any(re.match(r"^-\w*s", a) for a in args):
+            # a hard link is a second name for the same inode: writes through it land in
+            # the protected file while every path check sees /tmp/whatever (QA 10-03)
+            return "ln hard links %s" % files[0]
         if head == "find" and (files or dirs) and ("-delete" in args or any(
                 os.path.basename(args[k + 1]).lower() in REMOVE_HEADS | INPLACE_HEADS
                 for k, a in enumerate(args[:-1]) if a in ("-exec", "-execdir", "-ok"))):
             return "find deletes or edits under %s" % " ".join(files or dirs)[:80]
         if head == "git" and args:
-            sub = next((a for a in args if not a.startswith("-")), "")
-            if sub in ("rm", "mv") and files:
+            j, git_cwd = 0, cwd  # skip git's own value flags: git -C <dir> restore <file>
+            while j < len(args) and args[j].startswith("-"):
+                if args[j] == "-C" and j + 1 < len(args):
+                    git_cwd = resolve_path(args[j + 1], git_cwd)
+                j += 2 if args[j] in ("-C", "-c", "--git-dir", "--work-tree", "--namespace") \
+                    else 1
+            sub = args[j] if j < len(args) else ""
+            if git_cwd != cwd:  # pathspecs are relative to the -C dir
+                files = [a for a in args[j + 1:] if protected_kind(a, git_cwd) == "file"]
+            if sub in ("rm", "mv", "checkout", "restore", "stash") and files:
                 return "git %s on %s" % (sub, files[0])
             if sub == "clean" and any(re.match(r"^-\w*[xX]", a) for a in args) and (
                     os.path.realpath(cwd).startswith(os.path.realpath(
@@ -1771,9 +1814,12 @@ def protected_write(command, cwd, depth=0):
 def protected_msg(reason):
     return ("BLOCKED (social-pace-guard): %s.\nThe social pacing ledger, the gate state and "
             "~/.claude/config/social-pacing.json ARE the budget: deleting the ledger resets "
-            "every cap, and the config is Zalo's. Only Zalo changes them, in his own "
-            "terminal. Read them freely (cat, jq, `%s status`). There is no override."
-            % (reason, GATE_CMD))
+            "every cap, and the config is Zalo's. ~/.claude/config/computer-use-apps.json is "
+            "his list of the Mac apps computer use may drive, and macOS Computer Use's own "
+            "approvals store (ComputerUseAppApprovals.json) is the same list by another door: "
+            "adding an app is his call. "
+            "Only Zalo changes them, in his own terminal. Read them freely (cat, jq, "
+            "`%s status`). There is no override." % (reason, GATE_CMD))
 
 
 def decide_bash(command, ctx):
@@ -1832,11 +1878,51 @@ def decide_bash(command, ctx):
 
 URL_TOOL_RE = re.compile(r"navigate|tabs|new_page|newpage|open_url|goto|webfetch|open_tab"
                          r"|create_tab", re.IGNORECASE)
-CODE_TOOL_RE = re.compile(r"evaluate|run_code|javascript|execute|script", re.IGNORECASE)
+CODE_TOOL_RE = re.compile(r"evaluate|run_code|javascript|execute|script|^mcp__codex-cu__js$",
+                          re.IGNORECASE)
+# Codex Computer Use (the ChatGPT app's cua_repl) is judged on its `code` alone (the
+# free text `title` may repeat the URL). Verbs that load a page or put text into the
+# address bar are matched as bare names, so app["paste"](u) and typeText.call(app, u)
+# count too; the tab form typeText(<index>, ...) / paste(<index>, ...) types into a page
+# field and cannot reach the address bar. fetch and http(s).get are node network loads.
+# getTab only binds a tab that is already open (it never opens one), so it is no load.
+CU_TOOL_RE = re.compile(r"^mcp__codex-cu__", re.IGNORECASE)
+CU_NAV_RE = re.compile(
+    r"\b(?:createBrowserTab|goto|setValue|navigate|fetch|XMLHttpRequest)\b"
+    r"|\b(?:typeText|paste)\b(?!\s*\(\s*(?:\d|null\b))"
+    r"|\bhttps?\s*\.\s*(?:get|request)\b|\bwindow\s*\.\s*open\b"
+    r"|\blocation(?:\.href)?\s*=(?!=)|\blocation\s*\.\s*(?:assign|replace)\b")
+# UI actions: never a second load on their own, but code that acts on the UI while it
+# names a social host can load it (a click on a link, keys into the address bar).
+CU_ACT_RE = re.compile(r"\b(?:click|pressKey|back|forward|reload|performSecondaryAction"
+                       r"|drag|scroll|selectText)\b")
+# one pass over the code: template literals (they may span lines), quoted strings,
+# then comments, so a `//` inside a string is never read as a comment
+CU_TOKEN_RE = re.compile(r"""`(?:\\.|[^\\`])*`|"(?:\\.|[^\\"\n])*"|'(?:\\.|[^\\'\n])*'"""
+                         r"""|//[^\n]*|/\*[\s\S]*?\*/""")
+URLISH_RE = re.compile(r"^(?:[a-z][a-z0-9+.\-]*:|www\.|[a-z0-9\-]+(?:\.[a-z0-9\-]+)+(?:[/:?#]|$))",
+                       re.IGNORECASE)
+
+
+def cu_code(tool_input):
+    """The codex-cu code as it runs: comments dropped (they never execute), and prose
+    string literals blanked. A literal of two or more plain words that does not START
+    with an address is a message or a note: the omnibox would search it, the same rule
+    as the Chrome computer path (QA round 3). One that starts with an address is a URL
+    even with spaces in it (a search query), so it stays."""
+    def tok(m):
+        t = m.group(0)
+        if t.startswith(("//", "/*")):
+            return " "
+        inner = t[1:-1]
+        first = (inner.split() or [""])[0]
+        words = [w for w in inner.split() if re.fullmatch(r"[A-Za-z]+[,.!?;:]?", w)]
+        return '""' if len(words) > 1 and not URLISH_RE.match(first) else t
+    return CU_TOKEN_RE.sub(tok, str(tool_input.get("code") or ""))
 ELEMENT_TOOL_RE = re.compile(r"_type$|fill|form_input|select_option|press_key|hover|"
                              r"file_upload|snapshot|screenshot|console|network|find$", re.IGNORECASE)
-BROWSER_TOOL_RE = re.compile(r"^(?:WebFetch|mcp__.*(?:playwright|chrome|browser|puppeteer).*)$",
-                             re.IGNORECASE)
+BROWSER_TOOL_RE = re.compile(r"^(?:WebFetch|mcp__.*(?:playwright|chrome|browser|puppeteer"
+                             r"|codex-cu).*)$", re.IGNORECASE)
 
 
 def strings_in(obj):
@@ -1871,7 +1957,8 @@ def playwright_on_blueprint(ctx):
 
 
 def decide_browser(tool, tool_input, ctx, session=""):
-    blob = "\n".join(strings_in(tool_input))
+    cu = bool(CU_TOOL_RE.match(tool))
+    blob = cu_code(tool_input) if cu else "\n".join(strings_in(tool_input))
     soc = ctx.socials(blob)
     if not soc:
         return True, ""
@@ -1898,10 +1985,22 @@ def decide_browser(tool, tool_input, ctx, session=""):
         return False, deny_text(ctx, "a social host in a browser attached to port 9222 "
                                      "(the Blueprint Chrome)")
     urls = ctx.social_urls(blob)
-    if is_code_tool:
+    if cu:
+        # REPL state persists across calls, so a list of social URLs is bulk even
+        # before any verb uses it; a URL repeated in a comment is still one URL
+        # a list joined by | ; or an escaped newline is still several URLs
+        urls = list(dict.fromkeys(ctx.social_urls(re.sub(r"\\[ntr]|[|;]", " ", blob))))
+        if len(urls) > 1 or CODE_LOOP_RE.search(blob):
+            return False, deny_text(ctx, "Computer Use code that names several social URLs, "
+                                         "loops or sets timers (%s)" % tool)
+        navs = len(CU_NAV_RE.findall(blob))
+        if not navs and not CU_ACT_RE.search(blob):
+            return True, ""
+    elif is_code_tool:
         navs = len(NAV_CALL_RE.findall(blob))
         if not navs:
             return True, ""
+    if is_code_tool:
         if len(urls) > 1 or navs > 1 or CODE_LOOP_RE.search(blob):
             return False, deny_text(ctx, "page code that loads several pages, loops, reduces, "
                                          "recurses or sets timers (%s)" % tool)

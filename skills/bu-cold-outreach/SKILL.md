@@ -59,6 +59,12 @@ install he already paid to generate.
 session, which runs without the macOS sandbox and has the Computer Use plugin, so it can
 drive Chrome.**
 
+**Astra runs on GPT-6.1 Sol (`gpt-6.1-sol`) since 2026-10-04, on Zalo's word** ("the outreach
+needs to be moved to 6.1 Sol"). The model is pinned with `-m gpt-6.1-sol` in the codex-bare
+launcher (`RUNBOOK.md`, Launching codex-bare), so a Codex CLI update that changes the
+default model does not move it. The pane footer reads `GPT-6.1-Sol`. Astra is the persona
+name, not the model.
+
 Before the first tool call of a session, establish which lane you are in:
 
 - **codex-bare**, Computer Use available, Chrome opens and shows a rendered page. Full

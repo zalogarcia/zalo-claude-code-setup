@@ -364,6 +364,67 @@ def main():
           any(m == "Bash" and "background-lane-guard" in json.dumps(e)
               for m, e in zip(matchers, pre)))
 
+    # --- the startup update prompt is off (codex-autoupdate.sh updates) ------
+    d = workdir()
+    fake_json = os.path.join(d, "claude.json")
+    fake_cfg = os.path.join(d, "config.toml")
+    with open(fake_json, "w") as f:
+        json.dump({"mcpServers": {"ctx": {"url": "https://example.test/mcp"}}}, f)
+    with open(fake_cfg, "w") as f:
+        f.write('[projects."/tmp/a"]\ntrust_level = "trusted"\n')
+    saved = (cs.CLAUDE_JSON, cs.CONFIG_OUT)
+    try:
+        cs.CLAUDE_JSON, cs.CONFIG_OUT = fake_json, fake_cfg
+        cs.gen_mcp(cs.Sync(quiet=True))
+        cfg = tomllib.loads(open(fake_cfg).read())
+    finally:
+        cs.CLAUDE_JSON, cs.CONFIG_OUT = saved
+    check("71: the managed block sets check_for_update_on_startup = false at the root",
+          cfg.get("check_for_update_on_startup") is False)
+    check("72: the root key does not leak into a table, and the tables survive",
+          "check_for_update_on_startup" not in cfg.get("mcp_servers", {}).get("ctx", {})
+          and cfg["projects"]["/tmp/a"]["trust_level"] == "trusted")
+
+    # --- codex-cu is Claude-only: never projected, its matchers dropped ----
+    # Codex loads the same Computer Use server natively (unified-computer-use
+    # plugin); a projected copy would duplicate it, and a projected matcher
+    # would change hooks.json and so untrust every mirrored guard.
+    d = workdir()
+    fake_json = os.path.join(d, "claude.json")
+    fake_cfg = os.path.join(d, "config.toml")
+    fake_settings = os.path.join(d, "settings.json")
+    fake_hooks = os.path.join(d, "hooks.json")
+    with open(fake_json, "w") as f:
+        json.dump({"mcpServers": {
+            "codex-cu": {"type": "stdio", "command": "/x/codex-cu-mcp.py"},
+            "ctx": {"url": "https://example.test/mcp"}}}, f)
+    with open(fake_settings, "w") as f:
+        json.dump({"hooks": {"PreToolUse": [
+            {"matcher": "Bash|mcp__playwright__.*|mcp__codex-cu__.*", "hooks": [
+                {"type": "command", "command": "python3 /x/social-pace-guard.py"}]},
+            {"matcher": "mcp__codex-cu__.*", "hooks": [
+                {"type": "command", "command": "python3 /x/cu-only-guard.py"}]},
+        ]}}, f)
+    saved = (cs.CLAUDE_JSON, cs.CONFIG_OUT, cs.SETTINGS, cs.HOOKS_OUT)
+    try:
+        cs.CLAUDE_JSON, cs.CONFIG_OUT = fake_json, fake_cfg
+        cs.SETTINGS, cs.HOOKS_OUT = fake_settings, fake_hooks
+        cs.gen_mcp(cs.Sync(quiet=True))
+        cs.gen_hooks(cs.Sync(quiet=True))
+        cfg_text = open(fake_cfg).read()
+        with open(fake_hooks) as f:
+            pre = json.load(f)["hooks"].get("PreToolUse", [])
+    finally:
+        cs.CLAUDE_JSON, cs.CONFIG_OUT, cs.SETTINGS, cs.HOOKS_OUT = saved
+    matchers = [e.get("matcher") or "" for e in pre]
+    check("73: codex-cu is not projected into config.toml", "codex-cu" not in cfg_text)
+    check("74: the other servers still are", "[mcp_servers.ctx]" in cfg_text)
+    check("75: a mixed matcher keeps everything but its codex-cu part",
+          "Bash|mcp__playwright__.*" in matchers)
+    check("76: a codex-cu-only entry is not projected at all",
+          not any("codex-cu" in m for m in matchers)
+          and not any("cu-only-guard" in json.dumps(e) for e in pre))
+
     # --- the model map is the single point of truth ------------------------
     check("49: fable maps to the flagship at xhigh",
           cs.MODEL_MAP["fable"] == ("gpt-6-astra", "xhigh"))

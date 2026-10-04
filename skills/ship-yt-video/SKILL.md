@@ -1,6 +1,6 @@
 ---
 name: ship-yt-video
-description: End-to-end checklist for shipping a Zalo Kabche long-form YouTube video so no packaging or publish step gets skipped — edit-quality pass, a 3-TITLE split test pulled from the title-structures database, a 3-thumbnail split test (yt-thumbnail skill), a chapters-timed description, the correct upload path (Studio direct for long-form — Post for Me chokes on it), and the Claude-in-Chrome Studio setup. Use when the user says "ship the youtube video", "publish the video to youtube", "upload the long-form video", "put the video on youtube", or is finishing any video in ~/dev/zalo-kabche-brand. Replaces ad-hoc uploads that miss the title database, mistime chapters, or push a 45-min file through a pipeline that can't take it.
+description: End-to-end checklist for shipping a Zalo Kabche long-form YouTube video so no packaging or publish step gets skipped — edit-quality pass, a 3-TITLE split test pulled from the title-structures database, a 3-thumbnail split test (yt-thumbnail skill), a chapters-timed description, the correct upload path (Studio direct for long-form — Post for Me chokes on it), and the Studio upload, setup and publish through COMPUTER USE (computer-use.sh, Zalo's rule 2026-10-03). Use when the user says "ship the youtube video", "publish the video to youtube", "upload the long-form video", "put the video on youtube", or is finishing any video in ~/dev/zalo-kabche-brand. Replaces ad-hoc uploads that miss the title database, mistime chapters, or push a 45-min file through a pipeline that can't take it.
 ---
 
 The one authority for putting a finished Zalo Kabche long-form video on YouTube. Runs the full pipeline as a gated checklist (packaging with 3 titles + 3 thumbnails, description, upload, Studio setup) so no video ships with a plain title, mistimed chapters, or a failed upload.
@@ -16,7 +16,8 @@ Skip for: short-form / reels (those CAN go via Post for Me / Zalo OS — see `~/
 ## Prerequisites
 
 - The video is **edit-final** and exported to `~/Documents/Zalo Content/<deliverable>/` (content-location rule).
-- Channel: **Zalo Kabche** (`UCd-Xqhtu5vP7UCdW8p6vgmw`), 2.8K subs. Logged into YouTube Studio in Chrome (Claude-in-Chrome extension connected).
+- Channel: **Zalo Kabche** (`UCd-Xqhtu5vP7UCdW8p6vgmw`), 2.8K subs. Logged into YouTube Studio in Zalo's normal Chrome (Default profile).
+- **Upload rail = computer use (Zalo's rule, 2026-10-03: "when I ask you to post a youtube video you need to use the computer use").** `~/.claude/scripts/computer-use.sh "<task>"` (GPT-6.1 Sol through Codex Computer Use) drives his real Chrome: it picks the file in the macOS file dialog, so the 10 MB browser upload cap does not apply and nobody hands the file over. Google Chrome (`com.google.Chrome`) is on the computer use allow list since 2026-10-03 (only Zalo edits that list). Do not fall back to Claude-in-Chrome or ask him to drop the file unless computer use is down (exit 3) and he says so.
 - Source docs (read at packaging time): `~/dev/zalo-kabche-brand/process/packaging/title-structures.md` (THE title database), `process/packaging/thumbnail-formats.md`, `design/visual-spec.md`.
 
 ## Phase 0 — Edit-quality pass (BEFORE anything else)
@@ -60,13 +61,16 @@ Write the YouTube description; save to the deliverable folder as `YouTube Descri
 
 **Post for Me / Zalo OS CANNOT upload long-form.** Proven 2026-07-15: a 272 MB / 45-min file uploads to PFM storage complete and valid, then PFM's media processor fails it — `"All media failed to process"` — twice, deterministically. PFM is short-form only.
 
-- **Long-form (>15 min or >~200 MB): upload DIRECTLY in YouTube Studio.** Claude opens Create → Upload videos via Chrome, but **the human drops the file** — the browser `file_upload` tool caps at 10 MB, so Claude physically cannot push the video. Hand off that one action.
+- **Long-form: upload DIRECTLY in YouTube Studio through computer use.** One small `computer-use.sh` task per call, each under 10 minutes, and a `screencapture -x` you LOOK at after each: (1) Studio open on channel `UCd-Xqhtu5vP7UCdW8p6vgmw`; (2) Create, Upload videos, macOS file dialog, Cmd+Shift+G, the full path; (3) title, description (`pbcopy` it first), not made for kids; (4) Private, Save, record the video id. Every task text says: only the Studio tab, touch no other tab or app, no sign in or out, no channel setting, never Public or Unlisted unless this is the publish step, stop on any password, keychain or 2FA prompt.
+- **Trap, the Blueprint Chrome (proven 2026-10-03):** while the GHL Blueprint Chrome (`--remote-debugging-port=9222`) runs, computer use attaches to it instead of his normal Chrome and fails with `-10005 timeoutReached`. Before the upload: check `bg.mjs ps` shows no GHL job and `lsof -nP -iTCP:9222 -sTCP:ESTABLISHED` shows no client, then SIGTERM that exact pid (never by name). After the upload, ALWAYS relaunch it with the command in memory `blueprint-chrome-cdp-rail.md` and check `/json/version` on 9222. Never load a page in it.
+- **Trap, the clipboard encoding (LF1, 2026-10-03):** a headless worker has no `LANG`, so `pbcopy` reads the UTF-8 description as Mac Roman and every middot "·" lands in Studio as "¬∑". A `pbpaste` round trip converts back the same wrong way and hides it. Copy with `LANG=en_US.UTF-8 pbcopy < file`, then check with `osascript -e 'get the clipboard'` that it equals the file before the paste step.
+- **Small traps:** a Chrome extension bubble (for example "Devi is disabled") may sit over Studio: close it with its X only, never Accept or Remove. Computer use scrolling in Studio can fail with `-10005 windowNotFoundAtPosition`; clicks and typing still work, so read state from your own screenshot instead.
 - **Upload as PRIVATE.** Nothing goes public until packaging is locked and the user OKs it.
 - (Short-form clips only: the Zalo OS publish rail / Post for Me is fine.)
 
-## Phase 4 — Studio setup (Claude in Chrome)
+## Phase 4: Studio setup (computer use)
 
-Once the human has dropped the file and it's ingesting, Claude drives the rest (GIF-record it):
+Once the file is ingesting, computer use drives the rest in the same Studio tab (screenshot each step):
 
 1. **Title** — the chosen lead from the 3.
 2. **Description** — paste the Phase-2 text; dismiss the hashtag autocomplete (Escape).
@@ -76,7 +80,7 @@ Once the human has dropped the file and it's ingesting, Claude drives the rest (
 
 ## Phase 5 — Publish gate (explicit OK only)
 
-Keep it Private/Unlisted until: 3 thumbnails loaded into Test & Compare, lead title set, description + chapters verified. **Publish public only on the user's explicit "publish / go live."** Never auto-publish a video to the live channel.
+Keep it Private/Unlisted until: 3 thumbnails loaded into Test & Compare, lead title set, description + chapters verified. **Publish public only on the user's explicit "publish / go live."** Never auto-publish a video to the live channel. On his word, computer use sets Visibility to Public in the same Studio tab (the Blueprint Chrome trap above applies again), then prove it from outside: `curl -s -o /dev/null -w '%{http_code}' 'https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=<id>&format=json'` gives 200 when public (401 or 404 while private). First run on this rail: LF1, video `4XfCNwmYeiw`, 2026-10-03.
 
 ## Phase 6 — Post-ship (the waterfall)
 

@@ -24,6 +24,10 @@ node docs/visualization/generate-data.mjs --inline
 
 Acceptance checks fail the script with exit code 1 if the tree looks unexpectedly thin (≥ 7 agents, ≥ 11 rules, ≥ 13 commands, ≥ 2 hooks, 8 MCP, ≥ 7 skills, all edges reference real nodes).
 
+The scanner reads tracked files only (`git ls-files`). An untracked skill, rule, command or agent in a working copy never reaches `data.json`, and the script exits 1 outside a git checkout. When you generate for publishing, run it inside a fresh clone of the public repo: that clone is the first guard and this filter is the second.
+
+`--inline` also fills the counts in the page title, the hero line and the List label from the graph it just built (the `data-count-text` and `data-count-aria` templates in `index.html`). The page fills them again at render time from the data it loaded. Do not type a count into the copy.
+
 ## Local dev
 
 The HTML loads graph data from an inlined `<script type="application/json">` block first. If that's empty, it falls back to `fetch('data.json')` — which requires an HTTP server, because browsers block `file://` fetches for CORS reasons. Two ways to dev:

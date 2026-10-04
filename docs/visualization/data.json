@@ -1,146 +1,101 @@
 {
   "meta": {
-    "generatedAt": "2026-07-19T20:33:15.993Z",
+    "generatedAt": "2026-10-03T22:56:05.811Z",
     "repo": "zalo-claude-code-setup",
     "changelog": [
       {
-        "date": "2026-07-19",
+        "date": "2026-09-29",
         "entries": [
-          "feat(hooks): mechanization pass — 3 new guards, verify.sh, prose diet",
-          "Split QA model policy by stage: verifier ≠ author"
+          "test(bg-salvage): neutral fixture ids instead of a real project ref and agent id",
+          "fix(bg-salvage): list gh PR/issue writes and CloudFormation deploys; redact --value, Token and AWS secret keys; sort test-file rows last (independent verifier)",
+          "feat(bg-salvage): PRODUCTION WRITES section lists every live-system write a dead worker made",
+          "fix(supabase-signout-guard): suite survives a hook that exits at import",
+          "feat(hooks): supabase-signout-guard blocks a global Supabase sign out in agent code",
+          "fix(social-pace-guard): allow Telegram uploads and offline file edits that NAME social URLs"
         ]
       },
       {
-        "date": "2026-07-15",
+        "date": "2026-09-27",
         "entries": [
-          "Add ship-yt-video skill + CLAUDE.md callout"
+          "fix(unattended-write-guard): interpreter and relative-path writes to the bridge state files; document the Codex partial (independent verifier)",
+          "docs(CLAUDE.md): Learned Mistakes pointers for the three self-audit hooks (P2 to P5)",
+          "fix(hooks): atomic glob-option prefilter, dashed heredoc delimiters (QA hooks round 3)",
+          "fix(unattended-write-guard): heredoc-aware substitutions, ordered heredoc vouching, stdin SQL, approval guard (QA hooks round 2)",
+          "fix(hooks): unattended-write-guard reads substitutions, docker run and write functions; salvage never calls a live worker ended (QA hooks round 1)",
+          "fix(fable-insights): check the bias statement clause by clause; a failed self-check survives the relay (QA round 2)",
+          "fix(hooks): close unattended-write-guard bypasses, for_scalar false blocks, tmux draft path (QA round 1)",
+          "fix(fable-insights): one weight tolerance in both checks, honest census wording (QA round 1)",
+          "feat(shell-mechanics-guard): block five zsh shapes that fail every time here (self-audit P4)",
+          "feat(hooks): foreground agents in headless lanes, draft before verifier, hold unattended DB writes (self-audit P2, P3, P5)",
+          "fix(fable-insights): honest stratified sample, loud sampling check (self-audit P1)"
         ]
       },
       {
-        "date": "2026-07-14",
+        "date": "2026-09-26",
         "entries": [
-          "docs(CLAUDE.md): register infographics + yt-thumbnail production callouts"
+          "fix(social-pacing): read command substitutions; close the re-verifier's shapes",
+          "fix(social-pacing): close the verifier's hook bypasses and false positives",
+          "feat(social-pacing): one machine wide gate, hook and audit for social page loads",
+          "docs(quirks): find on this Mac is bfs, use -mmin not -newermt",
+          "docs(telegram): honour the shared tg-throttle.json cooldown before sending",
+          "docs(machine-editorial-broll): reading time, poster frame 0, beat sync, Kenney SFX",
+          "docs(bu-cold-outreach): 03:45 research block, recovery list, Facebook first worklist",
+          "fix(dev-server-restart): kill by port only, never by process name"
         ]
       },
       {
-        "date": "2026-07-11",
+        "date": "2026-09-25",
         "entries": [
-          "Remove dead .no-graphrag marker",
-          "Fix stale code-pathfinder reference in dispatch boilerplate",
-          "docs: document guard hooks + repo-init/VERIFY.md in README, refresh visualizer",
-          "fix(fable-insights): drop headless scheduling — keep as interactive tool",
-          "feat(setup): mechanize the 10/10 pillars — guards, VERIFY.md, self-audit, QA tiers"
+          "bg-salvage: a live worker is STILL RUNNING, never a relaunch candidate"
         ]
       },
       {
-        "date": "2026-07-09",
+        "date": "2026-09-24",
         "entries": [
-          "machine-editorial-broll: objects for nouns, type for verdicts",
-          "machine-editorial-broll: add the Depiction Law (law 0)",
-          "machine-editorial-broll: GLOSS is a quality tier, not a subject",
-          "Add GLOSS 3D recipe to machine-editorial-broll",
-          "Add 3D layer section to machine-editorial-broll",
-          "Expand machine-editorial-broll: v3 modes, canvas, plates, taxonomy",
-          "Fix machine-editorial-broll ProRes guidance",
-          "Add machine-editorial-broll skill + CLAUDE.md b-roll callout"
+          "fix(content-video-finish): verify keeps drill down PNGs saved in verify/",
+          "docs(content-video-finish): record Zalo's approval of the rough cut trial",
+          "feat(content-video-finish): rough cut step ported from video-use",
+          "chore(skills): track content-video-finish as it stood on 2026-09-23",
+          "chore(gitignore): keep the private cloudflare token folder out of the repo",
+          "chore: ignore a2p-partner/ (holds the Operator Base partner API key)",
+          "chore(gitignore): keep private operational folders out of the public mirror"
         ]
       },
       {
-        "date": "2026-07-02",
+        "date": "2026-09-23",
         "entries": [
-          "Friction-audit buildout: 5 new skills, /goal, fixed gitleaks hook, dispatch boilerplate"
+          "fix(tenant-triage): owner-only raw log copies, and delete them after the triage",
+          "fix(tenant-triage): guard audit_log.resource_id like session_key",
+          "fix(tenant-triage, voice-call-triage): mask caller data, count every log event",
+          "docs(go-live): drop an unproven claim from the pass-log reason",
+          "docs(go-live): the pass log outlives the worktree, whatever the repo ignores",
+          "fix(autopilot-merge, voice-call-triage): QA round 2, every VERIFY.md copy and formatted phones",
+          "fix(voice-call-triage): mask caller email and phone in the openai-live queries",
+          "fix(autopilot-merge): QA round 1, prod check under zsh and a durable go-live pass",
+          "docs(git): bless the zalo-kabche-brand /daily close push; Leash asks each time",
+          "feat(voice-triage): triage path for GPT-Live (openai-live) calls",
+          "feat(autopilot-merge): merge not-live-verified runs to integration only",
+          "docs(yt-thumbnail): real reference photos only, no character sheets",
+          "docs(bu-cold-outreach): re-confirm seed evidence live on every row",
+          "fix(peer-scripts): relaunch codex-bare when the plugin is newer than its session",
+          "fix(schema-snapshot): the MCP path runs the views query too",
+          "fix(qa-loop): name the repo-init scaffold exception in the tier note",
+          "fix(prompts): QA loop iteration 2 fixes for the 09-23 audit",
+          "fix(prompts): QA loop iteration 1 fixes for the 09-23 audit",
+          "docs(prompts): apply the 09-23 audit decisions D3 to D14 (effort stays xhigh)",
+          "refactor(rules): move three orchestrator-only rules to rules-ref (D1)",
+          "docs(prompts): apply the 09-23 prompt audit patch (effort stays xhigh)",
+          "fix(peer-scripts): check the ChatGPT plugin cache on every refresh run",
+          "fix(peer-scripts): never type into a Codex startup prompt, exit 5"
         ]
       },
       {
-        "date": "2026-06-15",
+        "date": "2026-09-22",
         "entries": [
-          "docs(git-safety): verify branch is the right HOME for a change before committing",
-          "Harden setup from Fable 5 transcript review",
-          "[agents] bump model pin to claude-opus-4-8"
-        ]
-      },
-      {
-        "date": "2026-06-11",
-        "entries": [
-          "[visualization] regenerate data with live-test-campaign skill",
-          "[skills] add live-test-campaign + qa-audit/plan-verify workflows",
-          "[visualization] regenerate data after ui-ux-pro-max removal",
-          "[skills] remove ui-ux-pro-max",
-          "[claude-md] document live-test-campaign skill invocation"
-        ]
-      },
-      {
-        "date": "2026-06-10",
-        "entries": [
-          "[statusline] show effort level next to model name",
-          "[statusline] show current model name before usage metrics"
-        ]
-      },
-      {
-        "date": "2026-05-22",
-        "entries": [
-          "[visualization] add 'Crank reasoning effort up' tip in How",
-          "[visualization] add 'Name your terminals' tip in How",
-          "qa-loop fixes + rename to Zalo's Claude Code Setup",
-          "[visualization] add 'A few things that help' tips section to How",
-          "Trim personal workflows out of the public setup",
-          "[visualization] show what's already encoded in CLAUDE.md",
-          "[visualization] explain CLAUDE.md in How (step 2) + Commands tab",
-          "[visualization] add Commands tab + qa-loop outcome to how-to",
-          "[visualization] replace tour-on-map with outcome-based how-to as default view",
-          "[visualization] add first-run tutorial overlay narrating the multi-terminal workflow",
-          "[skills] add seedance video generation + prompt builder",
-          "[bug-fix] require enumerating ≥2 alternative root cause hypotheses before fix"
-        ]
-      },
-      {
-        "date": "2026-05-19",
-        "entries": [
-          "[plan,autopilot] add --plan=<path> handoff so /autopilot consumes /plan output",
-          "[autopilot] fan out Phase 3 QA audit step"
-        ]
-      },
-      {
-        "date": "2026-05-18",
-        "entries": [
-          "[autopilot-collect] guard git-diff pipeline against pipefail abort",
-          "[autopilot-merge] add skill + command to consolidate completed autopilot worktrees",
-          "[plan] print ready-to-copy /autopilot command as final line of Step 6",
-          "[autopilot] return-contract + always-worktree to stop mid-phase pauses",
-          "[concurrency] autopilot worktree auto-spawn; plan per-run subdirs"
-        ]
-      },
-      {
-        "date": "2026-05-16",
-        "entries": [
-          "[cleanup] strip vibe-island from tracked hooks/settings.json sample"
-        ]
-      },
-      {
-        "date": "2026-05-15",
-        "entries": [
-          "[cleanup] remove agent-templates — never wired into any workflow",
-          "[cleanup] remove ship + split-screen-video commands; remove vibe-island hooks",
-          "[viz] add landing page that redirects site root to /visualization/",
-          "[viz] regenerate after cleanup — 15 commands, 8 skills, autopilot+plan flows",
-          "[skills] add create-skill meta-skill",
-          "[cleanup] remove dead commands, add workflow skills, fix dangling refs"
-        ]
-      },
-      {
-        "date": "2026-05-08",
-        "entries": [
-          "[setup] opt out of repo-graphrag indexing for ~/.claude/"
-        ]
-      },
-      {
-        "date": "2026-05-07",
-        "entries": [
-          "[graphrag-hook] guard against indexer pile-up + 30min watchdog",
-          "[autopilot] Batch 1: wu-1 + wu-2 + wu-3 (4 MEDIUMs from prior run)",
-          "[setup] gitignore: .autopilot.prev* archived prior runs",
-          "[autopilot] QA iteration 1 — fixed 1 HIGH (stale marker reference)",
-          "[autopilot] Batch 2: wu-3 autopilot api-retry integration"
+          "docs(bu-cold-outreach): record the snapshot shadowing gap as OPEN-GAPS #7",
+          "feat(bu-cold-outreach): one message per prospect until they reply",
+          "chore(models): Opus 5.5 cutover, pin effort xhigh on every agent",
+          "hooks(dispatch-claim-guard): catch a handoff claimed but never made"
         ]
       }
     ]
@@ -182,13 +137,6 @@
       "summary": "Behavioral rules that apply regardless of project. Drawn from both gsd-build/get-shit-done universal anti-patterns and obra/superpowers writing-plans \"No Placeholders\" list."
     },
     {
-      "id": "rule.api-retry",
-      "kind": "rule",
-      "label": "api-retry",
-      "path": "rules-ref/api-retry.md",
-      "summary": "Shared retry-and-recovery protocol for orchestrators that dispatch sub-agents via the `Agent` tool. Use this when the underlying Anthropic API errors transiently (overload, rate limit, 5xx) so that work units don't get marked `failed` for what is actually a recoverable condition."
-    },
-    {
       "id": "rule.checkpoints",
       "kind": "rule",
       "label": "checkpoints",
@@ -210,13 +158,6 @@
       "summary": "All migrations MUST be additive and non-breaking for existing users. Zero-downtime compatible."
     },
     {
-      "id": "rule.engineering-principles",
-      "kind": "rule",
-      "label": "engineering-principles",
-      "path": "rules-ref/engineering-principles.md",
-      "summary": "Used by `outcomes-grader` to evaluate plans (and optionally implementations) against the standards stated in `~/.claude/CLAUDE.md`. Each item describes an **outcome** the plan must exhibit — a measurable property — not a rule to follow. This makes the rubric harder to game and mo"
-    },
-    {
       "id": "rule.gates",
       "kind": "rule",
       "label": "gates",
@@ -229,13 +170,6 @@
       "label": "git-safety",
       "path": "rules/git-safety.md",
       "summary": "Combined from obra/superpowers `using-git-worktrees` and gsd-build/get-shit-done universal anti-patterns."
-    },
-    {
-      "id": "rule.plan-verification",
-      "kind": "rule",
-      "label": "plan-verification",
-      "path": "rules-ref/plan-verification.md",
-      "summary": "After `safe-planner` emits `## PLAN READY`, run two verification gates **before** acting on the plan. Both gates use fresh-context subagents (the value of brainstorm/grader pass is the second-opinion dynamic — same-model self-critique is weaker)."
     },
     {
       "id": "rule.problem-solving",
@@ -273,11 +207,46 @@
       "summary": "Adapted from obra/superpowers `dispatching-parallel-agents`. Claude Code's `Agent` tool runs multiple invocations concurrently when called in a single message — use this rule to decide when that's appropriate."
     },
     {
+      "id": "rule.api-retry",
+      "kind": "rule",
+      "label": "api-retry",
+      "path": "rules-ref/api-retry.md",
+      "summary": "Shared retry-and-recovery protocol for orchestrators that dispatch sub-agents via the `Agent` tool. Use this when the underlying Anthropic API errors transiently (overload, rate limit, 5xx) so that work units don't get marked `failed` for what is actually a recoverable condition."
+    },
+    {
+      "id": "rule.engineering-principles",
+      "kind": "rule",
+      "label": "engineering-principles",
+      "path": "rules-ref/engineering-principles.md",
+      "summary": "Used by `outcomes-grader` to evaluate plans (and optionally implementations) against the standards stated in `~/.claude/CLAUDE.md`. Each item describes an **outcome** the plan must exhibit — a measurable property — not a rule to follow. This makes the rubric harder to game and mo"
+    },
+    {
+      "id": "rule.frontend-workflow",
+      "kind": "rule",
+      "label": "frontend-workflow",
+      "path": "rules-ref/frontend-workflow.md",
+      "summary": "Demoted from always-loaded CLAUDE.md 2026-07-19 (zero invocations across a 37-session audit week). Read this when the work is genuinely UI-design-heavy: a new page, a component-library piece, a visual redesign. Skip for trivial copy/style tweaks or one-line CSS fixes."
+    },
+    {
+      "id": "rule.persuasion-principles",
+      "kind": "rule",
+      "label": "persuasion-principles",
+      "path": "rules-ref/persuasion-principles.md",
+      "summary": "Read this when authoring or revising files in `~/.claude/rules/`, `~/.claude/CLAUDE.md`, agent definitions, or skill bodies. It started as an adaptation of obra/superpowers `writing-skills/persuasion-principles.md`, which recommended authority framing (\"YOU MUST\", \"IMMEDIATELY\", "
+    },
+    {
+      "id": "rule.plan-verification",
+      "kind": "rule",
+      "label": "plan-verification",
+      "path": "rules-ref/plan-verification.md",
+      "summary": "After `safe-planner` emits `## PLAN READY`, run two verification gates **before** acting on the plan. Both gates use fresh-context subagents (the value of brainstorm/grader pass is the second-opinion dynamic — same-model self-critique is weaker)."
+    },
+    {
       "id": "command.autopilot",
       "kind": "command",
       "label": "/autopilot",
       "path": "commands/autopilot.md",
-      "summary": "Pure orchestrator that dispatches sub-agents for all work. The main thread never reads code, never writes code, never fixes bugs. It routes, tracks, verifies, and compacts. Sub-agents do the work — in parallel where possible, each with self-planning before coding. The orchestrato",
+      "summary": "Pure orchestrator that dispatches sub-agents for all work. The main thread never reads code, never writes code, never fixes bugs. It routes, tracks, verifies, and compacts. Sub-agents do the work, in parallel where possible. The orchestrator commits sequentially after each batch ",
       "includes": [
         "rule.agent-contracts",
         "rule.gates",
@@ -371,7 +340,7 @@
       "kind": "command",
       "label": "/go-live",
       "path": "commands/go-live.md",
-      "summary": "Closes the seam between \"code complete on a branch\" and \"verified working in production\" — the gap where the 2026-07 GHL post-mortem's 39 live-test defects lived. Consumes the activation runbook an `/autopilot` run wrote (or derives one), executes every step Claude can execute, c",
+      "summary": "Closes the seam between \"code complete on a branch\" and \"verified working in production\", where defects with no static signature (activation gaps, missing publishes, vendor wiring) surface. Consumes the activation runbook an `/autopilot` run wrote (or derives one), executes every",
       "includes": [
         "rule.gates",
         "rule.checkpoints",
@@ -408,7 +377,7 @@
       "kind": "command",
       "label": "/nano-banana",
       "path": "commands/nano-banana.md",
-      "summary": "Generates AI images using the nano-banana CLI (Gemini 3.1 Flash default, Pro available). Handles multi-resolution (512-4K), aspect ratios, reference images for style transfer, green screen workflow for transparent assets, cost tracking, and exact dimension control. Use when asked to \"generate an image\", \"create a sprite\", \"make an asset\", \"generate artwork\", or any image generation task for UI mockups, game assets, videos, or marketing materials.",
+      "summary": "Generates AI images with the nano-banana CLI (Gemini 3.1 Flash default, Pro available). Use only when the user explicitly asks for nano-banana or Gemini. Every other image request goes to gpt-image-2 (image-craft-expert, infographics, yt-thumbnail).",
       "includes": [],
       "dispatches": []
     },
@@ -493,7 +462,7 @@
       "kind": "agent",
       "label": "brainstorm",
       "path": "agents/brainstorm.md",
-      "summary": "Deep-thinking agent that prevents expensive mistakes by challenging assumptions, eliminating complexity, and stress-testing ideas before committing. Applies first principles, Elon Musk's 5-step philosophy, inversion, and second-order thinking. Use for any problem, plan, architecture decision, or strategy that deserves rigorous thought before action. <example>user: 'I need to figure out the best architecture for our real-time notification system' assistant: 'I'll use the brainstorm agent to break this down from first principles and challenge our assumptions.'</example>",
+      "summary": "Deep-thinking agent that prevents expensive mistakes by challenging assumptions, eliminating complexity, and stress-testing ideas before committing. Applies first principles, Elon Musk's 5-step philosophy, inversion, and second-order thinking. Use for any problem, plan, architecture decision, or strategy that deserves rigorous thought before action.",
       "markers": [
         "## EXPLORATION COMPLETE"
       ],
@@ -504,7 +473,7 @@
       "kind": "agent",
       "label": "bug-fix",
       "path": "agents/bug-fix.md",
-      "summary": "Trace the full user flow to find the root cause of a bug. Reads all related code and crafts a comprehensive fix plan before making changes. Use when something is broken and you need a thorough diagnosis. <example>user: 'Users are getting logged out randomly after checkout' assistant: 'I'll use the bug-fix agent to trace the full flow and find the root cause.'</example>",
+      "summary": "Trace the full user flow to find the root cause of a bug. Reads all related code and crafts a comprehensive fix plan before making changes. Use when something is broken and you need a thorough diagnosis.",
       "markers": [
         "## BLOCKED"
       ],
@@ -515,7 +484,7 @@
       "kind": "agent",
       "label": "frontend-specialist",
       "path": "agents/frontend-specialist.md",
-      "summary": "Builds and optimizes frontend UI — components, styling, responsiveness, accessibility, and performance. Use for any client-side development task. <example>user: 'I need to build a mobile-friendly navigation bar that collapses on smaller screens' assistant: 'I'll use the frontend-specialist agent to create a responsive navigation component.'</example>",
+      "summary": "Builds and optimizes frontend UI: components, styling, responsiveness, accessibility, and performance. Use for any client-side development task.",
       "markers": [
         "## IMPLEMENTATION COMPLETE",
         "## IMPLEMENTATION DONE_WITH_CONCERNS",
@@ -528,7 +497,7 @@
       "kind": "agent",
       "label": "image-craft-expert",
       "path": "agents/image-craft-expert.md",
-      "summary": "Crafts optimized text-to-image prompts and generates images using Gemini (nano-banana) and/or ChatGPT (gpt-image-2). Use for any image generation task. <example>user: 'Create an image of a fantasy castle at sunset' assistant: 'I'll use the image-craft-expert to craft a detailed generation prompt.'</example>",
+      "summary": "Crafts optimized text-to-image prompts and generates images with gpt-image-2 (Gemini via nano-banana only when the caller explicitly asks for nano-banana or Gemini). Use for any image generation task.",
       "markers": [],
       "includes": []
     },
@@ -537,7 +506,7 @@
       "kind": "agent",
       "label": "live-test",
       "path": "agents/live-test.md",
-      "summary": "Visually verifies code changes work in the browser using Playwright. Use after implementing features, fixing bugs, or making UI changes to confirm they work as intended before shipping. <example>user: 'I just added the new pricing page, can you verify it looks right?' assistant: 'I'll use the live-test agent to open the app in the browser and verify the pricing page.'</example>",
+      "summary": "Visually verifies code changes work in the browser using Playwright. Use after implementing features, fixing bugs, or making UI changes to confirm they work as intended before shipping.",
       "markers": [
         "## UI VERIFIED",
         "## UI ISSUES FOUND",
@@ -550,7 +519,7 @@
       "kind": "agent",
       "label": "outcomes-grader",
       "path": "agents/outcomes-grader.md",
-      "summary": "Grades a delivered artifact against a task-specific rubric. Use to verify task-level success criteria are met, not to hunt for generic bugs. <example>user: 'Did the implementation actually satisfy the rubric in .claude/rubric.md?' assistant: 'I'll use the outcomes-grader to evaluate each rubric item against the delivered code.'</example>",
+      "summary": "Grades a delivered artifact against a task-specific rubric. Use to verify task-level success criteria are met, not to hunt for generic bugs.",
       "markers": [
         "## OUTCOMES PASSED",
         "## OUTCOMES UNMET",
@@ -563,7 +532,7 @@
       "kind": "agent",
       "label": "qa-agent",
       "path": "agents/qa-agent.md",
-      "summary": "Audits recent code changes for real, reproducible bugs. Use after implementing features, before deployments, or when asked to stress test, verify, or audit code. <example>user: 'I just finished the checkout flow, can you stress test it?' assistant: 'I'll use the qa-agent to find any real bugs in the checkout implementation.'</example>",
+      "summary": "Audits recent code changes for real, reproducible bugs. Use after implementing features, before deployments, or when asked to stress test, verify, or audit code.",
       "markers": [
         "## VERIFICATION PASSED",
         "## ISSUES FOUND",
@@ -576,7 +545,7 @@
       "kind": "agent",
       "label": "safe-planner",
       "path": "agents/safe-planner.md",
-      "summary": "Plans implementation changes safely by reading all related code, mapping dependencies, identifying risks, and producing a rollback-ready plan for approval. Use before features, refactors, migrations, or any non-trivial changes. <example>user: 'I need to add Stripe webhooks to our checkout flow' assistant: 'I'll use the safe-planner agent to map dependencies and create a safe implementation plan before we touch anything.'</example>",
+      "summary": "Plans implementation changes safely by reading all related code, mapping dependencies, identifying risks, and producing a rollback-ready plan for approval. Use before features, refactors, migrations, or any non-trivial changes.",
       "markers": [
         "## PLAN READY",
         "## NEEDS DECISION",
@@ -589,7 +558,14 @@
       "kind": "skill",
       "label": "autopilot-collect",
       "path": "skills/autopilot-collect",
-      "summary": "List all /autopilot worktrees + branches in the current repo with their terminal_state, commits ahead of a base, files touched, and task summary. Use when the user asks \"which autopilots finished\", \"check autopilots\", \"all autopilots finished\", \"autopilots completed\", \"show pending autopilot runs\", \"what's left to merge\", or as the discovery step inside /autopilot-merge. Returns a TSV table — parse it; don't paste it raw into the conversation."
+      "summary": "List all /autopilot worktrees + branches in the current repo with their terminal_state, commits ahead of a base, files touched, and task summary. Use when the user asks which autopilot runs finished, are still pending, or are left to merge, or as the discovery step inside /autopilot-merge. Returns a TSV table."
+    },
+    {
+      "id": "skill.bu-cold-outreach",
+      "kind": "skill",
+      "label": "bu-cold-outreach",
+      "path": "skills/bu-cold-outreach",
+      "summary": "Run Black Umbrella's own cold DM outreach. Triggers \"run today's cold outreach\", \"cold DM batch\", \"outreach replies\", \"bu outreach\", \"approve the batch and send\", \"outreach report\". Astra executes it in the codex-bare Codex session with Computer Use, sending from Zalo's real LinkedIn, Facebook and Instagram accounts in Chrome, to HVAC and plumbing owner operators countrywide (whatever metros prospects.csv holds; tranche 1 is twelve Sun Belt metros plus a nationwide LinkedIn rail). Enforces ONE message per prospect until that prospect replies (no bumps, no multi part first touch, LinkedIn connection requests with no note, all checked by the batch lint against pipeline.csv and sent-log.csv), the message's four beats with no pitch and no link, the per channel caps, the ramp, the pacing, the stop on warning rule, and the approval mode in config.md. Not the course outreach-operator skill, which is for CMAA members sending by hand."
     },
     {
       "id": "skill.cf-crawl",
@@ -606,11 +582,25 @@
       "summary": "Create a multi-line git commit using the correct heredoc-inside-$(...) quoting pattern, with the Co-Authored-By trailer. Use whenever the user asks to commit, when a workflow needs to commit changes, or when a multi-line commit message is required. Eliminates re-deriving the tricky quoting and ensures a consistent commit-message style."
     },
     {
+      "id": "skill.content-video-finish",
+      "kind": "skill",
+      "label": "content-video-finish",
+      "path": "skills/content-video-finish",
+      "summary": "Finish a video Zalo recorded himself: rough cut the raw take first (fillers, dead air, false starts and superseded retakes out, cut on Scribe word boundaries and self checked at every cut), then add the headline, prompt/template cards, karaoke captions and hook-variant splits, then gate it against the locked safe-zone and caption laws. Use when he hands over self-recorded footage and describes overlays, captions, a headline or hook variants, or asks to cut the ums, the pauses or the retakes. This is the AD-HOC rail; daily-reels-machine covers the nightly batch and course-lesson-video covers CMAA lessons, and neither fires here."
+    },
+    {
       "id": "skill.create-skill",
       "kind": "skill",
       "label": "create-skill",
       "path": "skills/create-skill",
-      "summary": "Author a new Claude Code skill following the established pattern. Use when the user says \"create a skill\", \"add a skill\", \"let's skill-ify X\", \"promote this to a skill\", or asks \"should this be a skill?\" Guides the decision (is it worth a skill?), picks the form factor (markdown-only vs shell script), generates the SKILL.md from the canonical template, optionally generates an accompanying shell script, and proposes the CLAUDE.md callout for deterministic firing. Replaces ad-hoc skill creation with a consistent shape that matches typecheck-and-build, commit-with-heredoc, dev-server-restart, autopilot-collect, and cf-crawl."
+      "summary": "Author a new Claude Code skill in the established shape, or decide whether a recurring pattern deserves one. Use when the user wants to create, add or promote something to a skill, or asks whether it should be one. Covers the worth-it gate, the markdown-vs-script form factor, the SKILL.md template and the optional CLAUDE.md callout."
+    },
+    {
+      "id": "skill.daily",
+      "kind": "skill",
+      "label": "daily",
+      "path": "skills/daily",
+      "summary": "Run Zalo's daily content hour for the Zalo Kabche brand from ANY working directory — including Telegram/bridge sessions rooted at ~/dev. Invoke when Zalo says /daily, \"what's today\", \"daily check-in\", \"today's reel\", or opens a session to do his content hour. This is a thin router: the real procedure lives in ~/dev/zalo-kabche-brand/.claude/skills/daily/SKILL.md and is followed verbatim. Inside that repo, the repo-scoped skill wins and this one is unused."
     },
     {
       "id": "skill.dev-server-restart",
@@ -618,6 +608,13 @@
       "label": "dev-server-restart",
       "path": "skills/dev-server-restart",
       "summary": "Kill any stale dev server on a given port, restart it cleanly in the project, poll until it accepts connections, and smoke-test a route — returning HTTP status + log tail. Use before testing UI in the browser, after env changes, or whenever Claude wrote \"pkill -f 'next dev'\" in a previous turn and needs the server back up. Replaces the 100+ hand-written kill+sleep+curl variants."
+    },
+    {
+      "id": "skill.digest",
+      "kind": "skill",
+      "label": "digest",
+      "path": "skills/digest",
+      "summary": "Make an explanation easy for Zalo to digest. Text always comes first, in STE-lite (80% of ASD-STE100, checked by ste-lint.py). At most ONE extra goes with it, chosen by pick-format.py and never by asking him. The extra is an exact boxes-and-arrows diagram PNG (flow, sequence, compare, map) or a self-contained interactive HTML page. Use when you explain a system, a report, a plan or a result to Zalo, or he asks to \"break this down\", \"make this easier to digest\", \"diagram this\" or \"show it as a page\". Not for concept art or infographics (infographics), charts from data (dataviz) or explainer videos (not used)."
     },
     {
       "id": "skill.dub-video",
@@ -645,42 +642,42 @@
       "kind": "skill",
       "label": "live-test-campaign",
       "path": "skills/live-test-campaign",
-      "summary": "Run a master live-test campaign against a deployed app or feature — design-review the code first, enumerate edge cases by lifecycle stage, split live-vs-lab, then execute a cheapest-first phase ladder (preflight → read-only API → side-effect-free calls → UI → state writes → guard/abort paths → real external sends → cleanup) with positive-evidence discipline and a state-neutralization protocol. Use after shipping a feature, before launch, or whenever the user asks to \"live test everything\" / \"make sure it's perfect\" / \"catch all edge cases\". Battle-tested on a multi-day production campaign that found bugs static QA and 100+ unit tests missed."
+      "summary": "Run a designed live-test campaign against a deployed app or feature: code design review first, then a cheapest-first, destructive-last phase ladder with positive-evidence and state-neutralization rules. Use after shipping or before launch, or when the user asks to live test everything or catch all edge cases."
     },
     {
       "id": "skill.machine-editorial-broll",
       "kind": "skill",
       "label": "machine-editorial-broll",
       "path": "skills/machine-editorial-broll",
-      "summary": "Generate branded motion-graphics \"slides b-roll\" for Zalo's videos (VSLs, YouTube, teleprompter scripts, reels) using the Machine Editorial v3 system in the Remotion studio at /Users/zalo/dev/operator-broll. Use when the user says \"slides b-roll\", \"b-roll for this script\", \"motion graphics for my video\", \"VSL-style slides\", \"machine editorial\", or hands over a script/teleprompter text and wants the graphics cut. NOT for AI-generated footage — that's the seedance skill; this one is for the branded typographic beat system (dark navy + electric blue Line + gold ignite). Keeps every video's b-roll in one consistent, ownable visual language instead of re-deriving the style per video."
+      "summary": "Generate branded motion-graphics \"slides b-roll\" for Zalo's videos (VSLs, YouTube, teleprompter scripts, reels) using the Machine Editorial v3 system in the Remotion studio at /Users/zalo/dev/operator-broll. Use when the user says \"slides b-roll\", \"b-roll for this script\", \"motion graphics for my video\", \"VSL-style slides\", \"machine editorial\", or hands over a script/teleprompter text and wants the graphics cut. NOT for the video game b-roll layer on a delivered reel (that's dot-matrix-broll), and NOT for AI-generated footage — that's the seedance skill; this one is for the branded typographic beat system (dark navy + electric blue + gold ignite). Keeps every video's b-roll in one consistent, ownable visual language instead of re-deriving the style per video."
     },
     {
       "id": "skill.repo-init",
       "kind": "skill",
       "label": "repo-init",
       "path": "skills/repo-init",
-      "summary": "Scaffold per-repo Claude excellence in the current repo: scan the codebase, actually run (verify) the build/test/typecheck/lint commands, and generate .claude/CLAUDE.md, path-scoped .claude/rules/*.md, the machine-readable .claude/VERIFY.md verification manifest — deploy surfaces plus THE proof signal each deploy claim requires — and its runnable projection .claude/verify.sh (proof signals as executable checks with exit codes). Use when the user says \"initialize repo\", \"init this repo\", \"set up project for Claude\", \"new repo\", \"scaffold claude config\", or when starting work in a repo missing .claude/CLAUDE.md. Idempotent — fills gaps in existing scaffolds, never clobbers. Implements the global Project Init Protocol and prevents \"deploy verified\" overclaims that cite the wrong pipeline''s signal (documented incident: ECS green cited as proof for a Vercel-deployed dashboard change). Pair with ~/.claude/scripts/repo-drift-check.sh to find repos under ~/dev missing the scaffold."
+      "summary": "Scaffold a repo for Claude: scan the codebase, actually run the build/test/typecheck/lint commands, and generate .claude/CLAUDE.md, path-scoped .claude/rules/*.md, the machine-readable .claude/VERIFY.md verification manifest (deploy surfaces plus THE proof signal each deploy claim requires) and its runnable projection .claude/verify.sh. Use when the user asks to initialize or scaffold a repo for Claude, or when a repo lacks .claude/CLAUDE.md. Idempotent: fills gaps in existing scaffolds, never clobbers. Implements the global Project Init Protocol; ~/.claude/scripts/repo-drift-check.sh lists repos under ~/dev missing the scaffold."
     },
     {
       "id": "skill.schema-snapshot",
       "kind": "skill",
       "label": "schema-snapshot",
       "path": "skills/schema-snapshot",
-      "summary": "Dump the production Supabase public schema (tables, columns, types, nullability, defaults, FKs, RLS flags) via the Supabase MCP and rewrite docs/SCHEMA-PROD.md with a generated-at header and drift notes. Use after applying any migration, whenever the snapshot is >7 days old, when a prod SQL query fails on a column/table name, or when the user asks to \"refresh the schema snapshot\". Kills schema-guessing in ad-hoc SQL — the #2 measured friction cluster (~60 wasted turns)."
+      "summary": "Dump the Delta Agents production Supabase public schema (tables, columns, types, nullability, defaults, FKs, RLS flags) via the Supabase MCP and rewrite docs/SCHEMA-PROD.md with a generated-at header and drift notes. Use after applying any migration, whenever the snapshot is >7 days old, when a prod SQL query fails on a column/table name, or when the user asks to \"refresh the schema snapshot\". Prevents schema-guessing in ad-hoc SQL. The queries target Delta Agents prod ($DELTA_PROD_PROJECT_REF); in another repo, swap in the ref of that project first."
     },
     {
       "id": "skill.seedance",
       "kind": "skill",
       "label": "seedance",
       "path": "skills/seedance",
-      "summary": "Generates videos via Segmind Seedance 2.0 (ByteDance). Text-to-video and image-to-video with native synced audio, multi-shot prompts, 4-15s duration, 480p/720p/1080p, aspect ratios 16:9/9:16/1:1/4:3/3:4/21:9/adaptive, first/last-frame conditioning for clip chaining, up to 9 reference images for character/style consistency. Use when asked to \"generate a video\", \"make a clip\", \"create b-roll\", \"animate this image\", \"make a 5 second video of X\", or any AI video generation task."
+      "summary": "Generate AI video clips (text, image or video to video, 4-15s, optional synced audio) through Segmind Seedance 2.0''s generate.sh. Use for any AI video generation request: a clip, b-roll, animating an image, a multi-shot sequence."
     },
     {
       "id": "skill.seedance-video-prompt-builder",
       "kind": "skill",
       "label": "seedance-video-prompt-builder",
       "path": "skills/seedance-video-prompt-builder",
-      "summary": "Generate a detailed, shot-by-shot, copy-and-paste-ready video prompt for Seedance 2.0 from a creative brief. Use this skill whenever the user wants to create a Seedance video prompt, write a shot list, plan a video sequence, or describe a video concept for AI generation, or mentions Seedance. Also trigger when the user describes a scene, ad concept, brand film, product video, or any visual sequence they want turned into a generation-ready prompt — even if they don't explicitly say \"video prompt.\" Trigger on phrases like \"write me a video prompt\", \"Seedance prompt\", \"shot list\", \"plan a video\", \"video concept\", \"create a sequence\", \"brand film prompt\", \"ad prompt\", or any time the user describes what they want to happen in a video and needs it translated into a copy-paste-ready prompt."
+      "summary": "Generate a detailed, shot-by-shot, copy-and-paste-ready video prompt for Seedance 2.0 from a creative brief. Use whenever the user wants a Seedance prompt or a shot list, or describes a scene, ad concept, brand film, product video or other visual sequence they want turned into a generation-ready video prompt, even if they don't say \"video prompt\". Not for generating the clip itself (the seedance skill) or for branded motion-graphics slides (machine-editorial-broll)."
     },
     {
       "id": "skill.ship-to-prod",
@@ -708,7 +705,7 @@
       "kind": "skill",
       "label": "tenant-triage",
       "path": "skills/tenant-triage",
-      "summary": "Evidence-first triage for \"tenant X says Y broke, check why\" reports on Delta Agents prod. Resolves the tenant by fuzzy slug match, time-scopes from the user's report, pulls parallel evidence (sessions, messages, voice calls + tool events, followups, alerts/audit/escalations) via the Supabase MCP, greps ECS gateway/worker logs by tenant id, correlates with recent deploys, and emits a triage summary BEFORE any hypothesis. Use when the user says \"tenant … says\", \"our user … reports\", \"check why … for tenant\", \"customer reported\", or names a tenant plus a fuzzy symptom. Encodes the intake typed 13× in 15 days."
+      "summary": "Evidence-first triage for \"tenant X says Y broke, check why\" reports on Delta Agents prod. Resolves the tenant by fuzzy slug match, time-scopes from the user's report, pulls parallel evidence (sessions, messages, voice calls + tool events, followups, alerts/audit/escalations) via the Supabase MCP, greps ECS gateway/worker logs by tenant id, correlates with recent deploys, and emits a triage summary BEFORE any hypothesis. Use for a tenant or customer complaint with a fuzzy symptom (a tenant, user or customer reports that something broke and wants to know why)."
     },
     {
       "id": "skill.typecheck-and-build",
@@ -722,14 +719,14 @@
       "kind": "skill",
       "label": "voice-agent-forge",
       "path": "skills/voice-agent-forge",
-      "summary": "Generate production-ready Retell-style voice/chat agent system prompts in the Operator Base \"house format\" — the same structure the game-app's Prompt Forge (Prompt Studio) and demo-retell-setup templates produce. Use when the user says \"write a voice agent prompt\", \"build a Retell agent\", \"make an orchestrator bot\", \"create the sub-agents\", \"forge a prompt for [client]\", \"draft the AI receptionist prompt\", or asks for a multi-bot routing setup (orchestrator + specialized agents). Produces the full <identity>/<company_identity>/<goal>/<context>/<important_information>/<conversational_style_guideline>/<conversation_steps>/<objection_handling_database>/<knowledge_database> skeleton with the voice-specific rules baked in, so every client bot comes out consistent instead of re-derived from scratch each time."
+      "summary": "Write Retell-style voice or chat agent system prompts (single bot, or orchestrator plus sub-agents) in the Operator Base house format, with the Selling Method block for sales bots. Use when the user wants a new client agent prompt or a multi-bot routing setup; not for small wording edits."
     },
     {
       "id": "skill.voice-call-triage",
       "kind": "skill",
       "label": "voice-call-triage",
       "path": "skills/voice-call-triage",
-      "summary": "Triage one voice call (or \"the last call\") on Delta Agents prod — pull the tenant_voice_calls row (status/duration/disconnection reason), the tenant_voice_tool_events timeline, the gateway ECS log window around the call, and a DA-intended vs Retell-actual config diff via the Retell GET endpoints. Use when the user says \"it hung up\", \"call didn't work\", \"check the last call\", \"why did the voice agent…\", \"the call never picked up\", or names a phone number + a call symptom. Encodes the call→symptom→logs loop that took ~20 iterations per bug in past voice sessions."
+      "summary": "Triage one voice call (or \"the last call\") on Delta Agents prod — pull the tenant_voice_calls row (status/duration/disconnection reason), the tenant_voice_tool_events timeline, the gateway ECS log window around the call, and a DA-intended vs Retell-actual config diff via the Retell GET endpoints; for GPT-Live (engine openai-live) calls, the Twilio CallSid path instead: engine session, voice-bridge and gateway logs, the in-call booking guard. Use when a specific voice call misbehaved (hung up, never connected, did the wrong thing) or the user names a phone number with a call symptom."
     },
     {
       "id": "skill.voice-test-stack",
@@ -739,11 +736,18 @@
       "summary": "Bring the full Delta Agents local voice-test stack into a known-good state — kill stale gateway/dashboard listeners, start both from a named checkout/worktree with nohup + readiness polling, start the tunnel (cloudflared or ngrok, auto-picked from GATEWAY_URL), and print the callable state (tunnel URL, gateway health, dashboard URL, webhook URL shapes). Use before any live voice/webhook test against the local gateway, when the user says \"spin up the voice test stack\", or whenever a Retell/CRM webhook needs to reach localhost. Replaces the hand-assembled kill+build+node+vite+tunnel ritual."
     },
     {
+      "id": "skill.whiteboard-video-ideas",
+      "kind": "skill",
+      "label": "whiteboard-video-ideas",
+      "path": "skills/whiteboard-video-ideas",
+      "summary": "Produce new whiteboard YouTube video ideas for Zalo Kabche's channel in two stages. Stage 1 picks topics from the owner question research and his demo data (skipping anything filmed or planned on Linear) and sends them as ONE Telegram text with Linear Idea cards. Stage 2, only for the ones he picks, writes beats.md, renders a gpt-image-2 board per pick on the photo of his real whiteboard, builds the filming plan PDF (\"like last time\"), sends it with the boards and moves the cards to Boards ready. Use when Zalo asks for more whiteboard video ideas, picks ideas to shoot, or wants the board or filming plan for a shoot. Not for editing footage (yt-video-edit), thumbnails (yt-thumbnail) or publishing (ship-yt-video)."
+    },
+    {
       "id": "skill.yt-thumbnail",
       "kind": "skill",
       "label": "yt-thumbnail",
       "path": "skills/yt-thumbnail",
-      "summary": "Generate Zalo Kabche YouTube thumbnails (1280×720) from the locked Shop Manual '74 spec using real reference photos of Zalo, via the image-craft-expert agent on the gpt-image-2 `images.edit` rail (OpenAI — the standing preference, NOT nano-banana), with a mandatory text + face-identity audit and the 120px squint test. Use when the user says \"make the thumbnail\", \"thumbnail comps for video N\", \"thumbnail options\", or at the packaging stage of any video in ~/dev/zalo-kabche-brand. Encodes the photo-real vs manual-page precedence rule, the ≤4-word / one-orange-word text budget, and the stamp-never-lies guardrail. Replaces one-line \"make a thumbnail\" prompts that garble text, drift the face, and violate the brand spec."
+      "summary": "Generate Zalo Kabche YouTube thumbnails (1280×720) from the locked Shop Manual '74 spec using real reference photos of Zalo, via the image-craft-expert agent on the gpt-image-2 `images.edit` rail (OpenAI, the standing preference, NOT nano-banana), with a mandatory text + face-identity audit and the 120px squint test. Use when the user says \"make the thumbnail\", \"thumbnail comps for video N\", \"thumbnail options\", or at the packaging stage of any video in ~/dev/zalo-kabche-brand. Replaces one-line \"make a thumbnail\" prompts that garble text, drift the face, and violate the brand spec."
     },
     {
       "id": "mcp.context7",

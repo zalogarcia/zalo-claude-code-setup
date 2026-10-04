@@ -16,7 +16,8 @@ What it generates
                                          through hooks/codex-shim.py
   agents     ~/.codex/agents/*.toml      from ~/.claude/agents/*.md
   mcp        ~/.codex/config.toml        a sentinel-delimited managed block:
-                                         project_doc_max_bytes + [mcp_servers.*]
+                                         project_doc_max_bytes,
+                                         check_for_update_on_startup + [mcp_servers.*]
 
 Usage
 -----
@@ -90,6 +91,12 @@ MAX_HOOK_TIMEOUT = 600
 
 # Skills that make no sense inside Codex.
 SKILL_DENYLIST = {"codex"}
+
+# MCP servers that are Claude-only. codex-cu is the ChatGPT app's own Computer
+# Use server (cua_repl), which Codex already loads natively from its plugin, so
+# a projected copy would duplicate it; matchers aimed at it are dropped too, so
+# hooks.json (and the hook trust bound to its hash) does not change for them.
+CLAUDE_ONLY_MCP = {"codex-cu"}
 
 WATCHED_EXACT = {
     os.path.realpath(CLAUDE_MD): ["agents-md"],
@@ -496,6 +503,11 @@ def clamp(timeout):
     return min(timeout, MAX_HOOK_TIMEOUT)
 
 
+def claude_only_tool(matcher_part):
+    """True for a matcher alternative aimed at a CLAUDE_ONLY_MCP server's tools."""
+    return any(matcher_part.startswith("mcp__%s__" % n) for n in CLAUDE_ONLY_MCP)
+
+
 def gen_hooks(s):
     try:
         settings = json.loads(read(SETTINGS, "{}"))
@@ -527,7 +539,7 @@ def gen_hooks(s):
     for event in ("PreToolUse", "PostToolUse"):
         for entry in src.get(event) or []:
             matcher = entry.get("matcher") or ""
-            tools = [t for t in matcher.split("|") if t]
+            tools = [t for t in matcher.split("|") if t and not claude_only_tool(t)]
             keep = [t for t in tools if t not in PATCH_TOOLS and t not in AGENT_TOOLS]
             patchy = [t for t in tools if t in PATCH_TOOLS]
             agenty = [t for t in tools if t in AGENT_TOOLS]
@@ -674,6 +686,11 @@ def gen_agents(s):
 
 PROJECT_DOC_MAX_BYTES = 262144
 
+# Codex's own startup update prompt stays off: scripts/codex-autoupdate.sh
+# upgrades the Homebrew cask daily (Zalo, 2026-10-03), and the prompt held the
+# codex-bare session for a morning, so two outreach runs failed.
+CHECK_FOR_UPDATE_ON_STARTUP = False
+
 # Some vendors route MCP by client family in the URL path. leadconnector
 # answers a Codex client on /mcp/anthropic/v2 with
 #   HTTP 400 client_path_mismatch: This MCP client must use /mcp/openai/v2
@@ -697,7 +714,8 @@ def gen_mcp(s):
     except json.JSONDecodeError:
         s.note("mcp: ~/.claude.json does not parse, config block untouched")
         return False
-    servers = cfg.get("mcpServers") or {}
+    servers = {k: v for k, v in (cfg.get("mcpServers") or {}).items()
+               if k not in CLAUDE_ONLY_MCP}
 
     lines = [
         BEGIN,
@@ -706,6 +724,7 @@ def gen_mcp(s):
         "preserved byte for byte.",
         "",
         "project_doc_max_bytes = %d" % PROJECT_DOC_MAX_BYTES,
+        "check_for_update_on_startup = %s" % str(CHECK_FOR_UPDATE_ON_STARTUP).lower(),
         "",
     ]
     for name in sorted(servers):
