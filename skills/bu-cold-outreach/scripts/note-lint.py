@@ -221,7 +221,7 @@ APPROVED_JOKES = [
 ]
 # The asks are unchanged from 2026-09-12 so the J1 against J2 numbers stay comparable. What
 # changed on 2026-09-22 is that the joke and the ask are ONE message: until then the setup,
-# the punchline and the ask were three bubbles, and Zalo's screenshot of the Sandra Zurick
+# the punchline and the ask were three bubbles, and Zalo's screenshot of one prospect's
 # thread (three bubbles on 09-14 and a "Last one from me" bump on 09-22, zero replies) is
 # the reason the rule exists.
 J_ASKS = {

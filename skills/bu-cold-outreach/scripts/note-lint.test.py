@@ -232,7 +232,7 @@ for i in range(len(lint.APPROVED_JOKES)):
     for arm in ("J1", "J2"):
         case(f"approved joke {i + 1} as one {arm} message passes",
              fb(jtext(i, arm), f"D-fb-{arm}"), True)
-# Zalo's screenshot, 2026-09-22: the three Sandra Zurick bubbles of 2026-09-14, as they went.
+# Zalo's screenshot, 2026-09-22: the three bubbles one prospect got on 2026-09-14, as they went.
 SANDRA = ["My AC and I are fighting again.", "Now it's giving me the cold shoulder.",
           "Alright Sandra, real question and then I'll leave the jokes alone. Would you be "
           "open to talking about the calls that come in after you close?"]

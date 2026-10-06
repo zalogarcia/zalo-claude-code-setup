@@ -422,7 +422,7 @@ at send time instead of held at research.
 LinkedIn, then Instagram if `config.md` has it active (it is inactive as of 2026-09-12, so
 today the ladder is LinkedIn then nothing), then `NO_CHANNEL`. Never message the business page as a
 substitute, never send to a shared inbox, and never put a page URL in a batch entry: that
-is a bug, not a fallback, and the 2026-09-09 AJ's Air page message is the reason the rule
+is a bug, not a fallback, and the 2026-09-09 business page message is the reason the rule
 exists (an auto responder answered, the owners never saw it).
 
 While the personal profile is open, take whatever true detail is free for the `side_note`
@@ -451,7 +451,7 @@ without searching.
 
    **Check the flagged rows FIRST (2026-09-13).** The Apify export we already paid for
    carries a top level `openProfile` boolean, and it is the WRONG field: it reads false on
-   1,345 of 1,345 profiles, including Joe Borter, whom a live session confirmed the same
+   1,345 of 1,345 profiles, including one owner whom a live session confirmed the same
    morning as having a free composer. One falsification is enough, so the click stays
    mandatory and `openProfile` is never read as a negative. What the export IS good for is
    ORDER: Open Profile is a Premium feature, so `premium` is a necessary condition, and the
@@ -481,7 +481,7 @@ without searching.
    becomes `SENT` only when a MESSAGE goes out.
 2. **The owner's personal Facebook profile, and ONLY that (Zalo, 2026-09-09).** A business
    page is not a channel: its inbox goes to whoever manages the page, lands in a filtered
-   folder, and answers with an auto-responder (AJ's Air, 2026-09-09: "Thanks for messaging
+   folder, and answers with an auto-responder (one prospect's page, 2026-09-09: "Thanks for messaging
    us, we'll get back to you soon", the owners never saw it). If the personal profile
    cannot be verified (the intro, work field, cover or posts name the business), the
    Facebook channel for that row is closed: try LinkedIn or Instagram, else `NO_CHANNEL`.

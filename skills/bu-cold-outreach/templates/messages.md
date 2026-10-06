@@ -440,7 +440,7 @@ is his unverified claim and none of it goes in a message.
 
 **ONE message since 2026-09-22: the joke and the ask in the same bubble.** From 2026-09-13
 to 2026-09-22 this arm typed three separate sends (the setup, the punchline, then the ask),
-and Zalo's screenshot of the Sandra Zurick thread is what ended it: three bubbles, then a
+and Zalo's screenshot of one prospect's thread is what ended it: three bubbles, then a
 bump, then nothing back. Now the whole thing is one line, typed once and sent once:
 
 > [The approved setup] [its punchline] [the J1 or J2 ask]

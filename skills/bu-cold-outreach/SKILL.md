@@ -350,8 +350,8 @@ because the log is append only:**
 - `a5647b073a` (Geo, facebook, 2026-09-09) has TWO `SENT` rows, 10:45 and 11:20. They are the
   two halves of one message. Under the 2026-09-22 rule the second half would never have
   been sent. One prospect, one send.
-- `f4e1c0f25e` (AJ's Air, facebook, 2026-09-09 10:56) went to a business PAGE,
-  `facebook.com/AJsAirAC`. A page is not a channel, so it is excluded from every send count,
+- `f4e1c0f25e` (facebook, 2026-09-09 10:56) went to a business PAGE,
+  not the owner's profile. A page is not a channel, so it is excluded from every send count,
   every reply rate and the scoreboard. It stays in the file as the audit record of a rule
   violation, and an auto responder answered it, which is not a reply either.
 

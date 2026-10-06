@@ -121,7 +121,7 @@ Six approved jokes, three for HVAC owners and three for plumbing owners, in the 
 voice: short, dry, the kind of thing a guy types with one thumb. Since 2026-09-22 each is
 ONE message: the setup, the punchline and the ask in the same bubble, on one line, typed
 once and sent once. From 2026-09-13 to 2026-09-22 they went out as three separate sends,
-and Zalo's screenshot of the Sandra Zurick thread (three bubbles, then a bump, no reply) is
+and Zalo's screenshot of one prospect's thread (three bubbles, then a bump, no reply) is
 what ended that. No greeting and no first name before the joke; the name arrives in the
 ask. Vary them across a batch: three jokes per trade against a daily Facebook number means
 repeats are unavoidable, so the cap is no joke to more than 4 rows in one day.
