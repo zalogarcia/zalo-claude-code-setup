@@ -569,8 +569,8 @@ case("a note quoting 'your air conditioning' passes",
         "Sunday. So somebody's picking up at 10 at night. I trained a demo AI setter on your "
         "website that takes those calls 24/7 and books the job. Want to try and break it?",
         "D-li-P1"), True)
-case("a note naming 'your Air Texas' line passes",
-     li("Hi Raymond, Google has your Air Texas line closing at 7 weekdays. So somebody's "
+case("a note naming 'your Air Tahoe' line passes",
+     li("Hi Raymond, Google has your Air Tahoe line closing at 7 weekdays. So somebody's "
         "still getting those calls. I trained a demo AI setter on your website that takes "
         "those calls 24/7 and books the job. Want to try and break it?", "D-li-P1"), True)
 case("'we do air conditioning too' is not the tech as a category",

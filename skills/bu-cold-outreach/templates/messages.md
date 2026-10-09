@@ -113,7 +113,7 @@ objection that ends the pitch" in Zalo's rail at the bottom of this file.
 ## The specificity law (2026-09-09)
 
 The opener has to prove, in one clause, that a person looked at this business and not at
-a list. Zalo returned the 2026-09-08 batch because "saw True Home handles HVAC and
+a list. Zalo returned the 2026-09-08 batch because "saw Blue Fern handles HVAC and
 appliance repair, with technicians on call 24/7" and "saw Kestrel Air's June 2 Facebook
 ads" are true and generic: a services list is what every HVAC site says, and an ad date
 ties to nothing.

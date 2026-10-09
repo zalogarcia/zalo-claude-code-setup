@@ -91,7 +91,7 @@ arithmetic on two numbers that are on the screen.
 **From a closed day plus an evening.** Both facts are on the profile; the bridge just adds
 them up.
 
-> Hi Raymond, Google has Air Texas closing at 7 weekdays, noon Saturday, Sunday closed. So
+> Hi Raymond, Google has Air Tahoe closing at 7 weekdays, noon Saturday, Sunday closed. So
 > that's every evening plus the whole of Sunday landing on somebody's cell. I trained a demo
 > AI setter on your website that takes those calls 24/7 and books the job. Want to try and
 > break it?
