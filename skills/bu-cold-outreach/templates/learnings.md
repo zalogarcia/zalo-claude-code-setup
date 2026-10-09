@@ -112,8 +112,8 @@ Judgment rules:
    traffic: nothing was delivered, so nothing was read.
 8. **One prospect is one send.** Since 2026-09-22 every prospect gets one message, so a
    prospect is one `SENT` row. The historical multi part rows (the J arm's `SENT_CONT` rows
-   of 09-13 to 09-22, the 2026-09-08 Geo entry) and the `BUMP1` and `BUMP2` rows count
-   nowhere; counting the parts is how the Geo entry briefly read as two prospects.
+   of 09-13 to 09-22, the 2026-09-08 Abe entry) and the `BUMP1` and `BUMP2` rows count
+   nowhere; counting the parts is how the Abe entry briefly read as two prospects.
 
 ### Facebook group posts (channel NOT STARTED)
 

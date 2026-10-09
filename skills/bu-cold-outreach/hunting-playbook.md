@@ -347,7 +347,7 @@ two: `research/owner-candidates-<date>.csv` for the name (below) and
 `evidence_confidence`). A row appearing in BOTH is draft ready and should be worked first;
 Step 2E says where a row with only one of them goes. Two handling rules for the evidence
 file: only 4 of the 14 quotes carry a date the page actually shows, so a note built on an
-undated one says "a review on your site" and never invents "Jennifer's review from June";
+undated one says "a review on your site" and never invents "Kimberly's review from June";
 and a quote flagged `dash_in_quote` contains an em dash, so it is rewritten rather than
 pasted verbatim or the note lint rejects it.
 

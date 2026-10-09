@@ -125,26 +125,26 @@ def jrow(entry, joke_index=0, variant="D-fb-J1", name="Mike"):
 
 # ---------------------------------------------------------------- the control, P1 and P2
 GOLD_LI = [
-    ("Hi Chris, saw Jennifer's review from June. You reached out to her yourself, almost "
+    ("Hi Grant, saw Kimberly's review from June. You reached out to her yourself, almost "
      "immediately. So you're the one on the phone. I trained a demo AI setter on your "
      "website that takes those calls 24/7 and books the job. Want to try and break it?", "C-li-P1"),
-    ("Hi Sharon, Nate's review says Lloyd called him back on a Saturday and walked him "
-     "through the repair by text. That's Lloyd doing it by hand on his weekend. I trained a "
+    ("Hi Gloria, Kyle's review says Wayne called him back on a Saturday and walked him "
+     "through the repair by text. That's Wayne doing it by hand on his weekend. I trained a "
      "demo AI setter on your website that takes those calls 24/7 and books the job. Want to "
      "try and break it?", "D-li-P1"),
-    ("Hi Jonathan, Paula's review says you were fast on her Saturday AC call. And your "
+    ("Hi Nicholas, Diane's review says you were fast on her Saturday AC call. And your "
      "Facebook ad's running right now, so more of those are coming. I trained a demo AI "
      "setter on your website that answers them 24/7 and books the job. Want to try and "
      "break it?", "C-li-P1"),
-    ("Hi Maria, saw Amber's review: after-hours repair, then somebody on your team called "
+    ("Hi Elena, saw Megan's review: after-hours repair, then somebody on your team called "
      "hours later to check in. That's a person doing the follow-up by hand. I built a quick "
      "demo off your website: it picks up when nobody can, day or night, and books the job. "
      "Want to try and break it?", "D-li-P2"),
-    ("Hi John, Clay's review from July says he called after hours and Charles came out past "
-     "10pm. So somebody at AAction's picking up at 10 at night. I trained a demo AI setter "
+    ("Hi Dave, Ross's review from July says he called after hours and Raymond came out past "
+     "10pm. So somebody at Kestrel's picking up at 10 at night. I trained a demo AI setter "
      "on your website that takes those calls 24/7 and books the job. Want to try and break "
      "it?", "C-li-P1"),
-    ("Hi Alex, Svetlana's review says she called at 9 pm and you had it fixed the next day. "
+    ("Hi Evan, Patricia's review says she called at 9 pm and you had it fixed the next day. "
      "Your Facebook ad's live too, so the 9 pm calls keep coming. I built a quick demo off "
      "your website: it picks up when nobody can, day or night, and books the job. Want to "
      "try and break it?", "C-li-P2"),
@@ -153,12 +153,12 @@ for i, (text, var) in enumerate(GOLD_LI):
     case(f"gold LinkedIn note {i + 1} passes", li(text, var, entry=i + 1), True)
 
 GOLD_FB = [
-    ("Hey Geo, saw Briana's review from last month: called Prestige, had a quote the same "
+    ("Hey Abe, saw Monica's review from last month: called Clearway, had a quote the same "
      "day. Somebody's picking up fast over there.\n\nI trained a demo AI setter on your "
      "website. It answers your calls and texts in about five seconds, 24/7, and books the "
      "job straight into your calendar. Want to try and break it? Call it, text it, throw it "
      "your weirdest customer.", "D-fb-P1"),
-    ("Hey Albert and Janet, saw you're hiring an HVAC Office Manager, and Google has the "
+    ("Hey Walter and Linda, saw you're hiring an HVAC Office Manager, and Google has the "
      "office at 8 to 4 weekdays, closed weekends. So every call after 4 is landing "
      "somewhere.\n\nI trained a demo AI setter on your website: it answers calls and texts "
      "in about five seconds, 24/7, and books the job straight into your calendar. Want to "
@@ -168,12 +168,12 @@ for i, (text, var) in enumerate(GOLD_FB):
     case(f"gold Facebook note {i + 1} passes", fb(text, var, entry=7 + i), True)
 
 case("the generic note returned on 2026-09-09 still fails",
-     li("Hi John, saw Atlanta AAction Air's June 2 Facebook ads. I went ahead and trained a "
+     li("Hi Dave, saw Atlanta Kestrel Air's June 2 Facebook ads. I went ahead and trained a "
         "demo AI setter on your website. It answers your calls and texts in about five "
         "seconds, 24/7, and books the job straight into your calendar. Want me to send it "
         "over?"), False, "the dare is missing")
 case("the robotic note returned on 2026-09-09 still fails",
-     li('Hi John, Clay\'s 2-month-old review says he called after hours and "Charles came '
+     li('Hi Dave, Ross\'s 2-month-old review says he called after hours and "Raymond came '
         'out after 10pm" to fix his AC. I trained a demo AI setter on your website: answers '
         'calls and texts in about five seconds, 24/7, books the job into your calendar. '
         'Want to try and break it?'), False, "N-month-old")
@@ -182,7 +182,7 @@ case("a P1 row without the P1 line fails",
         "catches. I built a quick demo off your website: it picks up when nobody can. Want "
         "to try and break it?", "C-li-P1"), False, "P1 row without the P1 line")
 case("an em dash still fails",
-     li("Hi Chris, saw Jennifer's review from June \u2014 you called her back yourself. So "
+     li("Hi Grant, saw Kimberly's review from June \u2014 you called her back yourself. So "
         "you're the one on the phone. I trained a demo AI setter on your website that takes "
         "those calls 24/7 and books the job. Want to try and break it?"), False, "em or en dash")
 
@@ -233,14 +233,14 @@ for i in range(len(lint.APPROVED_JOKES)):
         case(f"approved joke {i + 1} as one {arm} message passes",
              fb(jtext(i, arm), f"D-fb-{arm}"), True)
 # Zalo's screenshot, 2026-09-22: the three bubbles one prospect got on 2026-09-14, as they went.
-SANDRA = ["My AC and I are fighting again.", "Now it's giving me the cold shoulder.",
-          "Alright Sandra, real question and then I'll leave the jokes alone. Would you be "
+TERESA = ["My AC and I are fighting again.", "Now it's giving me the cold shoulder.",
+          "Alright Teresa, real question and then I'll leave the jokes alone. Would you be "
           "open to talking about the calls that come in after you close?"]
-case("the Sandra setup alone fails: a bubble is not a message",
-     fb(SANDRA[0], "D-fb-J1"), False, "not an approved joke")
-case("the Sandra punchline alone fails", fb(SANDRA[1], "D-fb-J1"), False, "not an approved joke")
-case("the Sandra ask alone fails", fb(SANDRA[2], "D-fb-J1"), False, "not an approved joke")
-case("the three Sandra bubbles as ONE message pass", fb(" ".join(SANDRA), "D-fb-J1"), True)
+case("the Teresa setup alone fails: a bubble is not a message",
+     fb(TERESA[0], "D-fb-J1"), False, "not an approved joke")
+case("the Teresa punchline alone fails", fb(TERESA[1], "D-fb-J1"), False, "not an approved joke")
+case("the Teresa ask alone fails", fb(TERESA[2], "D-fb-J1"), False, "not an approved joke")
+case("the three Teresa bubbles as ONE message pass", fb(" ".join(TERESA), "D-fb-J1"), True)
 case("the joke with no ask fails",
      fb(f"{SETUP} {PUNCH}", "D-fb-J1"), False, "not followed by the fixed J1 ask")
 case("the joke and the ask on two lines fail: Enter would send the first line alone",
@@ -270,7 +270,7 @@ case("an empty variant fails loudly", li(GOLD_LI[0][0], ""), False, "unrecognise
 case("a link fails on any family", fb(J1_MSG[:-1] + " https://blackumbrella.app?", "D-fb-J1"),
      False, "a link")
 case("an unfilled token fails",
-     li(GOLD_LI[0][0].replace("Hi Chris", "Hi [First]"), "C-li-P1"), False, "an unfilled token")
+     li(GOLD_LI[0][0].replace("Hi Grant", "Hi [First]"), "C-li-P1"), False, "an unfilled token")
 
 # ------------------------------------------------------------------------- batch level
 full_batch = ([li(t, v, entry=i + 1) for i, (t, v) in enumerate(GOLD_LI)]
@@ -285,13 +285,13 @@ same = ("Hi {n}, {r}'s review says he called after hours and somebody came out p
         "takes those calls 24/7 and books the job. Want to try and break it?")
 out = batch_case("three identical openers in a batch of four still trip the diversity cap",
                  [li(same.format(n=n, r=r), "C-li-P1", entry=i + 1) for i, (n, r) in
-                  enumerate([("Al", "Clay"), ("Bo", "Dana"), ("Cy", "Eve")])]
+                  enumerate([("Al", "Ross"), ("Bo", "Dana"), ("Cy", "Eve")])]
                  + [li(GOLD_LI[1][0], "D-li-P1", entry=4)], 1)
 if "open the same way" not in out:
     FAILURES.append(f"diversity cap: wrong message:\n{out}")
 
 out = batch_case("a joke message is an opener like any other message",
-                 [li(same.format(n="Al", r="Clay"), "C-li-P1", entry=1),
+                 [li(same.format(n="Al", r="Ross"), "C-li-P1", entry=1),
                   li(same.format(n="Bo", r="Dana"), "C-li-P1", entry=2),
                   li(same.format(n="Cy", r="Eve"), "C-li-P1", entry=3)]
                  + jrow(4, 0, "D-fb-J1", "Di"), 1)
@@ -299,7 +299,7 @@ if "open the same way" not in out:
     FAILURES.append(f"diversity with a joke message: expected the cap to trip on 3 of 4:\n{out}")
 
 case("a stray part field on a control note fails on sight",
-     dict(li(same.format(n="Al", r="Clay"), "C-li-P1"), part="ask"), False, "a 'part' field")
+     dict(li(same.format(n="Al", r="Ross"), "C-li-P1"), part="ask"), False, "a 'part' field")
 
 # ------------------------------------------ the retired multi part machinery (2026-09-22)
 # The 2026-09-12 audit of 184db72 built a continuation marker so an interrupted three bubble
@@ -530,16 +530,16 @@ case("an unknown family still fails and the message lists G1",
 
 # HIGH 1. Quoting HIS OWN advertised price is approved opener type 3, and two notes carrying
 # one were sent on 2026-09-10. A flat ban on "$" failed both. Real text, from sent-log.csv.
-SENT_0910_MAGGIE = ("Hi Maggie, saw your $83-off drain cleaning offer plus a free camera "
+SENT_0910_BONNIE = ("Hi Bonnie, saw your $83-off drain cleaning offer plus a free camera "
                     "inspection; Google lists a 5pm close. So somebody's got to handle the "
                     "evening calls. I trained a demo AI setter on your website that takes "
                     "those calls 24/7 and books the job. Want to try and break it?")
-SENT_0910_GEORGE = ("Hi George, your $50 referral offer runs through Sept 30, but Google "
+SENT_0910_HAROLD = ("Hi Harold, your $50 referral offer runs through Sept 30, but Google "
                     "lists a 6pm close. That's a reason to catch calls after 6. I built a "
                     "quick demo off your website: it picks up when nobody can, day or night, "
                     "and books the job. Want to try and break it?")
-case("a sent note quoting his own $83 promo still passes", li(SENT_0910_MAGGIE, "C-li-P1"), True)
-case("a sent note quoting his own $50 promo still passes", li(SENT_0910_GEORGE, "C-li-P2"), True)
+case("a sent note quoting his own $83 promo still passes", li(SENT_0910_BONNIE, "C-li-P1"), True)
+case("a sent note quoting his own $50 promo still passes", li(SENT_0910_HAROLD, "C-li-P2"), True)
 case("the specificity law's own $79 tune up example passes",
      li("Hi Mike, your $79 tune up ad's running right now, and Google says you close at 5. "
         "So that ad money keeps ringing after hours. I trained a demo AI setter on your "
@@ -565,12 +565,12 @@ case("eight grand a month of jobs fails",
 # HIGH 2. "our ai" is inside "your air", and this is an HVAC skill: prospects.csv carries
 # 3,016 businesses with "Air" in the name. Word boundaries, not substrings.
 case("a note quoting 'your air conditioning' passes",
-     li("Hi Dana, Marcus's review says your air conditioning tech was out there past 10 on a "
+     li("Hi Dana, Julian's review says your air conditioning tech was out there past 10 on a "
         "Sunday. So somebody's picking up at 10 at night. I trained a demo AI setter on your "
         "website that takes those calls 24/7 and books the job. Want to try and break it?",
         "D-li-P1"), True)
 case("a note naming 'your Air Texas' line passes",
-     li("Hi Charles, Google has your Air Texas line closing at 7 weekdays. So somebody's "
+     li("Hi Raymond, Google has your Air Texas line closing at 7 weekdays. So somebody's "
         "still getting those calls. I trained a demo AI setter on your website that takes "
         "those calls 24/7 and books the job. Want to try and break it?", "D-li-P1"), True)
 case("'we do air conditioning too' is not the tech as a category",
@@ -752,7 +752,7 @@ for stage in ["BUMP1", "BUMP2", "SENT_CONT", "bump2"]:
          f"stage {stage!r}")
 case("stage SENT is the one message and passes", fb(GOLD_FB[0][0], "D-fb-P1", stage="SENT"), True)
 case("kind message said out loud passes", fb(GOLD_FB[0][0], "D-fb-P1", kind="message"), True)
-for phrase in ["Last one from me, Chris.", "Just following up on this.",
+for phrase in ["Last one from me, Grant.", "Just following up on this.",
                "Following up on my note.", "Bumping this up.",
                "In case you missed my last message.", "Circling back on this."]:
     case(f"the follow up phrase fails in any note: {phrase}",
@@ -780,20 +780,20 @@ case("a connect entry naming the retired N1 fails",
 # Refusals 1 and 3 against a small pipeline and log. `stage` column order is the real one.
 PIPE = [
     "fresh1,Fixture Air,Miami,D,fb,,Mike,FOUND,,,D-fb-J1,,,,0,",
-    "sent1,Fixture Drains,Miami,D,fb,,Sandra,SENT,2026-09-22,,D-fb-J1,,,,1,",
+    "sent1,Fixture Drains,Miami,D,fb,,Teresa,SENT,2026-09-22,,D-fb-J1,,,,1,",
     "cold1,Fixture Pipes,Houston,D,fb,,Frank,COLD,2026-09-15,,D-fb-J2,,,,1,",
     "rep1,Fixture Flow,Tampa,D,fb,,Heather,REPLIED,2026-09-15,,D-fb-J2,,,,1,",
     "dead1,Fixture Stop,Tampa,D,fb,,Ron,DEAD,2026-09-15,,D-fb-P1,,,,1,",
     "touched1,Fixture Legacy,Tampa,D,fb,,Lee,FOUND,,,D-fb-P1,,,,1,",
-    "noted1,Fixture Ducts,Phoenix,C,li,,Maggie,FOUND,,,C-li-P1,,,,0,",
-    "bare1,Fixture Plumbing,Tampa,C,li,,Chris,FOUND,,,C-li-P1,,,,0,",
+    "noted1,Fixture Ducts,Phoenix,C,li,,Bonnie,FOUND,,,C-li-P1,,,,0,",
+    "bare1,Fixture Plumbing,Tampa,C,li,,Grant,FOUND,,,C-li-P1,,,,0,",
     "friend1,Fixture Cooling,Orlando,D,fb,,Dan,FOUND,,,D-fb-P2,,,,0,",
     "nochan1,Fixture Nowhere,Miami,D,li,,Pat,NO_CHANNEL,2026-09-14,,D-li-O1,,,,1,",
 ]
 LOG = [
     '2026-09-22 10:00,fb,sent1,u,SENT,aa,My AC,D-fb-J1,joke,"My AC and I are fighting again."',
     '2026-09-22 10:03,fb,sent1,u,SENT_CONT,dd,Now it,D-fb-J1,joke,"Now it\'s giving me the cold shoulder."',
-    '2026-09-10 16:21,li,noted1,u,CONNECT,bb,Hi Maggie,C-li-P1,review,"Hi Maggie, the note text"',
+    '2026-09-10 16:21,li,noted1,u,CONNECT,bb,Hi Bonnie,C-li-P1,review,"Hi Bonnie, the note text"',
     '2026-09-23 09:00,li,bare1,u,CONNECT,,,C-li-P1,,',
     '2026-09-14 09:10,fb,friend1,u,FRIEND,,,D-fb-P2,,',
     '2026-09-14 12:00,li,nochan1,u,SENT,cc,Hi Pat,D-li-O1,review,"Hi Pat, the message"',
@@ -819,7 +819,7 @@ hb("an id the folder does not know is refused, not read as a fresh prospect",
 hb("a real id with one character dropped is refused (2026-09-22 QA repro)",
    [fb(J_FRESH, "D-fb-J1", prospect_id="sent")], 1, "is in neither pipeline.csv nor prospects.csv")
 hb("a real id with the owner's name appended is refused",
-   [fb(J_FRESH, "D-fb-J1", prospect_id="sent1 (Sandra)")], 1, "is in neither pipeline.csv nor prospects.csv")
+   [fb(J_FRESH, "D-fb-J1", prospect_id="sent1 (Teresa)")], 1, "is in neither pipeline.csv nor prospects.csv")
 hb("the one message after a note-less connection is accepted passes (option A)",
    [li(GOLD_LI[0][0], "C-li-P1", prospect_id="bare1")], 0, "ALL PASS")
 hb("the one message after an accepted friend request passes",
@@ -827,15 +827,15 @@ hb("the one message after an accepted friend request passes",
 hb("a connect entry with no note to a fresh prospect passes",
    [li("", "D-li-P1", kind="connect", prospect_id="fresh1")], 0, "ALL PASS")
 hb("a second message to a SENT prospect fails",
-   [fb(jtext(3, "J2", "Sandra"), "D-fb-J2", prospect_id="sent1")], 1,
+   [fb(jtext(3, "J2", "Teresa"), "D-fb-J2", prospect_id="sent1")], 1,
    "already got its one message", "plus 1 more")
 hb("a bump to a no reply prospect fails on the kind AND on the history",
-   [fb("Last one from me, Sandra. If the after hours calls are already handled, I'll leave "
+   [fb("Last one from me, Teresa. If the after hours calls are already handled, I'll leave "
        "you to it. If they aren't, you know where I am.", "D-fb-J1", kind="bump2",
        prospect_id="sent1")], 1, "kind 'bump2'", "banned phrase: 'last one from me'",
    "already got its one message")
 hb("a bump given an innocent kind still fails on the history",
-   [fb(jtext(4, "J1", "Sandra"), "D-fb-J1", prospect_id="sent1")], 1,
+   [fb(jtext(4, "J1", "Teresa"), "D-fb-J1", prospect_id="sent1")], 1,
    "already got its one message")
 hb("a second message on ANOTHER channel fails",
    [li(DM_O1, "D-li-O1", prospect_id="sent1")], 1, "already got its one message")

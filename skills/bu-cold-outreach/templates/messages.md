@@ -114,7 +114,7 @@ objection that ends the pitch" in Zalo's rail at the bottom of this file.
 
 The opener has to prove, in one clause, that a person looked at this business and not at
 a list. Zalo returned the 2026-09-08 batch because "saw True Home handles HVAC and
-appliance repair, with technicians on call 24/7" and "saw AAction Air's June 2 Facebook
+appliance repair, with technicians on call 24/7" and "saw Kestrel Air's June 2 Facebook
 ads" are true and generic: a services list is what every HVAC site says, and an ad date
 ties to nothing.
 
@@ -156,7 +156,7 @@ the thing that does this", and the owner stops reading. Shapes, by opener type:
 
 | Opener type | Bridge clause |
 | --- | --- |
-| A person handled an after hours call | "Someone at AAction is picking up at 10pm." / "That is a person doing it by hand." |
+| A person handled an after hours call | "Someone at Kestrel is picking up at 10pm." / "That is a person doing it by hand." |
 | The owner himself answered | "That is you on the phone." |
 | Hours gap | "Every call after 4 lands somewhere." |
 | Ad running | "Your Facebook ad is live, so those calls keep coming." |
@@ -329,7 +329,7 @@ N1 evidence notes stay in `learnings.md` history.
 
 **Sounding like a person, the checks before a note ships (2026-09-09):**
 
-- Time references the way people say them: "Clay's review this summer", "Jennifer's
+- Time references the way people say them: "Ross's review this summer", "Kimberly's
   review from June", "a review last month". Never "3-month-old review", never an exact
   date unless it is the job post date.
 - The reviewer's first name only when quoting or paraphrasing that review. It shows the
@@ -347,8 +347,8 @@ N1 evidence notes stay in `learnings.md` history.
   summer says". Some start with "saw", some with the fact, some with the quote itself.
   The four beats are the skeleton, not the wording; if three notes in a batch open the
   same way, rewrite one.
-- **Say what happened, not what the review "says".** "Clay called after hours and Charles
-  came out past 10pm" beats "Clay's review says he called after hours". Name the
+- **Say what happened, not what the review "says".** "Ross called after hours and Raymond
+  came out past 10pm" beats "Ross's review says he called after hours". Name the
   reviewer once, then talk about the event.
 - **The bridge is casual and short.** "So somebody's picking up at 10 at night." Not
   "That is a person handling the call by hand."
@@ -403,11 +403,11 @@ fact is a HOLD, not a send.
 
 **Two notes that ship, from the 2026-09-09 batch:**
 
-> Hi John, Clay's review this summer says he called after hours and Charles came out
-> after 10pm. Someone at AAction is picking up at 10pm. I trained a demo AI setter on
+> Hi Dave, Ross's review this summer says he called after hours and Raymond came out
+> after 10pm. Someone at Kestrel is picking up at 10pm. I trained a demo AI setter on
 > your website that takes those calls 24/7 and books the job. Want to try and break it?
 
-> Hi Albert and Janet, saw AJ's is hiring an HVAC Office Manager, and Google lists the
+> Hi Walter and Linda, saw you're hiring an HVAC Office Manager, and Google lists the
 > office at 8 to 4 weekdays, closed weekends. Every call after 4 lands somewhere.
 >
 > I trained a demo AI setter on your website: it answers calls and texts in about five

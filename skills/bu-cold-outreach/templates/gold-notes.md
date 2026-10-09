@@ -10,7 +10,7 @@ prospect gets unless he replies: no bump follows it, nothing continues it, and n
 channel repeats it.
 
 What makes them work: contractions ("that's", "somebody's picking up", "ad's running"),
-the fact told as an event ("Clay called after hours and Charles came out past 10pm")
+the fact told as an event ("Ross called after hours and Raymond came out past 10pm")
 instead of "the review says", a casual bridge that starts with "So" or "That's", the
 reviewer named once, no adjectives, no exclamation marks, no colon lists.
 
@@ -20,45 +20,45 @@ Written in 2026-09 as connection notes. Since 2026-09-22 a connection request ca
 note (option A), and these are the register for the one message that goes after the accept,
 and for an open profile message or an InMail.
 
-> Hi Chris, saw Jennifer's review from June. You reached out to her yourself, almost
+> Hi Grant, saw Kimberly's review from June. You reached out to her yourself, almost
 > immediately. So you're the one on the phone. I trained a demo AI setter on your
 > website that takes those calls 24/7 and books the job. Want to try and break it?
 
-> Hi Sharon, Nate's review says Lloyd called him back on a Saturday and walked him
-> through the repair by text. That's Lloyd doing it by hand on his weekend. I trained a
+> Hi Gloria, Kyle's review says Wayne called him back on a Saturday and walked him
+> through the repair by text. That's Wayne doing it by hand on his weekend. I trained a
 > demo AI setter on your website that takes those calls 24/7 and books the job. Want to
 > try and break it?
 
-> Hi Jonathan, Paula's review says you were fast on her Saturday AC call. And your
+> Hi Nicholas, Diane's review says you were fast on her Saturday AC call. And your
 > Facebook ad's running right now, so more of those are coming. I trained a demo AI
 > setter on your website that answers them 24/7 and books the job. Want to try and
 > break it?
 
-> Hi Maria, saw Amber's review: after-hours repair, then somebody on your team called
+> Hi Elena, saw Megan's review: after-hours repair, then somebody on your team called
 > hours later to check in. That's a person doing the follow-up by hand. I built a quick
 > demo off your website: it picks up when nobody can, day or night, and books the job.
 > Want to try and break it?
 
-> Hi John, Clay's review from July says he called after hours and Charles came out past
-> 10pm. So somebody at AAction's picking up at 10 at night. I trained a demo AI setter
+> Hi Dave, Ross's review from July says he called after hours and Raymond came out past
+> 10pm. So somebody at Kestrel's picking up at 10 at night. I trained a demo AI setter
 > on your website that takes those calls 24/7 and books the job. Want to try and break
 > it?
 
-> Hi Alex, Svetlana's review says she called at 9 pm and you had it fixed the next day.
+> Hi Evan, Patricia's review says she called at 9 pm and you had it fixed the next day.
 > Your Facebook ad's live too, so the 9 pm calls keep coming. I built a quick demo off
 > your website: it picks up when nobody can, day or night, and books the job. Want to
 > try and break it?
 
 ## Facebook messages (the specific and the bridge, a blank line, the full P1 or P2, all ONE message)
 
-> Hey Geo, saw Briana's review from last month: called Prestige, had a quote the same
+> Hey Abe, saw Monica's review from last month: called Clearway, had a quote the same
 > day. Somebody's picking up fast over there.
 >
 > I trained a demo AI setter on your website. It answers your calls and texts in about
 > five seconds, 24/7, and books the job straight into your calendar. Want to try and
 > break it? Call it, text it, throw it your weirdest customer.
 
-> Hey Albert and Janet, saw you're hiring an HVAC Office Manager, and Google has the
+> Hey Walter and Linda, saw you're hiring an HVAC Office Manager, and Google has the
 > office at 8 to 4 weekdays, closed weekends. So every call after 4 is landing
 > somewhere.
 >
@@ -77,7 +77,7 @@ the posted hours already show. Same register as everything above.
 **From posted hours, both ends visible.** Google shows the close and the open, so the gap is
 arithmetic on two numbers that are on the screen.
 
-> Hi Eric, Google has the office closed at 5 and open again at 8. So that's fifteen hours a
+> Hi Todd, Google has the office closed at 5 and open again at 8. So that's fifteen hours a
 > day where that phone's on somebody. I trained a demo AI setter on your website that takes
 > those calls 24/7 and books the job. Want to try and break it?
 
@@ -91,7 +91,7 @@ arithmetic on two numbers that are on the screen.
 **From a closed day plus an evening.** Both facts are on the profile; the bridge just adds
 them up.
 
-> Hi Charles, Google has Air Texas closing at 7 weekdays, noon Saturday, Sunday closed. So
+> Hi Raymond, Google has Air Texas closing at 7 weekdays, noon Saturday, Sunday closed. So
 > that's every evening plus the whole of Sunday landing on somebody's cell. I trained a demo
 > AI setter on your website that takes those calls 24/7 and books the job. Want to try and
 > break it?
@@ -171,15 +171,15 @@ man is still laughing. If he does not, the row goes `COLD` at day 7 and nothing 
 
 ## The three versions of one note, so the drift is visible
 
-Generic (returned): "Hi John, saw Atlanta AAction Air's June 2 Facebook ads. I went
+Generic (returned): "Hi Dave, saw Atlanta Kestrel Air's June 2 Facebook ads. I went
 ahead and trained a demo AI setter on your website. It answers your calls and texts in
 about five seconds, 24/7, and books the job straight into your calendar. Want me to send
 it over?"
 
-Specific but robotic (returned): "Hi John, Clay's 2-month-old review says he called after
-hours and "Charles came out after 10pm" to fix his AC. I trained a demo AI setter on your
+Specific but robotic (returned): "Hi Dave, Ross's 2-month-old review says he called after
+hours and "Raymond came out after 10pm" to fix his AC. I trained a demo AI setter on your
 website: answers calls and texts in about five seconds, 24/7, books the job into your
 calendar. Want to try and break it?"
 
-Approved: the John note above. Same fact, same pitch, same dare. The difference is the
+Approved: the Dave note above. Same fact, same pitch, same dare. The difference is the
 bridge, the contractions and the event told plainly.

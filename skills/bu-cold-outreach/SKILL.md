@@ -341,13 +341,13 @@ pacing like anything else typed in the app. Full shape in `config.md`.
 
 **Count DISTINCT prospects, not rows.** Sends on a channel or a variant are the number of
 distinct `prospect_id` values among its `SENT` rows. That is what keeps the historical
-multi row prospects (the 2026-09-09 Geo entry, the J rows of 09-13 to 09-22) at one send
+multi row prospects (the 2026-09-09 Abe entry, the J rows of 09-13 to 09-22) at one send
 each.
 
 **Two rows in the working log predate all of this and are corrected here, not rewritten,
 because the log is append only:**
 
-- `a5647b073a` (Geo, facebook, 2026-09-09) has TWO `SENT` rows, 10:45 and 11:20. They are the
+- `a5647b073a` (Abe, facebook, 2026-09-09) has TWO `SENT` rows, 10:45 and 11:20. They are the
   two halves of one message. Under the 2026-09-22 rule the second half would never have
   been sent. One prospect, one send.
 - `f4e1c0f25e` (facebook, 2026-09-09 10:56) went to a business PAGE,
